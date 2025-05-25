@@ -24,6 +24,8 @@ defmodule AshReports.Dsl.Report do
     :variables,
     :on_before_report,
     :on_after_report,
+    :locale,
+    :time_zone,
     generated?: false
   ]
   
@@ -69,6 +71,8 @@ defmodule AshReports.Dsl.Report do
     variables: map(),
     on_before_report: {module(), atom(), list()} | nil,
     on_after_report: {module(), atom(), list()} | nil,
+    locale: String.t() | nil,
+    time_zone: String.t() | nil,
     generated?: boolean()
   }
   
@@ -99,6 +103,8 @@ defmodule AshReports.Dsl.Report do
       styles: %{},
       data_sources: %{},
       variables: %{},
+      locale: "en",
+      time_zone: nil,
       generated?: false
     ]
   end
@@ -126,8 +132,9 @@ defmodule AshReports.Dsl.Report do
   defp validate_title(%{title: title}) when is_binary(title), do: :ok
   defp validate_title(_), do: {:error, "Report title must be a string"}
   
+  defp validate_formats(%{formats: nil}), do: {:error, "At least one format is required"}
   defp validate_formats(%{formats: []}), do: {:error, "At least one format is required"}
-  defp validate_formats(%{formats: formats}) do
+  defp validate_formats(%{formats: formats}) when is_list(formats) do
     valid_formats = [:html, :pdf, :heex]
     invalid = Enum.reject(formats, &(&1 in valid_formats))
     
@@ -137,6 +144,7 @@ defmodule AshReports.Dsl.Report do
       {:error, "Invalid formats: #{inspect(invalid)}. Valid formats are: #{inspect(valid_formats)}"}
     end
   end
+  defp validate_formats(_), do: {:error, "Formats must be a list"}
   
   defp validate_bands(%{bands: bands}) when is_list(bands), do: :ok
   defp validate_bands(_), do: {:error, "Bands must be a list"}

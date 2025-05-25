@@ -175,7 +175,7 @@ defmodule AshReports.Dsl.BandTest do
       )
       
       # This should succeed (level 74)
-      assert {:ok, updated_parent} = Band.add_sub_band(parent, child)
+      assert {:ok, _updated_parent} = Band.add_sub_band(parent, child)
       
       # Try to add another level (would be level 75)
       deep_parent = Band.new(:group_header, level: 74, group_expression: {:field, :subcategory})

@@ -79,9 +79,9 @@ defmodule AshReports.Dsl.Band do
   def new(type, opts \\ []) when is_atom(type) do
     struct(
       __MODULE__,
-      opts
+      default_values_for_type(type)
+      |> Keyword.merge(opts)
       |> Keyword.put(:type, type)
-      |> Keyword.merge(default_values_for_type(type))
     )
   end
   
@@ -130,8 +130,13 @@ defmodule AshReports.Dsl.Band do
     end
   end
   
-  defp validate_type(%{type: type}) when type in band_types(), do: :ok
-  defp validate_type(_), do: {:error, "Invalid band type"}
+  defp validate_type(%{type: type}) do
+    if type in band_types() do
+      :ok
+    else
+      {:error, "Invalid band type"}
+    end
+  end
   
   defp validate_columns(%{columns: columns}) when is_list(columns), do: :ok
   defp validate_columns(_), do: {:error, "Columns must be a list"}

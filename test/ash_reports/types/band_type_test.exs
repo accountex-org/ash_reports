@@ -5,21 +5,21 @@ defmodule AshReports.Types.BandTypeTest do
   
   describe "Ash.Type.Enum behavior" do
     test "includes all valid band types" do
-      # The Ash.Type.Enum macro generates values/0
+      # The Ash.Type.Enum macro generates cast/1
       values = [:title, :page_header, :column_header, :group_header, :detail,
                 :group_footer, :column_footer, :page_footer, :summary]
       
       for value <- values do
         # Test that cast works for valid values
-        assert {:ok, ^value} = Ecto.Type.cast(BandType, value)
-        assert {:ok, ^value} = Ecto.Type.cast(BandType, to_string(value))
+        assert {:ok, ^value} = Ash.Type.cast_input(BandType, value, [])
+        assert {:ok, ^value} = Ash.Type.cast_input(BandType, to_string(value), [])
       end
     end
     
     test "rejects invalid band types" do
-      assert :error = Ecto.Type.cast(BandType, :invalid)
-      assert :error = Ecto.Type.cast(BandType, "invalid")
-      assert :error = Ecto.Type.cast(BandType, nil)
+      assert {:error, _} = Ash.Type.cast_input(BandType, :invalid, [])
+      assert {:error, _} = Ash.Type.cast_input(BandType, "invalid", [])
+      assert {:error, _} = Ash.Type.cast_input(BandType, nil, [])
     end
   end
   
@@ -125,21 +125,21 @@ defmodule AshReports.Types.BandTypeTest do
     end
   end
   
-  describe "description/1" do
+  describe "band_description/1" do
     test "returns descriptions for all valid band types" do
-      assert BandType.description(:title) =~ "Report title"
-      assert BandType.description(:page_header) =~ "Page header"
-      assert BandType.description(:column_header) =~ "Column headers"
-      assert BandType.description(:group_header) =~ "Group header"
-      assert BandType.description(:detail) =~ "Detail band"
-      assert BandType.description(:group_footer) =~ "Group footer"
-      assert BandType.description(:column_footer) =~ "Column footers"
-      assert BandType.description(:page_footer) =~ "Page footer"
-      assert BandType.description(:summary) =~ "Report summary"
+      assert BandType.band_description(:title) =~ "Report title"
+      assert BandType.band_description(:page_header) =~ "Page header"
+      assert BandType.band_description(:column_header) =~ "Column headers"
+      assert BandType.band_description(:group_header) =~ "Group header"
+      assert BandType.band_description(:detail) =~ "Detail band"
+      assert BandType.band_description(:group_footer) =~ "Group footer"
+      assert BandType.band_description(:column_footer) =~ "Column footers"
+      assert BandType.band_description(:page_footer) =~ "Page footer"
+      assert BandType.band_description(:summary) =~ "Report summary"
     end
     
     test "returns unknown description for invalid type" do
-      assert BandType.description(:invalid) == "Unknown band type"
+      assert BandType.band_description(:invalid) == "Unknown band type"
     end
   end
 end

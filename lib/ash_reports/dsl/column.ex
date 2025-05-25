@@ -68,9 +68,9 @@ defmodule AshReports.Dsl.Column do
   def new(name, opts \\ []) when is_atom(name) do
     struct(
       __MODULE__,
-      opts
+      default_values()
+      |> Keyword.merge(opts)
       |> Keyword.put(:name, name)
-      |> Keyword.merge(default_values())
     )
   end
   
@@ -119,8 +119,13 @@ defmodule AshReports.Dsl.Column do
   defp validate_data_source(%{value: _}), do: :ok
   defp validate_data_source(_), do: {:error, "Column field must be an atom"}
   
-  defp validate_format(%{format: format}) when format in format_types(), do: :ok
-  defp validate_format(_), do: {:error, "Invalid column format"}
+  defp validate_format(%{format: format}) do
+    if format in format_types() do
+      :ok
+    else
+      {:error, "Invalid column format"}
+    end
+  end
   
   defp validate_alignment(%{alignment: align, vertical_alignment: valign}) 
     when align in [:left, :center, :right, :justify] and 
@@ -128,8 +133,13 @@ defmodule AshReports.Dsl.Column do
   defp validate_alignment(_), do: {:error, "Invalid alignment settings"}
   
   defp validate_aggregate(%{aggregate: nil}), do: :ok
-  defp validate_aggregate(%{aggregate: agg}) when agg in aggregate_types(), do: :ok
-  defp validate_aggregate(_), do: {:error, "Invalid aggregate type"}
+  defp validate_aggregate(%{aggregate: agg}) do
+    if agg in aggregate_types() do
+      :ok
+    else
+      {:error, "Invalid aggregate type"}
+    end
+  end
   
   defp validate_width(%{width: nil}), do: :ok
   defp validate_width(%{width: width}) when is_number(width) and width > 0, do: :ok
@@ -156,97 +166,65 @@ defmodule AshReports.Dsl.Column do
   
   @doc """
   Formats a value according to the column's format settings.
+  
+  ## Options
+  
+  * `:locale` - The locale to use for formatting (passed in context)
+  * `:time_zone` - The time zone for datetime formatting (passed in context)
   """
-  @spec format_value(t(), any()) :: String.t()
-  def format_value(%__MODULE__{format: format, format_options: opts}, value) do
+  @spec format_value(t(), any(), keyword()) :: String.t()
+  def format_value(%__MODULE__{format: format, format_options: opts}, value, context \\ []) do
+    locale = Keyword.get(context, :locale, "en")
+    time_zone = Keyword.get(context, :time_zone)
+    
+    # Merge column options with context
+    format_opts = Keyword.merge(opts, [locale: locale, time_zone: time_zone])
+    
     case format do
-      :text -> to_string(value)
-      :number -> format_number(value, opts)
-      :currency -> format_currency(value, opts)
-      :percentage -> format_percentage(value, opts)
-      :date -> format_date(value, opts)
-      :datetime -> format_datetime(value, opts)
-      :boolean -> format_boolean(value, opts)
-      :custom -> value
+      :text -> 
+        to_string(value)
+        
+      :number -> 
+        case AshReports.Formatter.format_number(value, format_opts) do
+          {:ok, formatted} -> formatted
+          {:error, _} -> to_string(value)
+        end
+        
+      :currency -> 
+        case AshReports.Formatter.format_currency(value, format_opts) do
+          {:ok, formatted} -> formatted
+          {:error, _} -> to_string(value)
+        end
+        
+      :percentage -> 
+        case AshReports.Formatter.format_percentage(value, format_opts) do
+          {:ok, formatted} -> formatted
+          {:error, _} -> to_string(value)
+        end
+        
+      :date -> 
+        case AshReports.Formatter.format_date(value, format_opts) do
+          {:ok, formatted} -> formatted
+          {:error, _} -> to_string(value)
+        end
+        
+      :datetime -> 
+        case AshReports.Formatter.format_datetime(value, format_opts) do
+          {:ok, formatted} -> formatted
+          {:error, _} -> to_string(value)
+        end
+        
+      :boolean -> 
+        case AshReports.Formatter.format_boolean(value, format_opts) do
+          {:ok, formatted} -> formatted
+          {:error, _} -> to_string(value)
+        end
+        
+      :custom -> 
+        to_string(value)
     end
   end
   
-  defp format_number(nil, _), do: ""
-  defp format_number(value, opts) when is_number(value) do
-    precision = Keyword.get(opts, :precision, 2)
-    delimiter = Keyword.get(opts, :delimiter, ",")
-    separator = Keyword.get(opts, :separator, ".")
-    
-    value
-    |> Float.round(precision)
-    |> to_string()
-    |> add_thousands_separator(delimiter, separator)
-  end
-  defp format_number(value, _), do: to_string(value)
-  
-  defp format_currency(nil, _), do: ""
-  defp format_currency(value, opts) when is_number(value) do
-    symbol = Keyword.get(opts, :symbol, "$")
-    position = Keyword.get(opts, :position, :before)
-    
-    formatted = format_number(value, opts)
-    
-    case position do
-      :before -> "#{symbol}#{formatted}"
-      :after -> "#{formatted}#{symbol}"
-    end
-  end
-  defp format_currency(value, _), do: to_string(value)
-  
-  defp format_percentage(nil, _), do: ""
-  defp format_percentage(value, opts) when is_number(value) do
-    multiply = Keyword.get(opts, :multiply, true)
-    precision = Keyword.get(opts, :precision, 2)
-    
-    percentage_value = if multiply, do: value * 100, else: value
-    
-    "#{Float.round(percentage_value, precision)}%"
-  end
-  defp format_percentage(value, _), do: to_string(value)
-  
-  defp format_date(nil, _), do: ""
-  defp format_date(%Date{} = date, opts) do
-    format = Keyword.get(opts, :format, "{YYYY}-{0M}-{0D}")
-    Calendar.strftime(date, format)
-  end
-  defp format_date(value, _), do: to_string(value)
-  
-  defp format_datetime(nil, _), do: ""
-  defp format_datetime(%DateTime{} = datetime, opts) do
-    format = Keyword.get(opts, :format, "{YYYY}-{0M}-{0D} {h24}:{m}:{s}")
-    Calendar.strftime(datetime, format)
-  end
-  defp format_datetime(%NaiveDateTime{} = datetime, opts) do
-    format = Keyword.get(opts, :format, "{YYYY}-{0M}-{0D} {h24}:{m}:{s}")
-    Calendar.strftime(datetime, format)
-  end
-  defp format_datetime(value, _), do: to_string(value)
-  
-  defp format_boolean(true, opts), do: Keyword.get(opts, :true_text, "Yes")
-  defp format_boolean(false, opts), do: Keyword.get(opts, :false_text, "No")
-  defp format_boolean(nil, opts), do: Keyword.get(opts, :nil_text, "")
-  defp format_boolean(value, _), do: to_string(value)
-  
-  defp add_thousands_separator(string, delimiter, separator) do
-    [integer_part | decimal_parts] = String.split(string, ".")
-    
-    formatted_integer = integer_part
-    |> String.reverse()
-    |> String.graphemes()
-    |> Enum.chunk_every(3)
-    |> Enum.join(delimiter)
-    |> String.reverse()
-    
-    case decimal_parts do
-      [] -> formatted_integer
-      _ -> "#{formatted_integer}#{separator}#{Enum.join(decimal_parts, ".")}"
-    end
-  end
   
   @doc """
   Returns the effective label for the column.
@@ -269,6 +247,7 @@ defmodule AshReports.Dsl.Column do
   """
   @spec get_sort_field(t()) :: atom() | nil
   def get_sort_field(%__MODULE__{sortable: false}), do: nil
-  def get_sort_field(%__MODULE__{sort_field: field}) when not is_nil(field), do: field
-  def get_sort_field(%__MODULE__{field: field}), do: field
+  def get_sort_field(%__MODULE__{sortable: true, sort_field: field}) when not is_nil(field), do: field
+  def get_sort_field(%__MODULE__{sortable: true, field: field}), do: field
+  def get_sort_field(_), do: nil
 end

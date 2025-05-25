@@ -17,27 +17,37 @@ This document outlines a comprehensive phased implementation plan for the AshRep
 - [x] Add band type enumeration: `:title`, `:page_header`, `:column_header`, `:group_header`, `:detail`, `:group_footer`, `:column_footer`, `:page_footer`, `:summary`
 - [x] Create comprehensive unit tests for all entity structures
 
-### 1.3 Spark DSL Entity Definitions
+### 1.3 CLDR Integration for Internationalization
+- [x] Add `ex_cldr` and related dependencies to mix.exs
+- [x] Configure CLDR backend module with number, datetime, and currency support
+- [x] Create `AshReports.Cldr` backend with locale configuration
+- [x] Implement locale-aware formatting functions for dates, times, numbers, and currencies
+- [x] Add locale parameter support to report definitions
+- [x] Create comprehensive unit tests for CLDR formatting
+
+### 1.4 Spark DSL Entity Definitions
 - [ ] Create `@column` entity definition with full schema validation
 - [ ] Create `@band` entity definition with recursive support for nested bands
 - [ ] Create `@report` entity definition with complete metadata schema
 - [ ] Add band-specific validation rules (e.g., title/summary bands appear once)
+- [ ] Integrate CLDR formatting options into column definitions
 - [ ] Create comprehensive unit tests for entity definitions
 
-### 1.4 Basic Extension Modules
+### 1.5 Basic Extension Modules
 - [ ] Create `AshReports.Domain` extension skeleton with sections
 - [ ] Create `AshReports.Resource` extension skeleton with reportable section
 - [ ] Implement basic section definitions without transformers
 - [ ] Create comprehensive unit tests for extension modules
 
-### 1.5 Integration Testing (Phase 1)
+### 1.6 Integration Testing (Phase 1)
 - [ ] Test domain extension can be loaded by Ash.Domain without errors
 - [ ] Test resource extension can be loaded by Ash.Resource without errors
 - [ ] Test basic DSL syntax parsing with empty sections
 - [ ] Test extension registration with Spark framework
 - [ ] Test entity validation with valid and invalid inputs
+- [ ] Test CLDR formatting integration with various locales
 
-**Phase 1 Exit Criteria:** All extensions load without errors. Basic DSL syntax is recognized. Entity structures support the full hierarchical band model. All unit and integration tests pass.
+**Phase 1 Exit Criteria:** All extensions load without errors. Basic DSL syntax is recognized. Entity structures support the full hierarchical band model. CLDR integration provides robust internationalization support. All unit and integration tests pass.
 
 ---
 
@@ -60,7 +70,8 @@ This document outlines a comprehensive phased implementation plan for the AshRep
 ### 2.3 Section Schema Implementation
 - [ ] Complete `@reports_section` implementation with full validation schema
 - [ ] Complete `@reportable_section` implementation with resource-specific options
-- [ ] Add domain-wide configuration options (default formats, storage paths)
+- [ ] Add domain-wide configuration options (default formats, storage paths, default locale)
+- [ ] Add locale configuration support at report, band, and column levels
 - [ ] Implement cross-section validation rules
 - [ ] Create comprehensive unit tests for section schemas
 
@@ -273,11 +284,13 @@ This document outlines a comprehensive phased implementation plan for the AshRep
 - [ ] Create comprehensive unit tests for table rendering
 
 ### 7.4 Data Formatting and Styling
-- [ ] Implement value formatting functions (currency, percentage, date)
+- [ ] Implement CLDR-based value formatting functions (currency, percentage, date, number)
+- [ ] Add locale-aware formatting with proper cultural conventions
 - [ ] Add custom formatting function support
 - [ ] Create CSS class generation for styling hooks
 - [ ] Implement responsive design support
 - [ ] Add print-friendly CSS options
+- [ ] Support RTL (right-to-left) text direction for appropriate locales
 - [ ] Create comprehensive unit tests for formatting and styling
 
 ### 7.5 Integration Testing (Phase 7)

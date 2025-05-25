@@ -49,6 +49,13 @@ defmodule AshReports.MixProject do
       {:ash, "~> 3.0"},
       {:spark, "~> 2.2"},
       
+      # CLDR dependencies for internationalization
+      {:ex_cldr, "~> 2.40"},
+      {:ex_cldr_numbers, "~> 2.33"},
+      {:ex_cldr_dates_times, "~> 2.20"},
+      {:ex_cldr_currencies, "~> 2.16"},
+      {:ex_cldr_calendars, "~> 1.26"},
+      
       # Optional dependencies
       {:chromic_pdf, "~> 1.17", optional: true},
       {:phoenix_live_view, "~> 0.20", optional: true},

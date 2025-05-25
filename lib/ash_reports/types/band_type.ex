@@ -100,15 +100,15 @@ defmodule AshReports.Types.BandType do
   @doc """
   Returns a human-readable description of the band type.
   """
-  @spec description(atom()) :: String.t()
-  def description(:title), do: "Report title band - appears once at the beginning"
-  def description(:page_header), do: "Page header - appears at the top of each page"
-  def description(:column_header), do: "Column headers for data tables"
-  def description(:group_header), do: "Group header - appears before each group of data"
-  def description(:detail), do: "Detail band - contains the main data rows"
-  def description(:group_footer), do: "Group footer - appears after each group of data"
-  def description(:column_footer), do: "Column footers with aggregations"
-  def description(:page_footer), do: "Page footer - appears at the bottom of each page"
-  def description(:summary), do: "Report summary band - appears once at the end"
-  def description(_), do: "Unknown band type"
+  @spec band_description(atom()) :: String.t()
+  def band_description(:title), do: "Report title band - appears once at the beginning"
+  def band_description(:page_header), do: "Page header - appears at the top of each page"
+  def band_description(:column_header), do: "Column headers for data tables"
+  def band_description(:group_header), do: "Group header - appears before each group of data"
+  def band_description(:detail), do: "Detail band - contains the main data rows"
+  def band_description(:group_footer), do: "Group footer - appears after each group of data"
+  def band_description(:column_footer), do: "Column footers with aggregations"
+  def band_description(:page_footer), do: "Page footer - appears at the bottom of each page"
+  def band_description(:summary), do: "Report summary band - appears once at the end"
+  def band_description(_), do: "Unknown band type"
 end

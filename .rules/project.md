@@ -63,6 +63,39 @@ When working with this codebase, understand that it follows Spark DSL extension 
 4. **Verifiers ** - DSL validation at compile time
 5. **Recursive Entities** - Bands can contain sub-bands with arbitrary nesting
 
+### Elixir Guard Clauses and Compile-Time Constraints
+
+**IMPORTANT**: When writing validation functions or pattern matching with `in` operator:
+
+1. **Guard clauses require compile-time values** - You cannot use function calls like `band_types()` or `format_types()` in guard clauses
+2. **Use regular conditionals instead** - Replace guard clauses with `if/else` statements when checking against dynamic lists:
+   ```elixir
+   # WRONG - This will cause compilation errors
+   defp validate_type(%{type: type}) when type in band_types(), do: :ok
+   
+   # CORRECT - Use regular conditional
+   defp validate_type(%{type: type}) do
+     if type in band_types() do
+       :ok
+     else
+       {:error, "Invalid band type"}
+     end
+   end
+   ```
+
+3. **For struct field defaults** - Use `Keyword.merge/2` correctly to ensure options override defaults:
+   ```elixir
+   # Merge defaults first, then apply user options
+   def new(name, opts \\ []) do
+     struct(
+       __MODULE__,
+       default_values()
+       |> Keyword.merge(opts)
+       |> Keyword.put(:name, name)
+     )
+   end
+   ```
+
 ### Working Spark Extension
 
 When looking at how code should be written you can inspire yourself by the [AshCommanded](https://github.com/accountex-org/ash_commanded) project.

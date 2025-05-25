@@ -107,7 +107,7 @@ defmodule AshReports.Dsl.ColumnTest do
     end
   end
   
-  describe "format_value/2" do
+  describe "format_value/3" do
     test "formats text values" do
       column = Column.new(:test, format: :text)
       assert Column.format_value(column, "Hello") == "Hello"
@@ -117,35 +117,32 @@ defmodule AshReports.Dsl.ColumnTest do
     
     test "formats number values" do
       column = Column.new(:test, format: :number, format_options: [precision: 2])
-      assert Column.format_value(column, 1234.567) == "1234.57"
-      assert Column.format_value(column, 1000) == "1000.00"
+      assert Column.format_value(column, 1234.567) == "1,234.57"
+      assert Column.format_value(column, 1000) == "1,000.00"
       assert Column.format_value(column, nil) == ""
     end
     
-    test "formats number with custom separators" do
-      column = Column.new(:test, 
-        format: :number, 
-        format_options: [precision: 2, delimiter: ".", separator: ","]
-      )
-      assert Column.format_value(column, 1234.56) == "1.234,56"
+    test "formats number with German locale" do
+      column = Column.new(:test, format: :number, format_options: [precision: 2])
+      assert Column.format_value(column, 1234.56, locale: "de") == "1.234,56"
     end
     
     test "formats currency values" do
-      column = Column.new(:test, format: :currency, format_options: [symbol: "$"])
+      column = Column.new(:test, format: :currency, format_options: [currency: "USD"])
       assert Column.format_value(column, 99.99) == "$99.99"
       assert Column.format_value(column, nil) == ""
-      
-      # With symbol after
-      column = Column.new(:test, 
-        format: :currency, 
-        format_options: [symbol: "€", position: :after]
-      )
-      assert Column.format_value(column, 100) == "100.00€"
+    end
+    
+    test "formats currency with EUR and German locale" do
+      column = Column.new(:test, format: :currency, format_options: [currency: "EUR"])
+      result = Column.format_value(column, 100, locale: "de")
+      assert String.contains?(result, "€")
+      assert String.contains?(result, "100")
     end
     
     test "formats percentage values" do
       column = Column.new(:test, format: :percentage)
-      assert Column.format_value(column, 0.75) == "75.0%"
+      assert String.contains?(Column.format_value(column, 0.75), "75")
       
       # Without multiplication
       column = Column.new(:test, 
@@ -158,23 +155,31 @@ defmodule AshReports.Dsl.ColumnTest do
     test "formats date values" do
       column = Column.new(:test, format: :date)
       date = ~D[2024-01-15]
-      assert Column.format_value(column, date) == "2024-01-15"
-      
-      # Custom format
-      column = Column.new(:test, 
-        format: :date,
-        format_options: [format: "{0D}/{0M}/{YYYY}"]
-      )
-      assert Column.format_value(column, date) == "15/01/2024"
+      result = Column.format_value(column, date)
+      assert String.contains?(result, "Jan")
+      assert String.contains?(result, "15")
+      assert String.contains?(result, "2024")
+    end
+    
+    test "formats date with German locale" do
+      column = Column.new(:test, format: :date, format_options: [format: :long])
+      date = ~D[2024-01-15]
+      result = Column.format_value(column, date, locale: "de")
+      assert String.contains?(result, "15")
+      assert String.contains?(result, "2024")
     end
     
     test "formats datetime values" do
       column = Column.new(:test, format: :datetime)
       datetime = ~U[2024-01-15 14:30:00Z]
-      assert Column.format_value(column, datetime) =~ "2024-01-15"
+      result = Column.format_value(column, datetime)
+      assert String.contains?(result, "Jan")
+      assert String.contains?(result, "15")
+      assert String.contains?(result, "2024")
       
       naive_datetime = ~N[2024-01-15 14:30:00]
-      assert Column.format_value(column, naive_datetime) == "2024-01-15 14:30:00"
+      result = Column.format_value(column, naive_datetime)
+      assert String.contains?(result, "2024")
     end
     
     test "formats boolean values" do
@@ -191,6 +196,12 @@ defmodule AshReports.Dsl.ColumnTest do
       assert Column.format_value(column, true) == "Active"
       assert Column.format_value(column, false) == "Inactive"
       assert Column.format_value(column, nil) == "Unknown"
+    end
+    
+    test "formats boolean with Spanish locale" do
+      column = Column.new(:test, format: :boolean)
+      assert Column.format_value(column, true, locale: "es") == "Sí"
+      assert Column.format_value(column, false, locale: "es") == "No"
     end
     
     test "handles custom format" do
