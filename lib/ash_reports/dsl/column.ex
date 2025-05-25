@@ -185,40 +185,22 @@ defmodule AshReports.Dsl.Column do
         to_string(value)
         
       :number -> 
-        case AshReports.Formatter.format_number(value, format_opts) do
-          {:ok, formatted} -> formatted
-          {:error, _} -> to_string(value)
-        end
+        if is_nil(value), do: "", else: AshReports.SimpleFormatter.format_number(value, format_opts)
         
       :currency -> 
-        case AshReports.Formatter.format_currency(value, format_opts) do
-          {:ok, formatted} -> formatted
-          {:error, _} -> to_string(value)
-        end
+        if is_nil(value), do: "", else: AshReports.SimpleFormatter.format_currency(value, format_opts)
         
       :percentage -> 
-        case AshReports.Formatter.format_percentage(value, format_opts) do
-          {:ok, formatted} -> formatted
-          {:error, _} -> to_string(value)
-        end
+        if is_nil(value), do: "", else: AshReports.SimpleFormatter.format_percentage(value, format_opts)
         
       :date -> 
-        case AshReports.Formatter.format_date(value, format_opts) do
-          {:ok, formatted} -> formatted
-          {:error, _} -> to_string(value)
-        end
+        if is_nil(value), do: "", else: AshReports.SimpleFormatter.format_date(value, format_opts)
         
       :datetime -> 
-        case AshReports.Formatter.format_datetime(value, format_opts) do
-          {:ok, formatted} -> formatted
-          {:error, _} -> to_string(value)
-        end
+        if is_nil(value), do: "", else: AshReports.SimpleFormatter.format_datetime(value, format_opts)
         
       :boolean -> 
-        case AshReports.Formatter.format_boolean(value, format_opts) do
-          {:ok, formatted} -> formatted
-          {:error, _} -> to_string(value)
-        end
+        AshReports.SimpleFormatter.format_boolean(value, format_opts)
         
       :custom -> 
         to_string(value)

@@ -136,7 +136,9 @@ defmodule AshReports.Formatter do
       {:ok, "15/01/2024 14:30"}
   """
   @spec format_datetime(DateTime.t() | NaiveDateTime.t(), keyword()) :: {:ok, String.t()} | {:error, term()}
-  def format_datetime(%DateTime{} = datetime, opts \\ []) do
+  def format_datetime(datetime, opts \\ [])
+  
+  def format_datetime(%DateTime{} = datetime, opts) do
     locale = Keyword.get(opts, :locale, "en")
     format = Keyword.get(opts, :format, :medium)
     time_zone = Keyword.get(opts, :time_zone)
@@ -147,7 +149,7 @@ defmodule AshReports.Formatter do
     Cldr.DateTime.to_string(datetime, cldr_opts)
   end
   
-  def format_datetime(%NaiveDateTime{} = datetime, opts \\ []) do
+  def format_datetime(%NaiveDateTime{} = datetime, opts) do
     locale = Keyword.get(opts, :locale, "en")
     format = Keyword.get(opts, :format, :medium)
     
@@ -221,16 +223,6 @@ defmodule AshReports.Formatter do
   defp translate_boolean(false, "de"), do: "Nein"
   defp translate_boolean(true, "pt"), do: "Sim"
   defp translate_boolean(false, "pt"), do: "Não"
-  defp translate_boolean(true, "ja"), do: "はい"
-  defp translate_boolean(false, "ja"), do: "いいえ"
-  defp translate_boolean(true, "zh"), do: "是"
-  defp translate_boolean(false, "zh"), do: "否"
-  defp translate_boolean(true, "ar"), do: "نعم"
-  defp translate_boolean(false, "ar"), do: "لا"
-  defp translate_boolean(true, "ru"), do: "Да"
-  defp translate_boolean(false, "ru"), do: "Нет"
-  defp translate_boolean(true, "it"), do: "Sì"
-  defp translate_boolean(false, "it"), do: "No"
   defp translate_boolean(true, _), do: "Yes"
   defp translate_boolean(false, _), do: "No"
   
@@ -254,7 +246,7 @@ defmodule AshReports.Formatter do
   """
   @spec available_locales() :: [String.t()]
   def available_locales do
-    Cldr.known_locale_names(Cldr)
+    Cldr.known_locale_names()
   end
   
   @doc """

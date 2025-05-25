@@ -85,7 +85,7 @@ defmodule AshReports.Dsl.BandTest do
       assert {:ok, ^band} = Band.validate(band)
       
       # non-atom is invalid
-      band = struct(Band, type: :detail, target_alias: "invalid")
+      band = struct(Band, Band.default_values_for_type(:detail) |> Keyword.merge(type: :detail, target_alias: "invalid"))
       assert {:error, "Detail band target_alias must be an atom"} = Band.validate(band)
     end
   end

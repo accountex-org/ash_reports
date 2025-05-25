@@ -19,7 +19,8 @@ defmodule AshReports.Types.BandTypeTest do
     test "rejects invalid band types" do
       assert {:error, _} = Ash.Type.cast_input(BandType, :invalid, [])
       assert {:error, _} = Ash.Type.cast_input(BandType, "invalid", [])
-      assert {:error, _} = Ash.Type.cast_input(BandType, nil, [])
+      # Ash.Type.Enum accepts nil by default
+      assert {:ok, nil} = Ash.Type.cast_input(BandType, nil, [])
     end
   end
   

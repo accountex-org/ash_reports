@@ -7,13 +7,9 @@ defmodule AshReports.Cldr do
   """
   
   use Cldr,
-    locales: ["en", "es", "fr", "de", "pt", "ja", "zh", "ar", "ru", "it"],
+    locales: ["en", "es", "fr", "de", "pt"],
     default_locale: "en",
-    providers: [
-      Cldr.Number,
-      Cldr.Calendar,
-      Cldr.DateTime,
-      Cldr.Currency
-    ],
-    json_library: Jason
+    providers: [Cldr.Number, Cldr.DateTime, Cldr.Currency],
+    generate_docs: false,
+    suppress_warnings: true
 end

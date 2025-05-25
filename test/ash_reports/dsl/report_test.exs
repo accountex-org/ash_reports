@@ -70,12 +70,12 @@ defmodule AshReports.Dsl.ReportTest do
     end
     
     test "validates page size" do
-      report = struct(Report, name: :test, title: "Test", page_size: :invalid)
+      report = struct(Report, Report.default_values() |> Keyword.merge(name: :test, title: "Test", page_size: :invalid))
       assert {:error, "Invalid page size"} = Report.validate(report)
     end
     
     test "validates orientation" do
-      report = struct(Report, name: :test, title: "Test", orientation: :invalid)
+      report = struct(Report, Report.default_values() |> Keyword.merge(name: :test, title: "Test", orientation: :invalid))
       assert {:error, "Orientation must be :portrait or :landscape"} = Report.validate(report)
     end
   end
