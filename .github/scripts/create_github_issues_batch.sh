@@ -17,6 +17,16 @@ if ! command -v gh &> /dev/null; then
     exit 1
 fi
 
+# Check GitHub authentication
+if ! gh auth status &> /dev/null; then
+    echo -e "${RED}Error: Not authenticated with GitHub${NC}"
+    echo -e "${YELLOW}Please run: ${GREEN}gh auth login${NC}"
+    echo ""
+    echo "This will open a browser to authenticate with GitHub."
+    echo "Make sure you have the necessary permissions for this repository."
+    exit 1
+fi
+
 # Check if jq is installed
 if ! command -v jq &> /dev/null; then
     echo -e "${RED}Error: jq is not installed${NC}"

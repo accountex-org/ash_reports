@@ -15,12 +15,16 @@ This directory contains scripts for managing GitHub issues, milestones, and proj
 - `update_issues_backlog_simple.sh` - Simplified backlog management
 
 ### 🔧 Development Tools
+- `test_auth.sh` - Test GitHub authentication and permissions
 - `asdf_plugins.sh` - Environment setup utilities
 
 ## Usage Workflow
 
 ### Initial Project Setup
 ```bash
+# 0. Test authentication and setup
+./scripts/test_auth.sh
+
 # 1. Create milestones for all phases
 ./scripts/create_github_milestones.sh
 
@@ -82,16 +86,45 @@ git commit -m "Updated project board for Phase X completion"
 ## Script Dependencies
 
 All scripts require:
-- `gh` (GitHub CLI) - authenticated
+- `gh` (GitHub CLI) - **must be authenticated**
 - `jq` - JSON processing
 - `bash` 4.0+
+
+### Authentication Setup
+
+Before running any scripts, ensure you're authenticated with GitHub:
+
+```bash
+# Quick test of authentication and permissions
+./scripts/test_auth.sh
+
+# Or check manually:
+gh auth status
+
+# If not authenticated, login
+gh auth login
+```
+
+**Important**: All scripts will now check authentication status and fail fast with clear error messages if not authenticated. This prevents cryptic errors and ensures proper permission handling.
+
+#### New Authentication Test Script
+
+Use `test_auth.sh` to verify your setup:
+- ✅ GitHub CLI installation
+- ✅ Authentication status
+- ✅ Repository access
+- ✅ Permission levels
+- ✅ Existing project boards
 
 ## Troubleshooting
 
 ### Common Issues
-1. **Rate Limiting**: Scripts include delays, but large operations may hit limits
-2. **Permission Errors**: Ensure GitHub token has project management permissions
-3. **Project Not Found**: Run setup scripts in correct order
+1. **Authentication Errors**: 
+   - **Error**: "Not authenticated with GitHub"
+   - **Solution**: Run `gh auth login` and ensure you have repository permissions
+2. **Rate Limiting**: Scripts include delays, but large operations may hit limits
+3. **Permission Errors**: Ensure GitHub token has project management permissions
+4. **Project Not Found**: Run setup scripts in correct order
 
 ### Recovery
 ```bash

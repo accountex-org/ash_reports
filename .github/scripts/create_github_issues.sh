@@ -17,6 +17,16 @@ if ! command -v gh &> /dev/null; then
     exit 1
 fi
 
+# Check GitHub authentication
+if ! gh auth status &> /dev/null; then
+    echo -e "${RED}Error: Not authenticated with GitHub${NC}"
+    echo -e "${YELLOW}Please run: ${GREEN}gh auth login${NC}"
+    echo ""
+    echo "This will open a browser to authenticate with GitHub."
+    echo "Make sure you have the necessary permissions for this repository."
+    exit 1
+fi
+
 # Check if we're in a git repository
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
     echo -e "${RED}Error: Not in a git repository${NC}"
