@@ -17,6 +17,7 @@ config :spark,
     "Ash.Resource": [
       section_order: [
         :resource,
+        :reportable,
         :code_interface,
         :actions,
         :policies,
@@ -32,5 +33,35 @@ config :spark,
         :identities
       ]
     ],
-    "Ash.Domain": [section_order: [:resources, :policies, :authorization, :domain, :execution]]
+    "Ash.Domain": [
+      section_order: [
+        :resources,
+        :reports,
+        :policies,
+        :authorization,
+        :domain,
+        :execution
+      ]
+    ]
   ]
+
+# Configure AshReports defaults
+config :ash_reports,
+  default_formats: [:html, :pdf],
+  report_storage_path: "priv/reports",
+  cache_ttl: :timer.minutes(15),
+  worker_pool_size: 5,
+  max_concurrent_reports: 10
+
+# ChromicPDF configuration for PDF generation
+if Code.ensure_loaded?(ChromicPDF) do
+  config :chromic_pdf,
+    session_pool: [size: 2],
+    offline: true,
+    print_to_pdf: %{
+      margin_top: "0.5in",
+      margin_bottom: "0.5in",
+      margin_left: "0.5in",
+      margin_right: "0.5in"
+    }
+end

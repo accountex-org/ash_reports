@@ -2,12 +2,89 @@
 
 # Script to create GitHub milestones from implementation phases
 # Requires: gh (GitHub CLI) to be installed and authenticated
+# 
+# Usage: ./create_github_milestones.sh [OPTIONS] [plan_file]
+#   
+# Options:
+#   -h, --help              Show this help message
+#   -d, --dry-run          Show what would be created without actually creating
+#   
+# Arguments:
+#   plan_file               Optional path to implementation plan (default: auto-detect)
+#   
+# Supported plans:
+#   - planning/implementation_plan.md (11 phases)
+#   - planning/detailed_implementation_plan.md (14 phases)
+#
+# Examples:
+#   ./create_github_milestones.sh                                    # Auto-detect plan
+#   ./create_github_milestones.sh planning/detailed_implementation_plan.md
+#   ./create_github_milestones.sh --dry-run                         # Preview only
 
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
+
+# Global options
+DRY_RUN=false
+
+# Function to show help
+show_help() {
+    echo "Create GitHub milestones from implementation plan phases"
+    echo ""
+    echo "Usage: $0 [OPTIONS] [plan_file]"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help       Show this help message"
+    echo "  -d, --dry-run    Show what would be created without actually creating"
+    echo ""
+    echo "Arguments:"
+    echo "  plan_file        Optional path to implementation plan (default: auto-detect)"
+    echo ""
+    echo "Supported plans:"
+    echo "  - planning/implementation_plan.md (11 phases)"
+    echo "  - planning/detailed_implementation_plan.md (14 phases)"
+    echo ""
+    echo "Examples:"
+    echo "  $0                                            # Auto-detect plan"
+    echo "  $0 planning/detailed_implementation_plan.md   # Use specific plan"
+    echo "  $0 --dry-run                                  # Preview only"
+    echo ""
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -d|--dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        -*)
+            echo -e "${RED}Error: Unknown option $1${NC}"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+        *)
+            # This should be the plan file
+            if [ -z "$PLAN_FILE_ARG" ]; then
+                PLAN_FILE_ARG="$1"
+            else
+                echo -e "${RED}Error: Too many arguments${NC}"
+                echo "Use --help for usage information"
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
 
 # Check if gh is installed
 if ! command -v gh &> /dev/null; then
@@ -39,7 +116,41 @@ if [ -z "$REPO" ]; then
     exit 1
 fi
 
+# Determine which implementation plan to use
+PLAN_FILE="$PLAN_FILE_ARG"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Auto-detect plan file if not provided
+if [ -z "$PLAN_FILE" ]; then
+    if [ -f "$PROJECT_ROOT/planning/detailed_implementation_plan.md" ]; then
+        PLAN_FILE="$PROJECT_ROOT/planning/detailed_implementation_plan.md"
+        echo -e "${BLUE}Auto-detected: detailed_implementation_plan.md (14 phases)${NC}"
+    elif [ -f "$PROJECT_ROOT/planning/implementation_plan.md" ]; then
+        PLAN_FILE="$PROJECT_ROOT/planning/implementation_plan.md"
+        echo -e "${BLUE}Auto-detected: implementation_plan.md (11 phases)${NC}"
+    else
+        echo -e "${RED}Error: No implementation plan found${NC}"
+        echo "Please create one of:"
+        echo "  - planning/detailed_implementation_plan.md"
+        echo "  - planning/implementation_plan.md"
+        exit 1
+    fi
+else
+    # Handle relative paths
+    if [[ "$PLAN_FILE" != /* ]]; then
+        PLAN_FILE="$PROJECT_ROOT/$PLAN_FILE"
+    fi
+    
+    if [ ! -f "$PLAN_FILE" ]; then
+        echo -e "${RED}Error: Plan file not found: $PLAN_FILE${NC}"
+        exit 1
+    fi
+    echo -e "${BLUE}Using specified plan: $(basename "$PLAN_FILE")${NC}"
+fi
+
 echo -e "${GREEN}Creating milestones for repository: $REPO${NC}"
+echo -e "${CYAN}Reading phases from: $(basename "$PLAN_FILE")${NC}"
 echo ""
 
 # Function to calculate due date (weeks from now)
@@ -54,6 +165,88 @@ calculate_due_date() {
     fi
 }
 
+# Function to extract phase information from implementation plan
+parse_implementation_plan() {
+    local plan_file="$1"
+    local current_phase=""
+    local current_title=""
+    local current_description=""
+    local current_tasks=""
+    local in_objectives=false
+    local week_counter=2
+    
+    echo -e "${BLUE}Parsing implementation plan...${NC}"
+    
+    while IFS= read -r line; do
+        # Detect phase headers
+        if [[ $line =~ ^##[[:space:]]*Phase[[:space:]]+([0-9]+):[[:space:]]*(.*)$ ]]; then
+            # Save previous phase if exists
+            if [ ! -z "$current_phase" ]; then
+                create_milestone_from_data "$current_phase" "$current_title" "$current_description" "$current_tasks" "$week_counter"
+                ((week_counter += 2))
+            fi
+            
+            # Start new phase
+            current_phase="${BASH_REMATCH[1]}"
+            current_title="${BASH_REMATCH[2]}"
+            current_description=""
+            current_tasks=""
+            in_objectives=false
+            
+        # Detect objectives section
+        elif [[ $line =~ ^###[[:space:]]*Objectives ]]; then
+            in_objectives=true
+            
+        # End of objectives section
+        elif [[ $line =~ ^###[[:space:]]* ]] && [[ ! $line =~ Objectives ]]; then
+            in_objectives=false
+            
+        # Collect objectives as description
+        elif $in_objectives && [[ $line =~ ^-[[:space:]]*(.*) ]]; then
+            if [ -z "$current_description" ]; then
+                current_description="${BASH_REMATCH[1]}"
+            else
+                current_description="$current_description"$'\n'"${BASH_REMATCH[1]}"
+            fi
+            
+        # Collect top-level tasks (deliverable sections)
+        elif [[ $line =~ ^####[[:space:]]*[0-9]+\.[0-9]+[[:space:]]*(.*) ]]; then
+            if [ -z "$current_tasks" ]; then
+                current_tasks="- ${BASH_REMATCH[1]}"
+            else
+                current_tasks="$current_tasks"$'\n'"- ${BASH_REMATCH[1]}"
+            fi
+        fi
+        
+    done < "$plan_file"
+    
+    # Handle last phase
+    if [ ! -z "$current_phase" ]; then
+        create_milestone_from_data "$current_phase" "$current_title" "$current_description" "$current_tasks" "$week_counter"
+    fi
+}
+
+# Function to create milestone from parsed data
+create_milestone_from_data() {
+    local phase_num="$1"
+    local title="$2" 
+    local description="$3"
+    local tasks="$4"
+    local weeks="$5"
+    
+    # Build full description
+    local full_description="$description"
+    if [ ! -z "$tasks" ]; then
+        if [ ! -z "$full_description" ]; then
+            full_description="$full_description"$'\n\n'"Key deliverables:"$'\n'"$tasks"
+        else
+            full_description="Key deliverables:"$'\n'"$tasks"
+        fi
+    fi
+    
+    create_milestone "$phase_num" "$title" "$full_description" "$(calculate_due_date $weeks)"
+}
+
 # Create milestones
 create_milestone() {
     local number=$1
@@ -61,13 +254,27 @@ create_milestone() {
     local description=$3
     local due_date=$4
     
-    echo -e "${YELLOW}Creating milestone: Phase $number - $title${NC}"
+    echo -e "${YELLOW}Milestone: Phase $number - $title${NC}"
+    echo -e "  Due date: ${CYAN}$due_date${NC}"
+    
+    if $DRY_RUN; then
+        echo -e "  ${BLUE}[DRY RUN] Would create milestone${NC}"
+        # Show description preview in dry run
+        if [ ${#description} -gt 100 ]; then
+            echo -e "  Description: ${description:0:100}..."
+        else
+            echo -e "  Description: $description"
+        fi
+        echo ""
+        return
+    fi
     
     # Check if milestone already exists
     existing=$(gh api repos/$REPO/milestones --jq ".[] | select(.title == \"Phase $number: $title\") | .number" 2>/dev/null)
     
     if [ ! -z "$existing" ]; then
-        echo -e "  Milestone already exists (number: $existing), skipping..."
+        echo -e "  ${YELLOW}⚠ Milestone already exists (number: $existing), skipping...${NC}"
+        echo ""
         return
     fi
     
@@ -87,133 +294,17 @@ create_milestone() {
     echo ""
 }
 
-# Milestones data based on implementation_phases.md
-echo "Creating milestones based on implementation phases..."
+# Parse and create milestones from implementation plan
+echo "Creating milestones from implementation plan..."
 echo ""
 
-# Phase 1
-create_milestone 1 "Core DSL Foundation" \
-"Basic DSL that can be used in domain/resource definitions without runtime functionality
+parse_implementation_plan "$PLAN_FILE"
 
-Key tasks:
-- Create core structs (Report, Band, Column)
-- Implement Spark DSL entities
-- Set up domain and resource extensions" \
-"$(calculate_due_date 2)"
-
-# Phase 2
-create_milestone 2 "Query Generation System" \
-"Query system that can fetch data for reports
-
-Key tasks:
-- Build query generator for reports
-- Implement band-specific queries
-- Add filtering, sorting, and pagination support" \
-"$(calculate_due_date 3)"
-
-# Phase 3
-create_milestone 3 "Basic Transformers" \
-"Reports are registered and accessible via generated actions
-
-Key tasks:
-- Create report registration transformers
-- Generate report actions for resources
-- Set up transformer infrastructure" \
-"$(calculate_due_date 4)"
-
-# Phase 4
-create_milestone 4 "Report Module Generation" \
-"Generated report modules with format dispatch
-
-Key tasks:
-- Implement module generation transformer
-- Create format-specific module stubs
-- Set up format registration system" \
-"$(calculate_due_date 6)"
-
-# Phase 5
-create_milestone 5 "HTML Renderer" \
-"Fully functional HTML report generation
-
-Key tasks:
-- Create HTML renderer
-- Implement band rendering system
-- Add column formatting and styling" \
-"$(calculate_due_date 8)"
-
-# Phase 6
-create_milestone 6 "Band Processing Engine" \
-"Complex hierarchical reports with grouping and aggregation
-
-Key tasks:
-- Build hierarchical band processor
-- Add grouping and aggregation support
-- Implement conditional rendering" \
-"$(calculate_due_date 9)"
-
-# Phase 7
-create_milestone 7 "PDF and HEEX Renderers" \
-"Multi-format report generation (HTML, PDF, HEEX)
-
-Key tasks:
-- Implement PDF renderer with ChromicPDF
-- Create HEEX template generator
-- Add Phoenix LiveView support" \
-"$(calculate_due_date 11)"
-
-# Phase 8
-create_milestone 8 "Reports Server" \
-"Standalone reports server with HTTP API and async generation
-
-Key tasks:
-- Build GenServer infrastructure
-- Create REST API endpoints
-- Implement async job processing
-- Add real-time updates support" \
-"$(calculate_due_date 12)"
-
-# Phase 9
-create_milestone 9 "MCP Server Integration" \
-"Fully functional MCP server allowing AI assistants to interact with reports
-
-Key tasks:
-- Implement MCP protocol server
-- Create report-specific tools
-- Add resource providers and prompts
-- Build management utilities" \
-"$(calculate_due_date 13)"
-
-# Phase 10
-create_milestone 10 "Advanced Features" \
-"Production-ready extension with advanced features
-
-Key tasks:
-- Implement caching system
-- Add advanced query features
-- Create export formats (CSV, Excel)" \
-"$(calculate_due_date 15)"
-
-# Phase 11
-create_milestone 11 "Testing and Documentation" \
-"Well-tested, documented extension ready for release
-
-Key tasks:
-- Complete test suite
-- Write comprehensive documentation
-- Create example implementations" \
-"$(calculate_due_date 17)"
-
-# Phase 12
-create_milestone 12 "Polish and Release" \
-"Published Hex package ready for community use
-
-Key tasks:
-- Performance optimization
-- Final bug fixes
-- Package preparation
-- Release to Hex.pm" \
-"$(calculate_due_date 18)"
-
-echo -e "${GREEN}Milestone creation complete!${NC}"
-echo ""
-echo "View your milestones at: https://github.com/$REPO/milestones"
+if $DRY_RUN; then
+    echo -e "${GREEN}Dry run complete!${NC}"
+    echo -e "${BLUE}To actually create these milestones, run without --dry-run${NC}"
+else
+    echo -e "${GREEN}Milestone creation complete!${NC}"
+    echo ""
+    echo "View your milestones at: https://github.com/$REPO/milestones"
+fi

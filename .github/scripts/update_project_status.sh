@@ -1,14 +1,93 @@
 #!/bin/bash
 
 # Script to update GitHub project board status based on implementation plan progress
-# This script marks Phase 1 issues as "Done" based on the completed tasks in implementation_plan.md
+# This script reads completed checkboxes from implementation plan files and updates corresponding GitHub issues
+#
+# Usage: ./update_project_status.sh [OPTIONS] [plan_file]
+#   
+# Options:
+#   -h, --help              Show this help message
+#   -d, --dry-run          Show what would be updated without actually updating
+#   -p, --phase PHASE      Only update issues for specific phase (e.g., -p 1)
+#   
+# Arguments:
+#   plan_file               Optional path to implementation plan (default: auto-detect)
 
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
+
+# Global options
+DRY_RUN=false
+PHASE_FILTER=""
+
+# Function to show help
+show_help() {
+    echo "Update GitHub project board status based on implementation plan progress"
+    echo ""
+    echo "Usage: $0 [OPTIONS] [plan_file]"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help          Show this help message"
+    echo "  -d, --dry-run       Show what would be updated without actually updating"
+    echo "  -p, --phase PHASE   Only update issues for specific phase (e.g., -p 1)"
+    echo ""
+    echo "Arguments:"
+    echo "  plan_file           Optional path to implementation plan (default: auto-detect)"
+    echo ""
+    echo "Supported plans:"
+    echo "  - planning/implementation_plan.md (11 phases)"
+    echo "  - planning/detailed_implementation_plan.md (14 phases)"
+    echo ""
+    echo "Examples:"
+    echo "  $0                                            # Auto-detect plan, update all phases"
+    echo "  $0 --phase 1                                  # Only update Phase 1 issues"
+    echo "  $0 --dry-run                                  # Preview updates without making changes"
+    echo "  $0 planning/detailed_implementation_plan.md   # Use specific plan"
+    echo ""
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -d|--dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        -p|--phase)
+            PHASE_FILTER="$2"
+            if ! [[ "$PHASE_FILTER" =~ ^[0-9]+$ ]]; then
+                echo -e "${RED}Error: Phase must be a number${NC}" >&2
+                exit 1
+            fi
+            shift 2
+            ;;
+        -*)
+            echo -e "${RED}Error: Unknown option $1${NC}" >&2
+            echo "Use --help for usage information" >&2
+            exit 1
+            ;;
+        *)
+            # This should be the plan file
+            if [ -z "$PLAN_FILE_ARG" ]; then
+                PLAN_FILE_ARG="$1"
+            else
+                echo -e "${RED}Error: Too many arguments${NC}" >&2
+                echo "Use --help for usage information" >&2
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
 
 # Check if gh is installed
 if ! command -v gh &> /dev/null; then
@@ -44,8 +123,47 @@ fi
 OWNER=$(echo $REPO | cut -d'/' -f1)
 REPO_NAME=$(echo $REPO | cut -d'/' -f2)
 
+# Determine which implementation plan to use
+PLAN_FILE="$PLAN_FILE_ARG"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Auto-detect plan file if not provided
+if [ -z "$PLAN_FILE" ]; then
+    if [ -f "$PROJECT_ROOT/planning/detailed_implementation_plan.md" ]; then
+        PLAN_FILE="$PROJECT_ROOT/planning/detailed_implementation_plan.md"
+        echo -e "${BLUE}Auto-detected: detailed_implementation_plan.md (14 phases)${NC}" >&2
+    elif [ -f "$PROJECT_ROOT/planning/implementation_plan.md" ]; then
+        PLAN_FILE="$PROJECT_ROOT/planning/implementation_plan.md"
+        echo -e "${BLUE}Auto-detected: implementation_plan.md (11 phases)${NC}" >&2
+    else
+        echo -e "${RED}Error: No implementation plan found${NC}" >&2
+        echo "Please create one of:" >&2
+        echo "  - planning/detailed_implementation_plan.md" >&2
+        echo "  - planning/implementation_plan.md" >&2
+        exit 1
+    fi
+else
+    # Handle relative paths
+    if [[ "$PLAN_FILE" != /* ]]; then
+        PLAN_FILE="$PROJECT_ROOT/$PLAN_FILE"
+    fi
+    
+    if [ ! -f "$PLAN_FILE" ]; then
+        echo -e "${RED}Error: Plan file not found: $PLAN_FILE${NC}" >&2
+        exit 1
+    fi
+    echo -e "${BLUE}Using specified plan: $(basename "$PLAN_FILE")${NC}" >&2
+fi
+
 echo -e "${GREEN}Updating project status for: $REPO${NC}" >&2
-echo -e "${BLUE}Based on implementation_plan.md changes${NC}" >&2
+echo -e "${CYAN}Reading completed tasks from: $(basename "$PLAN_FILE")${NC}" >&2
+if [ ! -z "$PHASE_FILTER" ]; then
+    echo -e "${YELLOW}Filtering to Phase $PHASE_FILTER only${NC}" >&2
+fi
+if $DRY_RUN; then
+    echo -e "${BLUE}Running in dry-run mode - no issues will be updated${NC}" >&2
+fi
 echo "" >&2
 
 # Function to find the project
@@ -99,68 +217,145 @@ get_field_ids() {
     echo "$status_field_id:$done_option_id:$in_progress_option_id"
 }
 
-# Function to update specific Phase 1 issues to Done
-update_phase1_to_done() {
+# Function to parse completed tasks from implementation plan
+parse_completed_tasks() {
+    local plan_file="$1"
+    local phase_filter="$2"
+    
+    declare -a completed_tasks=()
+    local current_phase=""
+    local in_target_phase=false
+    
+    while IFS= read -r line; do
+        # Check for phase headers
+        if [[ $line =~ ^##[[:space:]]*Phase[[:space:]]+([0-9]+):[[:space:]]*(.*)$ ]]; then
+            current_phase="${BASH_REMATCH[1]}"
+            if [ -z "$phase_filter" ] || [ "$current_phase" = "$phase_filter" ]; then
+                in_target_phase=true
+            else
+                in_target_phase=false
+            fi
+        # Check for completed checkboxes (marked with [x])
+        elif [ "$in_target_phase" = true ] && [[ $line =~ ^-[[:space:]]*\[x\][[:space:]]*(.*)$ ]]; then
+            task_description="${BASH_REMATCH[1]}"
+            # Clean up the task description for better matching
+            task_description=$(echo "$task_description" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            completed_tasks+=("$task_description")
+        fi
+    done < "$plan_file"
+    
+    printf '%s\n' "${completed_tasks[@]}"
+}
+
+# Function to update issues to Done based on completed tasks
+update_completed_tasks() {
     local project_number=$1
     local field_info=$2
     local status_field_id=$(echo $field_info | cut -d':' -f1)
     local done_option_id=$(echo $field_info | cut -d':' -f2)
     
-    echo -e "${BLUE}Marking completed Phase 1 tasks as Done...${NC}" >&2
+    echo -e "${BLUE}Parsing completed tasks from implementation plan...${NC}" >&2
     
-    # Define completed Phase 1 tasks based on implementation_plan.md
-    # Section 1.1: Basic DSL Structures
-    # Section 1.2: Section Definitions  
-    # Section 1.3: Extension Modules
+    # Get completed tasks from the plan file
+    mapfile -t completed_tasks < <(parse_completed_tasks "$PLAN_FILE" "$PHASE_FILTER")
     
-    declare -a completed_tasks=(
-        "Create.*lib/ash_reports/dsl.ex.*core structs"
-        "Report struct definition"
-        "Band struct definition"
-        "Column struct definition"
-        "Implement basic Spark DSL entities"
-        "@column entity definition"
-        "@band entity definition"
-        "@report entity definition"
-        "Create @reports_section for domain extension"
-        "Create @reportable_section for resource extension"
-        "Configure section schemas"
-        "Implement.*AshReports.Dsl.Domain.*extension"
-        "Implement.*AshReports.Dsl.Resource.*extension"
-        "Set up basic transformer registration"
-    )
-    
-    # Get all Phase 1 issues
-    phase1_issues=$(gh issue list --state open --label "phase-1" --limit 100 --json number,title,labels 2>/dev/null)
-    
-    if [ -z "$phase1_issues" ] || [ "$(echo "$phase1_issues" | jq length)" -eq 0 ]; then
-        echo -e "${YELLOW}No Phase 1 issues found${NC}" >&2
+    if [ ${#completed_tasks[@]} -eq 0 ]; then
+        echo -e "${YELLOW}No completed tasks found in the implementation plan${NC}" >&2
+        if [ ! -z "$PHASE_FILTER" ]; then
+            echo -e "${YELLOW}(Phase $PHASE_FILTER filter applied)${NC}" >&2
+        fi
         return
     fi
     
-    total_issues=$(echo "$phase1_issues" | jq length)
-    echo -e "${GREEN}Found $total_issues Phase 1 issues${NC}" >&2
+    echo -e "${GREEN}Found ${#completed_tasks[@]} completed tasks${NC}" >&2
+    if [ ! -z "$PHASE_FILTER" ]; then
+        echo -e "${BLUE}Filtering to Phase $PHASE_FILTER only${NC}" >&2
+    fi
     echo "" >&2
     
-    # Process each Phase 1 issue
+    # Build label filter based on phase
+    local label_filter=""
+    if [ ! -z "$PHASE_FILTER" ]; then
+        label_filter="--label phase-$PHASE_FILTER"
+    fi
+    
+    # Get all open issues (filtered by phase if specified)
+    issues=$(gh issue list --state open $label_filter --limit 200 --json number,title,labels 2>/dev/null)
+    
+    if [ -z "$issues" ] || [ "$(echo "$issues" | jq length)" -eq 0 ]; then
+        echo -e "${YELLOW}No open issues found${NC}" >&2
+        if [ ! -z "$PHASE_FILTER" ]; then
+            echo -e "${YELLOW}(Phase $PHASE_FILTER filter applied)${NC}" >&2
+        fi
+        return
+    fi
+    
+    total_issues=$(echo "$issues" | jq length)
+    echo -e "${GREEN}Found $total_issues open issues${NC}" >&2
+    if [ ! -z "$PHASE_FILTER" ]; then
+        echo -e "${BLUE}(Phase $PHASE_FILTER filter applied)${NC}" >&2
+    fi
+    echo "" >&2
+    
+    # Process each issue
     updated=0
     skipped=0
     
     for i in $(seq 0 $((total_issues - 1))); do
-        issue_number=$(echo "$phase1_issues" | jq -r ".[$i].number")
-        issue_title=$(echo "$phase1_issues" | jq -r ".[$i].title")
+        issue_number=$(echo "$issues" | jq -r ".[$i].number")
+        issue_title=$(echo "$issues" | jq -r ".[$i].title")
         
         # Check if this issue matches any completed task
         task_completed=false
-        for pattern in "${completed_tasks[@]}"; do
-            if echo "$issue_title" | grep -qi "$pattern"; then
+        matched_task=""
+        
+        for task in "${completed_tasks[@]}"; do
+            # Try multiple matching strategies
+            # 1. Exact match (case insensitive)
+            if echo "$issue_title" | grep -qi "^$task$"; then
                 task_completed=true
+                matched_task="$task"
+                break
+            fi
+            # 2. Partial match (case insensitive)
+            if echo "$issue_title" | grep -qi "$task"; then
+                task_completed=true
+                matched_task="$task"
+                break
+            fi
+            # 3. Keywords match (extract key words from both)
+            task_keywords=$(echo "$task" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/ /g' | tr -s ' ' | sed 's/^ *//;s/ *$//')
+            issue_keywords=$(echo "$issue_title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/ /g' | tr -s ' ' | sed 's/^ *//;s/ *$//')
+            
+            # Check if most words from task appear in issue title
+            word_count=0
+            matched_count=0
+            for word in $task_keywords; do
+                if [ ${#word} -gt 2 ]; then  # Only check words longer than 2 chars
+                    ((word_count++))
+                    if echo "$issue_keywords" | grep -q "\b$word\b"; then
+                        ((matched_count++))
+                    fi
+                fi
+            done
+            
+            # If 75% or more words match, consider it a match
+            if [ $word_count -gt 0 ] && [ $((matched_count * 4)) -ge $((word_count * 3)) ]; then
+                task_completed=true
+                matched_task="$task"
                 break
             fi
         done
         
         if [ "$task_completed" = true ]; then
             echo -e "[$((i+1))/$total_issues] ${GREEN}Marking as Done: ${issue_title:0:60}...${NC}" >&2
+            echo -e "  ${CYAN}Matched task: ${matched_task:0:50}...${NC}" >&2
+            
+            if $DRY_RUN; then
+                echo -e "  ${BLUE}[DRY RUN] Would mark as Done${NC}" >&2
+                ((updated++))
+                continue
+            fi
             
             # Get account type (do this once)
             if [ -z "$account_type" ]; then
@@ -243,8 +438,12 @@ update_phase1_to_done() {
                     echo -e "  ${GREEN}✓ Updated to Done${NC}" >&2
                     ((updated++))
                     
-                    # Also close the issue
-                    gh issue close $issue_number --comment "✅ Completed as part of Phase 1 implementation. Core DSL foundation is now working." 2>/dev/null
+                    # Also close the issue with reference to matched task
+                    close_comment="✅ Completed task: $matched_task"
+                    if [ ! -z "$PHASE_FILTER" ]; then
+                        close_comment="$close_comment\n\nMarked as completed in Phase $PHASE_FILTER of the implementation plan."
+                    fi
+                    gh issue close $issue_number --comment "$close_comment" 2>/dev/null
                 else
                     echo -e "  ${RED}✗ Failed to update status${NC}" >&2
                     ((skipped++))
@@ -266,31 +465,56 @@ update_phase1_to_done() {
     done
     
     echo "" >&2
-    echo -e "${GREEN}Phase 1 Update Summary:${NC}" >&2
-    echo -e "  Marked as Done: $updated issues" >&2
-    echo -e "  Skipped: $skipped issues" >&2
+    echo -e "${GREEN}Update Summary:${NC}" >&2
+    if $DRY_RUN; then
+        echo -e "  Would mark as Done: $updated issues" >&2
+        echo -e "  Would skip: $skipped issues" >&2
+    else
+        echo -e "  Marked as Done: $updated issues" >&2
+        echo -e "  Skipped: $skipped issues" >&2
+    fi
+    if [ ! -z "$PHASE_FILTER" ]; then
+        echo -e "  Phase filter: $PHASE_FILTER" >&2
+    fi
+    echo -e "  Total completed tasks in plan: ${#completed_tasks[@]}" >&2
 }
 
-# Function to add Phase 1 completion comment to milestone
+# Function to update milestone description for completed phases
 update_milestone_description() {
-    local phase=1
+    local phase="$1"
     
-    echo -e "${BLUE}Updating Phase 1 milestone description...${NC}" >&2
+    if [ -z "$phase" ]; then
+        echo -e "${YELLOW}No specific phase provided for milestone update${NC}" >&2
+        return
+    fi
     
-    # Get Phase 1 milestone
+    echo -e "${BLUE}Updating Phase $phase milestone description...${NC}" >&2
+    
+    if $DRY_RUN; then
+        echo -e "  ${BLUE}[DRY RUN] Would update milestone description${NC}" >&2
+        return
+    fi
+    
+    # Get milestone for the specified phase
     milestone=$(gh api repos/$REPO/milestones --jq ".[] | select(.title | startswith(\"Phase $phase:\"))" 2>/dev/null | head -1)
     
     if [ ! -z "$milestone" ]; then
         milestone_number=$(echo "$milestone" | jq -r .number)
         current_description=$(echo "$milestone" | jq -r .description)
         
+        # Check if already marked as completed
+        if echo "$current_description" | grep -q "✅ \*\*COMPLETED\*\*"; then
+            echo -e "  ${YELLOW}Milestone already marked as completed${NC}" >&2
+            return
+        fi
+        
         # Add completion status to description
-        new_description="✅ **COMPLETED** - Core DSL foundation is working
+        new_description="✅ **COMPLETED** - Tasks completed as tracked in implementation plan
 
-**Current Status:**
-- Recursive bands (recursive_as and nested band entities) are temporarily disabled due to Spark version compatibility
-- Full hierarchical band support is planned for Phase 6 with custom implementation  
-- Current flat band structure allows progression to Phase 2
+**Completion Status:**
+- Tasks have been marked as completed in the implementation plan
+- Corresponding GitHub issues have been closed
+- Ready to proceed to next phase
 
 **Original Description:**
 $current_description"
@@ -305,23 +529,28 @@ $current_description"
             echo -e "  ${YELLOW}Warning: Could not update milestone description${NC}" >&2
         fi
     else
-        echo -e "  ${YELLOW}Warning: Phase 1 milestone not found${NC}" >&2
+        echo -e "  ${YELLOW}Warning: Phase $phase milestone not found${NC}" >&2
     fi
 }
 
 # Main execution
 main() {
     echo -e "${YELLOW}This script will:${NC}" >&2
-    echo -e "  1. Mark completed Phase 1 tasks as 'Done' in the project board" >&2
-    echo -e "  2. Close completed Phase 1 issues" >&2
-    echo -e "  3. Update Phase 1 milestone description" >&2
+    echo -e "  1. Parse completed tasks from the implementation plan" >&2
+    echo -e "  2. Mark matching GitHub issues as 'Done' in the project board" >&2
+    echo -e "  3. Close completed issues with reference to matched tasks" >&2
+    if [ ! -z "$PHASE_FILTER" ]; then
+        echo -e "  4. Update Phase $PHASE_FILTER milestone description" >&2
+    fi
     echo "" >&2
     
-    read -p "Continue? (y/n): " confirm
-    
-    if [ "$confirm" != "y" ]; then
-        echo -e "${RED}Cancelled${NC}" >&2
-        exit 0
+    if ! $DRY_RUN; then
+        read -p "Continue? (y/n): " confirm
+        
+        if [ "$confirm" != "y" ]; then
+            echo -e "${RED}Cancelled${NC}" >&2
+            exit 0
+        fi
     fi
     
     echo "" >&2
@@ -332,17 +561,25 @@ main() {
     # Get field IDs
     field_info=$(get_field_ids $project_number)
     
-    # Update Phase 1 issues
-    update_phase1_to_done $project_number $field_info
+    # Update issues based on completed tasks
+    update_completed_tasks $project_number $field_info
     
-    # Update milestone
-    update_milestone_description
+    # Update milestone if phase filter is specified
+    if [ ! -z "$PHASE_FILTER" ]; then
+        update_milestone_description "$PHASE_FILTER"
+    fi
     
     echo "" >&2
-    echo -e "${GREEN}Project board update complete!${NC}" >&2
+    if $DRY_RUN; then
+        echo -e "${BLUE}Dry run complete - no changes were made${NC}" >&2
+    else
+        echo -e "${GREEN}Project board update complete!${NC}" >&2
+    fi
     echo "" >&2
     echo "View your project at: https://github.com/orgs/$OWNER/projects/$project_number" >&2
-    echo "View Phase 1 milestone at: https://github.com/$REPO/milestone/1" >&2
+    if [ ! -z "$PHASE_FILTER" ]; then
+        echo "View Phase $PHASE_FILTER milestone at: https://github.com/$REPO/milestones" >&2
+    fi
 }
 
 # Run main function

@@ -76,6 +76,7 @@ The system generates dedicated modules for each report format at compile time, p
 
 - `planning/system_design.md` - Comprehensive architecture documentation with implementation details
 - `planning/implementation_plan.md` - Detailed implementation plan in phases.
+- `planning/report_design.md` - Hierarchical band structure specification defining the 9-level report band system (title, page header, column header, group header, detail, group footer, column footer, page footer, summary) that must be implemented in the DSL and rendering engine
 - `lib/ash_reports.ex` - Main module (currently placeholder)
 - `mix.exs` - Project configuration and dependencies
 - `config/config.exs` - Ash and Spark configuration

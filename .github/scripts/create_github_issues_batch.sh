@@ -1,14 +1,93 @@
 #!/bin/bash
 
-# Batch script to create GitHub issues from implementation tasks
-# This version creates issues more efficiently using GitHub's batch API
+# Batch script to create GitHub issues from implementation plan tasks
+# This version creates issues more efficiently by parsing implementation plans directly
+#
+# Usage: ./create_github_issues_batch.sh [OPTIONS] [plan_file]
+#   
+# Options:
+#   -h, --help              Show this help message
+#   -d, --dry-run          Show what would be created without actually creating
+#   -p, --phase PHASE      Only create issues for specific phase (e.g., -p 1)
+#   
+# Arguments:
+#   plan_file               Optional path to implementation plan (default: auto-detect)
 
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
+
+# Global options
+DRY_RUN=false
+PHASE_FILTER=""
+
+# Function to show help
+show_help() {
+    echo "Create GitHub issues from implementation plan tasks"
+    echo ""
+    echo "Usage: $0 [OPTIONS] [plan_file]"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help          Show this help message"
+    echo "  -d, --dry-run       Show what would be created without actually creating"
+    echo "  -p, --phase PHASE   Only create issues for specific phase (e.g., -p 1)"
+    echo ""
+    echo "Arguments:"
+    echo "  plan_file           Optional path to implementation plan (default: auto-detect)"
+    echo ""
+    echo "Supported plans:"
+    echo "  - planning/implementation_plan.md (11 phases)"
+    echo "  - planning/detailed_implementation_plan.md (14 phases)"
+    echo ""
+    echo "Examples:"
+    echo "  $0                                            # Auto-detect plan, create all issues"
+    echo "  $0 --phase 1                                  # Only create Phase 1 issues"
+    echo "  $0 --dry-run                                  # Preview issues without creating"
+    echo "  $0 planning/detailed_implementation_plan.md   # Use specific plan"
+    echo ""
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -d|--dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        -p|--phase)
+            PHASE_FILTER="$2"
+            if ! [[ "$PHASE_FILTER" =~ ^[0-9]+$ ]]; then
+                echo -e "${RED}Error: Phase must be a number${NC}"
+                exit 1
+            fi
+            shift 2
+            ;;
+        -*)
+            echo -e "${RED}Error: Unknown option $1${NC}"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+        *)
+            # This should be the plan file
+            if [ -z "$PLAN_FILE_ARG" ]; then
+                PLAN_FILE_ARG="$1"
+            else
+                echo -e "${RED}Error: Too many arguments${NC}"
+                echo "Use --help for usage information"
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
 
 # Check if gh is installed
 if ! command -v gh &> /dev/null; then
@@ -44,7 +123,44 @@ fi
 OWNER=$(echo $REPO | cut -d'/' -f1)
 REPO_NAME=$(echo $REPO | cut -d'/' -f2)
 
+# Determine which implementation plan to use
+PLAN_FILE="$PLAN_FILE_ARG"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Auto-detect plan file if not provided
+if [ -z "$PLAN_FILE" ]; then
+    if [ -f "$PROJECT_ROOT/planning/detailed_implementation_plan.md" ]; then
+        PLAN_FILE="$PROJECT_ROOT/planning/detailed_implementation_plan.md"
+        echo -e "${BLUE}Auto-detected: detailed_implementation_plan.md (14 phases)${NC}"
+    elif [ -f "$PROJECT_ROOT/planning/implementation_plan.md" ]; then
+        PLAN_FILE="$PROJECT_ROOT/planning/implementation_plan.md"
+        echo -e "${BLUE}Auto-detected: implementation_plan.md (11 phases)${NC}"
+    else
+        echo -e "${RED}Error: No implementation plan found${NC}"
+        echo "Please create one of:"
+        echo "  - planning/detailed_implementation_plan.md"
+        echo "  - planning/implementation_plan.md"
+        exit 1
+    fi
+else
+    # Handle relative paths
+    if [[ "$PLAN_FILE" != /* ]]; then
+        PLAN_FILE="$PROJECT_ROOT/$PLAN_FILE"
+    fi
+    
+    if [ ! -f "$PLAN_FILE" ]; then
+        echo -e "${RED}Error: Plan file not found: $PLAN_FILE${NC}"
+        exit 1
+    fi
+    echo -e "${BLUE}Using specified plan: $(basename "$PLAN_FILE")${NC}"
+fi
+
 echo -e "${GREEN}Batch creating issues for: $REPO${NC}"
+echo -e "${CYAN}Reading tasks from: $(basename "$PLAN_FILE")${NC}"
+if [ ! -z "$PHASE_FILTER" ]; then
+    echo -e "${YELLOW}Filtering to Phase $PHASE_FILTER only${NC}"
+fi
 echo ""
 
 # Create project board for tracking
@@ -71,65 +187,96 @@ create_project_board() {
     echo $project_num
 }
 
-# Generate JSON file with all issues
+# Generate JSON file with all issues from implementation plan
 generate_issues_json() {
     local output_file="/tmp/ash_reports_issues.json"
     
-    echo -e "${BLUE}Generating issues JSON...${NC}" >&2
+    echo -e "${BLUE}Parsing implementation plan for tasks...${NC}" >&2
     
     # Start JSON array
     echo "[" > $output_file
     
     local first=true
     local task_num=0
+    local current_phase=""
+    local current_phase_title=""
+    local current_section=""
+    local current_section_title=""
+    local in_deliverables=false
     
-    # Process each task
+    # Parse the implementation plan file
     while IFS= read -r line; do
-        if [[ $line =~ ^([0-9]+)\.[[:space:]]+\[Phase[[:space:]]([0-9]+)\.([0-9]+)\][[:space:]](.+)$ ]]; then
-            task_num="${BASH_REMATCH[1]}"
-            phase="${BASH_REMATCH[2]}"
-            subsection="${BASH_REMATCH[3]}"
-            task="${BASH_REMATCH[4]}"
+        # Detect phase headers
+        if [[ $line =~ ^##[[:space:]]*Phase[[:space:]]+([0-9]+):[[:space:]]*(.*)$ ]]; then
+            current_phase="${BASH_REMATCH[1]}"
+            current_phase_title="${BASH_REMATCH[2]}"
+            current_section=""
+            current_section_title=""
+            in_deliverables=false
+            
+            # Skip if filtering by phase
+            if [ ! -z "$PHASE_FILTER" ] && [ "$current_phase" != "$PHASE_FILTER" ]; then
+                continue
+            fi
+            
+        # Detect section headers (deliverables)
+        elif [[ $line =~ ^###[[:space:]]*[0-9]+\.[0-9]+[[:space:]]*(.*) ]]; then
+            current_section_title="${BASH_REMATCH[1]}"
+            in_deliverables=true
+            
+        # Detect other section headers (end deliverables)
+        elif [[ $line =~ ^###[[:space:]]* ]] && [[ ! $line =~ ^###[[:space:]]*[0-9]+\.[0-9]+ ]]; then
+            in_deliverables=false
+            
+        # Collect task items from deliverables sections
+        elif $in_deliverables && [[ $line =~ ^-[[:space:]]*\[[[:space:]]*\][[:space:]]*(.*) ]]; then
+            # Skip if filtering by phase and not in current phase
+            if [ ! -z "$PHASE_FILTER" ] && [ "$current_phase" != "$PHASE_FILTER" ]; then
+                continue
+            fi
+            
+            task="${BASH_REMATCH[1]}"
+            ((task_num++))
             
             # Escape special characters in task description
-            task=$(echo "$task" | sed 's/"/\\"/g' | sed "s/'/\\'/g")
+            task_escaped=$(echo "$task" | sed 's/"/\\"/g' | sed "s/'/\\'/g")
             
-            # Determine complexity based on task
+            # Determine complexity based on task content
             complexity="Medium"
-            if [[ $task =~ ^(Create|Add|Implement basic) ]]; then
+            if [[ $task =~ ^(Update|Configure|Set up|Create.*struct|Add.*schema|Basic) ]]; then
                 complexity="Low"
-            elif [[ $task =~ (system|engine|integration|optimization) ]]; then
+            elif [[ $task =~ (system|engine|integration|optimization|complete|comprehensive|advanced) ]]; then
                 complexity="High"
             fi
             
             # Determine priority (earlier phases = higher priority)
             priority="P2"
-            if [ $phase -le 3 ]; then
+            if [ $current_phase -le 3 ]; then
                 priority="P1"
-            elif [ $phase -ge 10 ]; then
+            elif [ $current_phase -ge 10 ]; then
                 priority="P3"
             fi
             
             # Create title
-            title="[Phase $phase.$subsection] $task"
+            title="[Phase $current_phase] $task"
             if [ ${#title} -gt 100 ]; then
                 title="${title:0:97}..."
             fi
             
             # Create body
-            body="## Task #$task_num
+            body="## Task
 $task
 
 ## Phase Information
-- **Phase**: $phase
-- **Section**: $phase.$subsection
+- **Phase**: $current_phase - $current_phase_title
+- **Section**: $current_section_title
 - **Complexity**: $complexity
 - **Priority**: $priority
 
 ## Acceptance Criteria
 - [ ] Implementation complete
-- [ ] Unit tests added (if applicable)
-- [ ] Integration tests added (if applicable)
+- [ ] Unit tests added and passing
+- [ ] Integration tests added and passing (if applicable)
 - [ ] Documentation updated
 - [ ] Code reviewed
 
@@ -153,20 +300,22 @@ _Link to related issues_"
   {
     "title": "$title",
     "body": $body_json,
-    "labels": ["phase-$phase", "complexity:$complexity", "priority:$priority"],
-    "phase": $phase,
-    "subsection": "$subsection",
+    "labels": ["phase-$current_phase", "complexity:$complexity", "priority:$priority"],
+    "phase": $current_phase,
+    "section": "$current_section_title",
     "task_number": $task_num
   }
 EOF
         fi
-    done < /home/pcharbon/code/extensions/ash_reports/planning/implementation_tasks.md
+        
+    done < "$PLAN_FILE"
     
     # Close JSON array
     echo "" >> $output_file
     echo "]" >> $output_file
     
-    echo -e "${GREEN}Generated JSON with $(jq length $output_file) issues${NC}" >&2
+    local total_issues=$(jq length $output_file 2>/dev/null || echo "0")
+    echo -e "${GREEN}Generated JSON with $total_issues issues${NC}" >&2
     echo $output_file
 }
 
@@ -198,24 +347,27 @@ create_issues_from_json() {
     local json_file=$1
     local phase_filter=$2
     
-    # Get all milestones
-    echo -e "${BLUE}Fetching milestones...${NC}"
-    gh api repos/$REPO/milestones --paginate > /tmp/milestones.json
-    
-    # Check if milestones exist
-    milestone_count=$(jq length /tmp/milestones.json)
-    if [ "$milestone_count" -eq 0 ]; then
-        echo -e "${YELLOW}Warning: No milestones found!${NC}"
-        echo -e "${YELLOW}Run './scripts/create_github_milestones.sh' first to create milestones${NC}"
-        echo ""
-    fi
-    
     # Process issues
     local total=$(jq length $json_file)
     local created=0
     local skipped=0
+    local would_create=0
     
     echo -e "${YELLOW}Processing $total issues...${NC}"
+    
+    if ! $DRY_RUN; then
+        # Get all milestones for actual creation
+        echo -e "${BLUE}Fetching milestones...${NC}"
+        gh api repos/$REPO/milestones --paginate > /tmp/milestones.json
+        
+        # Check if milestones exist
+        milestone_count=$(jq length /tmp/milestones.json)
+        if [ "$milestone_count" -eq 0 ]; then
+            echo -e "${YELLOW}Warning: No milestones found!${NC}"
+            echo -e "${YELLOW}Run './scripts/create_github_milestones.sh' first to create milestones${NC}"
+            echo ""
+        fi
+    fi
     
     for i in $(seq 0 $((total - 1))); do
         phase=$(jq -r ".[$i].phase" $json_file)
@@ -229,11 +381,21 @@ create_issues_from_json() {
         body=$(jq -r ".[$i].body" $json_file)
         labels=$(jq -r ".[$i].labels | join(\",\")" $json_file)
         
+        if $DRY_RUN; then
+            echo -e "[$((i+1))/$total] ${BLUE}[DRY RUN]${NC} Would create: $title"
+            echo -e "  Labels: ${CYAN}$labels${NC}"
+            # Show first line of body as preview
+            preview=$(echo "$body" | head -1)
+            echo -e "  Preview: $preview"
+            ((would_create++))
+            continue
+        fi
+        
         # Check if issue exists
         existing=$(gh issue list --search "\"$title\" in:title" --json number --jq '.[0].number' 2>/dev/null)
         
         if [ ! -z "$existing" ]; then
-            echo -e "[$((i+1))/$total] Issue exists (#$existing): $title"
+            echo -e "[$((i+1))/$total] ${YELLOW}Issue exists (#$existing):${NC} $title"
             ((skipped++))
             continue
         fi
@@ -263,7 +425,7 @@ create_issues_from_json() {
             ((created++))
             echo -e "  ${GREEN}✓ Created: $result${NC}"
         else
-            echo -e "  ${RED}Failed: $result${NC}"
+            echo -e "  ${RED}✗ Failed: $result${NC}"
         fi
         
         # Rate limit protection
@@ -274,88 +436,96 @@ create_issues_from_json() {
     done
     
     echo ""
-    echo -e "${GREEN}Summary:${NC}"
-    echo -e "  Created: $created issues"
-    echo -e "  Skipped: $skipped issues (already exist)"
+    if $DRY_RUN; then
+        echo -e "${GREEN}Dry Run Summary:${NC}"
+        echo -e "  Would create: $would_create issues"
+        echo -e "${BLUE}To actually create these issues, run without --dry-run${NC}"
+    else
+        echo -e "${GREEN}Summary:${NC}"
+        echo -e "  Created: $created issues"
+        echo -e "  Skipped: $skipped issues (already exist)"
+        
+        # Cleanup
+        rm -f /tmp/milestones.json
+    fi
+}
+
+# Show phase summary
+show_phase_summary() {
+    echo -e "${BLUE}Phase Summary from $(basename "$PLAN_FILE"):${NC}"
+    echo ""
+    
+    # Count tasks per phase
+    local phase_counts=()
+    local total_tasks=0
+    
+    for phase in {1..20}; do  # Support up to 20 phases
+        local count=$(grep -c "^-[[:space:]]*\[[[:space:]]*\]" "$PLAN_FILE" | grep -E "Phase[[:space:]]+$phase:" | wc -l)
+        if [ $count -gt 0 ]; then
+            phase_counts[$phase]=$count
+            ((total_tasks += count))
+        fi
+    done
+    
+    # Display summary
+    for phase in "${!phase_counts[@]}"; do
+        printf "Phase %2d: %3d tasks\n" $phase ${phase_counts[$phase]}
+    done
+    echo ""
+    echo "Total: $total_tasks tasks from implementation plan"
+}
+
+# Main execution logic
+main() {
+    echo -e "${BLUE}Creating GitHub issues from implementation plan${NC}"
+    echo ""
+    
+    # Create labels first
+    if ! $DRY_RUN; then
+        create_all_labels
+    fi
+    
+    # Generate issues JSON
+    json_file=$(generate_issues_json)
+    
+    if [ ! -f "$json_file" ]; then
+        echo -e "${RED}Error: Failed to generate issues JSON${NC}"
+        exit 1
+    fi
+    
+    # Show summary first
+    local total_issues=$(jq length $json_file 2>/dev/null || echo "0")
+    echo ""
+    echo -e "${GREEN}Found $total_issues tasks to create as issues${NC}"
+    
+    if [ ! -z "$PHASE_FILTER" ]; then
+        echo -e "${YELLOW}Filtered to Phase $PHASE_FILTER only${NC}"
+    fi
+    
+    if $DRY_RUN; then
+        echo -e "${BLUE}Running in dry-run mode - no issues will be created${NC}"
+    fi
+    echo ""
+    
+    # Create issues
+    create_issues_from_json "$json_file" "$PHASE_FILTER"
     
     # Cleanup
-    rm -f /tmp/milestones.json
+    rm -f "$json_file"
 }
 
-# Main menu
-show_menu() {
-    echo "GitHub Issue Creation Options:"
-    echo ""
-    echo "  1) Create all 186 issues"
-    echo "  2) Create issues for specific phase"
-    echo "  3) Create project board only"
-    echo "  4) Generate issues preview (JSON)"
-    echo "  5) Show phase summary"
-    echo ""
-    read -p "Choose an option (1-5): " choice
-    
-    case $choice in
-        1)
-            create_all_labels
-            json_file=$(generate_issues_json)
-            create_issues_from_json $json_file
-            
-            read -p "Create project board and add issues? (y/n): " add_to_project
-            if [ "$add_to_project" = "y" ]; then
-                project_num=$(create_project_board)
-                echo "You can now add issues to the project board using the GitHub UI"
-            fi
-            ;;
-            
-        2)
-            read -p "Enter phase number (1-12): " phase
-            if [ $phase -lt 1 ] || [ $phase -gt 12 ]; then
-                echo -e "${RED}Invalid phase number${NC}"
-                exit 1
-            fi
-            
-            create_all_labels
-            json_file=$(generate_issues_json)
-            create_issues_from_json $json_file $phase
-            ;;
-            
-        3)
-            create_project_board
-            ;;
-            
-        4)
-            json_file=$(generate_issues_json)
-            echo ""
-            echo -e "${GREEN}Preview saved to: $json_file${NC}"
-            echo "First 3 issues:"
-            jq '.[0:3]' $json_file
-            ;;
-            
-        5)
-            echo -e "${BLUE}Phase Summary:${NC}"
-            echo ""
-            for i in {1..12}; do
-                count=$(grep -c "\[Phase $i\." /home/pcharbon/code/extensions/ash_reports/planning/implementation_tasks.md)
-                printf "Phase %2d: %3d tasks\n" $i $count
-            done
-            echo ""
-            echo "Total: 186 tasks"
-            ;;
-            
-        *)
-            echo -e "${RED}Invalid option${NC}"
-            exit 1
-            ;;
-    esac
-}
-
-# Run the menu
-show_menu
+# Run main execution
+main
 
 echo ""
-echo -e "${GREEN}Done!${NC}"
-echo ""
-echo "Useful links:"
-echo "  Issues: https://github.com/$REPO/issues"
-echo "  Milestones: https://github.com/$REPO/milestones"
-echo "  Projects: https://github.com/$OWNER/projects"
+if $DRY_RUN; then
+    echo -e "${GREEN}Dry run completed!${NC}"
+    echo -e "${BLUE}To actually create issues, run without --dry-run${NC}"
+else
+    echo -e "${GREEN}Issue creation completed!${NC}"
+    echo ""
+    echo "Useful links:"
+    echo "  Issues: https://github.com/$REPO/issues"
+    echo "  Milestones: https://github.com/$REPO/milestones"
+    echo "  Projects: https://github.com/$OWNER/projects"
+fi

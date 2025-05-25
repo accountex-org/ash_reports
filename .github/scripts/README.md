@@ -5,9 +5,9 @@ This directory contains scripts for managing GitHub issues, milestones, and proj
 ## Script Categories
 
 ### 📋 Project Setup Scripts
-- `create_github_milestones.sh` - Creates phase-based milestones
-- `create_github_issues.sh` - Creates issues from implementation tasks  
-- `create_github_issues_batch.sh` - Batch issue creation with advanced options
+- `create_github_milestones.sh` - Creates phase-based milestones from implementation plans (auto-detects plan file)
+- `create_github_issues.sh` - Creates issues from implementation tasks (redirects to batch script)
+- `create_github_issues_batch.sh` - Batch issue creation with advanced options (reads from implementation plans)
 
 ### 🔄 Status Update Scripts
 - `update_project_status.sh` - Updates project board based on implementation plan progress
@@ -25,11 +25,23 @@ This directory contains scripts for managing GitHub issues, milestones, and proj
 # 0. Test authentication and setup
 ./scripts/test_auth.sh
 
-# 1. Create milestones for all phases
+# 1. Create milestones for all phases (auto-detects plan)
 ./scripts/create_github_milestones.sh
 
-# 2. Create issues from implementation plan
+# Alternative: Preview milestones first
+./scripts/create_github_milestones.sh --dry-run
+
+# Alternative: Use specific implementation plan
+./scripts/create_github_milestones.sh planning/detailed_implementation_plan.md
+
+# 2. Create issues from implementation plan (auto-detects plan)
 ./scripts/create_github_issues_batch.sh
+
+# Alternative: Preview issues first
+./scripts/create_github_issues_batch.sh --dry-run
+
+# Alternative: Create only specific phase
+./scripts/create_github_issues_batch.sh --phase 1
 
 # 3. Set initial backlog status
 ./scripts/update_issues_backlog.sh
@@ -115,6 +127,27 @@ Use `test_auth.sh` to verify your setup:
 - ✅ Repository access
 - ✅ Permission levels
 - ✅ Existing project boards
+
+#### Enhanced Milestone Creation
+
+The `create_github_milestones.sh` script now includes:
+- **Auto-detection** of implementation plan files
+- **Support for multiple plans**: 
+  - `planning/implementation_plan.md` (11 phases)
+  - `planning/detailed_implementation_plan.md` (14 phases)
+- **Dry-run mode** to preview milestones before creation
+- **Dynamic parsing** of phase information from markdown files
+- **Help documentation** with usage examples
+
+#### Enhanced Issue Creation
+
+The `create_github_issues_batch.sh` script now includes:
+- **Auto-detection** of implementation plan files
+- **Dynamic parsing** of task items from markdown files
+- **Dry-run mode** to preview issues before creation
+- **Phase filtering** to create issues for specific phases only
+- **Smart labeling** with complexity and priority based on task content
+- **Milestone integration** automatically links issues to correct milestones
 
 ## Troubleshooting
 
