@@ -59,9 +59,19 @@ When working with this codebase, understand that it follows Spark DSL extension 
 
 1. **Entity Definitions** - Structured data (Report, Band, Column)
 2. **Section Definitions** - DSL sections (reports, reportable)  
-3. **Transformers** - Code generation at compile time
-4. **Verifiers ** - DSL validation at compile time
+3. **Transformers** - Code generation and structure manipulation at compile time
+4. **Verifiers** - DSL validation at compile time
 5. **Recursive Entities** - Bands can contain sub-bands with arbitrary nesting
+
+**IMPORTANT: Validation vs Transformation**
+- **Transformers** should ONLY be used for code generation, structure manipulation, and compile-time transformations
+- **Verifiers** should be used for ALL validation logic including:
+  - Checking for duplicate names
+  - Validating required fields
+  - Ensuring correct relationships between entities
+  - Type checking and constraint validation
+  - Any logic that validates the correctness of the DSL
+- Never put validation logic in Transformers - use Verifiers instead
 
 ### Elixir Guard Clauses and Compile-Time Constraints
 
