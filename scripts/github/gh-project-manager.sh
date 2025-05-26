@@ -21,7 +21,7 @@ NC='\033[0m' # No Color
 
 # Logging functions
 log() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    echo -e "${BLUE}[INFO]${NC} $1" >&2
 }
 
 error() {
@@ -29,16 +29,16 @@ error() {
 }
 
 success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    echo -e "${GREEN}[SUCCESS]${NC} $1" >&2
 }
 
 warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    echo -e "${YELLOW}[WARN]${NC} $1" >&2
 }
 
 debug() {
     if [[ "$VERBOSE" == "true" ]]; then
-        echo -e "${BLUE}[DEBUG]${NC} $1"
+        echo -e "${BLUE}[DEBUG]${NC} $1" >&2
     fi
 }
 
@@ -166,6 +166,29 @@ EOF
     debug "  Tasks: $(wc -l < "$output_dir/tasks.txt" 2>/dev/null || echo 0)"
 }
 
+# Ensure labels exist
+ensure_labels() {
+    local labels="$1"
+    
+    if [[ -z "$labels" ]]; then
+        return
+    fi
+    
+    # Get existing labels
+    local existing_labels=$(gh label list --repo "$REPO" --json name -q '.[].name' | tr '\n' ' ')
+    
+    # Check each label
+    IFS=',' read -ra LABEL_ARRAY <<< "$labels"
+    for label in "${LABEL_ARRAY[@]}"; do
+        label=$(echo "$label" | xargs)  # trim whitespace
+        if [[ ! " $existing_labels " =~ " $label " ]]; then
+            log "Creating label: $label"
+            # Create label with a default color
+            gh label create "$label" --repo "$REPO" --color "0366d6" --description "Auto-generated label" 2>/dev/null || true
+        fi
+    done
+}
+
 # Create or get milestone
 create_or_get_milestone() {
     local title="$1"
@@ -185,15 +208,30 @@ create_or_get_milestone() {
     
     if [[ -z "$milestone_num" ]]; then
         log "Creating milestone: $title"
-        milestone_num=$(gh api \
+        local create_output=$(gh api \
             --method POST \
             "/repos/$REPO/milestones" \
             --field title="$title" \
-            --field description="$description" \
-            --jq '.number')
+            --field description="$description" 2>&1)
+        
+        local create_status=$?
+        
+        if [[ $create_status -ne 0 ]]; then
+            error "Failed to create milestone: $create_output"
+            return 1
+        fi
+        
+        milestone_num=$(echo "$create_output" | jq -r '.number')
+        
+        if [[ -z "$milestone_num" || "$milestone_num" == "null" ]]; then
+            error "Failed to parse milestone number from: $create_output"
+            return 1
+        fi
     fi
     
-    echo "$milestone_num" > "$cache_file"
+    if [[ -n "$milestone_num" ]]; then
+        echo "$milestone_num" > "$cache_file"
+    fi
     echo "$milestone_num"
 }
 
@@ -220,9 +258,20 @@ create_or_get_issue() {
     
     if [[ -z "$issue_num" ]]; then
         log "Creating issue: $title"
-        local cmd="gh issue create --repo \"$REPO\" --title \"$title\" --body \"$body\""
+        
+        # Ensure labels exist
+        if [[ -n "$labels" ]]; then
+            ensure_labels "$labels"
+        fi
+        
+        # Write body to temp file to avoid shell escaping issues
+        local temp_body_file="/tmp/gh-issue-body-$$.txt"
+        echo "$body" > "$temp_body_file"
+        
+        local cmd="gh issue create --repo \"$REPO\" --title \"$title\" --body-file \"$temp_body_file\""
         
         if [[ -n "$milestone" ]]; then
+            debug "Adding milestone: $milestone"
             cmd="$cmd --milestone \"$milestone\""
         fi
         
@@ -230,10 +279,34 @@ create_or_get_issue() {
             cmd="$cmd --label \"$labels\""
         fi
         
-        issue_num=$(eval "$cmd" | grep -oE '[0-9]+$')
+        debug "Running: $cmd"
+        # Use printf to avoid issues with special characters
+        local create_output
+        create_output=$(eval "$cmd" 2>&1)
+        local create_status=$?
+        
+        if [[ $create_status -ne 0 ]]; then
+            error "Failed to create issue: $create_output"
+            rm -f "$temp_body_file"
+            return 1
+        fi
+        
+        # gh issue create returns a URL like https://github.com/owner/repo/issues/123
+        issue_num=$(echo "$create_output" | grep -oE 'issues/[0-9]+' | grep -oE '[0-9]+$')
+        
+        if [[ -z "$issue_num" ]]; then
+            error "Failed to parse issue number from: $create_output"
+            rm -f "$temp_body_file"
+            return 1
+        fi
+        
+        # Clean up temp file
+        rm -f "$temp_body_file"
     fi
     
-    echo "$issue_num" > "$cache_file"
+    if [[ -n "$issue_num" ]]; then
+        echo "$issue_num" > "$cache_file"
+    fi
     echo "$issue_num"
 }
 
@@ -285,6 +358,12 @@ create_from_plan() {
             fi
             
             local milestone_num=$(create_or_get_milestone "$milestone_title" "$milestone_desc")
+            
+            if [[ -z "$milestone_num" ]]; then
+                error "Failed to create/get milestone for Phase $phase_num"
+                continue
+            fi
+            
             debug "Milestone #$milestone_num created/found for Phase $phase_num"
             
             # Process sections (issues) for this phase
@@ -296,7 +375,12 @@ create_from_plan() {
                     local issue_labels="implementation,phase-$phase_num"
                     
                     local issue_num=$(create_or_get_issue "$issue_title" "$issue_body" \
-                        "$milestone_num" "$issue_labels")
+                        "$milestone_title" "$issue_labels")
+                    
+                    if [[ -z "$issue_num" ]]; then
+                        error "Failed to create/get issue for Section $phase_num.$section_num"
+                        continue
+                    fi
                     
                     debug "Issue #$issue_num created/found for Section $phase_num.$section_num"
                     
@@ -315,17 +399,30 @@ add_to_project() {
     local project_num="$1"
     local issue_num="$2"
     
+    # Validate inputs
+    if [[ -z "$project_num" ]]; then
+        error "Project number is required"
+        return 1
+    fi
+    
+    if [[ -z "$issue_num" ]]; then
+        error "Issue number is required"
+        return 1
+    fi
+    
     # Check if already in project
     local in_project=$(gh project item-list "$project_num" \
         --owner "${REPO%/*}" \
-        --format json | \
-        jq -r ".items[] | select(.content.number == $issue_num) | .id")
+        --format json 2>/dev/null | \
+        jq -r ".items[] | select(.content.number == $issue_num) | .id" 2>/dev/null)
     
     if [[ -z "$in_project" ]]; then
         debug "Adding issue #$issue_num to project"
         gh project item-add "$project_num" \
             --owner "${REPO%/*}" \
             --url "https://github.com/$REPO/issues/$issue_num"
+    else
+        debug "Issue #$issue_num already in project"
     fi
 }
 
