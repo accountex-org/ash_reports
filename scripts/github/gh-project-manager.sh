@@ -64,6 +64,7 @@ init_cache() {
     mkdir -p "$CACHE_DIR"
     mkdir -p "$CACHE_DIR/milestones"
     mkdir -p "$CACHE_DIR/issues"
+    mkdir -p "$CACHE_DIR/parsed"
 }
 
 # Get or create project

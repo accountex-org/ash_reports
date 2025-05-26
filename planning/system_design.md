@@ -1,4 +1,4 @@
-# Ash Reports System Design Document
+# AshReports System Design Document
 
 ## Executive Summary
 
@@ -12,7 +12,7 @@ This document outlines the design for an extensible reporting system built as ex
 ├─────────────────────────────────────────────────────────────┤
 │  MCP Server  │  Internal API  │  Report Designer Interface  │
 ├─────────────────────────────────────────────────────────────┤
-│                    Ash Reports Domain                        │
+│                    AshReports. Domain                        │
 │  ┌─────────────┐  ┌──────────────┐  ┌─────────────────┐   │
 │  │   Reports   │  │ Report Bands │  │ Report Variables│   │
 │  └─────────────┘  └──────────────┘  └─────────────────┘   │
@@ -33,12 +33,12 @@ This document outlines the design for an extensible reporting system built as ex
 
 ## Core Components
 
-### 1. Ash.Report Extension
+### 1. AshReports.Extension
 
 The main extension that defines reports within an Ash.Domain:
 
 ```elixir
-defmodule Ash.Report do
+defmodule AshReports.do
   @report_schema [
     name: [
       type: :atom,
@@ -64,15 +64,15 @@ defmodule Ash.Report do
       doc: "An Ash.Query to define the report scope"
     ],
     bands: [
-      type: {:list, {:spark, Ash.Report.Band}},
+      type: {:list, {:spark, AshReports.Band}},
       doc: "The hierarchical band structure"
     ],
     variables: [
-      type: {:list, {:spark, Ash.Report.Variable}},
+      type: {:list, {:spark, AshReports.Variable}},
       doc: "Report variables for calculations"
     ],
     groups: [
-      type: {:list, {:spark, Ash.Report.Group}},
+      type: {:list, {:spark, AshReports.Group}},
       doc: "Grouping definitions"
     ],
     permissions: [
@@ -80,7 +80,7 @@ defmodule Ash.Report do
       doc: "Required permissions to run this report"
     ],
     parameters: [
-      type: {:list, {:spark, Ash.Report.Parameter}},
+      type: {:list, {:spark, AshReports.Parameter}},
       doc: "Runtime parameters for the report"
     ]
   ]
@@ -88,9 +88,9 @@ defmodule Ash.Report do
   use Spark.Dsl.Extension,
     sections: @sections,
     transformers: [
-      Ash.Report.Transformers.ValidateBands,
-      Ash.Report.Transformers.BuildQuery,
-      Ash.Report.Transformers.ValidatePermissions
+      AshReports.Transformers.ValidateBands,
+      AshReports.Transformers.BuildQuery,
+      AshReports.Transformers.ValidatePermissions
     ]
 end
 ```
@@ -100,7 +100,7 @@ end
 Hierarchical band structure implementation:
 
 ```elixir
-defmodule Ash.Report.Band do
+defmodule AshReports.Band do
   @band_types [
     :title,
     :page_header,
@@ -141,7 +141,7 @@ defmodule Ash.Report.Band do
       doc: "Ash expression to evaluate on band exit"
     ],
     elements: [
-      type: {:list, {:spark, Ash.Report.Element}},
+      type: {:list, {:spark, AshReports.Element}},
       doc: "Report elements in this band"
     ],
     options: [
@@ -157,7 +157,7 @@ end
 Elements that can be placed within bands:
 
 ```elixir
-defmodule Ash.Report.Element do
+defmodule AshReports.Element do
   @element_types [:field, :label, :expression, :aggregate, :line, :box, :image]
 
   @element_schema [
@@ -223,7 +223,7 @@ end
 Variables for calculations and state management:
 
 ```elixir
-defmodule Ash.Report.Variable do
+defmodule AshReports.Variable do
   @reset_types [:detail, :group, :page, :report]
   
   @variable_schema [
@@ -1257,7 +1257,7 @@ end
 ```elixir
 defmodule MyApp.Reports do
   use Ash.Domain,
-    extensions: [Ash.Report]
+    extensions: [AshReports.
 
   reports do
     report :sales_summary do
@@ -1409,13 +1409,13 @@ end
 Abstract rendering interface with pluggable backends:
 
 ```elixir
-defmodule Ash.Report.Renderer do
-  @callback render(report :: Ash.Report.t(), data :: term(), opts :: keyword()) ::
+defmodule AshReports.Renderer do
+  @callback render(report :: AshReports.t(), data :: term(), opts :: keyword()) ::
               {:ok, binary()} | {:error, term()}
 
   defmacro __using__(_opts) do
     quote do
-      @behaviour Ash.Report.Renderer
+      @behaviour AshReports.Renderer
       
       def render(report, data, opts) do
         locale = Keyword.get(opts, :locale, "en")
@@ -1433,12 +1433,12 @@ end
 ### PDF Renderer Example
 
 ```elixir
-defmodule Ash.Report.Renderer.PDF do
-  use Ash.Report.Renderer
+defmodule AshReports.Renderer.PDF do
+  use AshReports.Renderer
   
   def do_render(report, data, opts) do
     # Use a library like ChromicPDF or wkhtmltopdf
-    html = Ash.Report.Renderer.HTML.render!(report, data, opts)
+    html = AshReports.Renderer.HTML.render!(report, data, opts)
     
     ChromicPDF.print_to_pdf(html,
       print_to_pdf: %{
@@ -1453,8 +1453,8 @@ end
 ### HEEX Renderer
 
 ```elixir
-defmodule Ash.Report.Renderer.HEEX do
-  use Ash.Report.Renderer
+defmodule AshReports.Renderer.HEEX do
+  use AshReports.Renderer
   use Phoenix.Component
   
   def do_render(report, data, opts) do
@@ -1466,7 +1466,7 @@ defmodule Ash.Report.Renderer.HEEX do
     }
     
     ~H"""
-    <div class="ash-report" data-report={@report.name}>
+    <div class="AshReports. data-report={@report.name}>
       <.render_band :for={band <- @bands} band={band} />
     </div>
     """
@@ -1474,7 +1474,7 @@ defmodule Ash.Report.Renderer.HEEX do
   
   defp render_band(assigns) do
     ~H"""
-    <div class={"ash-report-band ash-report-band-#{@band.type}"}>
+    <div class={"AshReports.band AshReports.band-#{@band.type}"}>
       <.render_element :for={element <- @band.elements} element={element} />
     </div>
     """
@@ -1496,7 +1496,7 @@ end
 GenServer for managing report execution:
 
 ```elixir
-defmodule Ash.Report.Server do
+defmodule AshReports.Server do
   use GenServer
   
   defmodule State do
@@ -1580,7 +1580,7 @@ end
 Model Context Protocol server for LLM access:
 
 ```elixir
-defmodule Ash.Report.MCPServer do
+defmodule AshReports.MCPServer do
   use GenServer
   
   @protocol_version "1.0.0"
@@ -1667,7 +1667,7 @@ defmodule Ash.Report.MCPServer do
   end
   
   defp run_report_for_mcp(report_name, params, state) do
-    case Ash.Report.Server.run_report(report_name, params, format: :json) do
+    case AshReports.Server.run_report(report_name, params, format: :json) do
       {:ok, result} ->
         %{
           content: [
@@ -1697,7 +1697,7 @@ end
 Integration with ex_cldr for formatting:
 
 ```elixir
-defmodule Ash.Report.Formatter do
+defmodule AshReports.Formatter do
   def format_value(value, format_spec, locale \\ "en") do
     Cldr.with_locale(locale, fn ->
       case format_spec do
@@ -1726,7 +1726,7 @@ end
 ### Permission System
 
 ```elixir
-defmodule Ash.Report.Authorization do
+defmodule AshReports.Authorization do
   def authorize_report(report, user, context \\ %{}) do
     required_permissions = report.permissions || []
     user_permissions = get_user_permissions(user)
@@ -1754,7 +1754,7 @@ end
 Reports respect Ash policies and filters:
 
 ```elixir
-defmodule Ash.Report.Transformers.ApplyPolicies do
+defmodule AshReports.Transformers.ApplyPolicies do
   use Spark.Dsl.Transformer
   
   def transform(dsl_state) do
@@ -1777,7 +1777,7 @@ end
 
 ```elixir
 # config/config.exs
-config :my_app, :ash_reports,
+config :my_app, :AshReports.,
   report_server: [
     reports_domain: MyApp.Reports,
     cache_ttl: :timer.minutes(15),
@@ -1789,10 +1789,10 @@ config :my_app, :ash_reports,
     require_authentication: true
   ],
   renderers: [
-    pdf: Ash.Report.Renderer.PDF,
-    html: Ash.Report.Renderer.HTML,
-    heex: Ash.Report.Renderer.HEEX,
-    json: Ash.Report.Renderer.JSON
+    pdf: AshReports.Renderer.PDF,
+    html: AshReports.Renderer.HTML,
+    heex: AshReports.Renderer.HEEX,
+    json: AshReports.Renderer.JSON
   ]
 ```
 
@@ -1805,9 +1805,9 @@ defmodule MyApp.Application do
   def start(_type, _args) do
     children = [
       # ... other children
-      {Ash.Report.Server, Application.get_env(:my_app, :ash_reports)[:report_server]},
-      {Ash.Report.MCPServer, Application.get_env(:my_app, :ash_reports)[:mcp_server]},
-      {Ash.Report.Cache, []}
+      {AshReports.Server, Application.get_env(:my_app, :AshReports.)[:report_server]},
+      {AshReports.MCPServer, Application.get_env(:my_app, :AshReports.)[:mcp_server]},
+      {AshReports.Cache, []}
     ]
     
     opts = [strategy: :one_for_one, name: MyApp.Supervisor]
@@ -1856,14 +1856,14 @@ end
 ### Renderer Testing
 
 ```elixir
-defmodule Ash.Report.Renderer.PDFTest do
+defmodule AshReports.Renderer.PDFTest do
   use ExUnit.Case
   
   test "renders PDF with correct formatting" do
     report = build_test_report()
     data = build_test_data()
     
-    {:ok, pdf_binary} = Ash.Report.Renderer.PDF.render(report, data, [])
+    {:ok, pdf_binary} = AshReports.Renderer.PDF.render(report, data, [])
     
     assert is_binary(pdf_binary)
     assert String.starts_with?(pdf_binary, "%PDF")
@@ -1882,7 +1882,7 @@ end
 ### Streaming for Large Reports
 
 ```elixir
-defmodule Ash.Report.Stream do
+defmodule AshReports.Stream do
   def stream_report(report, params, chunk_size \\ 1000) do
     Stream.resource(
       fn -> init_report_state(report, params) end,

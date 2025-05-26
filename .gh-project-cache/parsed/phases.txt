@@ -1,0 +1,6 @@
+PHASE|1|Core Foundation and DSL Framework|
+PHASE|2|Data Integration and Query System|
+PHASE|3|Rendering Engine and Output Formats|
+PHASE|4|Internationalization and Formatting|
+PHASE|5|Server Infrastructure|
+PHASE|6|Advanced Features and Polish|

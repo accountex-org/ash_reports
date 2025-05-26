@@ -1,4 +1,4 @@
-# Ash Reports Implementation Plan
+# AshReportss Implementation Plan
 
 ## Overview
 
@@ -12,30 +12,30 @@ This implementation plan is organized into 6 phases, with each phase building up
 ### 1.1 Spark DSL Foundation
 
 #### Implementation Tasks:
-- [ ] 1.1.1 Create `Ash.Report` extension module
+- [ ] 1.1.1 Create `AshReports` extension module
 - [ ] 1.1.2 Define core DSL schema for reports
 - [ ] 1.1.3 Implement basic section definitions
 - [ ] 1.1.4 Create DSL entity modules for Band, Element, Variable
 
 #### Code Structure:
 ```elixir
-# lib/ash/report.ex
-defmodule Ash.Report do
+# lib/AshReports.ex
+defmodule AshReports do
   use Spark.Dsl.Extension,
     sections: @sections,
     transformers: []
 end
 
-# lib/ash/report/dsl.ex
-defmodule Ash.Report.Dsl do
+# lib/AshReports/dsl.ex
+defmodule AshReports.Dsl do
   # Core DSL definitions
 end
 ```
 
 #### Testing:
 ```elixir
-# test/ash/report/dsl_test.exs
-defmodule Ash.Report.DslTest do
+# test/AshReports/dsl_test.exs
+defmodule AshReports.DslTest do
   use ExUnit.Case
 
   test "accepts valid report definition" do
@@ -45,7 +45,7 @@ defmodule Ash.Report.DslTest do
         title "Test Report"
         driving_resource TestResource
       end
-      """, Ash.Report)
+      """, AshReports)
   end
 
   test "rejects invalid report definition" do
@@ -54,7 +54,7 @@ defmodule Ash.Report.DslTest do
       report :test_report do
         # Missing required fields
       end
-      """, Ash.Report)
+      """, AshReports)
   end
 end
 ```
@@ -69,15 +69,15 @@ end
 
 #### Code Structure:
 ```elixir
-# lib/ash/report/band.ex
-defmodule Ash.Report.Band do
+# lib/AshReports/band.ex
+defmodule AshReports.Band do
   use Spark.Dsl.Entity
   
   defstruct [:type, :group_level, :detail_number, ...]
 end
 
-# lib/ash/report/transformers/validate_bands.ex
-defmodule Ash.Report.Transformers.ValidateBands do
+# lib/AshReports/transformers/validate_bands.ex
+defmodule AshReports.Transformers.ValidateBands do
   use Spark.Dsl.Transformer
   
   def transform(dsl_state) do
@@ -88,8 +88,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/band_test.exs
-defmodule Ash.Report.BandTest do
+# test/AshReports/band_test.exs
+defmodule AshReports.BandTest do
   use ExUnit.Case
 
   describe "band hierarchy validation" do
@@ -101,7 +101,7 @@ defmodule Ash.Report.BandTest do
         %Band{type: :summary}
       ]
       
-      assert :ok = Ash.Report.Band.validate_hierarchy(bands)
+      assert :ok = AshReports.Band.validate_hierarchy(bands)
     end
 
     test "rejects invalid band order" do
@@ -110,7 +110,7 @@ defmodule Ash.Report.BandTest do
         %Band{type: :title}
       ]
       
-      assert {:error, _} = Ash.Report.Band.validate_hierarchy(bands)
+      assert {:error, _} = AshReports.Band.validate_hierarchy(bands)
     end
   end
 end
@@ -126,8 +126,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/element_test.exs
-defmodule Ash.Report.ElementTest do
+# test/AshReports/element_test.exs
+defmodule AshReports.ElementTest do
   use ExUnit.Case
 
   test "creates field element with valid path" do
@@ -162,8 +162,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/registry_test.exs
-defmodule Ash.Report.RegistryTest do
+# test/AshReports/registry_test.exs
+defmodule AshReports.RegistryTest do
   use ExUnit.Case
 
   test "registers and retrieves reports" do
@@ -179,12 +179,12 @@ end
 
 ```elixir
 # test/integration/phase1_test.exs
-defmodule Ash.Report.Phase1IntegrationTest do
+defmodule AshReports.Phase1IntegrationTest do
   use ExUnit.Case
 
   defmodule TestDomain do
     use Ash.Domain,
-      extensions: [Ash.Report]
+      extensions: [AshReports]
 
     reports do
       report :basic_report do
@@ -235,8 +235,8 @@ end
 
 #### Code Structure:
 ```elixir
-# lib/ash/report/query_builder.ex
-defmodule Ash.Report.QueryBuilder do
+# lib/AshReports/query_builder.ex
+defmodule AshReports.QueryBuilder do
   def build_query(report, params) do
     report.driving_resource
     |> apply_scope(report.scope, params)
@@ -248,8 +248,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/query_builder_test.exs
-defmodule Ash.Report.QueryBuilderTest do
+# test/AshReports/query_builder_test.exs
+defmodule AshReports.QueryBuilderTest do
   use ExUnit.Case
 
   test "builds query with parameters" do
@@ -278,8 +278,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/variable_test.exs
-defmodule Ash.Report.VariableTest do
+# test/AshReports/variable_test.exs
+defmodule AshReports.VariableTest do
   use ExUnit.Case
 
   describe "variable calculations" do
@@ -327,8 +327,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/group_processor_test.exs
-defmodule Ash.Report.GroupProcessorTest do
+# test/AshReports/group_processor_test.exs
+defmodule AshReports.GroupProcessorTest do
   use ExUnit.Case
 
   test "detects group breaks" do
@@ -355,8 +355,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/data_loader_test.exs
-defmodule Ash.Report.DataLoaderTest do
+# test/AshReports/data_loader_test.exs
+defmodule AshReports.DataLoaderTest do
   use ExUnit.Case
 
   test "loads data with relationships" do
@@ -375,7 +375,7 @@ end
 
 ```elixir
 # test/integration/phase2_test.exs
-defmodule Ash.Report.Phase2IntegrationTest do
+defmodule AshReports.Phase2IntegrationTest do
   use ExUnit.Case
 
   setup do
@@ -401,7 +401,7 @@ defmodule Ash.Report.Phase2IntegrationTest do
     report = TestDomain.get_report!(:grouped_report)
     params = %{start_date: ~D[2024-01-01], end_date: ~D[2024-01-31]}
     
-    {:ok, result} = Ash.Report.Engine.process(report, params)
+    {:ok, result} = AshReports.Engine.process(report, params)
     
     assert result.groups["Electronics"] == %{
       records: 2,
@@ -428,14 +428,14 @@ end
 
 #### Code Structure:
 ```elixir
-# lib/ash/report/renderer.ex
-defmodule Ash.Report.Renderer do
+# lib/AshReports/renderer.ex
+defmodule AshReports.Renderer do
   @callback render(report :: Report.t(), data :: term(), opts :: keyword()) ::
               {:ok, binary()} | {:error, term()}
               
   defmacro __using__(_) do
     quote do
-      @behaviour Ash.Report.Renderer
+      @behaviour AshReports.Renderer
       
       def render(report, data, opts) do
         context = build_render_context(report, data, opts)
@@ -448,12 +448,12 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/renderer_test.exs
-defmodule Ash.Report.RendererTest do
+# test/AshReports/renderer_test.exs
+defmodule AshReports.RendererTest do
   use ExUnit.Case
 
   defmodule TestRenderer do
-    use Ash.Report.Renderer
+    use AshReports.Renderer
     
     def do_render(context) do
       {:ok, "test output"}
@@ -479,18 +479,18 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/renderer/html_test.exs
-defmodule Ash.Report.Renderer.HTMLTest do
+# test/AshReports/renderer/html_test.exs
+defmodule AshReports.Renderer.HTMLTest do
   use ExUnit.Case
 
   test "renders valid HTML structure" do
     report = build_simple_report()
     data = [%{name: "Test", value: 100}]
     
-    {:ok, html} = Ash.Report.Renderer.HTML.render(report, data, [])
+    {:ok, html} = AshReports.Renderer.HTML.render(report, data, [])
     
-    assert html =~ ~r/<div class="ash-report"/
-    assert html =~ ~r/<div class="ash-report-band-title"/
+    assert html =~ ~r/<div class="AshReports"/
+    assert html =~ ~r/<div class="AshReports-band-title"/
     assert html =~ "Test"
   end
 
@@ -501,7 +501,7 @@ defmodule Ash.Report.Renderer.HTMLTest do
       style: [color: "red", font_size: "14px"]
     }
     
-    html = Ash.Report.Renderer.HTML.render_element(element)
+    html = AshReports.Renderer.HTML.render_element(element)
     assert html =~ ~r/style="color: red; font-size: 14px"/
   end
 end
@@ -517,8 +517,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/renderer/heex_test.exs
-defmodule Ash.Report.Renderer.HEEXTest do
+# test/AshReports/renderer/heex_test.exs
+defmodule AshReports.Renderer.HEEXTest do
   use ExUnit.Case
   import Phoenix.LiveViewTest
 
@@ -526,12 +526,12 @@ defmodule Ash.Report.Renderer.HEEXTest do
     report = build_test_report()
     data = build_test_data()
     
-    html = render_component(&Ash.Report.Renderer.HEEX.report/1, 
+    html = render_component(&AshReports.Renderer.HEEX.report/1, 
       report: report,
       data: data
     )
     
-    assert html =~ "ash-report"
+    assert html =~ "AshReports"
     assert html =~ "Test Report"
   end
 end
@@ -547,15 +547,15 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/renderer/pdf_test.exs
-defmodule Ash.Report.Renderer.PDFTest do
+# test/AshReports/renderer/pdf_test.exs
+defmodule AshReports.Renderer.PDFTest do
   use ExUnit.Case
 
   test "generates valid PDF" do
     report = build_test_report()
     data = build_test_data()
     
-    {:ok, pdf_binary} = Ash.Report.Renderer.PDF.render(report, data, [])
+    {:ok, pdf_binary} = AshReports.Renderer.PDF.render(report, data, [])
     
     assert is_binary(pdf_binary)
     assert byte_size(pdf_binary) > 1000
@@ -566,7 +566,7 @@ defmodule Ash.Report.Renderer.PDFTest do
     report = build_report_with_many_records()
     data = build_large_dataset()
     
-    {:ok, pdf} = Ash.Report.Renderer.PDF.render(report, data, [])
+    {:ok, pdf} = AshReports.Renderer.PDF.render(report, data, [])
     
     # Verify page headers appear on each page
     assert count_occurrences(pdf, "Page Header") > 1
@@ -584,15 +584,15 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/renderer/json_test.exs
-defmodule Ash.Report.Renderer.JSONTest do
+# test/AshReports/renderer/json_test.exs
+defmodule AshReports.Renderer.JSONTest do
   use ExUnit.Case
 
   test "renders valid JSON structure" do
     report = build_test_report()
     data = build_test_data()
     
-    {:ok, json_string} = Ash.Report.Renderer.JSON.render(report, data, [])
+    {:ok, json_string} = AshReports.Renderer.JSON.render(report, data, [])
     {:ok, decoded} = Jason.decode(json_string)
     
     assert decoded["report"]["name"] == "test_report"
@@ -606,16 +606,16 @@ end
 
 ```elixir
 # test/integration/phase3_test.exs
-defmodule Ash.Report.Phase3IntegrationTest do
+defmodule AshReports.Phase3IntegrationTest do
   use ExUnit.Case
 
   test "renders same report in multiple formats" do
     report = create_test_report()
     data = create_test_data()
     
-    {:ok, html} = Ash.Report.render(report, data, format: :html)
-    {:ok, pdf} = Ash.Report.render(report, data, format: :pdf)
-    {:ok, json} = Ash.Report.render(report, data, format: :json)
+    {:ok, html} = AshReports.render(report, data, format: :html)
+    {:ok, pdf} = AshReports.render(report, data, format: :pdf)
+    {:ok, json} = AshReports.render(report, data, format: :json)
     
     assert is_binary(html) and String.contains?(html, "<html>")
     assert is_binary(pdf) and String.starts_with?(pdf, "%PDF")
@@ -626,8 +626,8 @@ defmodule Ash.Report.Phase3IntegrationTest do
     report = create_summary_report()
     data = create_financial_data()
     
-    {:ok, html} = Ash.Report.render(report, data, format: :html)
-    {:ok, json_string} = Ash.Report.render(report, data, format: :json)
+    {:ok, html} = AshReports.render(report, data, format: :html)
+    {:ok, json_string} = AshReports.render(report, data, format: :json)
     {:ok, json} = Jason.decode(json_string)
     
     # Extract total from HTML
@@ -654,8 +654,8 @@ end
 
 #### Code Structure:
 ```elixir
-# lib/ash/report/cldr.ex
-defmodule Ash.Report.Cldr do
+# lib/AshReports/cldr.ex
+defmodule AshReports.Cldr do
   use Cldr,
     locales: ["en", "es", "fr", "de", "ja"],
     default_locale: "en",
@@ -665,14 +665,14 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/cldr_test.exs
-defmodule Ash.Report.CldrTest do
+# test/AshReports/cldr_test.exs
+defmodule AshReports.CldrTest do
   use ExUnit.Case
 
   test "formats numbers for different locales" do
-    assert "1,234.56" = Ash.Report.Formatter.format_number(1234.56, locale: "en")
-    assert "1.234,56" = Ash.Report.Formatter.format_number(1234.56, locale: "de")
-    assert "1 234,56" = Ash.Report.Formatter.format_number(1234.56, locale: "fr")
+    assert "1,234.56" = AshReports.Formatter.format_number(1234.56, locale: "en")
+    assert "1.234,56" = AshReports.Formatter.format_number(1234.56, locale: "de")
+    assert "1 234,56" = AshReports.Formatter.format_number(1234.56, locale: "fr")
   end
 end
 ```
@@ -687,8 +687,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/format_spec_test.exs
-defmodule Ash.Report.FormatSpecTest do
+# test/AshReports/format_spec_test.exs
+defmodule AshReports.FormatSpecTest do
   use ExUnit.Case
 
   test "parses currency format" do
@@ -719,16 +719,16 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/locale_rendering_test.exs
-defmodule Ash.Report.LocaleRenderingTest do
+# test/AshReports/locale_rendering_test.exs
+defmodule AshReports.LocaleRenderingTest do
   use ExUnit.Case
 
   test "renders report in different locales" do
     report = build_financial_report()
     data = build_test_data()
     
-    {:ok, en_html} = Ash.Report.render(report, data, format: :html, locale: "en")
-    {:ok, de_html} = Ash.Report.render(report, data, format: :html, locale: "de")
+    {:ok, en_html} = AshReports.render(report, data, format: :html, locale: "en")
+    {:ok, de_html} = AshReports.render(report, data, format: :html, locale: "de")
     
     assert en_html =~ "$1,234.56"
     assert de_html =~ "1.234,56 $"
@@ -740,7 +740,7 @@ end
 
 ```elixir
 # test/integration/phase4_test.exs
-defmodule Ash.Report.Phase4IntegrationTest do
+defmodule AshReports.Phase4IntegrationTest do
   use ExUnit.Case
 
   test "complete internationalized report" do
@@ -750,7 +750,7 @@ defmodule Ash.Report.Phase4IntegrationTest do
     locales = ["en", "de", "fr", "ja"]
     
     results = for locale <- locales do
-      {:ok, html} = Ash.Report.render(report, data, 
+      {:ok, html} = AshReports.render(report, data, 
         format: :html, 
         locale: locale
       )
@@ -780,8 +780,8 @@ end
 
 #### Code Structure:
 ```elixir
-# lib/ash/report/server.ex
-defmodule Ash.Report.Server do
+# lib/AshReports/server.ex
+defmodule AshReports.Server do
   use GenServer
   
   def start_link(opts) do
@@ -794,30 +794,30 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/server_test.exs
-defmodule Ash.Report.ServerTest do
+# test/AshReports/server_test.exs
+defmodule AshReports.ServerTest do
   use ExUnit.Case
 
   setup do
-    {:ok, pid} = Ash.Report.Server.start_link(reports_domain: TestDomain)
+    {:ok, pid} = AshReports.Server.start_link(reports_domain: TestDomain)
     {:ok, server: pid}
   end
 
   test "runs report synchronously", %{server: _server} do
-    {:ok, result} = Ash.Report.Server.run_report(:test_report, %{})
+    {:ok, result} = AshReports.Server.run_report(:test_report, %{})
     
     assert result.report == :test_report
     assert result.content
   end
 
   test "runs report asynchronously" do
-    {:ok, job_id} = Ash.Report.Server.run_report_async(:test_report, %{})
+    {:ok, job_id} = AshReports.Server.run_report_async(:test_report, %{})
     
     assert is_binary(job_id)
     
     # Wait for completion
     assert eventually(fn ->
-      {:ok, :completed} == Ash.Report.Server.get_status(job_id)
+      {:ok, :completed} == AshReports.Server.get_status(job_id)
     end)
   end
 end
@@ -833,8 +833,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/cache_test.exs
-defmodule Ash.Report.CacheTest do
+# test/AshReports/cache_test.exs
+defmodule AshReports.CacheTest do
   use ExUnit.Case
 
   test "caches report results" do
@@ -871,17 +871,17 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/mcp_server_test.exs
-defmodule Ash.Report.MCPServerTest do
+# test/AshReports/mcp_server_test.exs
+defmodule AshReports.MCPServerTest do
   use ExUnit.Case
 
   setup do
-    {:ok, pid} = Ash.Report.MCPServer.start_link(
+    {:ok, pid} = AshReports.MCPServer.start_link(
       port: 0,  # Random port
       allowed_reports: [:test_report]
     )
     
-    {:ok, port} = Ash.Report.MCPServer.get_port(pid)
+    {:ok, port} = AshReports.MCPServer.get_port(pid)
     {:ok, server: pid, port: port}
   end
 
@@ -937,26 +937,26 @@ end
 
 ```elixir
 # test/integration/phase5_test.exs
-defmodule Ash.Report.Phase5IntegrationTest do
+defmodule AshReports.Phase5IntegrationTest do
   use ExUnit.Case
 
   test "end-to-end report generation through server" do
     # Start servers
-    {:ok, _} = start_supervised({Ash.Report.Server, reports_domain: TestDomain})
-    {:ok, _} = start_supervised({Ash.Report.MCPServer, 
+    {:ok, _} = start_supervised({AshReports.Server, reports_domain: TestDomain})
+    {:ok, _} = start_supervised({AshReports.MCPServer, 
       port: 5555,
       allowed_reports: [:sales_report]
     })
     
     # Generate report through server
-    {:ok, job_id} = Ash.Report.Server.run_report_async(:sales_report, %{
+    {:ok, job_id} = AshReports.Server.run_report_async(:sales_report, %{
       start_date: ~D[2024-01-01],
       end_date: ~D[2024-01-31]
     })
     
     # Poll for completion
     assert eventually(fn ->
-      case Ash.Report.Server.get_result(job_id) do
+      case AshReports.Server.get_result(job_id) do
         {:ok, result} -> 
           assert result.content
           true
@@ -968,7 +968,7 @@ defmodule Ash.Report.Phase5IntegrationTest do
 
   test "MCP server integration" do
     # Setup MCP server
-    {:ok, mcp} = start_supervised({Ash.Report.MCPServer, 
+    {:ok, mcp} = start_supervised({AshReports.MCPServer, 
       port: 5556,
       allowed_reports: [:test_report]
     })
@@ -1049,8 +1049,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/performance_test.exs
-defmodule Ash.Report.PerformanceTest do
+# test/AshReports/performance_test.exs
+defmodule AshReports.PerformanceTest do
   use ExUnit.Case
 
   @tag :performance
@@ -1061,7 +1061,7 @@ defmodule Ash.Report.PerformanceTest do
     report = create_test_report()
     
     {time, {:ok, _result}} = :timer.tc(fn ->
-      Ash.Report.run(report, %{}, streaming: true)
+      AshReports.run(report, %{}, streaming: true)
     end)
     
     # Should complete in under 5 seconds
@@ -1077,7 +1077,7 @@ defmodule Ash.Report.PerformanceTest do
     # Monitor memory usage
     before_memory = :erlang.memory(:total)
     
-    {:ok, stream} = Ash.Report.stream(report, %{}, chunk_size: 1000)
+    {:ok, stream} = AshReports.stream(report, %{}, chunk_size: 1000)
     
     # Process stream
     Enum.each(stream, fn _chunk ->
@@ -1099,8 +1099,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/security_test.exs
-defmodule Ash.Report.SecurityTest do
+# test/AshReports/security_test.exs
+defmodule AshReports.SecurityTest do
   use ExUnit.Case
 
   test "enforces report permissions" do
@@ -1110,17 +1110,17 @@ defmodule Ash.Report.SecurityTest do
     report = %Report{permissions: [:view_financial_reports]}
     
     assert {:error, :unauthorized} = 
-      Ash.Report.authorize(report, user_without_permission)
+      AshReports.authorize(report, user_without_permission)
       
     assert :ok = 
-      Ash.Report.authorize(report, user_with_permission)
+      AshReports.authorize(report, user_with_permission)
   end
 
   test "applies data masking" do
     report = create_report_with_sensitive_fields()
     data = create_sensitive_data()
     
-    {:ok, result} = Ash.Report.run(report, %{}, 
+    {:ok, result} = AshReports.run(report, %{}, 
       actor: %User{permissions: [:view_masked_data]}
     )
     
@@ -1140,8 +1140,8 @@ end
 
 #### Testing:
 ```elixir
-# test/ash/report/telemetry_test.exs
-defmodule Ash.Report.TelemetryTest do
+# test/AshReports/telemetry_test.exs
+defmodule AshReports.TelemetryTest do
   use ExUnit.Case
 
   test "emits telemetry events" do
@@ -1158,7 +1158,7 @@ defmodule Ash.Report.TelemetryTest do
       nil
     )
     
-    Ash.Report.run(:test_report, %{})
+    AshReports.run(:test_report, %{})
     
     assert_receive {:telemetry, [:ash, :report, :run, :stop], measurements, metadata}
     assert measurements.duration > 0
@@ -1171,7 +1171,7 @@ end
 
 ```elixir
 # test/integration/phase6_test.exs
-defmodule Ash.Report.Phase6IntegrationTest do
+defmodule AshReports.Phase6IntegrationTest do
   use ExUnit.Case
 
   test "complete production scenario" do
@@ -1191,7 +1191,7 @@ defmodule Ash.Report.Phase6IntegrationTest do
       locale: "de-DE"
     }
     
-    {:ok, result} = Ash.Report.Server.run_report(:comprehensive_report, 
+    {:ok, result} = AshReports.Server.run_report(:comprehensive_report, 
       %{customer_id: customer.id},
       actor: actor,
       format: :pdf,
@@ -1207,7 +1207,7 @@ defmodule Ash.Report.Phase6IntegrationTest do
     assert_receive {:telemetry, [:ash, :report, :run, :stop], _, _}
     
     # Verify caching
-    {:ok, cached} = Ash.Report.Server.run_report(:comprehensive_report,
+    {:ok, cached} = AshReports.Server.run_report(:comprehensive_report,
       %{customer_id: customer.id},
       actor: actor,
       format: :pdf,
@@ -1224,7 +1224,7 @@ defmodule Ash.Report.Phase6IntegrationTest do
     # Run 50 concurrent reports
     tasks = for i <- 1..50 do
       Task.async(fn ->
-        Ash.Report.Server.run_report(:stress_test_report, %{
+        AshReports.Server.run_report(:stress_test_report, %{
           iteration: i,
           date_range: random_date_range()
         })
@@ -1240,7 +1240,7 @@ defmodule Ash.Report.Phase6IntegrationTest do
     end)
     
     # Verify server is still responsive
-    assert {:ok, _} = Ash.Report.Server.run_report(:simple_report, %{})
+    assert {:ok, _} = AshReports.Server.run_report(:simple_report, %{})
   end
 end
 ```
@@ -1249,7 +1249,7 @@ end
 
 ```elixir
 # test/integration/system_test.exs
-defmodule Ash.Report.SystemTest do
+defmodule AshReports.SystemTest do
   use ExUnit.Case
 
   @moduledoc """
@@ -1258,12 +1258,12 @@ defmodule Ash.Report.SystemTest do
 
   setup_all do
     # Start all services
-    start_supervised!({Ash.Report.Server, 
+    start_supervised!({AshReports.Server, 
       reports_domain: TestApp.Reports,
       cache_ttl: :timer.minutes(5)
     })
     
-    start_supervised!({Ash.Report.MCPServer,
+    start_supervised!({AshReports.MCPServer,
       port: 5557,
       allowed_reports: [:customer_summary, :financial_report],
       require_authentication: true
@@ -1296,7 +1296,7 @@ defmodule Ash.Report.SystemTest do
     formats = [:pdf, :html, :json, :heex]
     
     results = for format <- formats do
-      {:ok, result} = Ash.Report.Server.run_report(:customer_summary,
+      {:ok, result} = AshReports.Server.run_report(:customer_summary,
         params,
         actor: actor,
         format: format,
@@ -1317,11 +1317,11 @@ defmodule Ash.Report.SystemTest do
     
     # 6. Verify caching works
     {time1, {:ok, _}} = :timer.tc(fn ->
-      Ash.Report.Server.run_report(:customer_summary, params, actor: actor)
+      AshReports.Server.run_report(:customer_summary, params, actor: actor)
     end)
     
     {time2, {:ok, result}} = :timer.tc(fn ->
-      Ash.Report.Server.run_report(:customer_summary, params, actor: actor)
+      AshReports.Server.run_report(:customer_summary, params, actor: actor)
     end)
     
     assert result.metadata.cache_hit == true
@@ -1330,7 +1330,7 @@ defmodule Ash.Report.SystemTest do
     # 7. Test streaming for large dataset
     large_params = Map.put(params, :customer_type, "all")
     
-    {:ok, stream} = Ash.Report.stream(:customer_summary, large_params,
+    {:ok, stream} = AshReports.stream(:customer_summary, large_params,
       actor: actor,
       chunk_size: 100
     )
