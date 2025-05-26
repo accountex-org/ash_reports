@@ -1,661 +1,1388 @@
-# AshReports Detailed Implementation Plan
-
-This document outlines a comprehensive phased implementation plan for the AshReports extension, incorporating both the system design architecture and the hierarchical band structure requirements. Each phase includes mandatory unit and integration testing.
-
-## Phase 1: Foundation & Core DSL Infrastructure
-
-### 1.1 Project Setup and Dependencies
-- [x] Update `mix.exs` with required dependencies (Spark, Ash, ChromicPDF)
-- [x] Configure application structure in `config/config.exs`
-- [x] Set up basic directory structure under `lib/ash_reports/`
-- [x] Create comprehensive unit tests for project setup
-
-### 1.2 Core DSL Entity Structures
-- [x] Implement `AshReports.Dsl.Report` struct with all metadata fields
-- [x] Implement `AshReports.Dsl.Band` struct supporting all 9 band types from report design
-- [x] Implement `AshReports.Dsl.Column` struct with formatting and alignment options
-- [x] Add band type enumeration: `:title`, `:page_header`, `:column_header`, `:group_header`, `:detail`, `:group_footer`, `:column_footer`, `:page_footer`, `:summary`
-- [x] Create comprehensive unit tests for all entity structures
-
-### 1.3 CLDR Integration for Internationalization
-- [x] Add `ex_cldr` and related dependencies to mix.exs
-- [x] Configure CLDR backend module with number, datetime, and currency support
-- [x] Create `AshReports.Cldr` backend with locale configuration
-- [x] Implement locale-aware formatting functions for dates, times, numbers, and currencies
-- [x] Add locale parameter support to report definitions
-- [x] Create comprehensive unit tests for CLDR formatting
-
-### 1.4 Spark DSL Entity Definitions
-- [ ] Create `@column` entity definition with full schema validation
-- [ ] Create `@band` entity definition with recursive support for nested bands
-- [ ] Create `@report` entity definition with complete metadata schema
-- [ ] Add band-specific validation rules (e.g., title/summary bands appear once)
-- [ ] Integrate CLDR formatting options into column definitions
-- [ ] Create comprehensive unit tests for entity definitions
-
-### 1.5 Basic Extension Modules
-- [ ] Create `AshReports.Domain` extension skeleton with sections
-- [ ] Create `AshReports.Resource` extension skeleton with reportable section
-- [ ] Implement basic section definitions without transformers
-- [ ] Create comprehensive unit tests for extension modules
-
-### 1.6 Integration Testing (Phase 1)
-- [ ] Test domain extension can be loaded by Ash.Domain without errors
-- [ ] Test resource extension can be loaded by Ash.Resource without errors
-- [ ] Test basic DSL syntax parsing with empty sections
-- [ ] Test extension registration with Spark framework
-- [ ] Test entity validation with valid and invalid inputs
-- [ ] Test CLDR formatting integration with various locales
-
-**Phase 1 Exit Criteria:** All extensions load without errors. Basic DSL syntax is recognized. Entity structures support the full hierarchical band model. CLDR integration provides robust internationalization support. All unit and integration tests pass.
-
----
-
-## Phase 2: Complete DSL Implementation & Validation
-
-### 2.1 Advanced Band Structure Implementation
-- [ ] Implement hierarchical band nesting logic with proper parent-child relationships
-- [ ] Add support for multiple detail bands with target alias expressions
-- [ ] Implement group band ordering and validation (up to 74 levels)
-- [ ] Add band configuration options (page breaks, column breaks, reprinting)
-- [ ] Create comprehensive unit tests for band structure logic
-
-### 2.2 Band Expression System
-- [ ] Implement on-entry and on-exit expression support for bands
-- [ ] Add expression validation and compilation
-- [ ] Support for band-specific variable scoping and reset options
-- [ ] Implement target alias expressions for detail bands
-- [ ] Create comprehensive unit tests for expression system
-
-### 2.3 Section Schema Implementation
-- [ ] Complete `@reports_section` implementation with full validation schema
-- [ ] Complete `@reportable_section` implementation with resource-specific options
-- [ ] Add domain-wide configuration options (default formats, storage paths, default locale)
-- [ ] Add locale configuration support at report, band, and column levels
-- [ ] Implement cross-section validation rules
-- [ ] Create comprehensive unit tests for section schemas
-
-### 2.4 Advanced Validation Logic
-- [ ] Validate report names are unique within domain
-- [ ] Validate band hierarchy rules (title/summary once, proper nesting)
-- [ ] Validate column field references against resource attributes
-- [ ] Validate format specifications and compatibility
-- [ ] Implement circular dependency detection in band relationships
-- [ ] Create comprehensive unit tests for validation logic
-
-### 2.5 Integration Testing (Phase 2)
-- [ ] Test complete report definition parsing with complex nested structures
-- [ ] Test validation error reporting with clear error messages
-- [ ] Test DSL compilation with various report configurations
-- [ ] Test cross-entity validation scenarios
-- [ ] Test hierarchical band structure with all 9 band types
-
-**Phase 2 Exit Criteria:** Complete DSL supports all band types and configurations. Complex nested reports can be defined. Validation provides clear error messages. All unit and integration tests pass.
-
----
-
-## Phase 3: Transformer Infrastructure & Report Registration
-
-### 3.1 Base Transformer Framework
-- [ ] Create `AshReports.Transformers.Base` module with common utilities
-- [ ] Implement transformer error handling with detailed error context
-- [ ] Add transformer debugging utilities and logging
-- [ ] Create transformer ordering system for dependencies
-- [ ] Create comprehensive unit tests for transformer framework
-
-### 3.2 Report Registration Transformer
-- [ ] Implement `AshReports.Transformers.RegisterReports`
-- [ ] Register reports in domain compile-time state with full metadata
-- [ ] Create report lookup utilities by name and type
-- [ ] Implement report dependency tracking and validation
-- [ ] Create comprehensive unit tests for report registration
-
-### 3.3 Band Structure Validation Transformer
-- [ ] Implement `AshReports.Transformers.ValidateBandHierarchy`
-- [ ] Validate proper band ordering and nesting rules
-- [ ] Check for required bands and proper grouping structure
-- [ ] Validate detail band target alias expressions
-- [ ] Create comprehensive unit tests for band validation
-
-### 3.4 Data Binding Infrastructure
-- [ ] Create `AshReports.DataBinder` module for band-data association
-- [ ] Implement parameter interpolation system
-- [ ] Add data validation logic for band expressions
-- [ ] Support for multiple detail band data sources
-- [ ] Create comprehensive unit tests for data binding
-
-### 3.5 Integration Testing (Phase 3)
-- [ ] Test complete transformer pipeline execution with complex reports
-- [ ] Test report registration across multiple domains
-- [ ] Test band hierarchy validation with nested structures
-- [ ] Test data binding with various band configurations
-- [ ] Test transformer error handling and recovery
-
-**Phase 3 Exit Criteria:** Transformers successfully process DSL definitions into validated runtime state. Band hierarchy is properly validated. Data binding supports complex structures. All unit and integration tests pass.
-
----
-
-## Phase 4: Query Generation & Data Processing
-
-### 4.1 Base Query Generator
-- [ ] Implement `AshReports.QueryGenerator` module with Ash query building
-- [ ] Add base query construction from report definitions
-- [ ] Implement filter application from report parameters
-- [ ] Add sorting and pagination support
-- [ ] Create comprehensive unit tests for query generation
-
-### 4.2 Relationship and Aggregation Support
-- [ ] Implement relationship loading based on band structure
-- [ ] Add aggregation logic for group bands (count, sum, avg, etc.)
-- [ ] Support for calculated fields and expressions
-- [ ] Implement join logic for multiple detail bands
-- [ ] Create comprehensive unit tests for relationships and aggregations
-
-### 4.3 Band-Specific Query Generation
-- [ ] Implement `build_band_query/3` for individual band data fetching
-- [ ] Add group band query generation with proper grouping
-- [ ] Support for detail band target alias resolution
-- [ ] Implement query optimization for nested band structures
-- [ ] Create comprehensive unit tests for band queries
-
-### 4.4 Data Processing Pipeline
-- [ ] Create `AshReports.DataProcessor` for processing query results
-- [ ] Implement band data extraction and organization
-- [ ] Add data transformation for band expressions
-- [ ] Support for variable calculations and scoping
-- [ ] Create comprehensive unit tests for data processing
-
-### 4.5 Integration Testing (Phase 4)
-- [ ] Test complete query generation pipeline with complex reports
-- [ ] Test data processing with nested band structures
-- [ ] Test relationship loading with multiple detail bands
-- [ ] Test aggregation calculations across group levels
-- [ ] Test query optimization and performance
-
-**Phase 4 Exit Criteria:** Queries can be generated from any report definition. Data processing supports the full band hierarchy. Relationships and aggregations work correctly. All unit and integration tests pass.
-
----
-
-## Phase 5: Module Generation & Report Runtime
-
-### 5.1 Report Module Generation Transformer
-- [ ] Implement `AshReports.Transformers.GenerateReportModules`
-- [ ] Create base report module generation with metadata
-- [ ] Add format-specific module generation (HTML, PDF, HEEX)
-- [ ] Implement module compilation and evaluation at runtime
-- [ ] Create comprehensive unit tests for module generation
-
-### 5.2 Base Report Module Template
-- [ ] Create report module template with standard interface
-- [ ] Implement `generate/2` function with parameter handling
-- [ ] Add `get_data/1` function with query integration
-- [ ] Implement report metadata access functions
-- [ ] Create comprehensive unit tests for base module functionality
-
-### 5.3 Format-Specific Module Templates
-- [ ] Create HTML format module template with band rendering
-- [ ] Create PDF format module template with ChromicPDF integration
-- [ ] Create HEEX format module template with Phoenix LiveView support
-- [ ] Add format selection and validation logic
-- [ ] Create comprehensive unit tests for format modules
-
-### 5.4 Runtime Module Integration
-- [ ] Implement module loading and caching system
-- [ ] Add module recompilation on DSL changes
-- [ ] Create module introspection utilities
-- [ ] Support for hot code reloading in development
-- [ ] Create comprehensive unit tests for runtime integration
-
-### 5.5 Integration Testing (Phase 5)
-- [ ] Test complete module generation pipeline with all formats
-- [ ] Test generated modules can be called with various parameters
-- [ ] Test module recompilation on DSL changes
-- [ ] Test format modules work independently and together
-- [ ] Test runtime module integration with Ash domains
-
-**Phase 5 Exit Criteria:** Report modules are successfully generated for all formats. Modules can be called at runtime with proper parameter handling. Module recompilation works correctly. All unit and integration tests pass.
-
----
-
-## Phase 6: Band Processing Engine Implementation
-
-### 6.1 Core Band Processor
-- [ ] Implement `AshReports.Dsl.BandProcessor` with recursive processing logic
-- [ ] Create band processing order management (title → page header → groups → detail → summary)
-- [ ] Add band-specific rendering dispatch system
-- [ ] Implement band expression evaluation (on-entry/on-exit)
-- [ ] Create comprehensive unit tests for band processor
-
-### 6.2 Hierarchical Band Navigation
-- [ ] Implement band hierarchy traversal with proper nesting
-- [ ] Add support for group band processing with data grouping
-- [ ] Create detail band processing with multiple target aliases
-- [ ] Implement band variable scoping and reset logic
-- [ ] Create comprehensive unit tests for band navigation
-
-### 6.3 Group Processing Engine
-- [ ] Implement group break detection and processing
-- [ ] Add group header/footer generation with proper nesting
-- [ ] Support for group aggregations (count, sum, avg, min, max)
-- [ ] Implement group restart options (page breaks, column breaks)
-- [ ] Create comprehensive unit tests for group processing
-
-### 6.4 Multi-Detail Band Support
-- [ ] Implement multiple detail band processing with target aliases
-- [ ] Add master-detail relationship handling
-- [ ] Support for child table processing per detail band
-- [ ] Implement detail band configuration options
-- [ ] Create comprehensive unit tests for multi-detail processing
-
-### 6.5 Integration Testing (Phase 6)
-- [ ] Test complete band processing with all 9 band types
-- [ ] Test hierarchical band structure with complex nesting
-- [ ] Test group processing with multiple levels and aggregations
-- [ ] Test multi-detail band processing with related data
-- [ ] Test band expression evaluation and variable scoping
-
-**Phase 6 Exit Criteria:** Band processing engine handles the complete hierarchical structure. Group processing works with multiple levels. Multi-detail bands process correctly. All unit and integration tests pass.
-
----
-
-## Phase 7: HTML Renderer Implementation
-
-### 7.1 HTML Renderer Core
-- [ ] Implement `AshReports.Renderers.Html` with complete document generation
-- [ ] Create main `render/3` function with band integration
-- [ ] Add HTML document structure generation with proper DOCTYPE
-- [ ] Implement CSS styling integration with customizable themes
-- [ ] Create comprehensive unit tests for HTML renderer core
-
-### 7.2 Band-Specific HTML Rendering
-- [ ] Implement HTML rendering for all 9 band types
-- [ ] Add title band rendering with report header styling
-- [ ] Create page header/footer rendering with pagination support
-- [ ] Implement group header/footer rendering with nesting styles
-- [ ] Add detail band rendering with data table generation
-- [ ] Create comprehensive unit tests for band rendering
-
-### 7.3 Table and Column Rendering
-- [ ] Implement HTML table generation for detail bands
-- [ ] Create column header generation with sorting indicators
-- [ ] Add data cell rendering with proper formatting
-- [ ] Implement column alignment and width management
-- [ ] Support for column spanning in group headers
-- [ ] Create comprehensive unit tests for table rendering
-
-### 7.4 Data Formatting and Styling
-- [ ] Implement CLDR-based value formatting functions (currency, percentage, date, number)
-- [ ] Add locale-aware formatting with proper cultural conventions
-- [ ] Add custom formatting function support
-- [ ] Create CSS class generation for styling hooks
-- [ ] Implement responsive design support
-- [ ] Add print-friendly CSS options
-- [ ] Support RTL (right-to-left) text direction for appropriate locales
-- [ ] Create comprehensive unit tests for formatting and styling
-
-### 7.5 Integration Testing (Phase 7)
-- [ ] Test complete HTML report generation with all band types
-- [ ] Test complex nested band structures in HTML output
-- [ ] Test data formatting with various data types
-- [ ] Test HTML output validation (valid HTML5)
-- [ ] Test responsive design and print formatting
-
-**Phase 7 Exit Criteria:** HTML reports can be generated from any valid report definition. Output is valid HTML5 with proper styling. All band types render correctly. All unit and integration tests pass.
-
----
-
-## Phase 8: PDF & HEEX Renderers
-
-### 8.1 PDF Renderer Implementation
-- [ ] Implement `AshReports.Renderers.Pdf` with ChromicPDF integration
-- [ ] Create HTML-to-PDF conversion pipeline with optimization
-- [ ] Add PDF-specific styling for print layout
-- [ ] Implement PDF output options (page size, margins, orientation)
-- [ ] Support for page breaks and headers/footers
-- [ ] Create comprehensive unit tests for PDF renderer
-
-### 8.2 HEEX Renderer Implementation
-- [ ] Implement `AshReports.Renderers.Heex` with template generation
-- [ ] Create HEEX template generation for interactive reports
-- [ ] Add Phoenix LiveView integration for real-time updates
-- [ ] Implement component-based rendering for reusability
-- [ ] Support for interactive elements and forms
-- [ ] Create comprehensive unit tests for HEEX renderer
-
-### 8.3 Format Pipeline and Conversion
-- [ ] Create format conversion utilities and optimization
-- [ ] Add format-specific rendering optimizations
-- [ ] Implement format validation and compatibility checking
-- [ ] Add format-specific error handling and recovery
-- [ ] Support for format-specific configuration options
-- [ ] Create comprehensive unit tests for format pipeline
-
-### 8.4 Advanced PDF Features
-- [ ] Add page break handling for large reports
-- [ ] Implement print-friendly CSS generation
-- [ ] Support for PDF bookmarks and navigation
-- [ ] Add watermark and security options
-- [ ] Implement PDF metadata generation
-- [ ] Create comprehensive unit tests for advanced PDF features
-
-### 8.5 Integration Testing (Phase 8)
-- [ ] Test complete PDF report generation with all band types
-- [ ] Test complete HEEX report generation with LiveView integration
-- [ ] Test format switching for the same report definition
-- [ ] Test PDF output quality and print formatting
-- [ ] Test HEEX interactivity and real-time updates
-
-**Phase 8 Exit Criteria:** PDF and HEEX formats work correctly with all features. Format conversion pipeline is robust. All three formats can be generated from the same report definition. All unit and integration tests pass.
-
----
-
-## Phase 9: Resource Actions & Domain Integration
-
-### 9.1 Resource Action Transformer
-- [ ] Implement `AshReports.Transformers.AddReportActions`
-- [ ] Add report generation actions to resources automatically
-- [ ] Create action parameter handling with validation
-- [ ] Implement action authorization and security
-- [ ] Support for custom action configurations
-- [ ] Create comprehensive unit tests for action transformer
-
-### 9.2 Domain-Level Report Management
-- [ ] Add domain-level report registry with full metadata
-- [ ] Implement report discovery utilities and introspection
-- [ ] Create domain report management functions (list, get, validate)
-- [ ] Add cross-resource report support and validation
-- [ ] Implement report caching and performance optimization
-- [ ] Create comprehensive unit tests for domain management
-
-### 9.3 Runtime Execution Pipeline
-- [ ] Implement complete report execution pipeline with error handling
-- [ ] Add parameter validation and type conversion
-- [ ] Create comprehensive error handling and user-friendly messages
-- [ ] Implement result caching with invalidation strategies
-- [ ] Support for async report generation
-- [ ] Create comprehensive unit tests for execution pipeline
-
-### 9.4 API Integration Layer
-- [ ] Add report endpoints to resources with RESTful interface
-- [ ] Implement report parameter parsing from HTTP requests
-- [ ] Create report result serialization for JSON responses
-- [ ] Add format content-type handling (HTML, PDF downloads)
-- [ ] Support for streaming large reports
-- [ ] Create comprehensive unit tests for API integration
-
-### 9.5 Integration Testing (Phase 9)
-- [ ] Test resource actions in complete Ash application context
-- [ ] Test domain-level report management across multiple domains
-- [ ] Test cross-resource report execution with complex relationships
-- [ ] Test API endpoint functionality with various formats
-- [ ] Test authorization and security across all access methods
-
-**Phase 9 Exit Criteria:** Reports can be executed through resource actions and API endpoints. Domain-level management is fully functional. Security and authorization work correctly. All unit and integration tests pass.
-
----
-
-## Phase 10: Internal Report Server
-
-### 10.1 Report Server Core
-- [ ] Implement `AshReports.Server` GenServer with state management
-- [ ] Create server startup and configuration system
-- [ ] Add graceful shutdown handling with cleanup
-- [ ] Implement server monitoring and health checks
-- [ ] Support for server clustering and distribution
-- [ ] Create comprehensive unit tests for server core
-
-### 10.2 Job Queue System
-- [ ] Implement `AshReports.Queue` with priority-based processing
-- [ ] Create job queuing for async report generation
-- [ ] Add job retry logic with exponential backoff
-- [ ] Implement job status tracking and monitoring
-- [ ] Support for job cancellation and cleanup
-- [ ] Create comprehensive unit tests for queue system
-
-### 10.3 Worker Pool Management
-- [ ] Implement `AshReports.WorkerPool` with configurable sizing
-- [ ] Create worker health monitoring and replacement
-- [ ] Add load balancing across available workers
-- [ ] Implement worker task distribution and coordination
-- [ ] Support for worker specialization by report type
-- [ ] Create comprehensive unit tests for worker pool
-
-### 10.4 Server-Side Caching
-- [ ] Create `AshReports.Cache` with multiple storage backends
-- [ ] Implement report result caching with TTL
-- [ ] Add cache invalidation strategies (time-based, dependency-based)
-- [ ] Support for distributed caching with ETS/Mnesia
-- [ ] Implement cache warming and precomputation
-- [ ] Create comprehensive unit tests for caching system
-
-### 10.5 Integration Testing (Phase 10)
-- [ ] Test complete server workflow with concurrent requests
-- [ ] Test job queue processing under load
-- [ ] Test worker pool scaling and fault tolerance
-- [ ] Test distributed caching across multiple nodes
-- [ ] Test server restart and state recovery
-
-**Phase 10 Exit Criteria:** Report server handles concurrent requests efficiently. Queue system processes jobs reliably. Worker pool scales appropriately. Caching improves performance. All unit and integration tests pass.
-
----
-
-## Phase 11: MCP Server Integration
-
-### 11.1 MCP Server Core
-- [ ] Implement `AshReports.McpServer` with protocol compliance
-- [ ] Create MCP server initialization and capability registration
-- [ ] Add MCP protocol message handling (JSON-RPC 2.0)
-- [ ] Implement server lifecycle management
-- [ ] Support for multiple concurrent MCP clients
-- [ ] Create comprehensive unit tests for MCP server core
-
-### 11.2 MCP Tools Implementation
-- [ ] Create `list_reports` tool for report discovery across domains
-- [ ] Implement `generate_report` tool for synchronous report execution
-- [ ] Add `get_report_schema` tool for report structure inspection
-- [ ] Create `get_report_status` tool for async generation monitoring
-- [ ] Implement `validate_report_params` tool for parameter validation
-- [ ] Create comprehensive unit tests for MCP tools
-
-### 11.3 MCP Resource Management
-- [ ] Implement report result resource exposure with proper URIs
-- [ ] Add report template resource access for inspection
-- [ ] Create report history and audit trail resources
-- [ ] Support for report asset management (images, CSS, attachments)
-- [ ] Implement resource metadata and versioning
-- [ ] Create comprehensive unit tests for resource management
-
-### 11.4 Authentication & Security
-- [ ] Implement MCP authentication mechanisms (token-based, certificate)
-- [ ] Add report access authorization with role-based permissions
-- [ ] Create secure parameter handling with input sanitization
-- [ ] Implement audit logging for all MCP operations
-- [ ] Support for rate limiting and abuse prevention
-- [ ] Create comprehensive unit tests for security features
-
-### 11.5 Integration Testing (Phase 11)
-- [ ] Test complete MCP client-server workflow with multiple clients
-- [ ] Test report generation through MCP protocol with all formats
-- [ ] Test resource management and retrieval operations
-- [ ] Test authentication across different client types
-- [ ] Test MCP server integration with internal report server
-
-**Phase 11 Exit Criteria:** MCP server responds correctly to all protocol messages. Report tools work through MCP interface. Authentication and security are properly implemented. Multiple clients can access reports concurrently. All unit and integration tests pass.
-
----
-
-## Phase 12: Advanced Features & Optimization
-
-### 12.1 Performance Optimization
-- [ ] Implement comprehensive report result caching with intelligent invalidation
-- [ ] Add query optimization for complex band structures
-- [ ] Create memory usage optimization for large datasets
-- [ ] Implement streaming for reports with large result sets
-- [ ] Add database connection pooling and optimization
-- [ ] Create comprehensive unit tests for performance features
-
-### 12.2 Advanced Report Features
-- [ ] Add conditional band rendering based on data content
-- [ ] Implement calculated fields with complex expressions
-- [ ] Create report parameters with defaults and validation
-- [ ] Add report composition (sub-reports and includes)
-- [ ] Support for dynamic band configuration at runtime
-- [ ] Create comprehensive unit tests for advanced features
-
-### 12.3 Debugging & Development Tools
-- [ ] Create report DSL validation tools with detailed diagnostics
-- [ ] Add report generation debugging with step-by-step tracing
-- [ ] Implement performance profiling for report execution
-- [ ] Create report testing utilities for automated validation
-- [ ] Add visual report designer integration hooks
-- [ ] Create comprehensive unit tests for debugging tools
-
-### 12.4 Export & Import System
-- [ ] Add CSV export functionality with configurable formatting
-- [ ] Implement Excel export with multiple sheets and formatting
-- [ ] Create XML export for data interchange
-- [ ] Add report definition export/import for sharing
-- [ ] Support for batch report generation and distribution
-- [ ] Create comprehensive unit tests for export/import features
-
-### 12.5 Integration Testing (Phase 12)
-- [ ] Test performance optimizations with large datasets
-- [ ] Test advanced features with complex report scenarios
-- [ ] Test debugging tools with real-world report issues
-- [ ] Test export functionality with various data types
-- [ ] Test system performance under maximum load
-
-**Phase 12 Exit Criteria:** All advanced features work correctly and provide significant value. Performance is optimized for production use. Debugging tools aid development effectively. Export features work reliably. All unit and integration tests pass.
-
----
-
-## Phase 13: Documentation & Examples
-
-### 13.1 API Documentation
-- [ ] Document all public modules and functions with comprehensive examples
-- [ ] Create complete DSL reference documentation with all band types
-- [ ] Add configuration option documentation with best practices
-- [ ] Document format-specific features and limitations
-- [ ] Create troubleshooting guide with common issues
-- [ ] Create comprehensive unit tests for all documentation examples
-
-### 13.2 User Guides & Tutorials
-- [ ] Write comprehensive getting started guide with step-by-step instructions
-- [ ] Create DSL tutorial covering all band types and features
-- [ ] Add advanced features guide with real-world scenarios
-- [ ] Write performance optimization guide with benchmarks
-- [ ] Create migration guide from other reporting systems
-- [ ] Create comprehensive unit tests for tutorial code
-
-### 13.3 Example Applications
-- [ ] Create basic report example demonstrating core concepts
-- [ ] Build complex nested report example with all band types
-- [ ] Add format-specific examples (HTML, PDF, HEEX) with styling
-- [ ] Create real-world use case examples (financial, inventory, customer)
-- [ ] Build interactive dashboard example with LiveView
-- [ ] Create comprehensive unit tests for all examples
-
-### 13.4 Developer Documentation
-- [ ] Document extension architecture with implementation details
-- [ ] Add transformer development guide with best practices
-- [ ] Create renderer development guide for custom formats
-- [ ] Write testing best practices and guidelines
-- [ ] Document internal APIs and extension points
-- [ ] Create comprehensive unit tests for developer examples
-
-### 13.5 Integration Testing (Phase 13)
-- [ ] Test all documentation examples compile and run correctly
-- [ ] Validate tutorial workflows from start to finish
-- [ ] Test example applications in various environments
-- [ ] Verify all features are properly documented
-- [ ] Test documentation accuracy against current implementation
-
-**Phase 13 Exit Criteria:** Documentation is complete, accurate, and helpful for all user types. Example applications demonstrate all features effectively. Getting started guide enables new users to be productive quickly. All unit and integration tests pass.
-
----
-
-## Phase 14: Testing & Release Preparation
-
-### 14.1 Comprehensive Test Suite Completion
-- [ ] Achieve 100% test coverage on all critical paths
-- [ ] Add missing test coverage for edge cases and error conditions
-- [ ] Create performance regression test suite
-- [ ] Test across all supported Elixir/OTP versions
-- [ ] Test integration with different Ash Framework versions
-- [ ] Create comprehensive unit tests for test infrastructure
-
-### 14.2 Performance & Load Testing
-- [ ] Benchmark report generation performance with large datasets
-- [ ] Test memory usage with complex nested structures
-- [ ] Optimize query generation for better database performance
-- [ ] Test concurrent report generation under load
-- [ ] Profile and optimize critical code paths
-- [ ] Create comprehensive unit tests for performance monitoring
-
-### 14.3 Security Audit & Hardening
-- [ ] Review input validation across all entry points
-- [ ] Test authorization mechanisms with various attack scenarios
-- [ ] Audit file system access and sandbox restrictions
-- [ ] Review dependency security and update to latest versions
-- [ ] Test SQL injection prevention in dynamic queries
-- [ ] Create comprehensive unit tests for security features
-
-### 14.4 Cross-Platform & Environment Testing
-- [ ] Test on multiple operating systems (Linux, macOS, Windows)
-- [ ] Verify compatibility with different database systems
-- [ ] Test in containerized environments (Docker)
-- [ ] Validate cloud deployment scenarios
-- [ ] Test with various Phoenix and LiveView versions
-- [ ] Create comprehensive unit tests for platform compatibility
-
-### 14.5 Integration Testing (Phase 14)
-- [ ] Execute full end-to-end test scenarios across all features
-- [ ] Perform load testing with realistic production scenarios
-- [ ] Conduct security penetration testing
-- [ ] Test complete CI/CD pipeline integration
-- [ ] Validate production deployment procedures
-
-**Phase 14 Exit Criteria:** All tests pass consistently across environments. Performance meets production requirements. Security audit passes with no critical issues. Cross-platform compatibility is verified. Release is ready for production use.
-
----
-
-## Testing Strategy & Standards
-
-### Unit Testing Requirements
-- **Coverage**: Minimum 95% code coverage for all modules
-- **Scope**: Every public function must have comprehensive unit tests
-- **Error Cases**: All error conditions and edge cases must be tested
-- **Mocking**: Use Mox for external dependencies (database, file system)
-- **Property Testing**: Use StreamData for complex data structure validation
-
-### Integration Testing Requirements
-- **End-to-End**: Complete workflows from DSL definition to report output
-- **Cross-Module**: Test interactions between transformers, renderers, and generators
-- **Database Integration**: Test with real Ash resources and relationships
-- **Format Validation**: Verify output quality for HTML, PDF, and HEEX
-- **Performance**: Integration tests must include performance benchmarks
-
-### Testing Tools & Framework
-- **ExUnit**: Primary testing framework with custom assertions
-- **Mox**: Mocking and testing doubles for external systems
-- **Bypass**: HTTP endpoint testing for MCP and API functionality
-- **Benchee**: Performance benchmarking and regression detection
-- **StreamData**: Property-based testing for complex data structures
-- **Credo**: Code quality and consistency validation
-- **Dialyzer**: Static analysis and type checking
-
-### Continuous Integration Requirements
-- **Phase Gates**: All tests must pass before proceeding to next phase
-- **Regression Prevention**: New features cannot break existing tests
-- **Performance Monitoring**: CI must detect performance regressions
-- **Multi-Environment**: Tests must pass on all supported platforms
-- **Documentation Testing**: All examples and tutorials must be validated
-
-### Quality Assurance Standards
-- **Code Review**: All code must be reviewed for quality and testing
-- **Test Quality**: Tests themselves must be reviewed for completeness
-- **Documentation**: All public APIs must have complete documentation
-- **Example Validation**: All examples must be tested and verified
-- **Performance Standards**: Clear performance benchmarks must be maintained
-
-This comprehensive plan ensures that the AshReports extension will be thoroughly tested, well-documented, and production-ready while maintaining the highest quality standards throughout development.
+# Ash Reports Implementation Plan
+
+## Overview
+
+This implementation plan is organized into 6 phases, with each phase building upon the previous one. Each section within a phase includes unit testing, and each phase concludes with integration testing to ensure all components work together correctly.
+
+## Phase 1: Core Foundation and DSL Framework
+
+**Duration: 3-4 weeks**  
+**Goal: Establish the foundational Spark DSL extensions and basic report structure**
+
+### 1.1 Spark DSL Foundation
+
+#### Implementation Tasks:
+- Create `Ash.Report` extension module
+- Define core DSL schema for reports
+- Implement basic section definitions
+- Create DSL entity modules for Band, Element, Variable
+
+#### Code Structure:
+```elixir
+# lib/ash/report.ex
+defmodule Ash.Report do
+  use Spark.Dsl.Extension,
+    sections: @sections,
+    transformers: []
+end
+
+# lib/ash/report/dsl.ex
+defmodule Ash.Report.Dsl do
+  # Core DSL definitions
+end
+```
+
+#### Testing:
+```elixir
+# test/ash/report/dsl_test.exs
+defmodule Ash.Report.DslTest do
+  use ExUnit.Case
+
+  test "accepts valid report definition" do
+    assert {:ok, _} = 
+      Spark.Dsl.parse("""
+      report :test_report do
+        title "Test Report"
+        driving_resource TestResource
+      end
+      """, Ash.Report)
+  end
+
+  test "rejects invalid report definition" do
+    assert {:error, _} = 
+      Spark.Dsl.parse("""
+      report :test_report do
+        # Missing required fields
+      end
+      """, Ash.Report)
+  end
+end
+```
+
+### 1.2 Band Hierarchy Implementation
+
+#### Implementation Tasks:
+- Create Band entity with type validation
+- Implement band ordering logic
+- Add band nesting support for groups
+- Create band validation transformer
+
+#### Code Structure:
+```elixir
+# lib/ash/report/band.ex
+defmodule Ash.Report.Band do
+  use Spark.Dsl.Entity
+  
+  defstruct [:type, :group_level, :detail_number, ...]
+end
+
+# lib/ash/report/transformers/validate_bands.ex
+defmodule Ash.Report.Transformers.ValidateBands do
+  use Spark.Dsl.Transformer
+  
+  def transform(dsl_state) do
+    # Validate band hierarchy
+  end
+end
+```
+
+#### Testing:
+```elixir
+# test/ash/report/band_test.exs
+defmodule Ash.Report.BandTest do
+  use ExUnit.Case
+
+  describe "band hierarchy validation" do
+    test "validates correct band order" do
+      bands = [
+        %Band{type: :title},
+        %Band{type: :page_header},
+        %Band{type: :detail},
+        %Band{type: :summary}
+      ]
+      
+      assert :ok = Ash.Report.Band.validate_hierarchy(bands)
+    end
+
+    test "rejects invalid band order" do
+      bands = [
+        %Band{type: :summary},
+        %Band{type: :title}
+      ]
+      
+      assert {:error, _} = Ash.Report.Band.validate_hierarchy(bands)
+    end
+  end
+end
+```
+
+### 1.3 Element System
+
+#### Implementation Tasks:
+- Create Element entity types (field, label, expression, etc.)
+- Implement position and style schemas
+- Add element validation
+- Create element renderer interface
+
+#### Testing:
+```elixir
+# test/ash/report/element_test.exs
+defmodule Ash.Report.ElementTest do
+  use ExUnit.Case
+
+  test "creates field element with valid path" do
+    element = %Element{
+      type: :field,
+      source: [:customer, :name],
+      position: [x: 10, y: 20]
+    }
+    
+    assert :ok = Element.validate(element)
+  end
+
+  test "validates expression elements" do
+    element = %Element{
+      type: :expression,
+      source: expr(total * 0.1),
+      format: [number: [precision: 2]]
+    }
+    
+    assert :ok = Element.validate(element)
+  end
+end
+```
+
+### 1.4 Basic Report Registry
+
+#### Implementation Tasks:
+- Create report storage mechanism
+- Implement report lookup functions
+- Add report compilation logic
+- Create basic report metadata
+
+#### Testing:
+```elixir
+# test/ash/report/registry_test.exs
+defmodule Ash.Report.RegistryTest do
+  use ExUnit.Case
+
+  test "registers and retrieves reports" do
+    report = %Report{name: :test_report, title: "Test"}
+    
+    :ok = Registry.register(report)
+    assert {:ok, ^report} = Registry.get(:test_report)
+  end
+end
+```
+
+### Phase 1 Integration Tests
+
+```elixir
+# test/integration/phase1_test.exs
+defmodule Ash.Report.Phase1IntegrationTest do
+  use ExUnit.Case
+
+  defmodule TestDomain do
+    use Ash.Domain,
+      extensions: [Ash.Report]
+
+    reports do
+      report :basic_report do
+        title "Basic Integration Test Report"
+        driving_resource TestResource
+        
+        bands do
+          band :title do
+            elements do
+              label "Test Report", position: [x: :center, y: 10]
+            end
+          end
+          
+          band :detail do
+            elements do
+              field :name, position: [x: 10, y: 5]
+              field :value, position: [x: 100, y: 5]
+            end
+          end
+        end
+      end
+    end
+  end
+
+  test "complete DSL compilation and registration" do
+    assert {:ok, domain} = Ash.Domain.Info.reports(TestDomain)
+    assert length(domain.reports) == 1
+    
+    report = hd(domain.reports)
+    assert report.name == :basic_report
+    assert length(report.bands) == 2
+  end
+end
+```
+
+## Phase 2: Data Integration and Query System
+
+**Duration: 3-4 weeks**  
+**Goal: Integrate with Ash Query system and implement data fetching**
+
+### 2.1 Query Builder
+
+#### Implementation Tasks:
+- Create query builder for report scope
+- Implement parameter substitution
+- Add query validation
+- Create query optimization logic
+
+#### Code Structure:
+```elixir
+# lib/ash/report/query_builder.ex
+defmodule Ash.Report.QueryBuilder do
+  def build_query(report, params) do
+    report.driving_resource
+    |> apply_scope(report.scope, params)
+    |> apply_sorting(report.sorting)
+    |> apply_loading(report.required_loads)
+  end
+end
+```
+
+#### Testing:
+```elixir
+# test/ash/report/query_builder_test.exs
+defmodule Ash.Report.QueryBuilderTest do
+  use ExUnit.Case
+
+  test "builds query with parameters" do
+    report = %Report{
+      driving_resource: Order,
+      scope: fn params ->
+        Order |> Ash.Query.filter(date >= ^params.start_date)
+      end
+    }
+    
+    query = QueryBuilder.build_query(report, %{start_date: ~D[2024-01-01]})
+    
+    assert %Ash.Query{resource: Order} = query
+    assert query.filter != nil
+  end
+end
+```
+
+### 2.2 Variable System Implementation
+
+#### Implementation Tasks:
+- Create variable storage and state management
+- Implement reset logic for different scopes
+- Add variable calculation engine
+- Create variable dependency resolver
+
+#### Testing:
+```elixir
+# test/ash/report/variable_test.exs
+defmodule Ash.Report.VariableTest do
+  use ExUnit.Case
+
+  describe "variable calculations" do
+    test "calculates sum variable" do
+      variable = %Variable{
+        name: :total,
+        type: :sum,
+        expression: expr(amount),
+        reset_on: :report
+      }
+      
+      state = VariableState.new([variable])
+      state = VariableState.update(state, :total, %{amount: 100})
+      state = VariableState.update(state, :total, %{amount: 50})
+      
+      assert VariableState.get_value(state, :total) == 150
+    end
+
+    test "resets on group change" do
+      variable = %Variable{
+        name: :group_total,
+        type: :sum,
+        expression: expr(amount),
+        reset_on: :group,
+        reset_group: 1
+      }
+      
+      state = VariableState.new([variable])
+      state = VariableState.update(state, :group_total, %{amount: 100})
+      state = VariableState.reset_group(state, 1)
+      
+      assert VariableState.get_value(state, :group_total) == 0
+    end
+  end
+end
+```
+
+### 2.3 Group Processing Engine
+
+#### Implementation Tasks:
+- Implement group break detection
+- Create group value tracking
+- Add multi-level group support
+- Implement group sorting
+
+#### Testing:
+```elixir
+# test/ash/report/group_processor_test.exs
+defmodule Ash.Report.GroupProcessorTest do
+  use ExUnit.Case
+
+  test "detects group breaks" do
+    processor = GroupProcessor.new([
+      %Group{field: :category, level: 1},
+      %Group{field: :subcategory, level: 2}
+    ])
+    
+    current = %{category: "A", subcategory: "X"}
+    next = %{category: "A", subcategory: "Y"}
+    
+    assert {:break, 2} = GroupProcessor.check_break(processor, current, next)
+  end
+end
+```
+
+### 2.4 Data Loader
+
+#### Implementation Tasks:
+- Create data fetching orchestrator
+- Implement relationship loading
+- Add data transformation pipeline
+- Create streaming support for large datasets
+
+#### Testing:
+```elixir
+# test/ash/report/data_loader_test.exs
+defmodule Ash.Report.DataLoaderTest do
+  use ExUnit.Case
+
+  test "loads data with relationships" do
+    report = build_test_report()
+    params = %{start_date: ~D[2024-01-01]}
+    
+    {:ok, data} = DataLoader.load(report, params)
+    
+    assert length(data) > 0
+    assert Ash.Resource.loaded?(hd(data), :customer)
+  end
+end
+```
+
+### Phase 2 Integration Tests
+
+```elixir
+# test/integration/phase2_test.exs
+defmodule Ash.Report.Phase2IntegrationTest do
+  use ExUnit.Case
+
+  setup do
+    # Create test data
+    {:ok, customer} = Customer.create(%{name: "Test Customer"})
+    {:ok, _} = Order.create(%{
+      customer_id: customer.id,
+      amount: 100,
+      category: "Electronics",
+      date: ~D[2024-01-15]
+    })
+    {:ok, _} = Order.create(%{
+      customer_id: customer.id,
+      amount: 200,
+      category: "Electronics",
+      date: ~D[2024-01-20]
+    })
+    
+    :ok
+  end
+
+  test "processes report with groups and variables" do
+    report = TestDomain.get_report!(:grouped_report)
+    params = %{start_date: ~D[2024-01-01], end_date: ~D[2024-01-31]}
+    
+    {:ok, result} = Ash.Report.Engine.process(report, params)
+    
+    assert result.groups["Electronics"] == %{
+      records: 2,
+      total: 300
+    }
+    
+    assert result.variables.grand_total == 300
+  end
+end
+```
+
+## Phase 3: Rendering Engine and Output Formats
+
+**Duration: 4-5 weeks**  
+**Goal: Implement the rendering abstraction and multiple output formats**
+
+### 3.1 Renderer Interface
+
+#### Implementation Tasks:
+- Create renderer behavior
+- Implement render context
+- Add layout calculation engine
+- Create render pipeline
+
+#### Code Structure:
+```elixir
+# lib/ash/report/renderer.ex
+defmodule Ash.Report.Renderer do
+  @callback render(report :: Report.t(), data :: term(), opts :: keyword()) ::
+              {:ok, binary()} | {:error, term()}
+              
+  defmacro __using__(_) do
+    quote do
+      @behaviour Ash.Report.Renderer
+      
+      def render(report, data, opts) do
+        context = build_render_context(report, data, opts)
+        do_render(context)
+      end
+    end
+  end
+end
+```
+
+#### Testing:
+```elixir
+# test/ash/report/renderer_test.exs
+defmodule Ash.Report.RendererTest do
+  use ExUnit.Case
+
+  defmodule TestRenderer do
+    use Ash.Report.Renderer
+    
+    def do_render(context) do
+      {:ok, "test output"}
+    end
+  end
+
+  test "renderer behavior implementation" do
+    report = build_test_report()
+    data = []
+    
+    assert {:ok, "test output"} = TestRenderer.render(report, data, [])
+  end
+end
+```
+
+### 3.2 HTML Renderer
+
+#### Implementation Tasks:
+- Create HTML template system
+- Implement CSS styling
+- Add responsive layout support
+- Create HTML element builders
+
+#### Testing:
+```elixir
+# test/ash/report/renderer/html_test.exs
+defmodule Ash.Report.Renderer.HTMLTest do
+  use ExUnit.Case
+
+  test "renders valid HTML structure" do
+    report = build_simple_report()
+    data = [%{name: "Test", value: 100}]
+    
+    {:ok, html} = Ash.Report.Renderer.HTML.render(report, data, [])
+    
+    assert html =~ ~r/<div class="ash-report"/
+    assert html =~ ~r/<div class="ash-report-band-title"/
+    assert html =~ "Test"
+  end
+
+  test "applies custom styles" do
+    element = %Element{
+      type: :label,
+      content: "Test",
+      style: [color: "red", font_size: "14px"]
+    }
+    
+    html = Ash.Report.Renderer.HTML.render_element(element)
+    assert html =~ ~r/style="color: red; font-size: 14px"/
+  end
+end
+```
+
+### 3.3 HEEX Renderer
+
+#### Implementation Tasks:
+- Create Phoenix component integration
+- Implement live view support
+- Add interactive elements
+- Create component library
+
+#### Testing:
+```elixir
+# test/ash/report/renderer/heex_test.exs
+defmodule Ash.Report.Renderer.HEEXTest do
+  use ExUnit.Case
+  import Phoenix.LiveViewTest
+
+  test "renders as Phoenix component" do
+    report = build_test_report()
+    data = build_test_data()
+    
+    html = render_component(&Ash.Report.Renderer.HEEX.report/1, 
+      report: report,
+      data: data
+    )
+    
+    assert html =~ "ash-report"
+    assert html =~ "Test Report"
+  end
+end
+```
+
+### 3.4 PDF Renderer
+
+#### Implementation Tasks:
+- Integrate PDF generation library (ChromicPDF/wkhtmltopdf)
+- Implement page layout management
+- Add page breaking logic
+- Create PDF-specific formatting
+
+#### Testing:
+```elixir
+# test/ash/report/renderer/pdf_test.exs
+defmodule Ash.Report.Renderer.PDFTest do
+  use ExUnit.Case
+
+  test "generates valid PDF" do
+    report = build_test_report()
+    data = build_test_data()
+    
+    {:ok, pdf_binary} = Ash.Report.Renderer.PDF.render(report, data, [])
+    
+    assert is_binary(pdf_binary)
+    assert byte_size(pdf_binary) > 1000
+    assert String.starts_with?(pdf_binary, "%PDF")
+  end
+
+  test "handles page breaks correctly" do
+    report = build_report_with_many_records()
+    data = build_large_dataset()
+    
+    {:ok, pdf} = Ash.Report.Renderer.PDF.render(report, data, [])
+    
+    # Verify page headers appear on each page
+    assert count_occurrences(pdf, "Page Header") > 1
+  end
+end
+```
+
+### 3.5 JSON Renderer
+
+#### Implementation Tasks:
+- Create JSON structure definition
+- Implement data serialization
+- Add metadata inclusion
+- Create JSON schema validation
+
+#### Testing:
+```elixir
+# test/ash/report/renderer/json_test.exs
+defmodule Ash.Report.Renderer.JSONTest do
+  use ExUnit.Case
+
+  test "renders valid JSON structure" do
+    report = build_test_report()
+    data = build_test_data()
+    
+    {:ok, json_string} = Ash.Report.Renderer.JSON.render(report, data, [])
+    {:ok, decoded} = Jason.decode(json_string)
+    
+    assert decoded["report"]["name"] == "test_report"
+    assert decoded["metadata"]["generated_at"]
+    assert is_list(decoded["data"])
+  end
+end
+```
+
+### Phase 3 Integration Tests
+
+```elixir
+# test/integration/phase3_test.exs
+defmodule Ash.Report.Phase3IntegrationTest do
+  use ExUnit.Case
+
+  test "renders same report in multiple formats" do
+    report = create_test_report()
+    data = create_test_data()
+    
+    {:ok, html} = Ash.Report.render(report, data, format: :html)
+    {:ok, pdf} = Ash.Report.render(report, data, format: :pdf)
+    {:ok, json} = Ash.Report.render(report, data, format: :json)
+    
+    assert is_binary(html) and String.contains?(html, "<html>")
+    assert is_binary(pdf) and String.starts_with?(pdf, "%PDF")
+    assert is_binary(json) and match?({:ok, _}, Jason.decode(json))
+  end
+
+  test "maintains data consistency across formats" do
+    report = create_summary_report()
+    data = create_financial_data()
+    
+    {:ok, html} = Ash.Report.render(report, data, format: :html)
+    {:ok, json_string} = Ash.Report.render(report, data, format: :json)
+    {:ok, json} = Jason.decode(json_string)
+    
+    # Extract total from HTML
+    html_total = extract_total_from_html(html)
+    json_total = json["summary"]["total"]
+    
+    assert html_total == json_total
+  end
+end
+```
+
+## Phase 4: Internationalization and Formatting
+
+**Duration: 2-3 weeks**  
+**Goal: Integrate CLDR for comprehensive internationalization**
+
+### 4.1 CLDR Integration
+
+#### Implementation Tasks:
+- Set up ex_cldr configuration
+- Create formatter module
+- Implement locale detection
+- Add locale fallback logic
+
+#### Code Structure:
+```elixir
+# lib/ash/report/cldr.ex
+defmodule Ash.Report.Cldr do
+  use Cldr,
+    locales: ["en", "es", "fr", "de", "ja"],
+    default_locale: "en",
+    providers: [Cldr.Number, Cldr.DateTime, Cldr.Unit, Cldr.Currency]
+end
+```
+
+#### Testing:
+```elixir
+# test/ash/report/cldr_test.exs
+defmodule Ash.Report.CldrTest do
+  use ExUnit.Case
+
+  test "formats numbers for different locales" do
+    assert "1,234.56" = Ash.Report.Formatter.format_number(1234.56, locale: "en")
+    assert "1.234,56" = Ash.Report.Formatter.format_number(1234.56, locale: "de")
+    assert "1 234,56" = Ash.Report.Formatter.format_number(1234.56, locale: "fr")
+  end
+end
+```
+
+### 4.2 Format Specifications
+
+#### Implementation Tasks:
+- Create format specification DSL
+- Implement format parsers
+- Add custom format support
+- Create format validation
+
+#### Testing:
+```elixir
+# test/ash/report/format_spec_test.exs
+defmodule Ash.Report.FormatSpecTest do
+  use ExUnit.Case
+
+  test "parses currency format" do
+    spec = [currency: :USD]
+    assert {:ok, formatter} = FormatSpec.parse(spec)
+    
+    assert "$1,234.56" = formatter.(1234.56, locale: "en")
+  end
+
+  test "parses date format" do
+    spec = [date: :medium]
+    assert {:ok, formatter} = FormatSpec.parse(spec)
+    
+    date = ~D[2024-01-15]
+    assert "Jan 15, 2024" = formatter.(date, locale: "en")
+    assert "15 janv. 2024" = formatter.(date, locale: "fr")
+  end
+end
+```
+
+### 4.3 Locale-aware Rendering
+
+#### Implementation Tasks:
+- Update renderers for locale support
+- Implement RTL support for applicable locales
+- Add locale-specific styling
+- Create translation system for labels
+
+#### Testing:
+```elixir
+# test/ash/report/locale_rendering_test.exs
+defmodule Ash.Report.LocaleRenderingTest do
+  use ExUnit.Case
+
+  test "renders report in different locales" do
+    report = build_financial_report()
+    data = build_test_data()
+    
+    {:ok, en_html} = Ash.Report.render(report, data, format: :html, locale: "en")
+    {:ok, de_html} = Ash.Report.render(report, data, format: :html, locale: "de")
+    
+    assert en_html =~ "$1,234.56"
+    assert de_html =~ "1.234,56 $"
+  end
+end
+```
+
+### Phase 4 Integration Tests
+
+```elixir
+# test/integration/phase4_test.exs
+defmodule Ash.Report.Phase4IntegrationTest do
+  use ExUnit.Case
+
+  test "complete internationalized report" do
+    report = create_international_report()
+    data = create_multi_currency_data()
+    
+    locales = ["en", "de", "fr", "ja"]
+    
+    results = for locale <- locales do
+      {:ok, html} = Ash.Report.render(report, data, 
+        format: :html, 
+        locale: locale
+      )
+      {locale, html}
+    end
+    
+    # Verify each locale has different formatting
+    assert Enum.all?(results, fn {locale, html} ->
+      String.contains?(html, expected_format_for_locale(locale))
+    end)
+  end
+end
+```
+
+## Phase 5: Server Infrastructure
+
+**Duration: 3-4 weeks**  
+**Goal: Implement report server and MCP server**
+
+### 5.1 Report Server
+
+#### Implementation Tasks:
+- Create GenServer for report management
+- Implement job queue
+- Add caching layer
+- Create monitoring and metrics
+
+#### Code Structure:
+```elixir
+# lib/ash/report/server.ex
+defmodule Ash.Report.Server do
+  use GenServer
+  
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
+  
+  # Implementation...
+end
+```
+
+#### Testing:
+```elixir
+# test/ash/report/server_test.exs
+defmodule Ash.Report.ServerTest do
+  use ExUnit.Case
+
+  setup do
+    {:ok, pid} = Ash.Report.Server.start_link(reports_domain: TestDomain)
+    {:ok, server: pid}
+  end
+
+  test "runs report synchronously", %{server: _server} do
+    {:ok, result} = Ash.Report.Server.run_report(:test_report, %{})
+    
+    assert result.report == :test_report
+    assert result.content
+  end
+
+  test "runs report asynchronously" do
+    {:ok, job_id} = Ash.Report.Server.run_report_async(:test_report, %{})
+    
+    assert is_binary(job_id)
+    
+    # Wait for completion
+    assert eventually(fn ->
+      {:ok, :completed} == Ash.Report.Server.get_status(job_id)
+    end)
+  end
+end
+```
+
+### 5.2 Caching System
+
+#### Implementation Tasks:
+- Implement ETS-based cache
+- Add cache key generation
+- Create TTL management
+- Implement cache invalidation
+
+#### Testing:
+```elixir
+# test/ash/report/cache_test.exs
+defmodule Ash.Report.CacheTest do
+  use ExUnit.Case
+
+  test "caches report results" do
+    report = :test_report
+    params = %{date: ~D[2024-01-01]}
+    
+    # First call - miss
+    assert :miss = Cache.get(report, params)
+    
+    result = %{content: "test"}
+    :ok = Cache.put(report, params, result, ttl: 1000)
+    
+    # Second call - hit
+    assert {:hit, ^result} = Cache.get(report, params)
+  end
+
+  test "respects TTL" do
+    Cache.put(:test, %{}, "data", ttl: 100)
+    assert {:hit, "data"} = Cache.get(:test, %{})
+    
+    Process.sleep(150)
+    assert :miss = Cache.get(:test, %{})
+  end
+end
+```
+
+### 5.3 MCP Server Implementation
+
+#### Implementation Tasks:
+- Create TCP server
+- Implement MCP protocol
+- Add authentication
+- Create tool registration
+
+#### Testing:
+```elixir
+# test/ash/report/mcp_server_test.exs
+defmodule Ash.Report.MCPServerTest do
+  use ExUnit.Case
+
+  setup do
+    {:ok, pid} = Ash.Report.MCPServer.start_link(
+      port: 0,  # Random port
+      allowed_reports: [:test_report]
+    )
+    
+    {:ok, port} = Ash.Report.MCPServer.get_port(pid)
+    {:ok, server: pid, port: port}
+  end
+
+  test "handles MCP initialize", %{port: port} do
+    {:ok, socket} = :gen_tcp.connect('localhost', port, [:binary, active: false])
+    
+    request = %{
+      jsonrpc: "2.0",
+      method: "initialize",
+      params: %{},
+      id: 1
+    }
+    
+    :ok = :gen_tcp.send(socket, Jason.encode!(request))
+    {:ok, response} = :gen_tcp.recv(socket, 0)
+    
+    {:ok, decoded} = Jason.decode(response)
+    assert decoded["result"]["protocolVersion"] == "1.0.0"
+  end
+
+  test "lists available tools", %{port: port} do
+    # Connect and initialize first
+    socket = connect_and_initialize(port)
+    
+    request = %{
+      jsonrpc: "2.0",
+      method: "tools/list",
+      params: %{},
+      id: 2
+    }
+    
+    :ok = :gen_tcp.send(socket, Jason.encode!(request))
+    {:ok, response} = :gen_tcp.recv(socket, 0)
+    
+    {:ok, decoded} = Jason.decode(response)
+    tools = decoded["result"]["tools"]
+    
+    assert length(tools) == 1
+    assert hd(tools)["name"] == "report_test_report"
+  end
+end
+```
+
+### 5.4 API Documentation
+
+#### Implementation Tasks:
+- Generate OpenAPI specification
+- Create API client examples
+- Add rate limiting
+- Implement API versioning
+
+### Phase 5 Integration Tests
+
+```elixir
+# test/integration/phase5_test.exs
+defmodule Ash.Report.Phase5IntegrationTest do
+  use ExUnit.Case
+
+  test "end-to-end report generation through server" do
+    # Start servers
+    {:ok, _} = start_supervised({Ash.Report.Server, reports_domain: TestDomain})
+    {:ok, _} = start_supervised({Ash.Report.MCPServer, 
+      port: 5555,
+      allowed_reports: [:sales_report]
+    })
+    
+    # Generate report through server
+    {:ok, job_id} = Ash.Report.Server.run_report_async(:sales_report, %{
+      start_date: ~D[2024-01-01],
+      end_date: ~D[2024-01-31]
+    })
+    
+    # Poll for completion
+    assert eventually(fn ->
+      case Ash.Report.Server.get_result(job_id) do
+        {:ok, result} -> 
+          assert result.content
+          true
+        _ -> 
+          false
+      end
+    end, timeout: 5000)
+  end
+
+  test "MCP server integration" do
+    # Setup MCP server
+    {:ok, mcp} = start_supervised({Ash.Report.MCPServer, 
+      port: 5556,
+      allowed_reports: [:test_report]
+    })
+    
+    # Simulate LLM request
+    {:ok, socket} = :gen_tcp.connect('localhost', 5556, [:binary, active: false])
+    
+    # Initialize
+    send_mcp_request(socket, "initialize", %{})
+    
+    # Call tool
+    response = send_mcp_request(socket, "tools/call", %{
+      name: "report_test_report",
+      arguments: %{param1: "value1"}
+    })
+    
+    assert response["result"]["content"]
+  end
+end
+```
+
+## Phase 6: Advanced Features and Polish
+
+**Duration: 3-4 weeks**  
+**Goal: Add advanced features and production readiness**
+
+### 6.1 Ash.Resource.Reportable Extension
+
+#### Implementation Tasks:
+- Create resource extension
+- Implement field exposure
+- Add calculated fields
+- Create field security
+
+#### Testing:
+```elixir
+# test/ash/resource/reportable_test.exs
+defmodule Ash.Resource.ReportableTest do
+  use ExUnit.Case
+
+  defmodule TestResource do
+    use Ash.Resource,
+      extensions: [Ash.Resource.Reportable]
+    
+    reportable do
+      field :name, :string, label: "Customer Name"
+      field :email, :string, sensitive: true
+      
+      calculation :full_address do
+        calculate fn record, _context ->
+          "#{record.address}, #{record.city}, #{record.state}"
+        end
+      end
+    end
+  end
+
+  test "exposes reportable fields" do
+    fields = Ash.Resource.Reportable.fields(TestResource)
+    
+    assert length(fields) == 3
+    assert Enum.find(fields, & &1.name == :name)
+  end
+
+  test "respects field sensitivity" do
+    email_field = Ash.Resource.Reportable.get_field(TestResource, :email)
+    assert email_field.sensitive == true
+  end
+end
+```
+
+### 6.2 Performance Optimization
+
+#### Implementation Tasks:
+- Implement query optimization
+- Add connection pooling
+- Create streaming for large datasets
+- Implement parallel processing
+
+#### Testing:
+```elixir
+# test/ash/report/performance_test.exs
+defmodule Ash.Report.PerformanceTest do
+  use ExUnit.Case
+
+  @tag :performance
+  test "handles large datasets efficiently" do
+    # Create 10,000 records
+    create_large_dataset(10_000)
+    
+    report = create_test_report()
+    
+    {time, {:ok, _result}} = :timer.tc(fn ->
+      Ash.Report.run(report, %{}, streaming: true)
+    end)
+    
+    # Should complete in under 5 seconds
+    assert time < 5_000_000
+  end
+
+  @tag :performance
+  test "uses streaming for memory efficiency" do
+    create_large_dataset(50_000)
+    
+    report = create_test_report()
+    
+    # Monitor memory usage
+    before_memory = :erlang.memory(:total)
+    
+    {:ok, stream} = Ash.Report.stream(report, %{}, chunk_size: 1000)
+    
+    # Process stream
+    Enum.each(stream, fn _chunk ->
+      # Verify memory doesn't grow significantly
+      current_memory = :erlang.memory(:total)
+      assert current_memory < before_memory * 1.5
+    end)
+  end
+end
+```
+
+### 6.3 Security Enhancements
+
+#### Implementation Tasks:
+- Implement row-level security
+- Add audit logging
+- Create permission caching
+- Implement data masking
+
+#### Testing:
+```elixir
+# test/ash/report/security_test.exs
+defmodule Ash.Report.SecurityTest do
+  use ExUnit.Case
+
+  test "enforces report permissions" do
+    user_without_permission = %User{permissions: []}
+    user_with_permission = %User{permissions: [:view_financial_reports]}
+    
+    report = %Report{permissions: [:view_financial_reports]}
+    
+    assert {:error, :unauthorized} = 
+      Ash.Report.authorize(report, user_without_permission)
+      
+    assert :ok = 
+      Ash.Report.authorize(report, user_with_permission)
+  end
+
+  test "applies data masking" do
+    report = create_report_with_sensitive_fields()
+    data = create_sensitive_data()
+    
+    {:ok, result} = Ash.Report.run(report, %{}, 
+      actor: %User{permissions: [:view_masked_data]}
+    )
+    
+    # Verify sensitive fields are masked
+    assert result.data |> hd() |> Map.get(:ssn) == "XXX-XX-1234"
+  end
+end
+```
+
+### 6.4 Monitoring and Observability
+
+#### Implementation Tasks:
+- Add telemetry events
+- Create health checks
+- Implement error tracking
+- Add performance metrics
+
+#### Testing:
+```elixir
+# test/ash/report/telemetry_test.exs
+defmodule Ash.Report.TelemetryTest do
+  use ExUnit.Case
+
+  test "emits telemetry events" do
+    self = self()
+    
+    handler = fn event, measurements, metadata, _config ->
+      send(self, {:telemetry, event, measurements, metadata})
+    end
+    
+    :telemetry.attach(
+      "test-handler",
+      [:ash, :report, :run, :stop],
+      handler,
+      nil
+    )
+    
+    Ash.Report.run(:test_report, %{})
+    
+    assert_receive {:telemetry, [:ash, :report, :run, :stop], measurements, metadata}
+    assert measurements.duration > 0
+    assert metadata.report == :test_report
+  end
+end
+```
+
+### Phase 6 Integration Tests
+
+```elixir
+# test/integration/phase6_test.exs
+defmodule Ash.Report.Phase6IntegrationTest do
+  use ExUnit.Case
+
+  test "complete production scenario" do
+    # Setup monitoring
+    attach_telemetry_handler()
+    
+    # Create test data with relationships
+    {:ok, customer} = create_customer()
+    {:ok, orders} = create_orders_for_customer(customer, 100)
+    
+    # Define report with all features
+    report = create_comprehensive_report()
+    
+    # Run report with security context
+    actor = %User{
+      permissions: [:view_reports, :view_financial_data],
+      locale: "de-DE"
+    }
+    
+    {:ok, result} = Ash.Report.Server.run_report(:comprehensive_report, 
+      %{customer_id: customer.id},
+      actor: actor,
+      format: :pdf,
+      locale: actor.locale
+    )
+    
+    # Verify result
+    assert byte_size(result.content) > 10_000
+    assert result.metadata.locale == "de-DE"
+    assert result.metadata.record_count == 100
+    
+    # Verify telemetry
+    assert_receive {:telemetry, [:ash, :report, :run, :stop], _, _}
+    
+    # Verify caching
+    {:ok, cached} = Ash.Report.Server.run_report(:comprehensive_report,
+      %{customer_id: customer.id},
+      actor: actor,
+      format: :pdf,
+      locale: actor.locale
+    )
+    
+    assert cached.metadata.cache_hit == true
+  end
+
+  test "stress test with concurrent reports" do
+    # Create shared test data
+    setup_stress_test_data()
+    
+    # Run 50 concurrent reports
+    tasks = for i <- 1..50 do
+      Task.async(fn ->
+        Ash.Report.Server.run_report(:stress_test_report, %{
+          iteration: i,
+          date_range: random_date_range()
+        })
+      end)
+    end
+    
+    # All should complete successfully
+    results = Task.await_many(tasks, 30_000)
+    
+    assert Enum.all?(results, fn
+      {:ok, _} -> true
+      _ -> false
+    end)
+    
+    # Verify server is still responsive
+    assert {:ok, _} = Ash.Report.Server.run_report(:simple_report, %{})
+  end
+end
+```
+
+## Final System Integration Test
+
+```elixir
+# test/integration/system_test.exs
+defmodule Ash.Report.SystemTest do
+  use ExUnit.Case
+
+  @moduledoc """
+  Complete system integration test covering all phases
+  """
+
+  setup_all do
+    # Start all services
+    start_supervised!({Ash.Report.Server, 
+      reports_domain: TestApp.Reports,
+      cache_ttl: :timer.minutes(5)
+    })
+    
+    start_supervised!({Ash.Report.MCPServer,
+      port: 5557,
+      allowed_reports: [:customer_summary, :financial_report],
+      require_authentication: true
+    })
+    
+    # Create test data
+    seed_test_database()
+    
+    :ok
+  end
+
+  test "complete end-to-end report generation workflow" do
+    # 1. Define a complex report using DSL
+    assert TestApp.Reports.get_report(:customer_summary)
+    
+    # 2. Run report with parameters and internationalization
+    params = %{
+      start_date: ~D[2024-01-01],
+      end_date: ~D[2024-12-31],
+      customer_type: "premium"
+    }
+    
+    actor = %User{
+      id: 1,
+      permissions: [:view_customer_reports],
+      locale: "fr-FR"
+    }
+    
+    # 3. Generate in multiple formats
+    formats = [:pdf, :html, :json, :heex]
+    
+    results = for format <- formats do
+      {:ok, result} = Ash.Report.Server.run_report(:customer_summary,
+        params,
+        actor: actor,
+        format: format,
+        locale: actor.locale
+      )
+      {format, result}
+    end
+    
+    # 4. Verify all formats generated correctly
+    assert Enum.all?(results, fn {format, result} ->
+      validate_format(format, result.content) and
+      result.metadata.locale == "fr-FR"
+    end)
+    
+    # 5. Test MCP server access
+    mcp_response = call_mcp_tool("report_customer_summary", params)
+    assert mcp_response["content"]
+    
+    # 6. Verify caching works
+    {time1, {:ok, _}} = :timer.tc(fn ->
+      Ash.Report.Server.run_report(:customer_summary, params, actor: actor)
+    end)
+    
+    {time2, {:ok, result}} = :timer.tc(fn ->
+      Ash.Report.Server.run_report(:customer_summary, params, actor: actor)
+    end)
+    
+    assert result.metadata.cache_hit == true
+    assert time2 < time1 / 10  # Cached should be much faster
+    
+    # 7. Test streaming for large dataset
+    large_params = Map.put(params, :customer_type, "all")
+    
+    {:ok, stream} = Ash.Report.stream(:customer_summary, large_params,
+      actor: actor,
+      chunk_size: 100
+    )
+    
+    chunk_count = Enum.count(stream)
+    assert chunk_count > 10  # Should have multiple chunks
+  end
+
+  defp validate_format(:pdf, content), do: String.starts_with?(content, "%PDF")
+  defp validate_format(:html, content), do: content =~ ~r/<html/i
+  defp validate_format(:json, content), do: match?({:ok, _}, Jason.decode(content))
+  defp validate_format(:heex, content), do: is_struct(content, Phoenix.LiveView.Rendered)
+end
+```
+
+## Testing Strategy Summary
+
+### Unit Test Coverage Goals
+- DSL parsing and validation: 100%
+- Core logic (bands, variables, groups): 95%
+- Renderers: 90%
+- Server components: 85%
+- Integration points: 80%
+
+### Performance Benchmarks
+- Simple report (< 100 records): < 100ms
+- Medium report (1,000 records): < 1 second
+- Large report (10,000 records): < 10 seconds
+- Streaming enabled: Memory usage < 2x baseline
+
+### Test Automation
+- Run unit tests on every commit
+- Run integration tests on PR
+- Run performance tests nightly
+- Run system tests before release
+
+## Deployment Checklist
+
+### Phase Completion Criteria
+Each phase is considered complete when:
+1. All unit tests pass (100%)
+2. Integration tests pass (100%)
+3. Documentation is complete
+4. Code review approved
+5. Performance benchmarks met
+
+### Production Readiness
+Before deploying to production:
+1. All phases complete
+2. System integration test passes
+3. Load testing completed
+4. Security audit performed
+5. Monitoring configured
+6. Documentation published
+7. Training materials prepared

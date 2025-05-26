@@ -1,3 +1,255 @@
+# Ash Reports System Design Document
+
+## Executive Summary
+
+This document outlines the design for an extensible reporting system built as extensions to the Ash framework using Spark DSL. The system provides a declarative way to define complex reports with hierarchical band structures, supports multiple output formats (PDF, HTML, HEEX), includes internationalization via CLDR, and exposes reports through both an internal API server and an MCP server for LLM integration.
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Application Layer                        │
+├─────────────────────────────────────────────────────────────┤
+│  MCP Server  │  Internal API  │  Report Designer Interface  │
+├─────────────────────────────────────────────────────────────┤
+│                    Ash Reports Domain                        │
+│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────┐   │
+│  │   Reports   │  │ Report Bands │  │ Report Variables│   │
+│  └─────────────┘  └──────────────┘  └─────────────────┘   │
+├─────────────────────────────────────────────────────────────┤
+│                  Ash Resource Extensions                     │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │         Reportable Fields & Calculations            │   │
+│  └─────────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────┤
+│                    Rendering Engine                          │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │   PDF    │  │   HTML   │  │   HEEX   │  │  Custom  │  │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
+├─────────────────────────────────────────────────────────────┤
+│          CLDR Internationalization Layer                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Core Components
+
+### 1. Ash.Report Extension
+
+The main extension that defines reports within an Ash.Domain:
+
+```elixir
+defmodule Ash.Report do
+  @report_schema [
+    name: [
+      type: :atom,
+      required: true,
+      doc: "The name of the report"
+    ],
+    title: [
+      type: :string,
+      required: true,
+      doc: "The display title of the report"
+    ],
+    description: [
+      type: :string,
+      doc: "A description of what this report contains"
+    ],
+    driving_resource: [
+      type: :atom,
+      required: true,
+      doc: "The main Ash resource driving this report"
+    ],
+    scope: [
+      type: :any,
+      doc: "An Ash.Query to define the report scope"
+    ],
+    bands: [
+      type: {:list, {:spark, Ash.Report.Band}},
+      doc: "The hierarchical band structure"
+    ],
+    variables: [
+      type: {:list, {:spark, Ash.Report.Variable}},
+      doc: "Report variables for calculations"
+    ],
+    groups: [
+      type: {:list, {:spark, Ash.Report.Group}},
+      doc: "Grouping definitions"
+    ],
+    permissions: [
+      type: {:list, :atom},
+      doc: "Required permissions to run this report"
+    ],
+    parameters: [
+      type: {:list, {:spark, Ash.Report.Parameter}},
+      doc: "Runtime parameters for the report"
+    ]
+  ]
+
+  use Spark.Dsl.Extension,
+    sections: @sections,
+    transformers: [
+      Ash.Report.Transformers.ValidateBands,
+      Ash.Report.Transformers.BuildQuery,
+      Ash.Report.Transformers.ValidatePermissions
+    ]
+end
+```
+
+### 2. Report Band DSL
+
+Hierarchical band structure implementation:
+
+```elixir
+defmodule Ash.Report.Band do
+  @band_types [
+    :title,
+    :page_header,
+    :column_header,
+    :group_header,
+    :detail_header,
+    :detail,
+    :detail_footer,
+    :group_footer,
+    :column_footer,
+    :page_footer,
+    :summary
+  ]
+
+  @band_schema [
+    type: [
+      type: {:in, @band_types},
+      required: true
+    ],
+    group_level: [
+      type: :integer,
+      doc: "For group bands, specifies nesting level"
+    ],
+    detail_number: [
+      type: :integer,
+      doc: "For multiple detail bands"
+    ],
+    target_alias: [
+      type: :any,
+      doc: "Expression for related resource alias"
+    ],
+    on_entry: [
+      type: :any,
+      doc: "Ash expression to evaluate on band entry"
+    ],
+    on_exit: [
+      type: :any,
+      doc: "Ash expression to evaluate on band exit"
+    ],
+    elements: [
+      type: {:list, {:spark, Ash.Report.Element}},
+      doc: "Report elements in this band"
+    ],
+    options: [
+      type: :keyword_list,
+      doc: "Band-specific options"
+    ]
+  ]
+end
+```
+
+### 3. Report Elements
+
+Elements that can be placed within bands:
+
+```elixir
+defmodule Ash.Report.Element do
+  @element_types [:field, :label, :expression, :aggregate, :line, :box, :image]
+
+  @element_schema [
+    type: [
+      type: {:in, @element_types},
+      required: true
+    ],
+    source: [
+      type: :any,
+      doc: "Field path or expression"
+    ],
+    format: [
+      type: :any,
+      doc: "CLDR format specification"
+    ],
+    position: [
+      type: :keyword_list,
+      doc: "Layout position (x, y, width, height)"
+    ],
+    style: [
+      type: :keyword_list,
+      doc: "Visual styling options"
+    ],
+    conditional: [
+      type: :any,
+      doc: "Ash expression for conditional display"
+    ]
+  ]
+end
+```
+
+### 4. Ash.Resource.Reportable Extension
+
+Extension for resources to expose reportable fields:
+
+```elixir
+defmodule Ash.Resource.Reportable do
+  @reportable_schema [
+    fields: [
+      type: {:list, {:spark, Ash.Resource.Reportable.Field}},
+      doc: "Fields exposed for reporting"
+    ],
+    calculations: [
+      type: {:list, {:spark, Ash.Resource.Reportable.Calculation}},
+      doc: "Calculated fields for reports"
+    ],
+    aggregates: [
+      type: {:list, {:spark, Ash.Resource.Reportable.Aggregate}},
+      doc: "Pre-defined aggregates for reports"
+    ]
+  ]
+
+  use Spark.Dsl.Extension,
+    sections: @sections,
+    transformers: [
+      Ash.Resource.Reportable.Transformers.ValidateFields
+    ]
+end
+```
+
+### 5. Report Variable System
+
+Variables for calculations and state management:
+
+```elixir
+defmodule Ash.Report.Variable do
+  @reset_types [:detail, :group, :page, :report]
+  
+  @variable_schema [
+    name: [
+      type: :atom,
+      required: true
+    ],
+    type: [
+      type: {:in, [:sum, :count, :average, :min, :max, :custom]},
+      required: true
+    ],
+    expression: [
+      type: :any,
+      doc: "Ash expression for variable calculation"
+    ],
+    reset_on: [
+      type: {:in, @reset_types},
+      default: :report
+    ],
+    reset_group: [
+      type: :integer,
+      doc: "For group resets, which group level"
+    ],
+    reset_detail: [
+      type: :integer,
+      doc: "For detail resets, which detail band"
 # Comprehensive Architecture for Ash.Domain Reports Extension
 
 This software architecture enables declarative definition of complex hierarchical reports within Ash domains using Spark DSL. The design allows developers to define reports with nested band structures and export them in multiple formats.
@@ -991,3 +1243,685 @@ Key features of this architecture include:
 6. **Domain-level configuration** - Configure reporting at both domain and resource levels
 
 By following the patterns established in the Ash ecosystem, this extension maintains consistency with other Ash components while providing powerful reporting capabilities.
+    ],
+    initial_value: [
+      type: :any,
+      default: 0
+    ]
+  ]
+end
+```
+
+## Domain Definition Example
+
+```elixir
+defmodule MyApp.Reports do
+  use Ash.Domain,
+    extensions: [Ash.Report]
+
+  reports do
+    report :sales_summary do
+      title "Sales Summary Report"
+      description "Monthly sales by region with totals"
+      driving_resource MyApp.Sales.Order
+      
+      parameters do
+        parameter :start_date, :date, required: true
+        parameter :end_date, :date, required: true
+        parameter :region, :string
+      end
+
+      scope fn params ->
+        MyApp.Sales.Order
+        |> Ash.Query.filter(order_date >= ^params.start_date)
+        |> Ash.Query.filter(order_date <= ^params.end_date)
+        |> Ash.Query.filter(if params.region, do: region == ^params.region, else: true)
+        |> Ash.Query.load([:customer, :line_items])
+      end
+
+      groups do
+        group :region, expr(region), level: 1
+        group :month, expr(fragment("date_trunc('month', ?)", order_date)), level: 2
+      end
+
+      variables do
+        variable :region_total, :sum, 
+          expression: expr(total_amount),
+          reset_on: :group,
+          reset_group: 1
+
+        variable :month_total, :sum,
+          expression: expr(total_amount),
+          reset_on: :group,
+          reset_group: 2
+
+        variable :grand_total, :sum,
+          expression: expr(total_amount),
+          reset_on: :report
+      end
+
+      bands do
+        band :title do
+          elements do
+            label "Sales Summary Report",
+              position: [x: :center, y: 10],
+              style: [font_size: 24, font_weight: :bold]
+            
+            expression expr("Report Period: #{format_date(^params.start_date)} to #{format_date(^params.end_date)}"),
+              position: [x: :center, y: 40]
+          end
+        end
+
+        band :page_header do
+          elements do
+            label "Order Date", position: [x: 50, y: 10, width: 100]
+            label "Customer", position: [x: 150, y: 10, width: 200]
+            label "Amount", position: [x: 350, y: 10, width: 100]
+            line position: [x: 50, y: 25, width: 400, height: 1]
+          end
+        end
+
+        band :group_header, group_level: 1 do
+          on_entry expr(reset_variable(:region_total))
+          
+          elements do
+            label "Region:", position: [x: 50, y: 5]
+            field :region, position: [x: 100, y: 5],
+              style: [font_weight: :bold]
+          end
+        end
+
+        band :group_header, group_level: 2 do
+          on_entry expr(reset_variable(:month_total))
+          
+          elements do
+            label "Month:", position: [x: 70, y: 5]
+            expression expr(format_date(^current.month, format: :month_year)),
+              position: [x: 120, y: 5]
+          end
+        end
+
+        band :detail do
+          elements do
+            field :order_date, 
+              position: [x: 50, y: 5, width: 100],
+              format: [date: :short]
+            
+            field [:customer, :name],
+              position: [x: 150, y: 5, width: 200]
+            
+            field :total_amount,
+              position: [x: 350, y: 5, width: 100],
+              format: [currency: :USD]
+          end
+        end
+
+        band :group_footer, group_level: 2 do
+          elements do
+            label "Month Total:",
+              position: [x: 250, y: 5],
+              style: [font_weight: :bold]
+            
+            variable :month_total,
+              position: [x: 350, y: 5, width: 100],
+              format: [currency: :USD],
+              style: [font_weight: :bold]
+          end
+        end
+
+        band :group_footer, group_level: 1 do
+          elements do
+            label "Region Total:",
+              position: [x: 250, y: 5],
+              style: [font_weight: :bold, font_size: 12]
+            
+            variable :region_total,
+              position: [x: 350, y: 5, width: 100],
+              format: [currency: :USD],
+              style: [font_weight: :bold, font_size: 12]
+            
+            line position: [x: 50, y: 15, width: 400, height: 2]
+          end
+        end
+
+        band :summary do
+          elements do
+            label "Grand Total:",
+              position: [x: 250, y: 10],
+              style: [font_weight: :bold, font_size: 14]
+            
+            variable :grand_total,
+              position: [x: 350, y: 10, width: 100],
+              format: [currency: :USD],
+              style: [font_weight: :bold, font_size: 14]
+          end
+        end
+      end
+
+      permissions [:view_sales_reports, :view_financial_data]
+    end
+  end
+end
+```
+
+## Rendering Engine
+
+Abstract rendering interface with pluggable backends:
+
+```elixir
+defmodule Ash.Report.Renderer do
+  @callback render(report :: Ash.Report.t(), data :: term(), opts :: keyword()) ::
+              {:ok, binary()} | {:error, term()}
+
+  defmacro __using__(_opts) do
+    quote do
+      @behaviour Ash.Report.Renderer
+      
+      def render(report, data, opts) do
+        locale = Keyword.get(opts, :locale, "en")
+        Cldr.with_locale(locale, fn ->
+          do_render(report, data, opts)
+        end)
+      end
+      
+      defoverridable render: 3
+    end
+  end
+end
+```
+
+### PDF Renderer Example
+
+```elixir
+defmodule Ash.Report.Renderer.PDF do
+  use Ash.Report.Renderer
+  
+  def do_render(report, data, opts) do
+    # Use a library like ChromicPDF or wkhtmltopdf
+    html = Ash.Report.Renderer.HTML.render!(report, data, opts)
+    
+    ChromicPDF.print_to_pdf(html,
+      print_to_pdf: %{
+        format: :A4,
+        landscape: Keyword.get(opts, :landscape, false)
+      }
+    )
+  end
+end
+```
+
+### HEEX Renderer
+
+```elixir
+defmodule Ash.Report.Renderer.HEEX do
+  use Ash.Report.Renderer
+  use Phoenix.Component
+  
+  def do_render(report, data, opts) do
+    assigns = %{
+      report: report,
+      data: data,
+      opts: opts,
+      bands: process_bands(report, data)
+    }
+    
+    ~H"""
+    <div class="ash-report" data-report={@report.name}>
+      <.render_band :for={band <- @bands} band={band} />
+    </div>
+    """
+  end
+  
+  defp render_band(assigns) do
+    ~H"""
+    <div class={"ash-report-band ash-report-band-#{@band.type}"}>
+      <.render_element :for={element <- @band.elements} element={element} />
+    </div>
+    """
+  end
+  
+  defp render_element(assigns) do
+    case assigns.element.type do
+      :field -> render_field(assigns)
+      :label -> render_label(assigns)
+      :expression -> render_expression(assigns)
+      # ... other element types
+    end
+  end
+end
+```
+
+## Internal Report Server
+
+GenServer for managing report execution:
+
+```elixir
+defmodule Ash.Report.Server do
+  use GenServer
+  
+  defmodule State do
+    defstruct [:reports_domain, :cache, :active_jobs]
+  end
+  
+  # Client API
+  
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
+  
+  def run_report(report_name, params, opts \\ []) do
+    GenServer.call(__MODULE__, {:run_report, report_name, params, opts})
+  end
+  
+  def run_report_async(report_name, params, opts \\ []) do
+    GenServer.cast(__MODULE__, {:run_report_async, report_name, params, opts})
+  end
+  
+  def get_report_status(job_id) do
+    GenServer.call(__MODULE__, {:get_status, job_id})
+  end
+  
+  # Server callbacks
+  
+  @impl true
+  def init(opts) do
+    state = %State{
+      reports_domain: Keyword.fetch!(opts, :reports_domain),
+      cache: :ets.new(:report_cache, [:set, :public]),
+      active_jobs: %{}
+    }
+    
+    {:ok, state}
+  end
+  
+  @impl true
+  def handle_call({:run_report, name, params, opts}, _from, state) do
+    case execute_report(state.reports_domain, name, params, opts) do
+      {:ok, result} ->
+        cache_result(state.cache, name, params, result)
+        {:reply, {:ok, result}, state}
+        
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
+    end
+  end
+  
+  @impl true
+  def handle_cast({:run_report_async, name, params, opts}, state) do
+    job_id = generate_job_id()
+    
+    task = Task.async(fn ->
+      execute_report(state.reports_domain, name, params, opts)
+    end)
+    
+    new_state = put_in(state.active_jobs[job_id], task)
+    {:noreply, new_state}
+  end
+  
+  defp execute_report(domain, name, params, opts) do
+    with {:ok, report} <- get_report(domain, name),
+         :ok <- validate_permissions(report, opts[:user]),
+         {:ok, data} <- fetch_report_data(report, params),
+         {:ok, rendered} <- render_report(report, data, opts) do
+      {:ok, %{
+        report: name,
+        params: params,
+        generated_at: DateTime.utc_now(),
+        format: Keyword.get(opts, :format, :pdf),
+        content: rendered
+      }}
+    end
+  end
+end
+```
+
+## MCP Server Integration
+
+Model Context Protocol server for LLM access:
+
+```elixir
+defmodule Ash.Report.MCPServer do
+  use GenServer
+  
+  @protocol_version "1.0.0"
+  
+  defmodule Tool do
+    defstruct [:name, :description, :parameters, :permissions]
+  end
+  
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
+  
+  # MCP Protocol Implementation
+  
+  def handle_info({:tcp, socket, data}, state) do
+    case Jason.decode(data) do
+      {:ok, %{"method" => method, "params" => params, "id" => id}} ->
+        response = handle_mcp_request(method, params, state)
+        :gen_tcp.send(socket, Jason.encode!(%{
+          jsonrpc: "2.0",
+          id: id,
+          result: response
+        }))
+        
+      {:error, _} ->
+        # Invalid JSON
+    end
+    
+    {:noreply, state}
+  end
+  
+  defp handle_mcp_request("initialize", _params, state) do
+    %{
+      protocolVersion: @protocol_version,
+      capabilities: %{
+        tools: true,
+        resources: false
+      }
+    }
+  end
+  
+  defp handle_mcp_request("tools/list", _params, state) do
+    tools = build_tools_list(state.reports_domain, state.allowed_reports)
+    
+    %{
+      tools: Enum.map(tools, fn tool ->
+        %{
+          name: "report_#{tool.name}",
+          description: tool.description,
+          inputSchema: build_json_schema(tool.parameters)
+        }
+      end)
+    }
+  end
+  
+  defp handle_mcp_request("tools/call", %{"name" => tool_name, "arguments" => args}, state) do
+    case String.trim_leading(tool_name, "report_") do
+      "" -> {:error, "Invalid tool name"}
+      
+      report_name ->
+        report_name = String.to_existing_atom(report_name)
+        
+        case validate_mcp_access(report_name, state) do
+          :ok ->
+            run_report_for_mcp(report_name, args, state)
+            
+          {:error, reason} ->
+            %{error: reason}
+        end
+    end
+  end
+  
+  defp build_json_schema(parameters) do
+    %{
+      type: "object",
+      properties: Enum.reduce(parameters, %{}, fn param, acc ->
+        Map.put(acc, param.name, %{
+          type: parameter_type_to_json_type(param.type),
+          description: param.description,
+          required: param.required
+        })
+      end)
+    }
+  end
+  
+  defp run_report_for_mcp(report_name, params, state) do
+    case Ash.Report.Server.run_report(report_name, params, format: :json) do
+      {:ok, result} ->
+        %{
+          content: [
+            %{
+              type: "text",
+              text: format_report_for_llm(result)
+            }
+          ]
+        }
+        
+      {:error, reason} ->
+        %{
+          content: [
+            %{
+              type: "text", 
+              text: "Error running report: #{inspect(reason)}"
+            }
+          ]
+        }
+    end
+  end
+end
+```
+
+## Internationalization with CLDR
+
+Integration with ex_cldr for formatting:
+
+```elixir
+defmodule Ash.Report.Formatter do
+  def format_value(value, format_spec, locale \\ "en") do
+    Cldr.with_locale(locale, fn ->
+      case format_spec do
+        [date: format] -> 
+          MyApp.Cldr.DateTime.to_string!(value, format: format)
+          
+        [currency: currency] ->
+          MyApp.Cldr.Number.to_string!(value, currency: currency)
+          
+        [number: opts] ->
+          MyApp.Cldr.Number.to_string!(value, opts)
+          
+        [unit: {unit, opts}] ->
+          MyApp.Cldr.Unit.to_string!(value, unit: unit)
+          
+        _ ->
+          to_string(value)
+      end
+    end)
+  end
+end
+```
+
+## Security Considerations
+
+### Permission System
+
+```elixir
+defmodule Ash.Report.Authorization do
+  def authorize_report(report, user, context \\ %{}) do
+    required_permissions = report.permissions || []
+    user_permissions = get_user_permissions(user)
+    
+    if MapSet.subset?(
+      MapSet.new(required_permissions),
+      MapSet.new(user_permissions)
+    ) do
+      :ok
+    else
+      {:error, :unauthorized}
+    end
+  end
+  
+  def filter_allowed_reports(reports, user) do
+    Enum.filter(reports, fn report ->
+      match?(:ok, authorize_report(report, user))
+    end)
+  end
+end
+```
+
+### Data Access Control
+
+Reports respect Ash policies and filters:
+
+```elixir
+defmodule Ash.Report.Transformers.ApplyPolicies do
+  use Spark.Dsl.Transformer
+  
+  def transform(dsl_state) do
+    {:ok, 
+     dsl_state
+     |> update_report_queries(&apply_policies/1)}
+  end
+  
+  defp apply_policies(query) do
+    query
+    |> Ash.Query.for_read(:report_read, actor: current_actor())
+    |> apply_report_specific_filters()
+  end
+end
+```
+
+## Configuration
+
+### Application Configuration
+
+```elixir
+# config/config.exs
+config :my_app, :ash_reports,
+  report_server: [
+    reports_domain: MyApp.Reports,
+    cache_ttl: :timer.minutes(15),
+    max_concurrent_reports: 10
+  ],
+  mcp_server: [
+    port: 5173,
+    allowed_reports: [:sales_summary, :inventory_status],
+    require_authentication: true
+  ],
+  renderers: [
+    pdf: Ash.Report.Renderer.PDF,
+    html: Ash.Report.Renderer.HTML,
+    heex: Ash.Report.Renderer.HEEX,
+    json: Ash.Report.Renderer.JSON
+  ]
+```
+
+### Supervision Tree
+
+```elixir
+defmodule MyApp.Application do
+  use Application
+  
+  def start(_type, _args) do
+    children = [
+      # ... other children
+      {Ash.Report.Server, Application.get_env(:my_app, :ash_reports)[:report_server]},
+      {Ash.Report.MCPServer, Application.get_env(:my_app, :ash_reports)[:mcp_server]},
+      {Ash.Report.Cache, []}
+    ]
+    
+    opts = [strategy: :one_for_one, name: MyApp.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+end
+```
+
+## Testing Strategy
+
+### Report Definition Testing
+
+```elixir
+defmodule MyApp.ReportTest do
+  use ExUnit.Case
+  
+  describe "sales_summary report" do
+    test "validates required parameters" do
+      assert {:error, _} = 
+        MyApp.Reports.run_report(:sales_summary, %{})
+    end
+    
+    test "generates correct bands" do
+      report = MyApp.Reports.get_report!(:sales_summary)
+      band_types = Enum.map(report.bands, & &1.type)
+      
+      assert :title in band_types
+      assert :page_header in band_types
+      assert :detail in band_types
+      assert :summary in band_types
+    end
+    
+    test "calculates variables correctly" do
+      data = create_test_data()
+      result = MyApp.Reports.run_report(:sales_summary, %{
+        start_date: ~D[2024-01-01],
+        end_date: ~D[2024-12-31]
+      })
+      
+      assert result.variables.grand_total == calculate_expected_total(data)
+    end
+  end
+end
+```
+
+### Renderer Testing
+
+```elixir
+defmodule Ash.Report.Renderer.PDFTest do
+  use ExUnit.Case
+  
+  test "renders PDF with correct formatting" do
+    report = build_test_report()
+    data = build_test_data()
+    
+    {:ok, pdf_binary} = Ash.Report.Renderer.PDF.render(report, data, [])
+    
+    assert is_binary(pdf_binary)
+    assert String.starts_with?(pdf_binary, "%PDF")
+  end
+end
+```
+
+## Performance Considerations
+
+### Query Optimization
+
+- Use Ash.Query.load/2 to preload associations
+- Implement query result caching for repeated report runs
+- Use database-level aggregations where possible
+
+### Streaming for Large Reports
+
+```elixir
+defmodule Ash.Report.Stream do
+  def stream_report(report, params, chunk_size \\ 1000) do
+    Stream.resource(
+      fn -> init_report_state(report, params) end,
+      fn state -> fetch_next_chunk(state, chunk_size) end,
+      fn state -> cleanup_report_state(state) end
+    )
+  end
+end
+```
+
+### Concurrent Report Generation
+
+- Use Task.async_stream for parallel processing of independent report sections
+- Implement connection pooling for database access
+- Rate limiting for MCP server requests
+
+## Future Extensions
+
+### 1. Report Designer UI
+- Visual band layout designer
+- Drag-and-drop element positioning
+- Live preview with sample data
+
+### 2. Advanced Features
+- Sub-reports within detail bands
+- Cross-tab/pivot reports
+- Chart integration (using VegaLite)
+- Conditional formatting rules
+
+### 3. Export/Import
+- Report definition serialization
+- Version control integration
+- Report templates marketplace
+
+### 4. Analytics Integration
+- Report usage tracking
+- Performance metrics
+- User behavior analytics
+
+## Conclusion
+
+This design provides a comprehensive, extensible reporting system built on Ash framework principles. The hierarchical band structure matches traditional report writers while leveraging Elixir's strengths and Ash's powerful query and authorization systems. The system is internationalized, supports multiple output formats, and can be accessed both programmatically and through LLM integration via MCP.
