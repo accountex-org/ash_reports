@@ -12,10 +12,10 @@ This implementation plan is organized into 6 phases, with each phase building up
 ### 1.1 Spark DSL Foundation
 
 #### Implementation Tasks:
-- Create `Ash.Report` extension module
-- Define core DSL schema for reports
-- Implement basic section definitions
-- Create DSL entity modules for Band, Element, Variable
+- [ ] 1.1.1 Create `Ash.Report` extension module
+- [ ] 1.1.2 Define core DSL schema for reports
+- [ ] 1.1.3 Implement basic section definitions
+- [ ] 1.1.4 Create DSL entity modules for Band, Element, Variable
 
 #### Code Structure:
 ```elixir
@@ -62,10 +62,10 @@ end
 ### 1.2 Band Hierarchy Implementation
 
 #### Implementation Tasks:
-- Create Band entity with type validation
-- Implement band ordering logic
-- Add band nesting support for groups
-- Create band validation transformer
+- [ ] 1.2.1 Create Band entity with type validation
+- [ ] 1.2.2 Implement band ordering logic
+- [ ] 1.2.3 Add band nesting support for groups
+- [ ] 1.2.4 Create band validation transformer
 
 #### Code Structure:
 ```elixir
@@ -119,10 +119,10 @@ end
 ### 1.3 Element System
 
 #### Implementation Tasks:
-- Create Element entity types (field, label, expression, etc.)
-- Implement position and style schemas
-- Add element validation
-- Create element renderer interface
+- [ ] 1.3.1 Create Element entity types (field, label, expression, etc.)
+- [ ] 1.3.2 Implement position and style schemas
+- [ ] 1.3.3 Add element validation
+- [ ] 1.3.4 Create element renderer interface
 
 #### Testing:
 ```elixir
@@ -155,10 +155,10 @@ end
 ### 1.4 Basic Report Registry
 
 #### Implementation Tasks:
-- Create report storage mechanism
-- Implement report lookup functions
-- Add report compilation logic
-- Create basic report metadata
+- [ ] 1.4.1 Create report storage mechanism
+- [ ] 1.4.2 Implement report lookup functions
+- [ ] 1.4.3 Add report compilation logic
+- [ ] 1.4.4 Create basic report metadata
 
 #### Testing:
 ```elixir
@@ -228,10 +228,10 @@ end
 ### 2.1 Query Builder
 
 #### Implementation Tasks:
-- Create query builder for report scope
-- Implement parameter substitution
-- Add query validation
-- Create query optimization logic
+- [ ] 2.1.1 Create query builder for report scope
+- [ ] 2.1.2 Implement parameter substitution
+- [ ] 2.1.3 Add query validation
+- [ ] 2.1.4 Create query optimization logic
 
 #### Code Structure:
 ```elixir
@@ -271,10 +271,10 @@ end
 ### 2.2 Variable System Implementation
 
 #### Implementation Tasks:
-- Create variable storage and state management
-- Implement reset logic for different scopes
-- Add variable calculation engine
-- Create variable dependency resolver
+- [ ] 2.2.1 Create variable storage and state management
+- [ ] 2.2.2 Implement reset logic for different scopes
+- [ ] 2.2.3 Add variable calculation engine
+- [ ] 2.2.4 Create variable dependency resolver
 
 #### Testing:
 ```elixir
@@ -320,10 +320,10 @@ end
 ### 2.3 Group Processing Engine
 
 #### Implementation Tasks:
-- Implement group break detection
-- Create group value tracking
-- Add multi-level group support
-- Implement group sorting
+- [ ] 2.3.1 Implement group break detection
+- [ ] 2.3.2 Create group value tracking
+- [ ] 2.3.3 Add multi-level group support
+- [ ] 2.3.4 Implement group sorting
 
 #### Testing:
 ```elixir
@@ -348,10 +348,10 @@ end
 ### 2.4 Data Loader
 
 #### Implementation Tasks:
-- Create data fetching orchestrator
-- Implement relationship loading
-- Add data transformation pipeline
-- Create streaming support for large datasets
+- [ ] 2.4.1 Create data fetching orchestrator
+- [ ] 2.4.2 Implement relationship loading
+- [ ] 2.4.3 Add data transformation pipeline
+- [ ] 2.4.4 Create streaming support for large datasets
 
 #### Testing:
 ```elixir
@@ -421,10 +421,10 @@ end
 ### 3.1 Renderer Interface
 
 #### Implementation Tasks:
-- Create renderer behavior
-- Implement render context
-- Add layout calculation engine
-- Create render pipeline
+- [ ] 3.1.1 Create renderer behavior
+- [ ] 3.1.2 Implement render context
+- [ ] 3.1.3 Add layout calculation engine
+- [ ] 3.1.4 Create render pipeline
 
 #### Code Structure:
 ```elixir
@@ -472,10 +472,10 @@ end
 ### 3.2 HTML Renderer
 
 #### Implementation Tasks:
-- Create HTML template system
-- Implement CSS styling
-- Add responsive layout support
-- Create HTML element builders
+- [ ] 3.2.1 Create HTML template system
+- [ ] 3.2.2 Implement CSS styling
+- [ ] 3.2.3 Add responsive layout support
+- [ ] 3.2.4 Create HTML element builders
 
 #### Testing:
 ```elixir
@@ -510,10 +510,10 @@ end
 ### 3.3 HEEX Renderer
 
 #### Implementation Tasks:
-- Create Phoenix component integration
-- Implement live view support
-- Add interactive elements
-- Create component library
+- [ ] 3.3.1 Create Phoenix component integration
+- [ ] 3.3.2 Implement live view support
+- [ ] 3.3.3 Add interactive elements
+- [ ] 3.3.4 Create component library
 
 #### Testing:
 ```elixir
@@ -540,10 +540,10 @@ end
 ### 3.4 PDF Renderer
 
 #### Implementation Tasks:
-- Integrate PDF generation library (ChromicPDF/wkhtmltopdf)
-- Implement page layout management
-- Add page breaking logic
-- Create PDF-specific formatting
+- [ ] 3.4.1 Integrate PDF generation library (ChromicPDF/wkhtmltopdf)
+- [ ] 3.4.2 Implement page layout management
+- [ ] 3.4.3 Add page breaking logic
+- [ ] 3.4.4 Create PDF-specific formatting
 
 #### Testing:
 ```elixir
@@ -577,10 +577,10 @@ end
 ### 3.5 JSON Renderer
 
 #### Implementation Tasks:
-- Create JSON structure definition
-- Implement data serialization
-- Add metadata inclusion
-- Create JSON schema validation
+- [ ] 3.5.1 Create JSON structure definition
+- [ ] 3.5.2 Implement data serialization
+- [ ] 3.5.3 Add metadata inclusion
+- [ ] 3.5.4 Create JSON schema validation
 
 #### Testing:
 ```elixir
@@ -647,10 +647,10 @@ end
 ### 4.1 CLDR Integration
 
 #### Implementation Tasks:
-- Set up ex_cldr configuration
-- Create formatter module
-- Implement locale detection
-- Add locale fallback logic
+- [ ] 4.1.1 Set up ex_cldr configuration
+- [ ] 4.1.2 Create formatter module
+- [ ] 4.1.3 Implement locale detection
+- [ ] 4.1.4 Add locale fallback logic
 
 #### Code Structure:
 ```elixir
@@ -680,10 +680,10 @@ end
 ### 4.2 Format Specifications
 
 #### Implementation Tasks:
-- Create format specification DSL
-- Implement format parsers
-- Add custom format support
-- Create format validation
+- [ ] 4.2.1 Create format specification DSL
+- [ ] 4.2.2 Implement format parsers
+- [ ] 4.2.3 Add custom format support
+- [ ] 4.2.4 Create format validation
 
 #### Testing:
 ```elixir
@@ -712,10 +712,10 @@ end
 ### 4.3 Locale-aware Rendering
 
 #### Implementation Tasks:
-- Update renderers for locale support
-- Implement RTL support for applicable locales
-- Add locale-specific styling
-- Create translation system for labels
+- [ ] 4.3.1 Update renderers for locale support
+- [ ] 4.3.2 Implement RTL support for applicable locales
+- [ ] 4.3.3 Add locale-specific styling
+- [ ] 4.3.4 Create translation system for labels
 
 #### Testing:
 ```elixir
@@ -773,10 +773,10 @@ end
 ### 5.1 Report Server
 
 #### Implementation Tasks:
-- Create GenServer for report management
-- Implement job queue
-- Add caching layer
-- Create monitoring and metrics
+- [ ] 5.1.1 Create GenServer for report management
+- [ ] 5.1.2 Implement job queue
+- [ ] 5.1.3 Add caching layer
+- [ ] 5.1.4 Create monitoring and metrics
 
 #### Code Structure:
 ```elixir
@@ -826,10 +826,10 @@ end
 ### 5.2 Caching System
 
 #### Implementation Tasks:
-- Implement ETS-based cache
-- Add cache key generation
-- Create TTL management
-- Implement cache invalidation
+- [ ] 5.2.1 Implement ETS-based cache
+- [ ] 5.2.2 Add cache key generation
+- [ ] 5.2.3 Create TTL management
+- [ ] 5.2.4 Implement cache invalidation
 
 #### Testing:
 ```elixir
@@ -864,10 +864,10 @@ end
 ### 5.3 MCP Server Implementation
 
 #### Implementation Tasks:
-- Create TCP server
-- Implement MCP protocol
-- Add authentication
-- Create tool registration
+- [ ] 5.3.1 Create TCP server
+- [ ] 5.3.2 Implement MCP protocol
+- [ ] 5.3.3 Add authentication
+- [ ] 5.3.4 Create tool registration
 
 #### Testing:
 ```elixir
@@ -928,10 +928,10 @@ end
 ### 5.4 API Documentation
 
 #### Implementation Tasks:
-- Generate OpenAPI specification
-- Create API client examples
-- Add rate limiting
-- Implement API versioning
+- [ ] 5.4.1 Generate OpenAPI specification
+- [ ] 5.4.2 Create API client examples
+- [ ] 5.4.3 Add rate limiting
+- [ ] 5.4.4 Implement API versioning
 
 ### Phase 5 Integration Tests
 
@@ -998,10 +998,10 @@ end
 ### 6.1 Ash.Resource.Reportable Extension
 
 #### Implementation Tasks:
-- Create resource extension
-- Implement field exposure
-- Add calculated fields
-- Create field security
+- [ ] 6.1.1 Create resource extension
+- [ ] 6.1.2 Implement field exposure
+- [ ] 6.1.3 Add calculated fields
+- [ ] 6.1.4 Create field security
 
 #### Testing:
 ```elixir
@@ -1042,10 +1042,10 @@ end
 ### 6.2 Performance Optimization
 
 #### Implementation Tasks:
-- Implement query optimization
-- Add connection pooling
-- Create streaming for large datasets
-- Implement parallel processing
+- [ ] 6.2.1 Implement query optimization
+- [ ] 6.2.2 Add connection pooling
+- [ ] 6.2.3 Create streaming for large datasets
+- [ ] 6.2.4 Implement parallel processing
 
 #### Testing:
 ```elixir
@@ -1092,10 +1092,10 @@ end
 ### 6.3 Security Enhancements
 
 #### Implementation Tasks:
-- Implement row-level security
-- Add audit logging
-- Create permission caching
-- Implement data masking
+- [ ] 6.3.1 Implement row-level security
+- [ ] 6.3.2 Add audit logging
+- [ ] 6.3.3 Create permission caching
+- [ ] 6.3.4 Implement data masking
 
 #### Testing:
 ```elixir
@@ -1133,10 +1133,10 @@ end
 ### 6.4 Monitoring and Observability
 
 #### Implementation Tasks:
-- Add telemetry events
-- Create health checks
-- Implement error tracking
-- Add performance metrics
+- [ ] 6.4.1 Add telemetry events
+- [ ] 6.4.2 Create health checks
+- [ ] 6.4.3 Implement error tracking
+- [ ] 6.4.4 Add performance metrics
 
 #### Testing:
 ```elixir
