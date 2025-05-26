@@ -74,14 +74,35 @@ get_project_number() {
         return
     fi
     
-    local project_name="Implementation Plan"
+    local project_name="Ash Reporting Engine"
     local project_num=$(gh project list --owner "${REPO%/*}" --format json | \
         jq -r ".projects[] | select(.title == \"$project_name\") | .number")
     
     if [[ -z "$project_num" ]]; then
         log "Creating new project: $project_name"
-        project_num=$(gh project create --owner "${REPO%/*}" --title "$project_name" \
-            --format json | jq -r .number)
+        local create_output=$(gh project create --owner "${REPO%/*}" --title "$project_name" \
+            --description "Automated tracking of implementation plan tasks" \
+            --format json 2>&1)
+        local create_status=$?
+        
+        if [[ $create_status -ne 0 ]]; then
+            error "Failed to create project: $create_output"
+            return 1
+        fi
+        
+        project_num=$(echo "$create_output" | jq -r '.number // empty')
+        
+        if [[ -z "$project_num" ]]; then
+            error "Failed to parse project number from: $create_output"
+            return 1
+        fi
+        
+        log "Created project #$project_num"
+    fi
+    
+    if [[ -z "$project_num" ]]; then
+        error "No project number available"
+        return 1
     fi
     
     echo "$project_num"
@@ -150,6 +171,9 @@ BEGIN {
 in_task_list && /^- / {
     task = $0
     gsub(/^- /, "", task)
+    # Remove checkbox prefix if present
+    gsub(/^\[ \] /, "", task)
+    gsub(/^\[x\] /, "", task)
     print "TASK|" phase_num "|" section_num "|" task > tasks_file
 }
 EOF
@@ -215,7 +239,7 @@ create_or_get_milestone() {
             --field description="$description" 2>&1)
         
         local create_status=$?
-        
+        e"
         if [[ $create_status -ne 0 ]]; then
             error "Failed to create milestone: $create_output"
             return 1
@@ -266,13 +290,13 @@ create_or_get_issue() {
         
         # Write body to temp file to avoid shell escaping issues
         local temp_body_file="/tmp/gh-issue-body-$$.txt"
-        echo "$body" > "$temp_body_file"
+        echo "$body" > "$tee"mp_body_file"
         
         local cmd="gh issue create --repo \"$REPO\" --title \"$title\" --body-file \"$temp_body_file\""
         
         if [[ -n "$milestone" ]]; then
             debug "Adding milestone: $milestone"
-            cmd="$cmd --milestone \"$milestone\""
+            cmd="$cmd --mile"estone \"$milestone\""
         fi
         
         if [[ -n "$labels" ]]; then
@@ -281,7 +305,7 @@ create_or_get_issue() {
         
         debug "Running: $cmd"
         # Use printf to avoid issues with special characters
-        local create_output
+        local create_outpute"
         create_output=$(eval "$cmd" 2>&1)
         local create_status=$?
         
@@ -311,29 +335,80 @@ create_or_get_issue() {
 }
 
 # Format task list for issue body
-format_task_list() {
+format_section_summary() {
     local phase_num="$1"
     local section_num="$2"
-    local tasks_file="$3"
+    local tasks_file="$3"e"
     
-    echo "## Implementation Tasks"
+    echo "## Overview"
     echo ""
-    
+    echo "This section contains the following implementation tasks:"
+    echo ""
+    e"
+    local task_count=0
     if [[ -f "$tasks_file" ]]; then
         grep "^TASK|$phase_num|$section_num|" "$tasks_file" | while IFS='|' read -r _ _ _ task; do
+            ((task_count++))
             echo "- [ ] $task"
         done
     fi
     
     echo ""
-    echo "## Testing"
+    echo "## Sub-tasks"
     echo ""
-    echo "- [ ] Unit tests completed"
-    echo "- [ ] Integration tests completed"
-    echo "- [ ] Documentation updated"
+    echo "Individual task ie"ssues will be created and linked to this section issue."
     echo ""
     echo "---"
     echo "_This issue was automatically generated from the implementation plan._"
+}
+
+# Create task issue
+create_task_issue() {
+    local phase_num="$1"
+    local section_num="$2"
+    local task_num="$3"
+    local task_desc="$4"
+    local parent_issue_num="$5"
+    local milestone_title="$6"
+    local project_num="$7"
+    
+    local task_title="[$phase_num.$section_num.$task_num] $task_desc"
+    local task_body=$(cat <<EOF
+## Task Descriptione"
+
+$task_desc
+
+## Parent Section
+
+This task is part of #$parent_issue_num
+
+## Acceptance Criteria
+
+- [ ] Implementation complete
+- [ ] Unit tests written and passing
+- [ ] Integration tests (if applicable)
+- [ ] Documentation updated
+- [ ] Code reviewed
+
+---
+_This task was automatically generated from the implementation plan._
+EOF
+    )
+    
+    local task_labels="task,phase-$phase_num,section-$phase_num-$section_num"
+    
+    local issue_num=$(create_or_get_issue "$task_title" "$task_body" \
+        "$milestone_title" "$task_labels")
+    
+    if [[ -n "$issue_num" ]]; then
+        debug "Created task issue #$issue_num for task $phase_num.$section_num.$task_num"
+        # Add task to project
+        add_to_project "$project_num" "$issue_num"
+    else
+        error "Failed to create task issue for $phase_num.$section_num.$task_num"
+    fi
+    
+    echo "$issue_num"
 }
 
 # Create milestones and issues from parsed plan
@@ -345,6 +420,12 @@ create_from_plan() {
     
     # Get project number
     local project_num=$(get_project_number)
+    
+    if [[ -z "$project_num" ]]; then
+        error "Failed to get or create project"
+        return 1
+    fi
+    
     log "Using project #$project_num"
     
     # Process phases (milestones)
@@ -371,21 +452,32 @@ create_from_plan() {
                 grep "^SECTION|$phase_num|" "$parsed_dir/sections.txt" | \
                 while IFS='|' read -r _ _ section_num section_title; do
                     local issue_title="[$phase_num.$section_num] $section_title"
-                    local issue_body=$(format_task_list "$phase_num" "$section_num" "$parsed_dir/tasks.txt")
-                    local issue_labels="implementation,phase-$phase_num"
+                    local issue_body=$(format_section_summary "$phase_num" "$section_num" "$parsed_dir/tasks.txt")
+                    local issue_labels="section,phase-$phase_num"
                     
-                    local issue_num=$(create_or_get_issue "$issue_title" "$issue_body" \
+                    local section_issue_num=$(create_or_get_issue "$issue_title" "$issue_body" \
                         "$milestone_title" "$issue_labels")
                     
-                    if [[ -z "$issue_num" ]]; then
+                    if [[ -z "$section_issue_num" ]]; then
                         error "Failed to create/get issue for Section $phase_num.$section_num"
                         continue
                     fi
                     
-                    debug "Issue #$issue_num created/found for Section $phase_num.$section_num"
+                    debug "Section issue #$section_issue_num created/found for Section $phase_num.$section_num"
                     
-                    # Add issue to project
-                    add_to_project "$project_num" "$issue_num"
+                    # Add section issue to project
+                    add_to_project "$project_num" "$section_issue_num"
+                    
+                    # Create task issues for this section
+                    if [[ -f "$parsed_dir/tasks.txt" ]]; then
+                        local task_num=0
+                        grep "^TASK|$phase_num|$section_num|" "$parsed_dir/tasks.txt" | \
+                        while IFS='|' read -r _ _ _ task_desc; do
+                            ((task_num++))
+                            create_task_issue "$phase_num" "$section_num" "$task_num" "$task_desc" \
+                                "$section_issue_num" "$milestone_title" "$project_num"
+                        done
+                    fi
                 done
             fi
         done < "$parsed_dir/phases.txt"
@@ -417,10 +509,18 @@ add_to_project() {
         jq -r ".items[] | select(.content.number == $issue_num) | .id" 2>/dev/null)
     
     if [[ -z "$in_project" ]]; then
-        debug "Adding issue #$issue_num to project"
-        gh project item-add "$project_num" \
+        debug "Adding issue #$issue_num to project #$project_num"
+        local add_output=$(gh project item-add "$project_num" \
             --owner "${REPO%/*}" \
-            --url "https://github.com/$REPO/issues/$issue_num"
+            --url "https://github.com/$REPO/issues/$issue_num" 2>&1)
+        local add_status=$?
+        
+        if [[ $add_status -ne 0 ]]; then
+            error "Failed to add issue #$issue_num to project: $add_output"
+            return 1
+        else
+            success "Added issue #$issue_num to project #$project_num"
+        fi
     else
         debug "Issue #$issue_num already in project"
     fi
