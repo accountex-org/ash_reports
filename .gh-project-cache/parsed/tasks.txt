@@ -1,0 +1,96 @@
+TASK|1|1|1.1.1 Create `AshReports` extension module
+TASK|1|1|1.1.2 Define core DSL schema for reports
+TASK|1|1|1.1.3 Implement basic section definitions
+TASK|1|1|1.1.4 Create DSL entity modules for Band, Element, Variable
+TASK|1|2|1.2.1 Create Band entity with type validation
+TASK|1|2|1.2.2 Implement band ordering logic
+TASK|1|2|1.2.3 Add band nesting support for groups
+TASK|1|2|1.2.4 Create band validation transformer
+TASK|1|3|1.3.1 Create Element entity types (field, label, expression, etc.)
+TASK|1|3|1.3.2 Implement position and style schemas
+TASK|1|3|1.3.3 Add element validation
+TASK|1|3|1.3.4 Create element renderer interface
+TASK|1|4|1.4.1 Create report storage mechanism
+TASK|1|4|1.4.2 Implement report lookup functions
+TASK|1|4|1.4.3 Add report compilation logic
+TASK|1|4|1.4.4 Create basic report metadata
+TASK|2|1|2.1.1 Create query builder for report scope
+TASK|2|1|2.1.2 Implement parameter substitution
+TASK|2|1|2.1.3 Add query validation
+TASK|2|1|2.1.4 Create query optimization logic
+TASK|2|2|2.2.1 Create variable storage and state management
+TASK|2|2|2.2.2 Implement reset logic for different scopes
+TASK|2|2|2.2.3 Add variable calculation engine
+TASK|2|2|2.2.4 Create variable dependency resolver
+TASK|2|3|2.3.1 Implement group break detection
+TASK|2|3|2.3.2 Create group value tracking
+TASK|2|3|2.3.3 Add multi-level group support
+TASK|2|3|2.3.4 Implement group sorting
+TASK|2|4|2.4.1 Create data fetching orchestrator
+TASK|2|4|2.4.2 Implement relationship loading
+TASK|2|4|2.4.3 Add data transformation pipeline
+TASK|2|4|2.4.4 Create streaming support for large datasets
+TASK|3|1|3.1.1 Create renderer behavior
+TASK|3|1|3.1.2 Implement render context
+TASK|3|1|3.1.3 Add layout calculation engine
+TASK|3|1|3.1.4 Create render pipeline
+TASK|3|2|3.2.1 Create HTML template system
+TASK|3|2|3.2.2 Implement CSS styling
+TASK|3|2|3.2.3 Add responsive layout support
+TASK|3|2|3.2.4 Create HTML element builders
+TASK|3|3|3.3.1 Create Phoenix component integration
+TASK|3|3|3.3.2 Implement live view support
+TASK|3|3|3.3.3 Add interactive elements
+TASK|3|3|3.3.4 Create component library
+TASK|3|4|3.4.1 Integrate PDF generation library (ChromicPDF/wkhtmltopdf)
+TASK|3|4|3.4.2 Implement page layout management
+TASK|3|4|3.4.3 Add page breaking logic
+TASK|3|4|3.4.4 Create PDF-specific formatting
+TASK|3|5|3.5.1 Create JSON structure definition
+TASK|3|5|3.5.2 Implement data serialization
+TASK|3|5|3.5.3 Add metadata inclusion
+TASK|3|5|3.5.4 Create JSON schema validation
+TASK|4|1|4.1.1 Set up ex_cldr configuration
+TASK|4|1|4.1.2 Create formatter module
+TASK|4|1|4.1.3 Implement locale detection
+TASK|4|1|4.1.4 Add locale fallback logic
+TASK|4|2|4.2.1 Create format specification DSL
+TASK|4|2|4.2.2 Implement format parsers
+TASK|4|2|4.2.3 Add custom format support
+TASK|4|2|4.2.4 Create format validation
+TASK|4|3|4.3.1 Update renderers for locale support
+TASK|4|3|4.3.2 Implement RTL support for applicable locales
+TASK|4|3|4.3.3 Add locale-specific styling
+TASK|4|3|4.3.4 Create translation system for labels
+TASK|5|1|5.1.1 Create GenServer for report management
+TASK|5|1|5.1.2 Implement job queue
+TASK|5|1|5.1.3 Add caching layer
+TASK|5|1|5.1.4 Create monitoring and metrics
+TASK|5|2|5.2.1 Implement ETS-based cache
+TASK|5|2|5.2.2 Add cache key generation
+TASK|5|2|5.2.3 Create TTL management
+TASK|5|2|5.2.4 Implement cache invalidation
+TASK|5|3|5.3.1 Create TCP server
+TASK|5|3|5.3.2 Implement MCP protocol
+TASK|5|3|5.3.3 Add authentication
+TASK|5|3|5.3.4 Create tool registration
+TASK|5|4|5.4.1 Generate OpenAPI specification
+TASK|5|4|5.4.2 Create API client examples
+TASK|5|4|5.4.3 Add rate limiting
+TASK|5|4|5.4.4 Implement API versioning
+TASK|6|1|6.1.1 Create resource extension
+TASK|6|1|6.1.2 Implement field exposure
+TASK|6|1|6.1.3 Add calculated fields
+TASK|6|1|6.1.4 Create field security
+TASK|6|2|6.2.1 Implement query optimization
+TASK|6|2|6.2.2 Add connection pooling
+TASK|6|2|6.2.3 Create streaming for large datasets
+TASK|6|2|6.2.4 Implement parallel processing
+TASK|6|3|6.3.1 Implement row-level security
+TASK|6|3|6.3.2 Add audit logging
+TASK|6|3|6.3.3 Create permission caching
+TASK|6|3|6.3.4 Implement data masking
+TASK|6|4|6.4.1 Add telemetry events
+TASK|6|4|6.4.2 Create health checks
+TASK|6|4|6.4.3 Implement error tracking
+TASK|6|4|6.4.4 Add performance metrics

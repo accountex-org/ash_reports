@@ -81,7 +81,6 @@ get_project_number() {
     if [[ -z "$project_num" ]]; then
         log "Creating new project: $project_name"
         local create_output=$(gh project create --owner "${REPO%/*}" --title "$project_name" \
-            --description "Automated tracking of implementation plan tasks" \
             --format json 2>&1)
         local create_status=$?
         
@@ -239,7 +238,6 @@ create_or_get_milestone() {
             --field description="$description" 2>&1)
         
         local create_status=$?
-        e"
         if [[ $create_status -ne 0 ]]; then
             error "Failed to create milestone: $create_output"
             return 1
@@ -290,13 +288,13 @@ create_or_get_issue() {
         
         # Write body to temp file to avoid shell escaping issues
         local temp_body_file="/tmp/gh-issue-body-$$.txt"
-        echo "$body" > "$tee"mp_body_file"
+        echo "$body" > "$temp_body_file"
         
         local cmd="gh issue create --repo \"$REPO\" --title \"$title\" --body-file \"$temp_body_file\""
         
         if [[ -n "$milestone" ]]; then
             debug "Adding milestone: $milestone"
-            cmd="$cmd --mile"estone \"$milestone\""
+            cmd="$cmd --milestone \"$milestone\""
         fi
         
         if [[ -n "$labels" ]]; then
@@ -305,7 +303,7 @@ create_or_get_issue() {
         
         debug "Running: $cmd"
         # Use printf to avoid issues with special characters
-        local create_outpute"
+        local create_output
         create_output=$(eval "$cmd" 2>&1)
         local create_status=$?
         
@@ -338,13 +336,12 @@ create_or_get_issue() {
 format_section_summary() {
     local phase_num="$1"
     local section_num="$2"
-    local tasks_file="$3"e"
+    local tasks_file="$3"
     
     echo "## Overview"
     echo ""
     echo "This section contains the following implementation tasks:"
     echo ""
-    e"
     local task_count=0
     if [[ -f "$tasks_file" ]]; then
         grep "^TASK|$phase_num|$section_num|" "$tasks_file" | while IFS='|' read -r _ _ _ task; do
@@ -356,7 +353,7 @@ format_section_summary() {
     echo ""
     echo "## Sub-tasks"
     echo ""
-    echo "Individual task ie"ssues will be created and linked to this section issue."
+    echo "Individual task issues will be created and linked to this section issue."
     echo ""
     echo "---"
     echo "_This issue was automatically generated from the implementation plan._"
@@ -374,7 +371,7 @@ create_task_issue() {
     
     local task_title="[$phase_num.$section_num.$task_num] $task_desc"
     local task_body=$(cat <<EOF
-## Task Descriptione"
+## Task Description
 
 $task_desc
 
@@ -397,14 +394,15 @@ EOF
     
     local task_labels="task,phase-$phase_num,section-$phase_num-$section_num"
     
-    local issue_num=$(create_or_get_issue "$task_title" "$task_body" \
-        "$milestone_title" "$task_labels")
+    local issue_num
+    issue_num=$(create_or_get_issue "$task_title" "$task_body" "$milestone_title" "$task_labels")
     
     if [[ -n "$issue_num" ]]; then
         debug "Created task issue #$issue_num for task $phase_num.$section_num.$task_num"
-        # Add task to project
-        add_to_project "$project_num" "$issue_num"
-    else
+        add_to_project "$project_num" "$issue_num" || true
+    fi
+    
+    if [[ -z "$issue_num" ]]; then
         error "Failed to create task issue for $phase_num.$section_num.$task_num"
     fi
     
