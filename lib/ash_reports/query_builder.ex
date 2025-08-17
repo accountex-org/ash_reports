@@ -137,8 +137,7 @@ defmodule AshReports.QueryBuilder do
   rescue
     error ->
       {:error,
-       {Ash.Error.Framework,
-        "Failed to create query for resource #{resource}: #{inspect(error)}"}}
+       {Ash.Error.Framework, "Failed to create query for resource #{resource}: #{inspect(error)}"}}
   end
 
   defp build_base_query(%Report{driving_resource: resource}) do
