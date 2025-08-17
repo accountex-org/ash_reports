@@ -11,8 +11,9 @@ defmodule AshReports.Verifiers.ValidateReports do
 
   use Spark.Dsl.Verifier
 
-  alias Spark.Dsl.Verifier
   alias AshReports.Info
+  alias Spark.Dsl.Verifier
+  alias Spark.Error.DslError
 
   @impl true
   def verify(dsl_state) do
@@ -35,7 +36,7 @@ defmodule AshReports.Verifiers.ValidateReports do
 
       duplicates ->
         {:error,
-         Spark.Error.DslError.exception(
+         DslError.exception(
            message: "Duplicate report names found: #{inspect(duplicates)}",
            path: [:reports],
            module: module
@@ -51,7 +52,7 @@ defmodule AshReports.Verifiers.ValidateReports do
         is_nil(report.name) ->
           {:halt,
            {:error,
-            Spark.Error.DslError.exception(
+            DslError.exception(
               message: "Report name is required",
               path: [:reports, :report],
               module: module
@@ -60,7 +61,7 @@ defmodule AshReports.Verifiers.ValidateReports do
         is_nil(report.driving_resource) ->
           {:halt,
            {:error,
-            Spark.Error.DslError.exception(
+            DslError.exception(
               message: "Report '#{report.name}' must specify a driving_resource",
               path: [:reports, report.name],
               module: module
@@ -91,7 +92,7 @@ defmodule AshReports.Verifiers.ValidateReports do
       true ->
         {:halt,
          {:error,
-          Spark.Error.DslError.exception(
+          DslError.exception(
             message:
               "Invalid driving_resource in report '#{report.name}': must be an atom representing an Ash.Resource module",
             path: [:reports, report.name, :driving_resource],
@@ -109,7 +110,7 @@ defmodule AshReports.Verifiers.ValidateReports do
       if Enum.empty?(detail_bands) do
         {:halt,
          {:error,
-          Spark.Error.DslError.exception(
+          DslError.exception(
             message: "Report '#{report.name}' must have at least one detail band",
             path: [:reports, report.name, :bands],
             module: module

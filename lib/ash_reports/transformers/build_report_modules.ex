@@ -8,8 +8,8 @@ defmodule AshReports.Transformers.BuildReportModules do
 
   use Spark.Dsl.Transformer
 
-  alias Spark.Dsl.Transformer
   alias AshReports.Info
+  alias Spark.Dsl.Transformer
 
   @impl true
   def transform(dsl_state) do
@@ -137,7 +137,7 @@ defmodule AshReports.Transformers.BuildReportModules do
 
   defp generate_single_format_module(base_module, report, format) do
     format_module = Module.concat(base_module, format |> to_string() |> Macro.camelize())
-    
+
     quote do
       defmodule unquote(format_module) do
         @moduledoc """

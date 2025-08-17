@@ -12,8 +12,8 @@ defmodule AshReports.Verifiers.ValidateBands do
 
   use Spark.Dsl.Verifier
 
-  alias Spark.Dsl.Verifier
   alias AshReports.Info
+  alias Spark.Dsl.Verifier
 
   @impl true
   def verify(dsl_state) do

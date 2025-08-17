@@ -3,7 +3,7 @@ defmodule AshReports.ParameterValidator do
   Validates report parameters against their definitions.
   """
 
-  alias AshReports.{Report, Parameter}
+  alias AshReports.{Parameter, Report}
 
   @doc """
   Validates the given parameters against the report's parameter definitions.

@@ -1100,7 +1100,7 @@ defmodule AshReports.ComplexReportScenariosTest do
               variable(:high_value_sum,
                 type: :sum_where,
                 expression: expr(credit_limit),
-                condition: expr(credit_limit > 10000),
+                condition: expr(credit_limit > 10_000),
                 reset_on: :group,
                 reset_group: 1
               )
@@ -1137,7 +1137,7 @@ defmodule AshReports.ComplexReportScenariosTest do
                     case do
                       credit_limit < 1000 -> "Low"
                       credit_limit < 5000 -> "Medium"
-                      credit_limit < 10000 -> "High"
+                      credit_limit < 10_000 -> "High"
                       true -> "Premium"
                     end
                   ),
@@ -1229,7 +1229,7 @@ defmodule AshReports.ComplexReportScenariosTest do
                                   case do
                                     credit_limit < 1000 -> "Low"
                                     credit_limit < 5000 -> "Medium"
-                                    credit_limit < 10000 -> "High"
+                                    credit_limit < 10_000 -> "High"
                                     true -> "Premium"
                                   end
                               )
