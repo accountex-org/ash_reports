@@ -1,7 +1,7 @@
 defmodule AshReports.QueryBuilder do
   @moduledoc """
   Builds Ash queries for report data fetching.
-  
+
   This module will be fully implemented in Phase 2 with complete query generation.
   """
 
@@ -9,7 +9,7 @@ defmodule AshReports.QueryBuilder do
 
   @doc """
   Builds an Ash query for the report with the given parameters.
-  
+
   This is a placeholder that will be implemented in Phase 2.
   """
   @spec build(Report.t(), map()) :: Ash.Query.t()
@@ -22,7 +22,7 @@ defmodule AshReports.QueryBuilder do
     # 4. Apply parameter filters
     # 5. Add sorting based on groups
     # 6. Pre-load aggregates and calculations
-    
+
     report.driving_resource
     |> Ash.Query.new()
     |> apply_scope(report.scope)
@@ -30,12 +30,14 @@ defmodule AshReports.QueryBuilder do
   end
 
   defp apply_scope(query, nil), do: query
+
   defp apply_scope(query, _scope) do
     # In Phase 2, this will properly apply Ash expressions
     query
   end
 
   defp apply_parameters(query, params) when map_size(params) == 0, do: query
+
   defp apply_parameters(query, _params) do
     # In Phase 2, this will apply parameter-based filters
     query

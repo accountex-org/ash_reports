@@ -48,18 +48,18 @@ defmodule AshReports.MixProject do
       # Core dependencies
       {:ash, "~> 3.0"},
       {:spark, "~> 2.2"},
-      
+
       # CLDR dependencies for internationalization
       {:ex_cldr, "~> 2.40"},
       {:ex_cldr_numbers, "~> 2.33"},
       {:ex_cldr_dates_times, "~> 2.20"},
       {:ex_cldr_currencies, "~> 2.16"},
       {:ex_cldr_calendars, "~> 1.26"},
-      
+
       # Optional dependencies
       {:chromic_pdf, "~> 1.17", optional: true},
       {:phoenix_live_view, "~> 0.20", optional: true},
-      
+
       # Development and test dependencies
       {:sourceror, "~> 1.8", only: [:dev, :test], runtime: false},
       {:igniter, "~> 0.5", only: [:dev, :test]},
@@ -67,7 +67,7 @@ defmodule AshReports.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
-      
+
       # Test dependencies
       {:mox, "~> 1.1", only: :test},
       {:benchee, "~> 1.3", only: [:dev, :test]},
@@ -108,19 +108,19 @@ defmodule AshReports.MixProject do
         "planning/detailed_implementation_plan.md": [title: "Implementation Plan"]
       ],
       groups_for_modules: [
-        "DSL": [
+        DSL: [
           AshReports.Dsl,
           AshReports.Dsl.Report,
           AshReports.Dsl.Band,
           AshReports.Dsl.Column
         ],
-        "Extensions": [
+        Extensions: [
           AshReports.Domain,
           AshReports.Resource
         ],
-        "Transformers": ~r/AshReports.Transformers.*/,
-        "Renderers": ~r/AshReports.Renderers.*/,
-        "Internal": ~r/AshReports.*/
+        Transformers: ~r/AshReports.Transformers.*/,
+        Renderers: ~r/AshReports.Renderers.*/,
+        Internal: ~r/AshReports.*/
       ]
     ]
   end

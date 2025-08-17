@@ -1,7 +1,7 @@
 defmodule AshReports.Variable do
   @moduledoc """
   Represents a variable that accumulates values during report execution.
-  
+
   Variables can perform calculations like sum, count, average, etc., and can be
   reset at different scopes (detail, group, page, or report level).
   """
@@ -48,7 +48,8 @@ defmodule AshReports.Variable do
       case opts[:type] do
         :sum -> Keyword.put(opts, :initial_value, 0)
         :count -> Keyword.put(opts, :initial_value, 0)
-        :average -> Keyword.put(opts, :initial_value, {0, 0}) # {sum, count}
+        # {sum, count}
+        :average -> Keyword.put(opts, :initial_value, {0, 0})
         :min -> Keyword.put(opts, :initial_value, nil)
         :max -> Keyword.put(opts, :initial_value, nil)
         :custom -> opts
@@ -72,11 +73,12 @@ defmodule AshReports.Variable do
   Checks if this variable should reset when the given scope changes.
   """
   @spec should_reset?(t(), reset_scope(), pos_integer() | nil) :: boolean()
-  def should_reset?(%__MODULE__{reset_on: reset_on}, scope, _group_level) when reset_on == scope do
+  def should_reset?(%__MODULE__{reset_on: reset_on}, scope, _group_level)
+      when reset_on == scope do
     true
   end
 
-  def should_reset?(%__MODULE__{reset_on: :group, reset_group: reset_group}, :group, group_level) 
+  def should_reset?(%__MODULE__{reset_on: :group, reset_group: reset_group}, :group, group_level)
       when not is_nil(reset_group) and reset_group == group_level do
     true
   end

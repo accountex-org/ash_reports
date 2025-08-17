@@ -8,7 +8,7 @@ defmodule AshReports.TransformerIntegrationTest do
   describe "transformer integration and execution order" do
     test "verifiers run before transformers" do
       # This test ensures that validation happens before module generation
-      
+
       # Invalid report should fail at verification stage, not transformation
       assert_raise Spark.Error.DslError, ~r/must have at least one detail band/, fn ->
         defmodule InvalidBeforeTransformDomain do
@@ -20,14 +20,14 @@ defmodule AshReports.TransformerIntegrationTest do
 
           reports do
             report :invalid_report do
-              title "Invalid Report"
-              driving_resource AshReports.Test.Customer
+              title("Invalid Report")
+              driving_resource(AshReports.Test.Customer)
               # No detail band - should fail validation
-              
+
               bands do
                 band :title do
                   elements do
-                    label "title", text: "Title"
+                    label("title", text: "Title")
                   end
                 end
               end
@@ -47,13 +47,13 @@ defmodule AshReports.TransformerIntegrationTest do
 
         reports do
           report :validated_state do
-            title "Validated State Report"
-            driving_resource AshReports.Test.Customer
+            title("Validated State Report")
+            driving_resource(AshReports.Test.Customer)
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
@@ -65,7 +65,7 @@ defmodule AshReports.TransformerIntegrationTest do
       assert ValidatedStateDomain
       report_module = ValidatedStateDomain.Reports.ValidatedState
       assert report_module
-      
+
       # Verify transformer had access to validated state
       definition = report_module.definition()
       assert definition.name == :validated_state
@@ -75,7 +75,7 @@ defmodule AshReports.TransformerIntegrationTest do
     test "DSL state persistence across transformers" do
       # Create a test that verifies data can be persisted and retrieved
       # This simulates how transformers can share data
-      
+
       defmodule PersistenceTestDomain do
         use Ash.Domain, extensions: [AshReports.Domain]
 
@@ -85,21 +85,21 @@ defmodule AshReports.TransformerIntegrationTest do
 
         reports do
           report :persistence_test do
-            title "Persistence Test Report"
-            driving_resource AshReports.Test.Customer
-            formats [:html, :pdf, :json]
+            title("Persistence Test Report")
+            driving_resource(AshReports.Test.Customer)
+            formats([:html, :pdf, :json])
 
             bands do
               band :title do
                 elements do
-                  label "title", text: "Test Report"
+                  label("title", text: "Test Report")
                 end
               end
 
               band :detail do
                 elements do
-                  field :name, source: [:name]
-                  field :email, source: [:email]
+                  field(:name, source: [:name])
+                  field(:email, source: [:email])
                 end
               end
             end
@@ -110,11 +110,11 @@ defmodule AshReports.TransformerIntegrationTest do
       # Verify that the transformer persisted data correctly
       report_module = PersistenceTestDomain.Reports.PersistenceTest
       definition = report_module.definition()
-      
+
       # The transformer should have persisted the report data
       assert definition.formats == [:html, :pdf, :json]
       assert length(definition.bands) == 2
-      
+
       # Format-specific modules should exist
       assert PersistenceTestDomain.Reports.PersistenceTest.Html
       assert PersistenceTestDomain.Reports.PersistenceTest.Pdf
@@ -123,7 +123,7 @@ defmodule AshReports.TransformerIntegrationTest do
 
     test "cross-transformer data sharing" do
       # Test that multiple transformers can work together by sharing persisted data
-      
+
       defmodule CrossTransformerDomain do
         use Ash.Domain, extensions: [AshReports.Domain]
 
@@ -133,18 +133,18 @@ defmodule AshReports.TransformerIntegrationTest do
 
         reports do
           report :cross_transformer do
-            title "Cross Transformer Test"
-            driving_resource AshReports.Test.Customer
+            title("Cross Transformer Test")
+            driving_resource(AshReports.Test.Customer)
 
             parameters do
-              parameter :start_date, :date, required: true
-              parameter :end_date, :date, required: true
+              parameter(:start_date, :date, required: true)
+              parameter(:end_date, :date, required: true)
             end
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
@@ -154,7 +154,7 @@ defmodule AshReports.TransformerIntegrationTest do
 
       report_module = CrossTransformerDomain.Reports.CrossTransformer
       definition = report_module.definition()
-      
+
       # Verify that parameter information was preserved
       assert length(definition.parameters) == 2
       assert Enum.any?(definition.parameters, &(&1.name == :start_date))
@@ -172,42 +172,42 @@ defmodule AshReports.TransformerIntegrationTest do
 
         reports do
           report :customer_report do
-            title "Customer Report"
-            driving_resource AshReports.Test.Customer
-            formats [:html]
+            title("Customer Report")
+            driving_resource(AshReports.Test.Customer)
+            formats([:html])
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
           end
 
           report :order_report do
-            title "Order Report"
-            driving_resource AshReports.Test.Order
-            formats [:html, :pdf]
+            title("Order Report")
+            driving_resource(AshReports.Test.Order)
+            formats([:html, :pdf])
 
             bands do
               band :detail do
                 elements do
-                  field :amount, source: [:amount]
+                  field(:amount, source: [:amount])
                 end
               end
             end
           end
 
           report :summary_report do
-            title "Summary Report"
-            driving_resource AshReports.Test.Customer
-            formats [:json]
+            title("Summary Report")
+            driving_resource(AshReports.Test.Customer)
+            formats([:json])
 
             bands do
               band :detail do
                 elements do
-                  aggregate :count, function: :count, source: [:id]
+                  aggregate(:count, function: :count, source: [:id])
                 end
               end
             end
@@ -238,13 +238,13 @@ defmodule AshReports.TransformerIntegrationTest do
 
     test "transformer execution order respects dependencies" do
       # Test that BuildReportModules runs after all verifiers
-      
+
       # We can't directly test execution order, but we can verify
       # that the transformer declares its dependencies correctly
       assert BuildReportModules.after?(ValidateReports) == true
       assert BuildReportModules.after?(ValidateBands) == true
       assert BuildReportModules.after?(ValidateElements) == true
-      
+
       # And that it doesn't claim to run before anything it shouldn't
       assert BuildReportModules.before?(ValidateReports) == false
       assert BuildReportModules.before?(ValidateBands) == false
@@ -261,56 +261,56 @@ defmodule AshReports.TransformerIntegrationTest do
 
         reports do
           report :complex_structure do
-            title "Complex Structure Report"
-            driving_resource AshReports.Test.Customer
-            formats [:html, :pdf]
+            title("Complex Structure Report")
+            driving_resource(AshReports.Test.Customer)
+            formats([:html, :pdf])
 
             parameters do
-              parameter :region, :string, required: false
-              parameter :start_date, :date, required: true
+              parameter(:region, :string, required: false)
+              parameter(:start_date, :date, required: true)
             end
 
             groups do
-              group :region, field: [:region], sort: :asc
-              group :status, field: [:status], sort: :desc
+              group(:region, field: [:region], sort: :asc)
+              group(:status, field: [:status], sort: :desc)
             end
 
             variables do
-              variable :total_count, type: :count, reset_on: :report
-              variable :group_count, type: :count, reset_on: :group, reset_group: 1
+              variable(:total_count, type: :count, reset_on: :report)
+              variable(:group_count, type: :count, reset_on: :group, reset_group: 1)
             end
 
             bands do
               band :title do
                 elements do
-                  label "title", text: "Customer Report"
-                  image "logo", source: "/logo.png"
+                  label("title", text: "Customer Report")
+                  image("logo", source: "/logo.png")
                 end
               end
 
               band :group_header, group_level: 1 do
                 elements do
-                  label "region", text: "Region Header"
+                  label("region", text: "Region Header")
                 end
 
                 bands do
                   band :group_header, group_level: 2 do
                     elements do
-                      label "status", text: "Status Header"
+                      label("status", text: "Status Header")
                     end
                   end
 
                   band :detail do
                     elements do
-                      field :name, source: [:name]
-                      field :email, source: [:email]
-                      expression :full_name, expression: expr(first_name <> " " <> last_name)
+                      field(:name, source: [:name])
+                      field(:email, source: [:email])
+                      expression(:full_name, expression: expr(first_name <> " " <> last_name))
                     end
                   end
 
                   band :group_footer, group_level: 2 do
                     elements do
-                      aggregate :status_count, function: :count, source: [:id]
+                      aggregate(:status_count, function: :count, source: [:id])
                     end
                   end
                 end
@@ -318,14 +318,14 @@ defmodule AshReports.TransformerIntegrationTest do
 
               band :group_footer, group_level: 1 do
                 elements do
-                  aggregate :region_count, function: :count, source: [:id]
+                  aggregate(:region_count, function: :count, source: [:id])
                 end
               end
 
               band :summary do
                 elements do
-                  aggregate :total, function: :count, source: [:id]
-                  label "end", text: "End of Report"
+                  aggregate(:total, function: :count, source: [:id])
+                  label("end", text: "End of Report")
                 end
               end
             end
@@ -339,16 +339,20 @@ defmodule AshReports.TransformerIntegrationTest do
       assert report_module
 
       definition = report_module.definition()
-      
+
       # Verify all complex elements are preserved
       assert length(definition.parameters) == 2
       assert length(definition.groups) == 2
       assert length(definition.variables) == 2
-      assert length(definition.bands) == 4  # title, group_header, group_footer, summary
+      # title, group_header, group_footer, summary
+      assert length(definition.bands) == 4
 
       # Verify nested bands are handled
-      group_header = Enum.find(definition.bands, &(&1.type == :group_header && &1.group_level == 1))
-      assert length(group_header.bands) == 3  # nested group_header, detail, group_footer
+      group_header =
+        Enum.find(definition.bands, &(&1.type == :group_header && &1.group_level == 1))
+
+      # nested group_header, detail, group_footer
+      assert length(group_header.bands) == 3
 
       # Format modules should exist
       assert report_module.Html
@@ -374,11 +378,11 @@ defmodule AshReports.TransformerIntegrationTest do
 
     test "transformer handles malformed DSL state gracefully" do
       # This test ensures the transformer is robust against edge cases
-      
+
       # We can't easily create malformed DSL state at the module level,
       # but we can test the transformer directly
       empty_state = %Spark.Dsl.State{} |> Transformer.persist(:module, TestModule)
-      
+
       # Should not crash
       result = BuildReportModules.transform(empty_state)
       assert {:ok, _} = result
@@ -386,7 +390,7 @@ defmodule AshReports.TransformerIntegrationTest do
 
     test "compilation errors are properly reported" do
       # Test that compilation errors include proper context
-      
+
       assert_raise Spark.Error.DslError, fn ->
         defmodule CompilationErrorDomain do
           use Ash.Domain, extensions: [AshReports.Domain]
@@ -397,14 +401,14 @@ defmodule AshReports.TransformerIntegrationTest do
 
           reports do
             report :compilation_error do
-              title "Compilation Error Test"
+              title("Compilation Error Test")
               # This will trigger a validation error before transformation
-              driving_resource NonExistentResource
+              driving_resource(NonExistentResource)
 
               bands do
                 band :detail do
                   elements do
-                    field :name, source: [:name]
+                    field(:name, source: [:name])
                   end
                 end
               end
@@ -426,20 +430,20 @@ defmodule AshReports.TransformerIntegrationTest do
 
         reports do
           report :preserve_relationships do
-            title "Preserve Relationships"
-            driving_resource AshReports.Test.Customer
+            title("Preserve Relationships")
+            driving_resource(AshReports.Test.Customer)
 
             bands do
               band :group_header, group_level: 1 do
                 elements do
-                  label "group", text: "Group Header"
+                  label("group", text: "Group Header")
                 end
 
                 bands do
                   band :detail do
                     elements do
-                      field :name, source: [:name]
-                      field :email, source: [:email]
+                      field(:name, source: [:name])
+                      field(:email, source: [:email])
                     end
                   end
                 end
@@ -447,7 +451,7 @@ defmodule AshReports.TransformerIntegrationTest do
 
               band :group_footer, group_level: 1 do
                 elements do
-                  aggregate :count, function: :count, source: [:id]
+                  aggregate(:count, function: :count, source: [:id])
                 end
               end
             end
@@ -461,7 +465,7 @@ defmodule AshReports.TransformerIntegrationTest do
       # Verify nested band relationships are preserved
       group_header = Enum.find(definition.bands, &(&1.type == :group_header))
       assert length(group_header.bands) == 1
-      
+
       detail_band = hd(group_header.bands)
       assert detail_band.type == :detail
       assert length(detail_band.elements) == 2
@@ -477,31 +481,31 @@ defmodule AshReports.TransformerIntegrationTest do
 
         reports do
           report :recursive_bands do
-            title "Recursive Bands"
-            driving_resource AshReports.Test.Customer
+            title("Recursive Bands")
+            driving_resource(AshReports.Test.Customer)
 
             bands do
               band :level1, type: :group_header, group_level: 1 do
                 elements do
-                  label "level1", text: "Level 1"
+                  label("level1", text: "Level 1")
                 end
 
                 bands do
                   band :level2, type: :group_header, group_level: 2 do
                     elements do
-                      label "level2", text: "Level 2"
+                      label("level2", text: "Level 2")
                     end
 
                     bands do
                       band :level3, type: :group_header, group_level: 3 do
                         elements do
-                          label "level3", text: "Level 3"
+                          label("level3", text: "Level 3")
                         end
 
                         bands do
                           band :detail do
                             elements do
-                              field :name, source: [:name]
+                              field(:name, source: [:name])
                             end
                           end
                         end
@@ -509,7 +513,7 @@ defmodule AshReports.TransformerIntegrationTest do
 
                       band :level3_footer, type: :group_footer, group_level: 3 do
                         elements do
-                          aggregate :level3_count, function: :count, source: [:id]
+                          aggregate(:level3_count, function: :count, source: [:id])
                         end
                       end
                     end
@@ -517,7 +521,7 @@ defmodule AshReports.TransformerIntegrationTest do
 
                   band :level2_footer, type: :group_footer, group_level: 2 do
                     elements do
-                      aggregate :level2_count, function: :count, source: [:id]
+                      aggregate(:level2_count, function: :count, source: [:id])
                     end
                   end
                 end
@@ -525,7 +529,7 @@ defmodule AshReports.TransformerIntegrationTest do
 
               band :level1_footer, type: :group_footer, group_level: 1 do
                 elements do
-                  aggregate :level1_count, function: :count, source: [:id]
+                  aggregate(:level1_count, function: :count, source: [:id])
                 end
               end
             end
@@ -541,13 +545,13 @@ defmodule AshReports.TransformerIntegrationTest do
       # Verify deep nesting is preserved
       level1 = Enum.find(definition.bands, &(&1.name == :level1))
       assert level1
-      
+
       level2 = Enum.find(level1.bands, &(&1.name == :level2))
       assert level2
-      
+
       level3 = Enum.find(level2.bands, &(&1.name == :level3))
       assert level3
-      
+
       detail = Enum.find(level3.bands, &(&1.type == :detail))
       assert detail
     end
@@ -564,18 +568,18 @@ defmodule AshReports.TransformerIntegrationTest do
 
         reports do
           report :consistent_interfaces do
-            title "Consistent Interfaces"
-            driving_resource AshReports.Test.Customer
-            formats [:html, :pdf, :heex, :json]
+            title("Consistent Interfaces")
+            driving_resource(AshReports.Test.Customer)
+            formats([:html, :pdf, :heex, :json])
 
             parameters do
-              parameter :test_param, :string, required: false
+              parameter(:test_param, :string, required: false)
             end
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
@@ -602,10 +606,11 @@ defmodule AshReports.TransformerIntegrationTest do
 
       # Test format-specific modules
       formats = [:html, :pdf, :heex, :json]
+
       for format <- formats do
         format_module_name = format |> to_string() |> Macro.camelize()
         format_module = Module.concat(base_module, format_module_name)
-        
+
         assert function_exported?(format_module, :render, 3)
         assert function_exported?(format_module, :supports_streaming?, 0)
         assert function_exported?(format_module, :file_extension, 0)

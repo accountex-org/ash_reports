@@ -2,23 +2,23 @@ defmodule AshReports.Entities.BandTest do
   @moduledoc """
   Tests for AshReports.Band entity structure and validation.
   """
-  
+
   use ExUnit.Case, async: true
-  
+
   import AshReports.TestHelpers
   alias AshReports.Band
-  
+
   describe "Band struct creation" do
     test "creates band with required fields" do
       band = %Band{
         name: :test_band,
         type: :detail
       }
-      
+
       assert band.name == :test_band
       assert band.type == :detail
     end
-    
+
     test "creates band with all optional fields" do
       band = %Band{
         name: :test_band,
@@ -36,7 +36,7 @@ defmodule AshReports.Entities.BandTest do
         elements: [],
         bands: []
       }
-      
+
       assert band.name == :test_band
       assert band.type == :group_header
       assert band.group_level == 1
@@ -53,15 +53,23 @@ defmodule AshReports.Entities.BandTest do
       assert band.bands == []
     end
   end
-  
+
   describe "Band type validation" do
     test "validates all supported band types" do
       valid_types = [
-        :title, :page_header, :column_header, :group_header,
-        :detail_header, :detail, :detail_footer, :group_footer,
-        :column_footer, :page_footer, :summary
+        :title,
+        :page_header,
+        :column_header,
+        :group_header,
+        :detail_header,
+        :detail,
+        :detail_footer,
+        :group_footer,
+        :column_footer,
+        :page_footer,
+        :summary
       ]
-      
+
       for band_type <- valid_types do
         dsl_content = """
         reports do
@@ -77,14 +85,14 @@ defmodule AshReports.Entities.BandTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "rejects invalid band types" do
       invalid_types = [:invalid_type, :header, :footer, :content]
-      
+
       for invalid_type <- invalid_types do
         dsl_content = """
         reports do
@@ -100,11 +108,11 @@ defmodule AshReports.Entities.BandTest do
           end
         end
         """
-        
+
         assert_dsl_error(dsl_content, "#{invalid_type}")
       end
     end
-    
+
     test "requires type field" do
       dsl_content = """
       reports do
@@ -120,11 +128,11 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "required")
     end
   end
-  
+
   describe "Band field validation" do
     test "validates group_level is positive integer" do
       dsl_content = """
@@ -142,9 +150,9 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
-      
+
       # Test invalid group_level (0 or negative)
       dsl_content_invalid = """
       reports do
@@ -161,10 +169,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content_invalid, "positive")
     end
-    
+
     test "validates detail_number is positive integer" do
       dsl_content = """
       reports do
@@ -181,10 +189,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "validates height is positive integer" do
       dsl_content = """
       reports do
@@ -201,13 +209,13 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "validates boolean fields" do
       boolean_fields = [:can_grow, :can_shrink, :keep_together]
-      
+
       for field <- boolean_fields do
         for value <- [true, false] do
           dsl_content = """
@@ -225,12 +233,12 @@ defmodule AshReports.Entities.BandTest do
             end
           end
           """
-          
+
           assert_dsl_valid(dsl_content)
         end
       end
     end
-    
+
     test "sets default values correctly" do
       dsl_content = """
       reports do
@@ -246,19 +254,19 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
       bands = Map.get(report, :bands, [])
       band = hd(bands)
-      
+
       assert band.can_grow == true
       assert band.can_shrink == false
       assert band.visible == true
     end
   end
-  
+
   describe "Band element relationships" do
     test "can contain label elements" do
       dsl_content = """
@@ -287,10 +295,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "can contain field elements" do
       dsl_content = """
       reports do
@@ -318,10 +326,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "can contain expression elements" do
       dsl_content = """
       reports do
@@ -344,10 +352,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "can contain aggregate elements" do
       dsl_content = """
       reports do
@@ -372,10 +380,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "can contain line elements" do
       dsl_content = """
       reports do
@@ -399,10 +407,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "can contain box elements" do
       dsl_content = """
       reports do
@@ -426,10 +434,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "can contain image elements" do
       dsl_content = """
       reports do
@@ -453,10 +461,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "can contain mixed element types" do
       dsl_content = """
       reports do
@@ -494,11 +502,11 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "Band recursive nesting" do
     test "supports nested bands (recursive_as: :bands)" do
       dsl_content = """
@@ -535,10 +543,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "supports multiple levels of band nesting" do
       dsl_content = """
       reports do
@@ -587,10 +595,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "validates nested band structure" do
       dsl_content = """
       reports do
@@ -619,30 +627,30 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
-      
+
       bands = Map.get(report, :bands, [])
       outer_band = hd(bands)
-      
+
       nested_bands = Map.get(outer_band, :bands, [])
       assert length(nested_bands) == 1
-      
+
       inner_band = hd(nested_bands)
       assert inner_band.name == :inner_band
       assert inner_band.type == :detail
-      
+
       inner_elements = Map.get(inner_band, :elements, [])
       assert length(inner_elements) == 1
     end
   end
-  
+
   describe "Band type-specific features" do
     test "group bands can specify group_level" do
       group_band_types = [:group_header, :group_footer]
-      
+
       for band_type <- group_band_types do
         dsl_content = """
         reports do
@@ -659,14 +667,14 @@ defmodule AshReports.Entities.BandTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "detail bands can specify detail_number" do
       detail_band_types = [:detail_header, :detail, :detail_footer]
-      
+
       for band_type <- detail_band_types do
         dsl_content = """
         reports do
@@ -683,11 +691,11 @@ defmodule AshReports.Entities.BandTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "bands can have conditional visibility" do
       dsl_content = """
       reports do
@@ -704,10 +712,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "bands can have entry and exit expressions" do
       dsl_content = """
       reports do
@@ -725,11 +733,11 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "Band complex scenarios" do
     test "handles empty band (no elements)" do
       dsl_content = """
@@ -747,10 +755,10 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "validates band order requirements" do
       # This test checks the logical band ordering that should be enforced
       # by verifiers. DSL parsing should allow any order, but verifiers
@@ -781,7 +789,7 @@ defmodule AshReports.Entities.BandTest do
         end
       end
       """
-      
+
       # This should parse successfully (DSL level)
       # but may fail at verifier level for improper ordering
       {:ok, _dsl_state} = parse_dsl(dsl_content)

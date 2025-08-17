@@ -1,7 +1,7 @@
 defmodule AshReports.Group do
   @moduledoc """
   Represents a grouping level for report data.
-  
+
   Groups define how data should be organized hierarchically in the report,
   with support for multi-level grouping.
   """

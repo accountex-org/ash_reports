@@ -1,14 +1,14 @@
 defmodule AshReports.Entities.ElementTest do
   @moduledoc """
   Tests for AshReports element entity structures and validation.
-  
+
   Tests all 7 element types: label, field, expression, aggregate, line, box, image.
   """
-  
+
   use ExUnit.Case, async: true
-  
+
   import AshReports.TestHelpers
-  
+
   describe "Label element" do
     test "creates valid label element with required fields" do
       dsl_content = """
@@ -31,10 +31,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "label element requires text field" do
       dsl_content = """
       reports do
@@ -56,10 +56,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "required")
     end
-    
+
     test "label element with all optional fields" do
       dsl_content = """
       reports do
@@ -84,10 +84,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "extracts label element correctly" do
       dsl_content = """
       reports do
@@ -110,7 +110,7 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
@@ -118,13 +118,13 @@ defmodule AshReports.Entities.ElementTest do
       band = hd(bands)
       elements = Map.get(band, :elements, [])
       element = hd(elements)
-      
+
       assert element.name == :title_label
       assert element.text == "Report Title"
       assert element.position == [x: 10, y: 5]
     end
   end
-  
+
   describe "Field element" do
     test "creates valid field element with required fields" do
       dsl_content = """
@@ -147,10 +147,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "field element requires source field" do
       dsl_content = """
       reports do
@@ -172,10 +172,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "required")
     end
-    
+
     test "field element with complex source expressions" do
       source_expressions = [
         ":name",
@@ -184,7 +184,7 @@ defmodule AshReports.Entities.ElementTest do
         "{:nested_field, :order, :customer, :name}",
         "{:expression, {:upper, :name}}"
       ]
-      
+
       for source_expr <- source_expressions do
         dsl_content = """
         reports do
@@ -206,11 +206,11 @@ defmodule AshReports.Entities.ElementTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "field element with formatting options" do
       dsl_content = """
       reports do
@@ -240,11 +240,11 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "Expression element" do
     test "creates valid expression element with required fields" do
       dsl_content = """
@@ -267,10 +267,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "expression element requires expression field" do
       dsl_content = """
       reports do
@@ -292,10 +292,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "required")
     end
-    
+
     test "expression element with complex expressions" do
       expressions = [
         "{:add, :field1, :field2}",
@@ -304,7 +304,7 @@ defmodule AshReports.Entities.ElementTest do
         "{:if, {:greater_than, :age, 18}, \"Adult\", \"Minor\"}",
         "{:format, :amount, :currency}"
       ]
-      
+
       for expr <- expressions do
         dsl_content = """
         reports do
@@ -327,12 +327,12 @@ defmodule AshReports.Entities.ElementTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
   end
-  
+
   describe "Aggregate element" do
     test "creates valid aggregate element with required fields" do
       dsl_content = """
@@ -356,10 +356,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "aggregate element requires function and source" do
       # Missing function
       dsl_content_no_function = """
@@ -382,9 +382,9 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content_no_function, "required")
-      
+
       # Missing source
       dsl_content_no_source = """
       reports do
@@ -406,13 +406,13 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content_no_source, "required")
     end
-    
+
     test "validates aggregate function options" do
       valid_functions = [:sum, :count, :average, :min, :max]
-      
+
       for function <- valid_functions do
         dsl_content = """
         reports do
@@ -435,14 +435,14 @@ defmodule AshReports.Entities.ElementTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "validates aggregate scope options" do
       valid_scopes = [:band, :group, :page, :report]
-      
+
       for scope <- valid_scopes do
         dsl_content = """
         reports do
@@ -466,11 +466,11 @@ defmodule AshReports.Entities.ElementTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "aggregate element with all options" do
       dsl_content = """
       reports do
@@ -498,11 +498,11 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "Line element" do
     test "creates valid line element with minimal fields" do
       dsl_content = """
@@ -525,13 +525,13 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "validates line orientation options" do
       valid_orientations = [:horizontal, :vertical]
-      
+
       for orientation <- valid_orientations do
         dsl_content = """
         reports do
@@ -553,11 +553,11 @@ defmodule AshReports.Entities.ElementTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "line element with thickness and positioning" do
       dsl_content = """
       reports do
@@ -582,10 +582,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "line element sets default thickness" do
       dsl_content = """
       reports do
@@ -607,7 +607,7 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
@@ -615,11 +615,12 @@ defmodule AshReports.Entities.ElementTest do
       band = hd(bands)
       elements = Map.get(band, :elements, [])
       element = hd(elements)
-      
-      assert element.thickness == 1  # default value
+
+      # default value
+      assert element.thickness == 1
     end
   end
-  
+
   describe "Box element" do
     test "creates valid box element with minimal fields" do
       dsl_content = """
@@ -642,10 +643,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "box element with border and fill properties" do
       dsl_content = """
       reports do
@@ -669,10 +670,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "box element with complex styling" do
       dsl_content = """
       reports do
@@ -706,11 +707,11 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "Image element" do
     test "creates valid image element with required fields" do
       dsl_content = """
@@ -733,10 +734,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "image element requires source field" do
       dsl_content = """
       reports do
@@ -758,13 +759,13 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "required")
     end
-    
+
     test "validates image scale_mode options" do
       valid_scale_modes = [:fit, :fill, :stretch, :none]
-      
+
       for scale_mode <- valid_scale_modes do
         dsl_content = """
         reports do
@@ -787,11 +788,11 @@ defmodule AshReports.Entities.ElementTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "image element with dynamic source expressions" do
       dynamic_sources = [
         "\"/static/logo.png\"",
@@ -799,7 +800,7 @@ defmodule AshReports.Entities.ElementTest do
         "{:expression, {:concat, \"/images/\", :company_id, \".png\"}}",
         "{:if, {:equal, :region, \"North\"}, \"/north_logo.png\", \"/default_logo.png\"}"
       ]
-      
+
       for source_expr <- dynamic_sources do
         dsl_content = """
         reports do
@@ -822,11 +823,11 @@ defmodule AshReports.Entities.ElementTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "image element sets default scale_mode" do
       dsl_content = """
       reports do
@@ -848,7 +849,7 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
@@ -856,11 +857,12 @@ defmodule AshReports.Entities.ElementTest do
       band = hd(bands)
       elements = Map.get(band, :elements, [])
       element = hd(elements)
-      
-      assert element.scale_mode == :fit  # default value
+
+      # default value
+      assert element.scale_mode == :fit
     end
   end
-  
+
   describe "Element common features" do
     test "all elements support position configuration" do
       element_configs = [
@@ -872,7 +874,7 @@ defmodule AshReports.Entities.ElementTest do
         {"box", "box :test do\nend"},
         {"image", "image :test do\n  source \"/test.png\"\nend"}
       ]
-      
+
       for {_element_type, element_config} <- element_configs do
         dsl_content = """
         reports do
@@ -893,11 +895,11 @@ defmodule AshReports.Entities.ElementTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "all elements support style configuration" do
       element_configs = [
         {"label", "label :test do\n  text \"Test\"\nend"},
@@ -908,7 +910,7 @@ defmodule AshReports.Entities.ElementTest do
         {"box", "box :test do\nend"},
         {"image", "image :test do\n  source \"/test.png\"\nend"}
       ]
-      
+
       for {_element_type, element_config} <- element_configs do
         dsl_content = """
         reports do
@@ -929,11 +931,11 @@ defmodule AshReports.Entities.ElementTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "all elements support conditional visibility" do
       element_configs = [
         {"label", "label :test do\n  text \"Test\"\nend"},
@@ -944,7 +946,7 @@ defmodule AshReports.Entities.ElementTest do
         {"box", "box :test do\nend"},
         {"image", "image :test do\n  source \"/test.png\"\nend"}
       ]
-      
+
       for {_element_type, element_config} <- element_configs do
         dsl_content = """
         reports do
@@ -965,12 +967,12 @@ defmodule AshReports.Entities.ElementTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
   end
-  
+
   describe "Element validation edge cases" do
     test "validates element names are unique within band" do
       dsl_content = """
@@ -997,11 +999,11 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       # This should pass DSL parsing but fail at verifier level
       {:ok, _dsl_state} = parse_dsl(dsl_content)
     end
-    
+
     test "handles empty element collections" do
       dsl_content = """
       reports do
@@ -1021,10 +1023,10 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "validates complex element positioning" do
       dsl_content = """
       reports do
@@ -1057,7 +1059,7 @@ defmodule AshReports.Entities.ElementTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end

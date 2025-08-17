@@ -1,7 +1,7 @@
 defmodule AshReports.Element do
   @moduledoc """
   Base module for report elements.
-  
+
   Elements are the visual components within bands that display data, labels,
   lines, boxes, images, etc.
   """
@@ -49,6 +49,7 @@ defmodule AshReports.Element do
   """
   @spec visible?(t(), map()) :: boolean()
   def visible?(%{conditional: nil}, _context), do: true
+
   def visible?(%{conditional: _expr}, _context) do
     # This would be evaluated by the rendering engine with the actual context
     # For now, we'll just return true as a placeholder
@@ -79,6 +80,7 @@ defmodule AshReports.Element do
   def keyword_to_map(keyword) when is_list(keyword) do
     Map.new(keyword)
   end
+
   def keyword_to_map(map) when is_map(map), do: map
   def keyword_to_map(_), do: %{}
 end

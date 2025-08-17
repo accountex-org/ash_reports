@@ -3,28 +3,29 @@ defmodule AshReports.ErrorHandlingTest do
 
   describe "comprehensive error handling" do
     test "provides clear error messages for missing required fields" do
-      error = assert_raise Spark.Error.DslError, fn ->
-        defmodule MissingRequiredFieldsDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule MissingRequiredFieldsDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :missing_fields do
-              # Missing title and driving_resource
-              bands do
-                band :detail do
-                  elements do
-                    field :name, source: [:name]
+            reports do
+              report :missing_fields do
+                # Missing title and driving_resource
+                bands do
+                  band :detail do
+                    elements do
+                      field(:name, source: [:name])
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       # Error should mention the specific missing field
       assert error.message =~ "must specify a driving_resource"
@@ -33,37 +34,39 @@ defmodule AshReports.ErrorHandlingTest do
     end
 
     test "provides helpful error messages for invalid band types" do
-      error = assert_raise Spark.Error.DslError, fn ->
-        defmodule InvalidBandTypeDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule InvalidBandTypeDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :invalid_band_type do
-              title "Invalid Band Type Test"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :invalid_band_type do
+                title("Invalid Band Type Test")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :invalid_band do
-                  type :completely_invalid_type
-                  elements do
-                    field :name, source: [:name]
+                bands do
+                  band :invalid_band do
+                    type :completely_invalid_type
+
+                    elements do
+                      field(:name, source: [:name])
+                    end
                   end
-                end
 
-                band :detail do
-                  elements do
-                    field :email, source: [:email]
+                  band :detail do
+                    elements do
+                      field(:email, source: [:email])
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       # Error should list valid types
       assert error.message =~ "Invalid band type 'completely_invalid_type'"
@@ -72,166 +75,197 @@ defmodule AshReports.ErrorHandlingTest do
     end
 
     test "provides helpful error messages for invalid element types" do
-      error = assert_raise Spark.Error.DslError, fn ->
-        defmodule InvalidElementTypeDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule InvalidElementTypeDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
-
-          reports do
-            report :invalid_element_type do
-              title "Invalid Element Type Test"
-              driving_resource AshReports.Test.Customer
-
-              bands do
-                band :detail do
-                  elements do
-                    element :invalid_element do
-                      type :not_a_real_element_type
-                    end
-                  end
-                end
-              end
+            resources do
+              resource AshReports.Test.Customer
             end
-          end
-        end
-      end
 
-      # Error should list valid element types
-      assert error.message =~ "Invalid element type 'not_a_real_element_type'"
-      assert error.message =~ "Valid types are:"
-      assert error.path == [:reports, :invalid_element_type, :bands, :detail, :elements, :invalid_element]
-    end
+            reports do
+              report :invalid_element_type do
+                title("Invalid Element Type Test")
+                driving_resource(AshReports.Test.Customer)
 
-    test "provides specific error messages for aggregate function validation" do
-      error = assert_raise Spark.Error.DslError, fn ->
-        defmodule InvalidAggregateDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
-
-          resources do
-            resource AshReports.Test.Customer
-          end
-
-          reports do
-            report :invalid_aggregate do
-              title "Invalid Aggregate Test"
-              driving_resource AshReports.Test.Customer
-
-              bands do
-                band :detail do
-                  elements do
-                    aggregate :bad_aggregate, function: :invalid_function, source: [:id]
-                  end
-                end
-              end
-            end
-          end
-        end
-      end
-
-      # Error should mention the specific invalid function
-      assert error.message =~ "Invalid aggregate function 'invalid_function'"
-      assert error.path == [:reports, :invalid_aggregate, :bands, :detail, :elements, :bad_aggregate, :function]
-    end
-
-    test "error messages include full DSL path context" do
-      error = assert_raise Spark.Error.DslError, fn ->
-        defmodule NestedErrorPathDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
-
-          resources do
-            resource AshReports.Test.Customer
-          end
-
-          reports do
-            report :nested_error_path do
-              title "Nested Error Path Test"
-              driving_resource AshReports.Test.Customer
-
-              bands do
-                band :group_header, group_level: 1 do
-                  elements do
-                    label "group", text: "Group Header"
-                  end
-
-                  bands do
-                    band :nested_detail do
-                      elements do
-                        field :invalid_field  # Missing source
+                bands do
+                  band :detail do
+                    elements do
+                      element :invalid_element do
+                        type :not_a_real_element_type
                       end
                     end
                   end
                 end
+              end
+            end
+          end
+        end
 
-                band :detail do
-                  elements do
-                    field :name, source: [:name]
+      # Error should list valid element types
+      assert error.message =~ "Invalid element type 'not_a_real_element_type'"
+      assert error.message =~ "Valid types are:"
+
+      assert error.path == [
+               :reports,
+               :invalid_element_type,
+               :bands,
+               :detail,
+               :elements,
+               :invalid_element
+             ]
+    end
+
+    test "provides specific error messages for aggregate function validation" do
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule InvalidAggregateDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
+
+            resources do
+              resource AshReports.Test.Customer
+            end
+
+            reports do
+              report :invalid_aggregate do
+                title("Invalid Aggregate Test")
+                driving_resource(AshReports.Test.Customer)
+
+                bands do
+                  band :detail do
+                    elements do
+                      aggregate(:bad_aggregate, function: :invalid_function, source: [:id])
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
+
+      # Error should mention the specific invalid function
+      assert error.message =~ "Invalid aggregate function 'invalid_function'"
+
+      assert error.path == [
+               :reports,
+               :invalid_aggregate,
+               :bands,
+               :detail,
+               :elements,
+               :bad_aggregate,
+               :function
+             ]
+    end
+
+    test "error messages include full DSL path context" do
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule NestedErrorPathDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
+
+            resources do
+              resource AshReports.Test.Customer
+            end
+
+            reports do
+              report :nested_error_path do
+                title("Nested Error Path Test")
+                driving_resource(AshReports.Test.Customer)
+
+                bands do
+                  band :group_header, group_level: 1 do
+                    elements do
+                      label("group", text: "Group Header")
+                    end
+
+                    bands do
+                      band :nested_detail do
+                        elements do
+                          # Missing source
+                          field :invalid_field
+                        end
+                      end
+                    end
+                  end
+
+                  band :detail do
+                    elements do
+                      field(:name, source: [:name])
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
 
       # Error path should include the full nested path
-      assert error.path == [:reports, :nested_error_path, :bands, :nested_detail, :elements, :invalid_field]
+      assert error.path == [
+               :reports,
+               :nested_error_path,
+               :bands,
+               :nested_detail,
+               :elements,
+               :invalid_field
+             ]
+
       assert error.message =~ "must have a source"
     end
 
     test "error messages for duplicate names include all duplicates" do
-      error = assert_raise Spark.Error.DslError, fn ->
-        defmodule MultipleDuplicatesDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule MultipleDuplicatesDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :duplicate_one do
-              title "First Duplicate"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :duplicate_one do
+                title("First Duplicate")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :detail do
-                  elements do
-                    field :name, source: [:name]
+                bands do
+                  band :detail do
+                    elements do
+                      field(:name, source: [:name])
+                    end
                   end
                 end
               end
-            end
 
-            report :duplicate_two do
-              title "Second Duplicate"
-              driving_resource AshReports.Test.Customer
+              report :duplicate_two do
+                title("Second Duplicate")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :detail do
-                  elements do
-                    field :name, source: [:name]
+                bands do
+                  band :detail do
+                    elements do
+                      field(:name, source: [:name])
+                    end
                   end
                 end
               end
-            end
 
-            report :duplicate_one do  # Duplicate name
-              title "Third Report with Duplicate Name"
-              driving_resource AshReports.Test.Customer
+              # Duplicate name
+              report :duplicate_one do
+                title("Third Report with Duplicate Name")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :detail do
-                  elements do
-                    field :name, source: [:name]
+                bands do
+                  band :detail do
+                    elements do
+                      field(:name, source: [:name])
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       # Error should mention the specific duplicate names
       assert error.message =~ "Duplicate report names found"
@@ -240,182 +274,189 @@ defmodule AshReports.ErrorHandlingTest do
 
     test "error messages for band hierarchy violations" do
       # Test title band not first
-      title_error = assert_raise Spark.Error.DslError, fn ->
-        defmodule TitleNotFirstDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      title_error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule TitleNotFirstDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :title_not_first do
-              title "Title Not First"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :title_not_first do
+                title("Title Not First")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :detail do
-                  elements do
-                    field :name, source: [:name]
+                bands do
+                  band :detail do
+                    elements do
+                      field(:name, source: [:name])
+                    end
                   end
-                end
 
-                band :title do
-                  elements do
-                    label "title", text: "Report Title"
+                  band :title do
+                    elements do
+                      label("title", text: "Report Title")
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       assert title_error.message =~ "Title band must be the first band"
 
       # Test summary band not last
-      summary_error = assert_raise Spark.Error.DslError, fn ->
-        defmodule SummaryNotLastDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      summary_error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule SummaryNotLastDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :summary_not_last do
-              title "Summary Not Last"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :summary_not_last do
+                title("Summary Not Last")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :summary do
-                  elements do
-                    label "summary", text: "Summary"
+                bands do
+                  band :summary do
+                    elements do
+                      label("summary", text: "Summary")
+                    end
                   end
-                end
 
-                band :detail do
-                  elements do
-                    field :name, source: [:name]
+                  band :detail do
+                    elements do
+                      field(:name, source: [:name])
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       assert summary_error.message =~ "Summary band must be the last band"
     end
 
     test "error messages for group band validation" do
       # Test missing group_level
-      missing_level_error = assert_raise Spark.Error.DslError, fn ->
-        defmodule MissingGroupLevelDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      missing_level_error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule MissingGroupLevelDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :missing_group_level do
-              title "Missing Group Level"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :missing_group_level do
+                title("Missing Group Level")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :group_header do
-                  # Missing group_level
-                  elements do
-                    label "group", text: "Group"
+                bands do
+                  band :group_header do
+                    # Missing group_level
+                    elements do
+                      label("group", text: "Group")
+                    end
                   end
-                end
 
-                band :detail do
-                  elements do
-                    field :name, source: [:name]
+                  band :detail do
+                    elements do
+                      field(:name, source: [:name])
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       assert missing_level_error.message =~ "must specify a group_level"
 
       # Test invalid group_level
-      invalid_level_error = assert_raise Spark.Error.DslError, fn ->
-        defmodule InvalidGroupLevelDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      invalid_level_error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule InvalidGroupLevelDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :invalid_group_level do
-              title "Invalid Group Level"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :invalid_group_level do
+                title("Invalid Group Level")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :group_header, group_level: -1 do
-                  elements do
-                    label "group", text: "Group"
+                bands do
+                  band :group_header, group_level: -1 do
+                    elements do
+                      label("group", text: "Group")
+                    end
                   end
-                end
 
-                band :detail do
-                  elements do
-                    field :name, source: [:name]
+                  band :detail do
+                    elements do
+                      field(:name, source: [:name])
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       assert invalid_level_error.message =~ "must have a positive integer group_level"
     end
 
     test "error messages for detail band number validation" do
-      error = assert_raise Spark.Error.DslError, fn ->
-        defmodule InvalidDetailNumbersDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule InvalidDetailNumbersDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :invalid_detail_numbers do
-              title "Invalid Detail Numbers"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :invalid_detail_numbers do
+                title("Invalid Detail Numbers")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :detail, detail_number: 1 do
-                  elements do
-                    field :name, source: [:name]
+                bands do
+                  band :detail, detail_number: 1 do
+                    elements do
+                      field(:name, source: [:name])
+                    end
                   end
-                end
 
-                band :detail, detail_number: 3 do  # Skipping 2
-                  elements do
-                    field :email, source: [:email]
+                  # Skipping 2
+                  band :detail, detail_number: 3 do
+                    elements do
+                      field(:email, source: [:email])
+                    end
                   end
-                end
 
-                band :detail, detail_number: 5 do  # Skipping 4
-                  elements do
-                    field :phone, source: [:phone]
+                  # Skipping 4
+                  band :detail, detail_number: 5 do
+                    elements do
+                      field(:phone, source: [:phone])
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       assert error.message =~ "Detail band numbers must be sequential starting from 1"
       assert error.message =~ "Found: [1, 3, 5]"
@@ -423,202 +464,215 @@ defmodule AshReports.ErrorHandlingTest do
 
     test "error messages for element validation" do
       # Test label without text
-      label_error = assert_raise Spark.Error.DslError, fn ->
-        defmodule MissingLabelTextDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      label_error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule MissingLabelTextDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :missing_label_text do
-              title "Missing Label Text"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :missing_label_text do
+                title("Missing Label Text")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :detail do
-                  elements do
-                    label :empty_label  # Missing text
+                bands do
+                  band :detail do
+                    elements do
+                      # Missing text
+                      label(:empty_label)
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       assert label_error.message =~ "Label element 'empty_label' must have text"
 
       # Test field without source
-      field_error = assert_raise Spark.Error.DslError, fn ->
-        defmodule MissingFieldSourceDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      field_error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule MissingFieldSourceDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :missing_field_source do
-              title "Missing Field Source"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :missing_field_source do
+                title("Missing Field Source")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :detail do
-                  elements do
-                    field :no_source  # Missing source
+                bands do
+                  band :detail do
+                    elements do
+                      # Missing source
+                      field :no_source
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       assert field_error.message =~ "Field element 'no_source' must have a source"
 
       # Test expression without expression
-      expr_error = assert_raise Spark.Error.DslError, fn ->
-        defmodule MissingExpressionDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      expr_error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule MissingExpressionDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :missing_expression do
-              title "Missing Expression"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :missing_expression do
+                title("Missing Expression")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :detail do
-                  elements do
-                    expression :no_expr  # Missing expression
+                bands do
+                  band :detail do
+                    elements do
+                      # Missing expression
+                      expression(:no_expr)
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       assert expr_error.message =~ "Expression element 'no_expr' must have an expression"
 
       # Test image without source
-      image_error = assert_raise Spark.Error.DslError, fn ->
-        defmodule MissingImageSourceDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      image_error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule MissingImageSourceDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :missing_image_source do
-              title "Missing Image Source"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :missing_image_source do
+                title("Missing Image Source")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :detail do
-                  elements do
-                    image :no_source  # Missing source
+                bands do
+                  band :detail do
+                    elements do
+                      # Missing source
+                      image(:no_source)
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       assert image_error.message =~ "Image element 'no_source' must have a source"
     end
 
     test "error messages for aggregate validation" do
       # Test missing function
-      function_error = assert_raise Spark.Error.DslError, fn ->
-        defmodule MissingAggregateFunctionDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      function_error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule MissingAggregateFunctionDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :missing_aggregate_function do
-              title "Missing Aggregate Function"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :missing_aggregate_function do
+                title("Missing Aggregate Function")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :detail do
-                  elements do
-                    aggregate :no_function, source: [:id]  # Missing function
+                bands do
+                  band :detail do
+                    elements do
+                      # Missing function
+                      aggregate(:no_function, source: [:id])
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       assert function_error.message =~ "Aggregate element 'no_function' must have a function"
 
       # Test missing source
-      source_error = assert_raise Spark.Error.DslError, fn ->
-        defmodule MissingAggregateSourceDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      source_error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule MissingAggregateSourceDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :missing_aggregate_source do
-              title "Missing Aggregate Source"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :missing_aggregate_source do
+                title("Missing Aggregate Source")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :detail do
-                  elements do
-                    aggregate :no_source, function: :count  # Missing source
+                bands do
+                  band :detail do
+                    elements do
+                      # Missing source
+                      aggregate(:no_source, function: :count)
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       assert source_error.message =~ "Aggregate element 'no_source' must have a source"
     end
 
     test "provides context for compilation module information" do
-      error = assert_raise Spark.Error.DslError, fn ->
-        defmodule CompilationContextDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule CompilationContextDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :compilation_context do
-              title "Compilation Context Test"
-              driving_resource AshReports.Test.Customer
-              # Missing detail band to trigger error
+            reports do
+              report :compilation_context do
+                title("Compilation Context Test")
+                driving_resource(AshReports.Test.Customer)
+                # Missing detail band to trigger error
 
-              bands do
-                band :title do
-                  elements do
-                    label "title", text: "Title"
+                bands do
+                  band :title do
+                    elements do
+                      label("title", text: "Title")
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       # Error should include the module being compiled
       assert error.module == CompilationContextDomain
@@ -626,36 +680,38 @@ defmodule AshReports.ErrorHandlingTest do
     end
 
     test "error handling works with nested band structures" do
-      error = assert_raise Spark.Error.DslError, fn ->
-        defmodule NestedErrorDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule NestedErrorDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :nested_error do
-              title "Nested Error Test"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :nested_error do
+                title("Nested Error Test")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :group_header, group_level: 1 do
-                  elements do
-                    label "group", text: "Group"
-                  end
-
-                  bands do
-                    band :nested_group, type: :group_header do
-                      # Missing group_level
-                      elements do
-                        label "nested", text: "Nested"
-                      end
+                bands do
+                  band :group_header, group_level: 1 do
+                    elements do
+                      label("group", text: "Group")
                     end
 
-                    band :detail do
-                      elements do
-                        field :name, source: [:name]
+                    bands do
+                      band :nested_group, type: :group_header do
+                        # Missing group_level
+                        elements do
+                          label("nested", text: "Nested")
+                        end
+                      end
+
+                      band :detail do
+                        elements do
+                          field(:name, source: [:name])
+                        end
                       end
                     end
                   end
@@ -664,7 +720,6 @@ defmodule AshReports.ErrorHandlingTest do
             end
           end
         end
-      end
 
       # Error should be detected in nested structure
       assert error.message =~ "must specify a group_level"
@@ -674,33 +729,34 @@ defmodule AshReports.ErrorHandlingTest do
     test "multiple errors are reported appropriately" do
       # Test that the first error is reported, not all of them
       # (Since Elixir typically stops at the first compilation error)
-      
-      error = assert_raise Spark.Error.DslError, fn ->
-        defmodule MultipleErrorsDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule MultipleErrorsDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          reports do
-            # This report has multiple issues, but we should get the first one
-            report :multiple_errors do
-              # Missing driving_resource (first error)
-              title "Multiple Errors Test"
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-              bands do
-                # Also missing detail band (second error)
-                band :title do
-                  elements do
-                    label "title", text: "Title"
+            reports do
+              # This report has multiple issues, but we should get the first one
+              report :multiple_errors do
+                # Missing driving_resource (first error)
+                title("Multiple Errors Test")
+
+                bands do
+                  # Also missing detail band (second error)
+                  band :title do
+                    elements do
+                      label("title", text: "Title")
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       # Should get the first error (missing driving_resource)
       assert error.message =~ "must specify a driving_resource"
@@ -709,14 +765,14 @@ defmodule AshReports.ErrorHandlingTest do
     test "error recovery and graceful degradation" do
       # Test that valid reports in the same domain still work
       # even if one report has errors
-      
+
       # This is tricky to test because compilation errors prevent
       # the entire module from compiling. In practice, users would
       # fix the error and recompile.
-      
+
       # Instead, we test that the error system doesn't crash
       # the compilation process entirely
-      
+
       try do
         defmodule ErrorRecoveryDomain do
           use Ash.Domain, extensions: [AshReports.Domain]
@@ -727,13 +783,13 @@ defmodule AshReports.ErrorHandlingTest do
 
           reports do
             report :invalid_report do
-              title "Invalid Report"
+              title("Invalid Report")
               # Missing driving_resource
-              
+
               bands do
                 band :detail do
                   elements do
-                    field :name, source: [:name]
+                    field(:name, source: [:name])
                   end
                 end
               end
@@ -741,7 +797,7 @@ defmodule AshReports.ErrorHandlingTest do
           end
         end
       rescue
-        Spark.Error.DslError -> 
+        Spark.Error.DslError ->
           # This is expected - the error should be a DslError, not a crash
           :ok
       end
@@ -750,69 +806,80 @@ defmodule AshReports.ErrorHandlingTest do
 
   describe "error message formatting" do
     test "error messages are user-friendly and actionable" do
-      error = assert_raise Spark.Error.DslError, fn ->
-        defmodule UserFriendlyErrorDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule UserFriendlyErrorDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :user_friendly_error do
-              title "User Friendly Error Test"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :user_friendly_error do
+                title("User Friendly Error Test")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :detail do
-                  elements do
-                    field :missing_source_field  # This will trigger a clear error
+                bands do
+                  band :detail do
+                    elements do
+                      # This will trigger a clear error
+                      field :missing_source_field
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       # Error message should be clear and actionable
       assert error.message =~ "Field element 'missing_source_field' must have a source"
       # Path should clearly indicate where the error occurred
-      assert error.path == [:reports, :user_friendly_error, :bands, :detail, :elements, :missing_source_field]
+      assert error.path == [
+               :reports,
+               :user_friendly_error,
+               :bands,
+               :detail,
+               :elements,
+               :missing_source_field
+             ]
     end
 
     test "error messages include suggestions when possible" do
-      error = assert_raise Spark.Error.DslError, fn ->
-        defmodule SuggestionsErrorDomain do
-          use Ash.Domain, extensions: [AshReports.Domain]
+      error =
+        assert_raise Spark.Error.DslError, fn ->
+          defmodule SuggestionsErrorDomain do
+            use Ash.Domain, extensions: [AshReports.Domain]
 
-          resources do
-            resource AshReports.Test.Customer
-          end
+            resources do
+              resource AshReports.Test.Customer
+            end
 
-          reports do
-            report :suggestions_error do
-              title "Suggestions Error Test"
-              driving_resource AshReports.Test.Customer
+            reports do
+              report :suggestions_error do
+                title("Suggestions Error Test")
+                driving_resource(AshReports.Test.Customer)
 
-              bands do
-                band :invalid_band do
-                  type :invalid_type
-                  elements do
-                    field :name, source: [:name]
+                bands do
+                  band :invalid_band do
+                    type :invalid_type
+
+                    elements do
+                      field(:name, source: [:name])
+                    end
                   end
-                end
 
-                band :detail do
-                  elements do
-                    field :email, source: [:email]
+                  band :detail do
+                    elements do
+                      field(:email, source: [:email])
+                    end
                   end
                 end
               end
             end
           end
         end
-      end
 
       # Error should include valid options
       assert error.message =~ "Valid types are:"
@@ -826,7 +893,7 @@ defmodule AshReports.ErrorHandlingTest do
     test "handles transformer exceptions gracefully" do
       # Since we can't easily cause transformer exceptions in a controlled way,
       # we test that the transformer is defensive against edge cases
-      
+
       # Test with minimal valid structure
       defmodule MinimalValidDomain do
         use Ash.Domain, extensions: [AshReports.Domain]
@@ -837,13 +904,13 @@ defmodule AshReports.ErrorHandlingTest do
 
         reports do
           report :minimal_valid do
-            title "Minimal Valid Report"
-            driving_resource AshReports.Test.Customer
+            title("Minimal Valid Report")
+            driving_resource(AshReports.Test.Customer)
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end

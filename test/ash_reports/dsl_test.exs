@@ -1,15 +1,15 @@
 defmodule AshReports.DslTest do
   @moduledoc """
   Comprehensive tests for AshReports.Dsl module.
-  
+
   Tests DSL entity parsing, schema validation, and entity relationships
   following the expert-validated testing patterns.
   """
-  
+
   use ExUnit.Case, async: true
-  
+
   import AshReports.TestHelpers
-  
+
   describe "reports section parsing" do
     test "parses valid reports section with minimal report" do
       dsl_content = """
@@ -20,10 +20,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "parses reports section with multiple reports" do
       dsl_content = """
       reports do
@@ -38,10 +38,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "extracts report entities correctly" do
       dsl_content = """
       reports do
@@ -53,12 +53,12 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
-      
+
       assert length(reports) == 1
-      
+
       report = hd(reports)
       assert report.name == :test_report
       assert report.title == "Test Report"
@@ -67,7 +67,7 @@ defmodule AshReports.DslTest do
       assert report.formats == [:html, :pdf]
     end
   end
-  
+
   describe "report entity validation" do
     test "requires name argument" do
       dsl_content = """
@@ -78,10 +78,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "missing required argument")
     end
-    
+
     test "requires driving_resource field" do
       dsl_content = """
       reports do
@@ -90,10 +90,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "required")
     end
-    
+
     test "validates format options" do
       dsl_content = """
       reports do
@@ -104,10 +104,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "invalid_format")
     end
-    
+
     test "accepts valid format combinations" do
       valid_formats = [
         [:html],
@@ -117,7 +117,7 @@ defmodule AshReports.DslTest do
         [:html, :pdf],
         [:html, :pdf, :heex, :json]
       ]
-      
+
       for formats <- valid_formats do
         dsl_content = """
         reports do
@@ -128,11 +128,11 @@ defmodule AshReports.DslTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "sets default values correctly" do
       dsl_content = """
       reports do
@@ -142,16 +142,16 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
-      
+
       assert report.formats == [:html]
       assert report.permissions == []
     end
   end
-  
+
   describe "parameter entity parsing" do
     test "parses valid parameter with required fields" do
       dsl_content = """
@@ -166,10 +166,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "parses parameter with all options" do
       dsl_content = """
       reports do
@@ -187,10 +187,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "extracts parameter entities correctly" do
       dsl_content = """
       reports do
@@ -210,25 +210,25 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
-      
+
       parameters = Map.get(report, :parameters, [])
       assert length(parameters) == 2
-      
+
       start_date_param = Enum.find(parameters, &(&1.name == :start_date))
       assert start_date_param.type == :date
       assert start_date_param.required == true
-      
+
       region_param = Enum.find(parameters, &(&1.name == :region))
       assert region_param.type == :string
       assert region_param.default == "North"
       assert region_param.required == false
     end
   end
-  
+
   describe "band entity parsing" do
     test "parses valid band with required fields" do
       dsl_content = """
@@ -245,10 +245,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "parses band with all options" do
       dsl_content = """
       reports do
@@ -271,17 +271,25 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "validates band type options" do
       valid_types = [
-        :title, :page_header, :column_header, :group_header,
-        :detail_header, :detail, :detail_footer, :group_footer,
-        :column_footer, :page_footer, :summary
+        :title,
+        :page_header,
+        :column_header,
+        :group_header,
+        :detail_header,
+        :detail,
+        :detail_footer,
+        :group_footer,
+        :column_footer,
+        :page_footer,
+        :summary
       ]
-      
+
       for band_type <- valid_types do
         dsl_content = """
         reports do
@@ -297,11 +305,11 @@ defmodule AshReports.DslTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "rejects invalid band types" do
       dsl_content = """
       reports do
@@ -317,10 +325,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "invalid_type")
     end
-    
+
     test "extracts band entities correctly" do
       dsl_content = """
       reports do
@@ -342,24 +350,24 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
-      
+
       bands = Map.get(report, :bands, [])
       assert length(bands) == 2
-      
+
       title_band = Enum.find(bands, &(&1.name == :title))
       assert title_band.type == :title
       assert title_band.height == 50
-      
+
       detail_band = Enum.find(bands, &(&1.name == :detail))
       assert detail_band.type == :detail
       assert detail_band.can_grow == true
     end
   end
-  
+
   describe "element entity parsing" do
     test "parses label element" do
       dsl_content = """
@@ -383,10 +391,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "parses field element" do
       dsl_content = """
       reports do
@@ -410,10 +418,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "parses expression element" do
       dsl_content = """
       reports do
@@ -436,10 +444,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "parses aggregate element" do
       dsl_content = """
       reports do
@@ -463,10 +471,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "parses line element" do
       dsl_content = """
       reports do
@@ -489,10 +497,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "parses box element" do
       dsl_content = """
       reports do
@@ -515,10 +523,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "parses image element" do
       dsl_content = """
       reports do
@@ -541,11 +549,11 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "variable entity parsing" do
     test "parses valid variable with required fields" do
       dsl_content = """
@@ -563,10 +571,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "parses variable with all options" do
       dsl_content = """
       reports do
@@ -586,13 +594,13 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "validates variable type options" do
       valid_types = [:sum, :count, :average, :min, :max, :custom]
-      
+
       for var_type <- valid_types do
         dsl_content = """
         reports do
@@ -609,14 +617,14 @@ defmodule AshReports.DslTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "validates reset_on options" do
       valid_reset_options = [:detail, :group, :page, :report]
-      
+
       for reset_option <- valid_reset_options do
         dsl_content = """
         reports do
@@ -634,12 +642,12 @@ defmodule AshReports.DslTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
   end
-  
+
   describe "group entity parsing" do
     test "parses valid group with required fields" do
       dsl_content = """
@@ -657,10 +665,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "parses group with all options" do
       dsl_content = """
       reports do
@@ -678,13 +686,13 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "validates sort options" do
       valid_sort_options = [:asc, :desc]
-      
+
       for sort_option <- valid_sort_options do
         dsl_content = """
         reports do
@@ -702,11 +710,11 @@ defmodule AshReports.DslTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "extracts group entities correctly" do
       dsl_content = """
       reports do
@@ -729,26 +737,27 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
-      
+
       groups = Map.get(report, :groups, [])
       assert length(groups) == 2
-      
+
       region_group = Enum.find(groups, &(&1.name == :by_region))
       assert region_group.level == 1
       assert region_group.expression == :region
       assert region_group.sort == :desc
-      
+
       status_group = Enum.find(groups, &(&1.name == :by_status))
       assert status_group.level == 2
       assert status_group.expression == :status
-      assert status_group.sort == :asc  # default value
+      # default value
+      assert status_group.sort == :asc
     end
   end
-  
+
   describe "complex nested DSL structures" do
     test "parses complete report with all entity types" do
       dsl_content = """
@@ -889,10 +898,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "validates entity relationships and constraints" do
       # Test that group_level in bands matches group definitions
       dsl_content = """
@@ -917,14 +926,14 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       # Note: This test might pass at DSL parsing level but should fail at verification level
       # The actual validation happens in verifiers, not in DSL parsing
       # We'll test the verifier behavior separately
       {:ok, _dsl_state} = parse_dsl(dsl_content)
     end
   end
-  
+
   describe "error handling and edge cases" do
     test "handles missing required fields gracefully" do
       dsl_content = """
@@ -941,10 +950,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "required")
     end
-    
+
     test "handles invalid nested structures" do
       dsl_content = """
       reports do
@@ -966,10 +975,10 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "required")
     end
-    
+
     test "handles empty entities correctly" do
       dsl_content = """
       reports do
@@ -995,7 +1004,7 @@ defmodule AshReports.DslTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end

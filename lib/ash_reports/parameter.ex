@@ -38,9 +38,8 @@ defmodule AshReports.Parameter do
   """
   @spec validate_value(t(), any()) :: {:ok, any()} | {:error, String.t()}
   def validate_value(%__MODULE__{} = param, value) do
-    with {:ok, value} <- validate_type(param.type, value),
-         {:ok, value} <- validate_constraints(param.type, value, param.constraints) do
-      {:ok, value}
+    with {:ok, value} <- validate_type(param.type, value) do
+      validate_constraints(param.type, value, param.constraints)
     end
   end
 
@@ -53,10 +52,12 @@ defmodule AshReports.Parameter do
   defp validate_type(:date, %Date{} = value), do: {:ok, value}
   defp validate_type(:datetime, %DateTime{} = value), do: {:ok, value}
   defp validate_type(:decimal, %Decimal{} = value), do: {:ok, value}
-  defp validate_type(type, value), do: {:error, "Invalid value for type #{type}: #{inspect(value)}"}
+
+  defp validate_type(type, value),
+    do: {:error, "Invalid value for type #{type}: #{inspect(value)}"}
 
   defp validate_constraints(_type, value, []), do: {:ok, value}
-  
+
   defp validate_constraints(:string, value, constraints) do
     cond do
       min = constraints[:min_length] ->
@@ -65,21 +66,21 @@ defmodule AshReports.Parameter do
         else
           validate_constraints(:string, value, Keyword.delete(constraints, :min_length))
         end
-      
+
       max = constraints[:max_length] ->
         if String.length(value) > max do
           {:error, "String must be at most #{max} characters long"}
         else
           validate_constraints(:string, value, Keyword.delete(constraints, :max_length))
         end
-      
+
       pattern = constraints[:pattern] ->
         if Regex.match?(pattern, value) do
           validate_constraints(:string, value, Keyword.delete(constraints, :pattern))
         else
           {:error, "String does not match required pattern"}
         end
-      
+
       true ->
         {:ok, value}
     end
@@ -103,14 +104,14 @@ defmodule AshReports.Parameter do
         else
           validate_numeric_constraints(value, Keyword.delete(constraints, :min))
         end
-      
+
       max = constraints[:max] ->
         if value > max do
           {:error, "Value must be at most #{max}"}
         else
           validate_numeric_constraints(value, Keyword.delete(constraints, :max))
         end
-      
+
       true ->
         {:ok, value}
     end

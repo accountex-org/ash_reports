@@ -2,12 +2,12 @@ defmodule AshReports.Entities.VariableTest do
   @moduledoc """
   Tests for AshReports.Variable entity structure and validation.
   """
-  
+
   use ExUnit.Case, async: true
-  
+
   import AshReports.TestHelpers
   alias AshReports.Variable
-  
+
   describe "Variable struct creation" do
     test "creates variable with required fields" do
       variable = %Variable{
@@ -15,12 +15,12 @@ defmodule AshReports.Entities.VariableTest do
         type: :sum,
         expression: :total_amount
       }
-      
+
       assert variable.name == :total_sales
       assert variable.type == :sum
       assert variable.expression == :total_amount
     end
-    
+
     test "creates variable with all optional fields" do
       variable = %Variable{
         name: :group_total,
@@ -30,7 +30,7 @@ defmodule AshReports.Entities.VariableTest do
         reset_group: 2,
         initial_value: 0
       }
-      
+
       assert variable.name == :group_total
       assert variable.type == :sum
       assert variable.expression == {:multiply, :quantity, :price}
@@ -39,7 +39,7 @@ defmodule AshReports.Entities.VariableTest do
       assert variable.initial_value == 0
     end
   end
-  
+
   describe "Variable field validation" do
     test "requires name field" do
       dsl_content = """
@@ -57,10 +57,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "missing required argument")
     end
-    
+
     test "requires type field" do
       dsl_content = """
       reports do
@@ -76,10 +76,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "required")
     end
-    
+
     test "requires expression field" do
       dsl_content = """
       reports do
@@ -95,13 +95,13 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content, "required")
     end
-    
+
     test "validates variable type options" do
       valid_types = [:sum, :count, :average, :min, :max, :custom]
-      
+
       for var_type <- valid_types do
         dsl_content = """
         reports do
@@ -118,14 +118,14 @@ defmodule AshReports.Entities.VariableTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "rejects invalid variable types" do
       invalid_types = [:invalid_type, :total, :accumulate]
-      
+
       for invalid_type <- invalid_types do
         dsl_content = """
         reports do
@@ -142,14 +142,14 @@ defmodule AshReports.Entities.VariableTest do
           end
         end
         """
-        
+
         assert_dsl_error(dsl_content, "#{invalid_type}")
       end
     end
-    
+
     test "validates reset_on options" do
       valid_reset_options = [:detail, :group, :page, :report]
-      
+
       for reset_option <- valid_reset_options do
         dsl_content = """
         reports do
@@ -167,14 +167,14 @@ defmodule AshReports.Entities.VariableTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "rejects invalid reset_on options" do
       invalid_reset_options = [:invalid_reset, :band, :section]
-      
+
       for invalid_option <- invalid_reset_options do
         dsl_content = """
         reports do
@@ -192,11 +192,11 @@ defmodule AshReports.Entities.VariableTest do
           end
         end
         """
-        
+
         assert_dsl_error(dsl_content, "#{invalid_option}")
       end
     end
-    
+
     test "validates reset_group is positive integer" do
       dsl_content = """
       reports do
@@ -215,9 +215,9 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
-      
+
       # Test invalid reset_group (0 or negative)
       dsl_content_invalid = """
       reports do
@@ -236,10 +236,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_error(dsl_content_invalid, "positive")
     end
-    
+
     test "sets default values correctly" do
       dsl_content = """
       reports do
@@ -256,17 +256,18 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
       variables = Map.get(report, :variables, [])
       variable = hd(variables)
-      
-      assert variable.reset_on == :report  # default value
+
+      # default value
+      assert variable.reset_on == :report
     end
   end
-  
+
   describe "Variable type-specific behavior" do
     test "sum variable with numeric expressions" do
       dsl_content = """
@@ -291,10 +292,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "count variable with field references" do
       dsl_content = """
       reports do
@@ -319,10 +320,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "average variable with calculations" do
       dsl_content = """
       reports do
@@ -346,10 +347,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "min and max variables" do
       dsl_content = """
       reports do
@@ -374,10 +375,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "custom variable with complex expressions" do
       dsl_content = """
       reports do
@@ -396,11 +397,11 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "Variable reset behavior" do
     test "detail reset variables" do
       dsl_content = """
@@ -420,10 +421,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "group reset variables with group levels" do
       dsl_content = """
       reports do
@@ -449,10 +450,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "page reset variables" do
       dsl_content = """
       reports do
@@ -478,10 +479,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "report reset variables" do
       dsl_content = """
       reports do
@@ -505,11 +506,11 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "Variable expressions" do
     test "simple field expressions" do
       simple_expressions = [
@@ -518,7 +519,7 @@ defmodule AshReports.Entities.VariableTest do
         ":id",
         ":order_date"
       ]
-      
+
       for expr <- simple_expressions do
         dsl_content = """
         reports do
@@ -535,11 +536,11 @@ defmodule AshReports.Entities.VariableTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "complex field expressions" do
       complex_expressions = [
         "{:field, :customer, :region}",
@@ -548,7 +549,7 @@ defmodule AshReports.Entities.VariableTest do
         "{:multiply, :quantity, :unit_price}",
         "{:if, {:greater_than, :age, 18}, 1, 0}"
       ]
-      
+
       for expr <- complex_expressions do
         dsl_content = """
         reports do
@@ -565,11 +566,11 @@ defmodule AshReports.Entities.VariableTest do
           end
         end
         """
-        
+
         assert_dsl_valid(dsl_content)
       end
     end
-    
+
     test "conditional expressions" do
       dsl_content = """
       reports do
@@ -594,11 +595,11 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "Variable usage scenarios" do
     test "running totals and counters" do
       dsl_content = """
@@ -633,10 +634,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "percentage calculations" do
       dsl_content = """
       reports do
@@ -666,10 +667,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "multi-level grouping variables" do
       dsl_content = """
       reports do
@@ -709,11 +710,11 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "Variable validation edge cases" do
     test "validates variable names are unique within report" do
       dsl_content = """
@@ -736,11 +737,11 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       # This should pass DSL parsing but fail at verifier level
       {:ok, _dsl_state} = parse_dsl(dsl_content)
     end
-    
+
     test "validates reset_group is specified when reset_on is :group" do
       # Valid: reset_on :group with reset_group specified
       dsl_content_valid = """
@@ -760,13 +761,13 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content_valid)
-      
+
       # This validation (reset_group required when reset_on is :group)
       # might be handled at verifier level rather than DSL parsing level
     end
-    
+
     test "handles variables with initial values" do
       dsl_content = """
       reports do
@@ -792,10 +793,10 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "extracts variable entities correctly" do
       dsl_content = """
       reports do
@@ -821,20 +822,20 @@ defmodule AshReports.Entities.VariableTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
-      
+
       variables = Map.get(report, :variables, [])
       assert length(variables) == 2
-      
+
       sales_var = Enum.find(variables, &(&1.name == :total_sales))
       assert sales_var.type == :sum
       assert sales_var.expression == :total_amount
       assert sales_var.reset_on == :report
       assert sales_var.initial_value == 0
-      
+
       count_var = Enum.find(variables, &(&1.name == :order_count))
       assert count_var.type == :count
       assert count_var.expression == :id

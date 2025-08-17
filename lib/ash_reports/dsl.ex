@@ -1,7 +1,7 @@
 defmodule AshReports.Dsl do
   @moduledoc """
   DSL components for AshReports.
-  
+
   This module provides the core DSL building blocks for defining reports,
   including sections, entities, and their schemas.
   """
@@ -16,7 +16,7 @@ defmodule AshReports.Dsl do
       name: :reports,
       describe: """
       Configure reports for this domain.
-      
+
       Reports are defined with a hierarchical band structure and can be rendered
       in multiple formats (HTML, PDF, HEEX, JSON).
       """,
@@ -128,7 +128,7 @@ defmodule AshReports.Dsl do
       name: :band,
       describe: """
       Defines a band within the report structure.
-      
+
       Bands are the fundamental building blocks of reports and can be of various types:
       title, page_header, column_header, group_header, detail, etc.
       """,
@@ -358,9 +358,21 @@ defmodule AshReports.Dsl do
         doc: "The band identifier."
       ],
       type: [
-        type: {:in, [:title, :page_header, :column_header, :group_header, 
-                     :detail_header, :detail, :detail_footer, :group_footer,
-                     :column_footer, :page_footer, :summary]},
+        type:
+          {:in,
+           [
+             :title,
+             :page_header,
+             :column_header,
+             :group_header,
+             :detail_header,
+             :detail,
+             :detail_footer,
+             :group_footer,
+             :column_footer,
+             :page_footer,
+             :summary
+           ]},
         required: true,
         doc: "The type of band."
       ],
@@ -496,109 +508,116 @@ defmodule AshReports.Dsl do
   end
 
   defp label_element_schema do
-    base_element_schema() ++ [
-      text: [
-        type: :string,
-        required: true,
-        doc: "The label text to display."
+    base_element_schema() ++
+      [
+        text: [
+          type: :string,
+          required: true,
+          doc: "The label text to display."
+        ]
       ]
-    ]
   end
 
   defp field_element_schema do
-    base_element_schema() ++ [
-      source: [
-        type: :any,
-        required: true,
-        doc: "The field path or expression to get the value."
-      ],
-      format: [
-        type: :any,
-        doc: "Format specification for the field value."
+    base_element_schema() ++
+      [
+        source: [
+          type: :any,
+          required: true,
+          doc: "The field path or expression to get the value."
+        ],
+        format: [
+          type: :any,
+          doc: "Format specification for the field value."
+        ]
       ]
-    ]
   end
 
   defp expression_element_schema do
-    base_element_schema() ++ [
-      expression: [
-        type: :any,
-        required: true,
-        doc: "The expression to calculate."
-      ],
-      format: [
-        type: :any,
-        doc: "Format specification for the expression result."
+    base_element_schema() ++
+      [
+        expression: [
+          type: :any,
+          required: true,
+          doc: "The expression to calculate."
+        ],
+        format: [
+          type: :any,
+          doc: "Format specification for the expression result."
+        ]
       ]
-    ]
   end
 
   defp aggregate_element_schema do
-    base_element_schema() ++ [
-      function: [
-        type: {:in, [:sum, :count, :average, :min, :max]},
-        required: true,
-        doc: "The aggregate function to apply."
-      ],
-      source: [
-        type: :any,
-        required: true,
-        doc: "The field or expression to aggregate."
-      ],
-      scope: [
-        type: {:in, [:band, :group, :page, :report]},
-        default: :band,
-        doc: "The scope over which to calculate the aggregate."
-      ],
-      format: [
-        type: :any,
-        doc: "Format specification for the aggregate result."
+    base_element_schema() ++
+      [
+        function: [
+          type: {:in, [:sum, :count, :average, :min, :max]},
+          required: true,
+          doc: "The aggregate function to apply."
+        ],
+        source: [
+          type: :any,
+          required: true,
+          doc: "The field or expression to aggregate."
+        ],
+        scope: [
+          type: {:in, [:band, :group, :page, :report]},
+          default: :band,
+          doc: "The scope over which to calculate the aggregate."
+        ],
+        format: [
+          type: :any,
+          doc: "Format specification for the aggregate result."
+        ]
       ]
-    ]
   end
 
   defp line_element_schema do
-    base_element_schema() ++ [
-      orientation: [
-        type: {:in, [:horizontal, :vertical]},
-        default: :horizontal,
-        doc: "The line orientation."
-      ],
-      thickness: [
-        type: :pos_integer,
-        default: 1,
-        doc: "The line thickness in rendering units."
+    base_element_schema() ++
+      [
+        orientation: [
+          type: {:in, [:horizontal, :vertical]},
+          default: :horizontal,
+          doc: "The line orientation."
+        ],
+        thickness: [
+          type: :pos_integer,
+          default: 1,
+          doc: "The line thickness in rendering units."
+        ]
       ]
-    ]
   end
 
   defp box_element_schema do
-    base_element_schema() ++ [
-      border: [
-        type: :keyword_list,
-        default: [],
-        doc: "Border properties (width, color, style)."
-      ],
-      fill: [
-        type: :keyword_list,
-        default: [],
-        doc: "Fill properties (color, pattern)."
+    base_element_schema() ++
+      [
+        border: [
+          type: :keyword_list,
+          default: [],
+          doc: "Border properties (width, color, style)."
+        ],
+        fill: [
+          type: :keyword_list,
+          default: [],
+          doc: "Fill properties (color, pattern)."
+        ]
       ]
-    ]
   end
 
   defp image_element_schema do
-    base_element_schema() ++ [
-      source: [
-        type: {:or, [:string, :any]},
-        required: true,
-        doc: "The image path or expression that returns a path/URL."
-      ],
-      scale_mode: [
-        type: {:in, [:fit, :fill, :stretch, :none]},
-        default: :fit,
-        doc: "How to scale the image within its bounds."
+    base_element_schema() ++
+      [
+        source: [
+          type: {:or, [:string, :any]},
+          required: true,
+          doc: "The image path or expression that returns a path/URL."
+        ],
+        scale_mode: [
+          type: {:in, [:fit, :fill, :stretch, :none]},
+          default: :fit,
+          doc: "How to scale the image within its bounds."
+        ]
       ]
-    ]
   end
 end

@@ -1,7 +1,7 @@
 defmodule AshReports.Info do
   @moduledoc """
   Introspection helpers for AshReports.
-  
+
   This module provides functions to retrieve report definitions and related
   information from domains that use the AshReports extension.
   """

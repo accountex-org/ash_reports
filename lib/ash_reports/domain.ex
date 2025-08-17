@@ -1,12 +1,12 @@
 defmodule AshReports.Domain do
   @moduledoc """
   Domain extension for AshReports.
-  
+
   This extension adds reporting capabilities to an Ash domain, allowing you to define
   reports that can query and present data from your domain's resources.
-  
+
   ## Usage
-  
+
       defmodule MyApp.Reporting do
         use Ash.Domain,
           extensions: [AshReports.Domain]
@@ -45,7 +45,7 @@ defmodule AshReports.Domain do
   """
 
   @reports_section AshReports.Dsl.reports_section()
-  
+
   use Spark.Dsl.Extension,
     sections: [@reports_section],
     transformers: [

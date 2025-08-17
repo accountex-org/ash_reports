@@ -1,7 +1,7 @@
 defmodule AshReports.Renderer do
   @moduledoc """
   Behaviour for report renderers.
-  
+
   Each output format (HTML, PDF, HEEX, JSON) implements this behaviour
   to provide format-specific rendering capabilities.
   """
@@ -32,7 +32,7 @@ defmodule AshReports.Renderer do
   @spec render(module(), any(), atom(), Keyword.t()) :: {:ok, any()} | {:error, term()}
   def render(report_module, data, format, opts \\ []) do
     renderer = get_renderer(report_module, format)
-    
+
     if renderer do
       renderer.render(report_module, data, opts)
     else

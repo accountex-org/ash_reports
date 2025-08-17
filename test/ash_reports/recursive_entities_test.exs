@@ -1,15 +1,15 @@
 defmodule AshReports.RecursiveEntitiesTest do
   @moduledoc """
   Tests for recursive entity structures in AshReports DSL.
-  
+
   Tests band nesting (recursive_as: :bands) and complex element hierarchies
   within bands and nested bands.
   """
-  
+
   use ExUnit.Case, async: true
-  
+
   import AshReports.TestHelpers
-  
+
   describe "Band recursive nesting (recursive_as: :bands)" do
     test "supports simple band nesting" do
       dsl_content = """
@@ -45,10 +45,10 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "supports multiple levels of band nesting" do
       dsl_content = """
       reports do
@@ -96,10 +96,10 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "supports multiple nested bands at the same level" do
       dsl_content = """
       reports do
@@ -157,10 +157,10 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "validates nested band structure and extracts correctly" do
       dsl_content = """
       reports do
@@ -208,48 +208,48 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
-      
+
       bands = Map.get(report, :bands, [])
       assert length(bands) == 1
-      
+
       outer_band = hd(bands)
       assert outer_band.name == :outer
       assert outer_band.type == :group_header
       assert outer_band.group_level == 1
-      
+
       # Check outer band elements
       outer_elements = Map.get(outer_band, :elements, [])
       assert length(outer_elements) == 1
       outer_label = hd(outer_elements)
       assert outer_label.name == :outer_label
-      
+
       # Check nested bands
       nested_bands = Map.get(outer_band, :bands, [])
       assert length(nested_bands) == 1
-      
+
       middle_band = hd(nested_bands)
       assert middle_band.name == :middle
       assert middle_band.type == :group_header
       assert middle_band.group_level == 2
-      
+
       # Check middle band elements
       middle_elements = Map.get(middle_band, :elements, [])
       assert length(middle_elements) == 1
       middle_field = hd(middle_elements)
       assert middle_field.name == :middle_field
-      
+
       # Check deeply nested bands
       deep_nested_bands = Map.get(middle_band, :bands, [])
       assert length(deep_nested_bands) == 1
-      
+
       inner_band = hd(deep_nested_bands)
       assert inner_band.name == :inner
       assert inner_band.type == :detail
-      
+
       # Check inner band elements
       inner_elements = Map.get(inner_band, :elements, [])
       assert length(inner_elements) == 1
@@ -257,7 +257,7 @@ defmodule AshReports.RecursiveEntitiesTest do
       assert inner_field.name == :inner_field
     end
   end
-  
+
   describe "Complex band hierarchy patterns" do
     test "group header with nested detail bands" do
       dsl_content = """
@@ -313,10 +313,10 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "nested group headers with their own footers" do
       dsl_content = """
       reports do
@@ -390,10 +390,10 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "band with conditional nested bands" do
       dsl_content = """
       reports do
@@ -442,11 +442,11 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "Element hierarchy within bands" do
     test "band with complex element arrangements" do
       dsl_content = """
@@ -547,10 +547,10 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "nested bands with different element types" do
       dsl_content = """
       reports do
@@ -628,11 +628,11 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "Deep nesting validation" do
     test "supports very deep band nesting" do
       dsl_content = """
@@ -706,10 +706,10 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "validates complex mixed hierarchy" do
       dsl_content = """
       reports do
@@ -884,11 +884,11 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
   end
-  
+
   describe "Recursive structure edge cases" do
     test "handles empty nested bands sections" do
       dsl_content = """
@@ -916,10 +916,10 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "handles band with only nested bands (no direct elements)" do
       dsl_content = """
       reports do
@@ -950,10 +950,10 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "handles band with both nested bands and elements" do
       dsl_content = """
       reports do
@@ -992,10 +992,10 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       assert_dsl_valid(dsl_content)
     end
-    
+
     test "extracts complex recursive structure correctly" do
       dsl_content = """
       reports do
@@ -1054,47 +1054,47 @@ defmodule AshReports.RecursiveEntitiesTest do
         end
       end
       """
-      
+
       {:ok, dsl_state} = parse_dsl(dsl_content)
       reports = get_dsl_entities(dsl_state, [:reports])
       report = hd(reports)
-      
+
       bands = Map.get(report, :bands, [])
       assert length(bands) == 1
-      
+
       root_band = hd(bands)
       assert root_band.name == :root
-      
+
       # Check root band elements
       root_elements = Map.get(root_band, :elements, [])
       assert length(root_elements) == 1
       assert hd(root_elements).name == :root_label
-      
+
       # Check root band children
       child_bands = Map.get(root_band, :bands, [])
       assert length(child_bands) == 2
-      
+
       child1 = Enum.find(child_bands, &(&1.name == :child1))
       assert child1.type == :detail
       child1_elements = Map.get(child1, :elements, [])
       assert length(child1_elements) == 1
       assert hd(child1_elements).name == :child1_field
-      
+
       child2 = Enum.find(child_bands, &(&1.name == :child2))
       assert child2.type == :detail_footer
       child2_elements = Map.get(child2, :elements, [])
       assert length(child2_elements) == 1
       assert hd(child2_elements).name == :child2_total
-      
+
       # Check grandchild
       grandchild_bands = Map.get(child2, :bands, [])
       assert length(grandchild_bands) == 1
-      
+
       grandchild = hd(grandchild_bands)
       assert grandchild.name == :grandchild
       assert grandchild.type == :detail
       assert grandchild.detail_number == 2
-      
+
       grandchild_elements = Map.get(grandchild, :elements, [])
       assert length(grandchild_elements) == 1
       assert hd(grandchild_elements).name == :grandchild_field

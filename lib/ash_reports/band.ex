@@ -1,7 +1,7 @@
 defmodule AshReports.Band do
   @moduledoc """
   Represents a band within a report structure.
-  
+
   Bands are the fundamental building blocks of reports and can be hierarchically nested.
   They contain elements that define what data and formatting to display.
   """
@@ -107,6 +107,7 @@ defmodule AshReports.Band do
   """
   @spec all_bands(t()) :: [t()]
   def all_bands(%__MODULE__{bands: nil}), do: []
+
   def all_bands(%__MODULE__{bands: bands}) do
     Enum.flat_map(bands, fn band ->
       [band | all_bands(band)]

@@ -16,23 +16,25 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
         reports do
           report :test_report do
-            title "Test Report"
-            driving_resource AshReports.Test.Customer
-            formats [:html, :pdf]
+            title("Test Report")
+            driving_resource(AshReports.Test.Customer)
+            formats([:html, :pdf])
 
             bands do
               band :title do
                 type :title
+
                 elements do
-                  label "Report Title", text: "Test Report"
+                  label("Report Title", text: "Test Report")
                 end
               end
 
               band :detail do
                 type :detail
+
                 elements do
-                  field :name, source: [:name]
-                  field :email, source: [:email]
+                  field(:name, source: [:name])
+                  field(:email, source: [:email])
                 end
               end
             end
@@ -67,14 +69,14 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
         reports do
           report :format_test do
-            title "Format Test Report"
-            driving_resource AshReports.Test.Customer
-            formats [:html, :pdf, :heex, :json]
+            title("Format Test Report")
+            driving_resource(AshReports.Test.Customer)
+            formats([:html, :pdf, :heex, :json])
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
@@ -103,33 +105,32 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       # Test JSON module
       json_module = TestDomainFormats.Reports.FormatTest.Json
       assert json_module.file_extension() == ".json"
-      assert json_module.supports_streaming?() == false  # JSON needs full structure
+      # JSON needs full structure
+      assert json_module.supports_streaming?() == false
     end
 
     test "persists report data in DSL state" do
       # Create a minimal domain to test DSL state manipulation
-      dsl_state = 
+      dsl_state =
         Spark.Dsl.Extension.build_entity_entities(
           AshReports.Domain,
           [],
           :reports,
           :report,
-          [
-            name: :state_test,
-            title: "State Test Report",
-            driving_resource: AshReports.Test.Customer,
-            bands: [
-              %AshReports.Band{
-                name: :detail,
-                type: :detail,
-                elements: [
-                  %AshReports.Element.Field{
-                    name: :name,
-                    source: [:name]
-                  }
-                ]
-              }
-            ]
+          name: :state_test,
+          title: "State Test Report",
+          driving_resource: AshReports.Test.Customer,
+          bands: [
+            %AshReports.Band{
+              name: :detail,
+              type: :detail,
+              elements: [
+                %AshReports.Element.Field{
+                  name: :name,
+                  source: [:name]
+                }
+              ]
+            }
           ]
         )
         |> elem(1)
@@ -159,26 +160,26 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
         reports do
           report :customer_report do
-            title "Customer Report"
-            driving_resource AshReports.Test.Customer
+            title("Customer Report")
+            driving_resource(AshReports.Test.Customer)
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
           end
 
           report :order_report do
-            title "Order Report"
-            driving_resource AshReports.Test.Order
+            title("Order Report")
+            driving_resource(AshReports.Test.Order)
 
             bands do
               band :detail do
                 elements do
-                  field :amount, source: [:amount]
+                  field(:amount, source: [:amount])
                 end
               end
             end
@@ -210,19 +211,19 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
         reports do
           report :param_test do
-            title "Parameter Test Report"
-            driving_resource AshReports.Test.Customer
+            title("Parameter Test Report")
+            driving_resource(AshReports.Test.Customer)
 
             parameters do
-              parameter :start_date, :date, required: true
-              parameter :end_date, :date, required: true
-              parameter :category, :string, required: false
+              parameter(:start_date, :date, required: true)
+              parameter(:end_date, :date, required: true)
+              parameter(:category, :string, required: false)
             end
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
@@ -231,10 +232,10 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       end
 
       report_module = ParameterDomain.Reports.ParamTest
-      
+
       # Test parameter validation interface exists
       assert function_exported?(report_module, :validate_params, 1)
-      
+
       # The actual validation will be tested in ParameterValidator tests
       # Here we just verify the interface is present
     end
@@ -249,13 +250,13 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
         reports do
           report :query_test do
-            title "Query Test Report"
-            driving_resource AshReports.Test.Customer
+            title("Query Test Report")
+            driving_resource(AshReports.Test.Customer)
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
@@ -264,11 +265,11 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       end
 
       report_module = QueryDomain.Reports.QueryTest
-      
+
       # Test query building interface exists
       assert function_exported?(report_module, :build_query, 0)
       assert function_exported?(report_module, :build_query, 1)
-      
+
       # The actual query building will be tested in QueryBuilder tests
       # Here we just verify the interface is present
     end
@@ -276,7 +277,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
     test "transformer execution order is correct" do
       # Test that BuildReportModules runs after all verifiers
       assert BuildReportModules.after?(AshReports.Verifiers.ValidateReports) == true
-      assert BuildReportModules.after?(AshReports.Verifiers.ValidateBands) == true  
+      assert BuildReportModules.after?(AshReports.Verifiers.ValidateBands) == true
       assert BuildReportModules.after?(AshReports.Verifiers.ValidateElements) == true
       assert BuildReportModules.before?(SomeOtherTransformer) == false
     end
@@ -306,26 +307,26 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
         reports do
           report :snake_case_report do
-            title "Snake Case Report"
-            driving_resource AshReports.Test.Customer
+            title("Snake Case Report")
+            driving_resource(AshReports.Test.Customer)
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
           end
 
           report :camelCaseReport do
-            title "Camel Case Report"
-            driving_resource AshReports.Test.Customer
+            title("Camel Case Report")
+            driving_resource(AshReports.Test.Customer)
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
@@ -336,7 +337,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       # Verify proper PascalCase module naming
       assert NamingDomain.Reports.SnakeCaseReport
       assert NamingDomain.Reports.CamelCaseReport
-      
+
       # Verify the original names are preserved in definitions
       assert NamingDomain.Reports.SnakeCaseReport.definition().name == :snake_case_report
       assert NamingDomain.Reports.CamelCaseReport.definition().name == :camelCaseReport
@@ -354,14 +355,14 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
         reports do
           report :html_test do
-            title "HTML Test Report"
-            driving_resource AshReports.Test.Customer
-            formats [:html]
+            title("HTML Test Report")
+            driving_resource(AshReports.Test.Customer)
+            formats([:html])
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
@@ -370,11 +371,11 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       end
 
       html_module = HtmlDomain.Reports.HtmlTest.Html
-      
+
       # Test that it implements the AshReports.Renderer behavior
       behaviours = html_module.__info__(:attributes) |> Keyword.get(:behaviour, [])
       assert AshReports.Renderer in behaviours
-      
+
       # Test required callbacks exist
       assert function_exported?(html_module, :render, 3)
       assert function_exported?(html_module, :supports_streaming?, 0)
@@ -391,14 +392,14 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
         reports do
           report :all_formats do
-            title "All Formats Report"
-            driving_resource AshReports.Test.Customer
-            formats [:html, :pdf, :heex, :json]
+            title("All Formats Report")
+            driving_resource(AshReports.Test.Customer)
+            formats([:html, :pdf, :heex, :json])
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
@@ -412,23 +413,24 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       for format <- formats do
         format_module_name = format |> to_string() |> Macro.camelize()
         format_module = Module.concat(base_module, format_module_name)
-        
+
         # All format modules should exist
         assert format_module
-        
+
         # All should implement the same interface
         assert function_exported?(format_module, :render, 3)
         assert function_exported?(format_module, :supports_streaming?, 0)
         assert function_exported?(format_module, :file_extension, 0)
-        
+
         # File extensions should be correct
-        expected_extension = case format do
-          :html -> ".html"
-          :pdf -> ".pdf"
-          :heex -> ".heex"
-          :json -> ".json"
-        end
-        
+        expected_extension =
+          case format do
+            :html -> ".html"
+            :pdf -> ".pdf"
+            :heex -> ".heex"
+            :json -> ".json"
+          end
+
         assert format_module.file_extension() == expected_extension
       end
     end
@@ -437,7 +439,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
   describe "error handling" do
     test "transformer handles invalid DSL state gracefully" do
       # Create an invalid DSL state (missing required fields)
-      invalid_state = 
+      invalid_state =
         %Spark.Dsl.State{}
         |> Transformer.persist(:module, InvalidModule)
 
@@ -488,22 +490,22 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
           ]
         }
       ]
-      
+
       # Simulate DSL state after other transformers have run
-      dsl_state = 
+      dsl_state =
         %Spark.Dsl.State{}
         |> Transformer.persist(:module, TestStateModule)
         |> Transformer.persist(:ash_reports_parsed, initial_reports)
-      
+
       # Apply transformer
       {:ok, transformed_state} = BuildReportModules.transform(dsl_state)
-      
+
       # Verify DSL state was correctly updated
       persisted_reports = Transformer.get_persisted(transformed_state, :ash_reports)
       assert length(persisted_reports) == 2
-      assert Enum.find(persisted_reports, & &1.name == :first_report)
-      assert Enum.find(persisted_reports, & &1.name == :second_report)
-      
+      assert Enum.find(persisted_reports, &(&1.name == :first_report))
+      assert Enum.find(persisted_reports, &(&1.name == :second_report))
+
       # Verify module mapping was created
       module_map = Transformer.get_persisted(transformed_state, :ash_reports_modules)
       assert is_map(module_map)
@@ -514,8 +516,8 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
     test "transformer preserves existing DSL state data" do
       # Create DSL state with existing persisted data
       existing_data = %{some: "existing", data: "preserved"}
-      
-      initial_dsl_state = 
+
+      initial_dsl_state =
         %Spark.Dsl.State{}
         |> Transformer.persist(:module, TestPreserveModule)
         |> Transformer.persist(:existing_key, existing_data)
@@ -529,18 +531,18 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
             ]
           }
         ])
-      
+
       # Apply transformer
       {:ok, final_state} = BuildReportModules.transform(initial_dsl_state)
-      
+
       # Verify existing data is preserved
       preserved_data = Transformer.get_persisted(final_state, :existing_key)
       assert preserved_data == existing_data
-      
+
       # Verify new data was added
       reports = Transformer.get_persisted(final_state, :ash_reports)
       assert length(reports) == 1
-      
+
       modules = Transformer.get_persisted(final_state, :ash_reports_modules)
       assert is_map(modules)
     end
@@ -567,16 +569,16 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
           bands: [%AshReports.Band{name: :detail, type: :detail, elements: []}]
         }
       ]
-      
-      dsl_state = 
+
+      dsl_state =
         %Spark.Dsl.State{}
         |> Transformer.persist(:module, EdgeCaseModule)
         |> Transformer.persist(:ash_reports_parsed, edge_case_reports)
-      
+
       {:ok, transformed_state} = BuildReportModules.transform(dsl_state)
-      
+
       modules = Transformer.get_persisted(transformed_state, :ash_reports_modules)
-      
+
       # Verify proper module name generation handles different naming patterns
       assert Map.has_key?(modules, :report_with_underscores)
       assert Map.has_key?(modules, :ReportWithCamelCase)
@@ -589,17 +591,18 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
         name: :no_format_report,
         title: "No Format Report",
         driving_resource: AshReports.Test.Customer,
-        formats: nil,  # No formats specified
+        # No formats specified
+        formats: nil,
         bands: [%AshReports.Band{name: :detail, type: :detail, elements: []}]
       }
-      
-      dsl_state = 
+
+      dsl_state =
         %Spark.Dsl.State{}
         |> Transformer.persist(:module, NoFormatModule)
         |> Transformer.persist(:ash_reports_parsed, [no_format_report])
-      
+
       {:ok, transformed_state} = BuildReportModules.transform(dsl_state)
-      
+
       # Should handle nil formats gracefully
       modules = Transformer.get_persisted(transformed_state, :ash_reports_modules)
       assert Map.has_key?(modules, :no_format_report)
@@ -610,7 +613,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       assert BuildReportModules.after?(AshReports.Verifiers.ValidateReports) == true
       assert BuildReportModules.after?(AshReports.Verifiers.ValidateBands) == true
       assert BuildReportModules.after?(AshReports.Verifiers.ValidateElements) == true
-      
+
       # Should not run before other transformers
       assert BuildReportModules.before?(SomeOtherTransformer) == false
       assert BuildReportModules.before?(AnyTransformer) == false
@@ -628,19 +631,19 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
         reports do
           report :interface_test do
-            title "Interface Test Report"
-            driving_resource AshReports.Test.Customer
-            formats [:html, :pdf]
-            
+            title("Interface Test Report")
+            driving_resource(AshReports.Test.Customer)
+            formats([:html, :pdf])
+
             parameters do
-              parameter :start_date, :date, required: true
-              parameter :end_date, :date, required: true
+              parameter(:start_date, :date, required: true)
+              parameter(:end_date, :date, required: true)
             end
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
@@ -649,7 +652,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       end
 
       report_module = InterfaceTestDomain.Reports.InterfaceTest
-      
+
       # Test all required interface methods exist
       assert function_exported?(report_module, :definition, 0)
       assert function_exported?(report_module, :domain, 0)
@@ -664,13 +667,13 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       assert function_exported?(report_module, :build_query, 1)
       assert function_exported?(report_module, :supported_formats, 0)
       assert function_exported?(report_module, :supports_format?, 1)
-      
+
       # Test interface returns correct values
       definition = report_module.definition()
       assert definition.name == :interface_test
       assert definition.title == "Interface Test Report"
       assert definition.driving_resource == AshReports.Test.Customer
-      
+
       assert report_module.domain() == InterfaceTestDomain
       assert report_module.supported_formats() == [:html, :pdf]
       assert report_module.supports_format?(:html) == true
@@ -687,14 +690,14 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
         reports do
           report :renderer_test do
-            title "Renderer Test Report"
-            driving_resource AshReports.Test.Customer
-            formats [:html, :pdf, :json, :heex]
+            title("Renderer Test Report")
+            driving_resource(AshReports.Test.Customer)
+            formats([:html, :pdf, :json, :heex])
 
             bands do
               band :detail do
                 elements do
-                  field :name, source: [:name]
+                  field(:name, source: [:name])
                 end
               end
             end
@@ -703,34 +706,35 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       end
 
       base_module = RendererTestDomain.Reports.RendererTest
-      
+
       # Test each format module
       format_tests = [
         {:html, "Html", ".html", true},
         {:pdf, "Pdf", ".pdf", true},
-        {:json, "Json", ".json", false},  # JSON doesn't support streaming
+        # JSON doesn't support streaming
+        {:json, "Json", ".json", false},
         {:heex, "Heex", ".heex", true}
       ]
-      
+
       for {format, module_suffix, extension, streaming} <- format_tests do
         format_module = Module.concat(base_module, module_suffix)
-        
+
         # Verify module exists
         assert format_module
-        
+
         # Verify behavior implementation
         behaviours = format_module.__info__(:attributes) |> Keyword.get(:behaviour, [])
         assert AshReports.Renderer in behaviours
-        
+
         # Verify required callbacks
         assert function_exported?(format_module, :render, 3)
         assert function_exported?(format_module, :supports_streaming?, 0)
         assert function_exported?(format_module, :file_extension, 0)
-        
+
         # Verify callback implementations
         assert format_module.file_extension() == extension
         assert format_module.supports_streaming?() == streaming
-        
+
         # Verify render method returns expected structure
         {:ok, result} = format_module.render(base_module, [], [])
         assert is_binary(result)
@@ -752,42 +756,42 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
         reports do
           report :pipeline_customer_report do
-            title "Pipeline Customer Report"
-            driving_resource AshReports.Test.Customer
-            formats [:html, :pdf]
+            title("Pipeline Customer Report")
+            driving_resource(AshReports.Test.Customer)
+            formats([:html, :pdf])
 
             bands do
               band :title do
                 elements do
-                  label "title", text: "Customer Report"
+                  label("title", text: "Customer Report")
                 end
               end
 
               band :detail do
                 elements do
-                  field :name, source: [:name]
-                  field :email, source: [:email]
+                  field(:name, source: [:name])
+                  field(:email, source: [:email])
                 end
               end
 
               band :summary do
                 elements do
-                  aggregate :count, function: :count, source: [:id]
+                  aggregate(:count, function: :count, source: [:id])
                 end
               end
             end
           end
 
           report :pipeline_order_report do
-            title "Pipeline Order Report"
-            driving_resource AshReports.Test.Order
-            formats [:json]
+            title("Pipeline Order Report")
+            driving_resource(AshReports.Test.Order)
+            formats([:json])
 
             bands do
               band :detail do
                 elements do
-                  field :amount, source: [:amount]
-                  field :date, source: [:date]
+                  field(:amount, source: [:amount])
+                  field(:date, source: [:date])
                 end
               end
             end
@@ -798,22 +802,22 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       # Verify complete pipeline worked
       assert PipelineTestDomain.Reports.PipelineCustomerReport
       assert PipelineTestDomain.Reports.PipelineOrderReport
-      
+
       # Verify format modules were created
       assert PipelineTestDomain.Reports.PipelineCustomerReport.Html
       assert PipelineTestDomain.Reports.PipelineCustomerReport.Pdf
       assert PipelineTestDomain.Reports.PipelineOrderReport.Json
-      
+
       # Verify definitions are correct
       customer_def = PipelineTestDomain.Reports.PipelineCustomerReport.definition()
       order_def = PipelineTestDomain.Reports.PipelineOrderReport.definition()
-      
+
       assert customer_def.name == :pipeline_customer_report
       assert order_def.name == :pipeline_order_report
-      
+
       assert length(customer_def.bands) == 3
       assert length(order_def.bands) == 1
-      
+
       # Verify formats are correct
       assert customer_def.formats == [:html, :pdf]
       assert order_def.formats == [:json]
