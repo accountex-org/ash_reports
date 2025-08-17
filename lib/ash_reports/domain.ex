@@ -44,6 +44,8 @@ defmodule AshReports.Domain do
       end
   """
 
+  @reports_section AshReports.Dsl.reports_section()
+  
   use Spark.Dsl.Extension,
     sections: [@reports_section],
     transformers: [
@@ -54,6 +56,4 @@ defmodule AshReports.Domain do
       AshReports.Verifiers.ValidateBands,
       AshReports.Verifiers.ValidateElements
     ]
-
-  @reports_section AshReports.Dsl.reports_section()
 end

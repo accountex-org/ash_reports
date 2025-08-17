@@ -1,4 +1,17 @@
 ExUnit.start()
 
-# Configure Mox for test doubles
-Mox.defmock(AshReports.MockDataLayer, for: Ash.DataLayer)
+# Configure ExUnit
+ExUnit.configure(exclude: [:performance])
+
+# Add support directory to code path
+Code.require_file("support/mock_data_layer.ex", __DIR__)
+Code.require_file("support/test_resources.ex", __DIR__) 
+Code.require_file("support/test_helpers.ex", __DIR__)
+
+# Import test helpers for all tests
+import AshReports.TestHelpers
+
+# Setup and teardown for tests
+ExUnit.after_suite(fn _results ->
+  AshReports.MockDataLayer.clear_all_test_data()
+end)

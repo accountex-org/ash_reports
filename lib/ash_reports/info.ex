@@ -7,7 +7,7 @@ defmodule AshReports.Info do
   """
 
   use Spark.InfoGenerator,
-    extension: AshReports,
+    extension: AshReports.Domain,
     sections: [:reports]
 
   @doc """

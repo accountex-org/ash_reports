@@ -1,0 +1,1270 @@
+defmodule AshReports.CrossComponentIntegrationTest do
+  @moduledoc """
+  Phase 1D: Cross-Component Integration Testing
+  
+  This test module focuses on testing the integration between transformers,
+  verifiers, and other system components. It validates that components work
+  together correctly, handle edge cases, and maintain proper data flow.
+  """
+  
+  use ExUnit.Case, async: false
+  import AshReports.TestHelpers
+  
+  alias AshReports.Transformers.BuildReportModules
+  alias AshReports.Verifiers.{ValidateReports, ValidateBands, ValidateElements}
+  alias Spark.Dsl.Transformer
+  
+  describe "transformer-verifier interaction patterns" do
+    test "verifies transformer execution order dependencies" do
+      # Test that transformers declare proper dependencies on verifiers
+      
+      # BuildReportModules should run after all verifiers
+      assert BuildReportModules.after?(ValidateReports) == true
+      assert BuildReportModules.after?(ValidateBands) == true  
+      assert BuildReportModules.after?(ValidateElements) == true
+      
+      # BuildReportModules should not run before verifiers
+      assert BuildReportModules.before?(ValidateReports) == false
+      assert BuildReportModules.before?(ValidateBands) == false
+      assert BuildReportModules.before?(ValidateElements) == false
+      
+      # Verifiers should not depend on transformers
+      refute ValidateReports.after?(BuildReportModules)
+      refute ValidateBands.after?(BuildReportModules)
+      refute ValidateElements.after?(BuildReportModules)
+    end
+
+    test "validates data flow from verifiers to transformers" do
+      defmodule DataFlowTestDomain do
+        use Ash.Domain, extensions: [AshReports.Domain]
+
+        resources do
+          resource AshReports.Test.Customer
+        end
+
+        reports do
+          report :data_flow_test do
+            title "Data Flow Test Report"
+            driving_resource AshReports.Test.Customer
+            formats [:html, :pdf]
+
+            parameters do
+              parameter :test_param, :string, required: true
+            end
+
+            variables do
+              variable :test_var, type: :count, reset_on: :report
+            end
+
+            groups do
+              group :region, field: [:region], sort: :asc
+            end
+
+            bands do
+              band :title do
+                elements do
+                  label "title", text: "Data Flow Test"
+                  expression "param_ref", expression: expr("Parameter: " <> test_param)
+                end
+              end
+
+              band :group_header, group_level: 1 do
+                elements do
+                  field :region_field, source: [:region]
+                  expression "var_ref", expression: expr("Variable: " <> test_var)
+                end
+
+                bands do
+                  band :detail do
+                    elements do
+                      field :name, source: [:name]
+                      field :email, source: [:email]
+                      aggregate :count_agg, function: :count, source: [:id]
+                    end
+                  end
+                end
+              end
+
+              band :group_footer, group_level: 1 do
+                elements do
+                  aggregate :group_total, function: :count, source: [:id]
+                end
+              end
+
+              band :summary do
+                elements do
+                  aggregate :report_total, function: :count, source: [:id]
+                  expression "final_var", expression: expr("Final count: " <> test_var)
+                end
+              end
+            end
+          end
+        end
+      end
+
+      # If compilation succeeds, verifiers validated the data and transformers processed it
+      assert DataFlowTestDomain
+      report_module = DataFlowTestDomain.Reports.DataFlowTest
+      assert report_module
+      
+      # Verify that transformer has access to validated DSL data
+      definition = report_module.definition()
+      
+      # Check that all DSL elements are present and correctly structured
+      assert definition.name == :data_flow_test
+      assert definition.driving_resource == AshReports.Test.Customer
+      assert length(definition.formats) == 2
+      assert length(definition.parameters) == 1
+      assert length(definition.variables) == 1
+      assert length(definition.groups) == 1
+      assert length(definition.bands) == 4  # title, group_header, group_footer, summary
+      
+      # Verify nested band structure was preserved
+      group_header = Enum.find(definition.bands, &(&1.type == :group_header))
+      assert length(group_header.bands) == 1  # detail band
+      
+      detail_band = hd(group_header.bands)
+      assert detail_band.type == :detail
+      assert length(detail_band.elements) == 3  # name, email, count_agg
+      
+      # Verify format modules were generated
+      assert DataFlowTestDomain.Reports.DataFlowTest.Html
+      assert DataFlowTestDomain.Reports.DataFlowTest.Pdf
+    end
+
+    test "handles verifier errors before transformer execution" do
+      # Test that verifier errors prevent transformer execution
+      
+      assert_raise Spark.Error.DslError, ~r/must have at least one detail band/, fn ->
+        defmodule VerifierErrorTestDomain do
+          use Ash.Domain, extensions: [AshReports.Domain]
+
+          resources do
+            resource AshReports.Test.Customer
+          end
+
+          reports do
+            report :verifier_error_test do
+              title "Verifier Error Test"
+              driving_resource AshReports.Test.Customer
+              
+              # This should fail validation - no detail band
+              bands do
+                band :title do
+                  elements do
+                    label "title", text: "Invalid Report"
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+      
+      # The error should be caught by verifiers, preventing transformers from running
+      # If we reach this point, the verifier correctly blocked compilation
+    end
+
+    test "validates transformer persistence across verifier stages" do
+      # Test that data persisted by early verifiers is available to later stages
+      
+      defmodule PersistenceTestDomain do
+        use Ash.Domain, extensions: [AshReports.Domain]
+
+        resources do
+          resource AshReports.Test.Customer
+        end
+
+        reports do
+          report :persistence_test do
+            title "Persistence Test Report"
+            driving_resource AshReports.Test.Customer
+            formats [:html, :json]
+
+            parameters do
+              parameter :region_filter, :string, required: false
+              parameter :min_credit, :decimal, required: false
+            end
+
+            variables do
+              variable :customer_count, type: :count, reset_on: :report
+              variable :region_count, type: :count, reset_on: :group, reset_group: 1
+            end
+
+            groups do
+              group :region, field: [:region], sort: :asc
+              group :status, field: [:status], sort: :desc
+            end
+
+            bands do
+              band :title do
+                elements do
+                  label "title", text: "Persistence Test"
+                  expression "params", expression: expr("Filters: " <> (region_filter || "None"))
+                end
+              end
+
+              band :group_header, group_level: 1 do
+                elements do
+                  field :region, source: [:region]
+                  expression "region_info", expression: expr("Region: " <> region)
+                end
+
+                bands do
+                  band :group_header, group_level: 2 do
+                    elements do
+                      field :status, source: [:status]
+                    end
+
+                    bands do
+                      band :detail do
+                        elements do
+                          field :name, source: [:name]
+                          field :email, source: [:email]
+                          field :credit_limit, source: [:credit_limit], format: :currency
+                          expression :customer_info, 
+                                    expression: expr(name <> " - " <> region <> " - " <> status)
+                        end
+                      end
+                    end
+                  end
+
+                  band :group_footer, group_level: 2 do
+                    elements do
+                      aggregate :status_count, function: :count, source: [:id]
+                      expression "status_summary", 
+                                expression: expr("Status total: " <> status_count)
+                    end
+                  end
+                end
+              end
+
+              band :group_footer, group_level: 1 do
+                elements do
+                  aggregate :region_total, function: :count, source: [:id]
+                  aggregate :region_credit, function: :sum, source: [:credit_limit], format: :currency
+                  expression "region_summary", 
+                            expression: expr("Region total: " <> region_total <> ", Credit: " <> region_credit)
+                end
+              end
+
+              band :summary do
+                elements do
+                  aggregate :grand_total, function: :count, source: [:id]
+                  aggregate :grand_credit, function: :sum, source: [:credit_limit], format: :currency
+                  expression "grand_summary", 
+                            expression: expr("Grand total: " <> grand_total <> ", Variables used: " <> customer_count)
+                end
+              end
+            end
+          end
+        end
+      end
+
+      # Verify successful compilation with all components working together
+      assert PersistenceTestDomain
+      report_module = PersistenceTestDomain.Reports.PersistenceTest
+      definition = report_module.definition()
+      
+      # Verify that all DSL data was properly persisted and accessible to transformers
+      assert definition.name == :persistence_test
+      assert length(definition.parameters) == 2
+      assert length(definition.variables) == 2  
+      assert length(definition.groups) == 2
+      assert length(definition.bands) == 4
+      
+      # Verify deep nesting was handled correctly
+      group_header_1 = Enum.find(definition.bands, &(&1.type == :group_header && &1.group_level == 1))
+      assert length(group_header_1.bands) == 2  # group_header_2 and group_footer_2
+      
+      group_header_2 = Enum.find(group_header_1.bands, &(&1.type == :group_header && &1.group_level == 2))
+      assert length(group_header_2.bands) == 1  # detail
+      
+      # Verify format modules were generated correctly
+      assert report_module.Html
+      assert report_module.Json
+      refute Code.ensure_loaded?(Module.concat(report_module, Pdf))  # Not in formats list
+    end
+  end
+
+  describe "entity relationship validation across components" do
+    test "validates parameter references in expressions across verifier-transformer chain" do
+      defmodule ParameterReferenceTestDomain do
+        use Ash.Domain, extensions: [AshReports.Domain]
+
+        resources do
+          resource AshReports.Test.Customer
+        end
+
+        reports do
+          report :parameter_reference_test do
+            title "Parameter Reference Test"
+            driving_resource AshReports.Test.Customer
+
+            parameters do
+              parameter :report_title, :string, required: true
+              parameter :date_filter, :date, required: false
+              parameter :include_summary, :boolean, required: false, default: true
+            end
+
+            bands do
+              band :title do
+                elements do
+                  # Valid parameter references - should pass verifiers and transformers
+                  label "title", text: expr(report_title)
+                  expression "date_info", 
+                            expression: expr(if(date_filter != nil, 
+                              "Date: " <> format_date(date_filter, :short), 
+                              "No date filter"))
+                  expression "conditional_summary",
+                            expression: expr(if(include_summary, "Summary enabled", "Summary disabled"))
+                end
+              end
+
+              band :detail do
+                elements do
+                  field :name, source: [:name]
+                  expression "name_with_title", 
+                            expression: expr(report_title <> ": " <> name)
+                end
+              end
+
+              band :summary do
+                elements do
+                  aggregate :total_count, function: :count, source: [:id]
+                  expression "summary_line", 
+                            expression: expr(report_title <> " completed with " <> total_count <> " records"),
+                            visible: expr(include_summary)
+                end
+              end
+            end
+          end
+        end
+      end
+
+      # Should compile successfully with valid parameter references
+      assert ParameterReferenceTestDomain
+      report_module = ParameterReferenceTestDomain.Reports.ParameterReferenceTest
+      definition = report_module.definition()
+      
+      # Verify parameter references were preserved through the processing chain
+      assert length(definition.parameters) == 3
+      
+      # Verify expressions using parameters are present
+      title_band = Enum.find(definition.bands, &(&1.type == :title))
+      assert length(title_band.elements) == 3
+      
+      # Test parameter validation works correctly
+      valid_params = %{report_title: "Test Report"}
+      assert {:ok, _} = report_module.validate_params(valid_params)
+      
+      invalid_params = %{include_summary: "not_boolean"}
+      assert {:error, _} = report_module.validate_params(invalid_params)
+    end
+
+    test "validates variable references across nested band structures" do
+      defmodule VariableReferenceTestDomain do
+        use Ash.Domain, extensions: [AshReports.Domain]
+
+        resources do
+          resource AshReports.Test.Customer
+        end
+
+        reports do
+          report :variable_reference_test do
+            title "Variable Reference Test"
+            driving_resource AshReports.Test.Customer
+
+            variables do
+              variable :report_counter, type: :count, reset_on: :report
+              variable :group_counter, type: :count, reset_on: :group, reset_group: 1
+              variable :subgroup_counter, type: :count, reset_on: :group, reset_group: 2
+              variable :running_total, type: :sum, expression: expr(credit_limit), reset_on: :report
+            end
+
+            groups do
+              group :region, field: [:region], sort: :asc
+              group :status, field: [:status], sort: :asc
+            end
+
+            bands do
+              band :title do
+                elements do
+                  expression "report_info", 
+                            expression: expr("Report counter: " <> report_counter)
+                end
+              end
+
+              band :group_header, group_level: 1 do
+                elements do
+                  field :region, source: [:region]
+                  expression "group_info", 
+                            expression: expr("Group counter: " <> group_counter <> 
+                                           " | Report counter: " <> report_counter)
+                end
+
+                bands do
+                  band :group_header, group_level: 2 do
+                    elements do
+                      field :status, source: [:status]
+                      expression "subgroup_info", 
+                                expression: expr("Subgroup: " <> subgroup_counter <> 
+                                               " | Group: " <> group_counter <> 
+                                               " | Report: " <> report_counter)
+                    end
+
+                    bands do
+                      band :detail do
+                        elements do
+                          field :name, source: [:name]
+                          field :credit_limit, source: [:credit_limit], format: :currency
+                          expression "detail_counters", 
+                                    expression: expr("Detail - Sub: " <> subgroup_counter <> 
+                                                   " | Group: " <> group_counter <> 
+                                                   " | Report: " <> report_counter <> 
+                                                   " | Running Total: " <> running_total)
+                        end
+                      end
+                    end
+                  end
+
+                  band :group_footer, group_level: 2 do
+                    elements do
+                      expression "subgroup_summary", 
+                                expression: expr("Subgroup total: " <> subgroup_counter)
+                    end
+                  end
+                end
+              end
+
+              band :group_footer, group_level: 1 do
+                elements do
+                  expression "group_summary", 
+                            expression: expr("Group total: " <> group_counter <> 
+                                           " | Running total: " <> running_total)
+                end
+              end
+
+              band :summary do
+                elements do
+                  aggregate :final_count, function: :count, source: [:id]
+                  expression "final_summary", 
+                            expression: expr("Final - Report: " <> report_counter <> 
+                                           " | Aggregate: " <> final_count <> 
+                                           " | Running Total: " <> running_total)
+                end
+              end
+            end
+          end
+        end
+      end
+
+      # Should compile successfully with valid variable references
+      assert VariableReferenceTestDomain
+      report_module = VariableReferenceTestDomain.Reports.VariableReferenceTest
+      definition = report_module.definition()
+      
+      # Verify variable definitions were preserved
+      assert length(definition.variables) == 4
+      
+      # Verify variable scoping is correct
+      variables_by_reset = Enum.group_by(definition.variables, & &1.reset_on)
+      assert length(variables_by_reset[:report]) == 2  # report_counter, running_total
+      assert length(variables_by_reset[:group]) == 2  # group_counter, subgroup_counter
+      
+      # Verify group-level variables have correct reset_group values
+      group_vars = variables_by_reset[:group]
+      group_var = Enum.find(group_vars, &(&1.name == :group_counter))
+      subgroup_var = Enum.find(group_vars, &(&1.name == :subgroup_counter))
+      
+      assert group_var.reset_group == 1
+      assert subgroup_var.reset_group == 2
+    end
+
+    test "validates group references and dependencies" do
+      defmodule GroupReferenceTestDomain do
+        use Ash.Domain, extensions: [AshReports.Domain]
+
+        resources do
+          resource AshReports.Test.Customer
+        end
+
+        reports do
+          report :group_reference_test do
+            title "Group Reference Test"  
+            driving_resource AshReports.Test.Customer
+
+            groups do
+              group :region, field: [:region], sort: :asc
+              group :status, field: [:status], sort: :desc
+              group :credit_tier, field: expr(case do
+                credit_limit < 1000 -> "Low"
+                credit_limit < 5000 -> "Medium"  
+                credit_limit < 10000 -> "High"
+                true -> "Premium"
+              end), sort: :asc
+            end
+
+            bands do
+              band :title do
+                elements do
+                  label "title", text: "Group Reference Test"
+                end
+              end
+
+              # Group headers must correspond to defined groups
+              band :region_header, type: :group_header, group_level: 1 do
+                elements do
+                  field :region_field, source: [:region]
+                  expression "region_info", expression: expr("Region: " <> region)
+                end
+
+                bands do
+                  band :status_header, type: :group_header, group_level: 2 do
+                    elements do
+                      field :status_field, source: [:status]
+                      expression "status_info", expression: expr("Status: " <> status)
+                    end
+
+                    bands do
+                      band :tier_header, type: :group_header, group_level: 3 do
+                        elements do
+                          expression "tier_info", 
+                                    expression: expr("Credit Tier: " <> 
+                                                   case do
+                                                     credit_limit < 1000 -> "Low"
+                                                     credit_limit < 5000 -> "Medium"
+                                                     credit_limit < 10000 -> "High"
+                                                     true -> "Premium"
+                                                   end)
+                        end
+
+                        bands do
+                          band :detail do
+                            elements do
+                              field :name, source: [:name]
+                              field :credit_limit, source: [:credit_limit], format: :currency
+                              expression "customer_tier", 
+                                        expression: expr(name <> " - " <> region <> " - " <> status)
+                            end
+                          end
+                        end
+                      end
+
+                      band :tier_footer, type: :group_footer, group_level: 3 do
+                        elements do
+                          aggregate :tier_count, function: :count, source: [:id]
+                        end
+                      end
+                    end
+                  end
+
+                  band :status_footer, type: :group_footer, group_level: 2 do
+                    elements do
+                      aggregate :status_count, function: :count, source: [:id]
+                    end
+                  end
+                end
+              end
+
+              band :region_footer, type: :group_footer, group_level: 1 do
+                elements do
+                  aggregate :region_count, function: :count, source: [:id]
+                end
+              end
+
+              band :summary do
+                elements do
+                  aggregate :total_count, function: :count, source: [:id]
+                end
+              end
+            end
+          end
+        end
+      end
+
+      # Should compile successfully with proper group-band relationships
+      assert GroupReferenceTestDomain
+      report_module = GroupReferenceTestDomain.Reports.GroupReferenceTest
+      definition = report_module.definition()
+      
+      # Verify group definitions
+      assert length(definition.groups) == 3
+      
+      # Verify group levels correspond to band levels
+      group_headers = Enum.filter(definition.bands, &(&1.type == :group_header))
+      
+      # Should have one level-1 group header at top level
+      top_level_headers = Enum.filter(group_headers, &(&1.group_level == 1))
+      assert length(top_level_headers) == 1
+      
+      # Verify nested structure matches group levels
+      region_header = hd(top_level_headers)
+      status_headers = Enum.filter(region_header.bands, &(&1.type == :group_header && &1.group_level == 2))
+      assert length(status_headers) == 1
+      
+      status_header = hd(status_headers)
+      tier_headers = Enum.filter(status_header.bands, &(&1.type == :group_header && &1.group_level == 3))
+      assert length(tier_headers) == 1
+    end
+  end
+
+  describe "runtime interface functionality integration" do
+    test "validates generated module interface consistency across formats" do
+      defmodule InterfaceConsistencyTestDomain do
+        use Ash.Domain, extensions: [AshReports.Domain]
+
+        resources do
+          resource AshReports.Test.Customer
+        end
+
+        reports do
+          report :interface_consistency_test do
+            title "Interface Consistency Test"
+            driving_resource AshReports.Test.Customer
+            formats [:html, :pdf, :json, :heex]
+
+            parameters do
+              parameter :test_param, :string, required: true
+              parameter :optional_param, :integer, required: false, default: 42
+            end
+
+            bands do
+              band :detail do
+                elements do
+                  field :name, source: [:name]
+                  field :email, source: [:email]
+                end
+              end
+            end
+          end
+        end
+      end
+
+      base_module = InterfaceConsistencyTestDomain.Reports.InterfaceConsistencyTest
+      format_modules = [base_module.Html, base_module.Pdf, base_module.Json, base_module.Heex]
+      
+      # Test base module interface
+      assert function_exported?(base_module, :definition, 0)
+      assert function_exported?(base_module, :domain, 0)
+      assert function_exported?(base_module, :run, 0)
+      assert function_exported?(base_module, :run, 1) 
+      assert function_exported?(base_module, :run, 2)
+      assert function_exported?(base_module, :render, 1)
+      assert function_exported?(base_module, :render, 2)
+      assert function_exported?(base_module, :render, 3)
+      assert function_exported?(base_module, :validate_params, 1)
+      assert function_exported?(base_module, :build_query, 0)
+      assert function_exported?(base_module, :build_query, 1)
+      assert function_exported?(base_module, :supported_formats, 0)
+      assert function_exported?(base_module, :supports_format?, 1)
+      
+      # Test format module interfaces are consistent
+      for format_module <- format_modules do
+        assert function_exported?(format_module, :render, 3)
+        assert function_exported?(format_module, :supports_streaming?, 0)
+        assert function_exported?(format_module, :file_extension, 0)
+      end
+      
+      # Test interface behavior consistency
+      assert base_module.domain() == InterfaceConsistencyTestDomain
+      assert base_module.supported_formats() == [:html, :pdf, :json, :heex]
+      
+      # Test format-specific behavior
+      assert base_module.Html.file_extension() == ".html"
+      assert base_module.Pdf.file_extension() == ".pdf" 
+      assert base_module.Json.file_extension() == ".json"
+      assert base_module.Heex.file_extension() == ".heex"
+      
+      # Test parameter validation consistency
+      valid_params = %{test_param: "test_value"}
+      assert {:ok, validated} = base_module.validate_params(valid_params)
+      assert validated.test_param == "test_value"
+      assert validated.optional_param == 42  # Default applied
+      
+      invalid_params = %{test_param: 123}  # Wrong type
+      assert {:error, _errors} = base_module.validate_params(invalid_params)
+    end
+
+    test "validates query building integration with DSL components" do
+      setup_test_data()
+      
+      defmodule QueryBuildingTestDomain do
+        use Ash.Domain, extensions: [AshReports.Domain]
+
+        resources do
+          resource AshReports.Test.Customer
+        end
+
+        reports do
+          report :query_building_test do
+            title "Query Building Test"
+            driving_resource AshReports.Test.Customer
+
+            parameters do
+              parameter :region_filter, :string, required: false
+              parameter :min_credit, :decimal, required: false
+            end
+
+            variables do
+              variable :customer_count, type: :count, reset_on: :report
+            end
+
+            groups do
+              group :region, field: [:region], sort: :asc
+            end
+
+            bands do
+              band :detail do
+                elements do
+                  field :name, source: [:name]
+                  field :region, source: [:region]
+                  field :credit_limit, source: [:credit_limit], format: :currency
+                end
+              end
+            end
+          end
+        end
+      end
+
+      report_module = QueryBuildingTestDomain.Reports.QueryBuildingTest
+      
+      # Test basic query building
+      assert {:ok, base_query} = report_module.build_query()
+      assert base_query
+      
+      # Test query building with parameters
+      params = %{region_filter: "North", min_credit: Decimal.new("1000")}
+      assert {:ok, validated_params} = report_module.validate_params(params)
+      assert {:ok, param_query} = report_module.build_query(validated_params)
+      assert param_query
+      
+      # Test that queries are different when parameters are applied
+      # (Actual query content depends on implementation, but structure should change)
+      refute base_query == param_query
+      
+      # Test error handling in query building
+      # Invalid parameters should be caught during validation, not query building
+      invalid_params = %{min_credit: "not_a_number"}
+      assert {:error, _} = report_module.validate_params(invalid_params)
+      
+      cleanup_test_data()
+    end
+
+    test "validates end-to-end workflow integration" do
+      setup_test_data()
+      
+      defmodule EndToEndWorkflowTestDomain do
+        use Ash.Domain, extensions: [AshReports.Domain]
+
+        resources do
+          resource AshReports.Test.Customer
+        end
+
+        reports do
+          report :end_to_end_workflow_test do
+            title "End-to-End Workflow Test"
+            driving_resource AshReports.Test.Customer
+            formats [:html, :json]
+
+            parameters do
+              parameter :report_title, :string, required: true
+              parameter :include_summary, :boolean, required: false, default: true
+            end
+
+            variables do
+              variable :processed_count, type: :count, reset_on: :report
+            end
+
+            groups do
+              group :region, field: [:region], sort: :asc
+            end
+
+            bands do
+              band :title do
+                elements do
+                  label "title", text: expr(report_title)
+                  expression "generation_time", expression: expr("Generated: " <> now())
+                end
+              end
+
+              band :group_header, group_level: 1 do
+                elements do
+                  field :region_name, source: [:region]
+                  expression "region_intro", expression: expr("Processing region: " <> region)
+                end
+
+                bands do
+                  band :detail do
+                    elements do
+                      field :customer_name, source: [:name]
+                      field :customer_email, source: [:email]
+                      field :customer_status, source: [:status]
+                      expression "customer_info", 
+                                expression: expr(name <> " (" <> email <> ") - " <> status)
+                    end
+                  end
+                end
+              end
+
+              band :group_footer, group_level: 1 do
+                elements do
+                  aggregate :region_count, function: :count, source: [:id]
+                  expression "region_summary", 
+                            expression: expr("Region " <> region <> " total: " <> region_count)
+                end
+              end
+
+              band :summary do
+                elements do
+                  aggregate :total_customers, function: :count, source: [:id]
+                  expression "final_summary", 
+                            expression: expr(report_title <> " completed with " <> total_customers <> 
+                                           " customers processed"),
+                            visible: expr(include_summary)
+                  expression "variable_check", 
+                            expression: expr("Variable count: " <> processed_count)
+                end
+              end
+            end
+          end
+        end
+      end
+
+      report_module = EndToEndWorkflowTestDomain.Reports.EndToEndWorkflowTest
+      
+      # Test complete workflow: validation -> query building -> interface access
+      params = %{
+        report_title: "Integration Test Report",
+        include_summary: true
+      }
+      
+      # Step 1: Parameter validation
+      assert {:ok, validated_params} = report_module.validate_params(params)
+      assert validated_params.report_title == "Integration Test Report"
+      assert validated_params.include_summary == true
+      
+      # Step 2: Query building
+      assert {:ok, query} = report_module.build_query(validated_params)
+      assert query
+      
+      # Step 3: Interface verification
+      definition = report_module.definition()
+      assert definition.name == :end_to_end_workflow_test
+      assert definition.driving_resource == AshReports.Test.Customer
+      
+      # Step 4: Format support verification
+      assert report_module.supported_formats() == [:html, :json]
+      assert report_module.supports_format?(:html) == true
+      assert report_module.supports_format?(:pdf) == false
+      
+      # Step 5: Format module interfaces
+      assert report_module.Html.file_extension() == ".html"
+      assert report_module.Json.file_extension() == ".json"
+      
+      cleanup_test_data()
+    end
+  end
+
+  describe "error propagation and recovery patterns" do
+    test "handles errors gracefully across component boundaries" do
+      # Test that errors in one component don't corrupt others
+      
+      # First, create a valid domain to establish baseline
+      defmodule BaselineDomain do
+        use Ash.Domain, extensions: [AshReports.Domain]
+
+        resources do
+          resource AshReports.Test.Customer
+        end
+
+        reports do
+          report :baseline_report do
+            title "Baseline Report"
+            driving_resource AshReports.Test.Customer
+
+            bands do
+              band :detail do
+                elements do
+                  field :name, source: [:name]
+                end
+              end
+            end
+          end
+        end
+      end
+
+      # Verify baseline works
+      assert BaselineDomain
+      baseline_module = BaselineDomain.Reports.BaselineReport
+      assert baseline_module
+      
+      # Now test that compilation errors don't affect the baseline
+      assert_raise Spark.Error.DslError, fn ->
+        defmodule ErrorDomain do
+          use Ash.Domain, extensions: [AshReports.Domain]
+
+          resources do
+            resource AshReports.Test.Customer
+          end
+
+          reports do
+            report :error_report do
+              title "Error Report"
+              driving_resource NonExistentResource  # This should cause an error
+
+              bands do
+                band :detail do
+                  elements do
+                    field :name, source: [:name]
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+      
+      # Verify baseline still works after error
+      assert BaselineDomain
+      assert baseline_module
+      assert baseline_module.definition()
+    end
+
+    test "validates error context and reporting" do
+      # Test that errors include proper context information
+      
+      error_dsl = """
+      resources do
+        resource AshReports.Test.Customer
+      end
+
+      reports do
+        report :context_error_test do
+          title "Context Error Test"
+          driving_resource AshReports.Test.Customer
+
+          bands do
+            band :invalid_band do
+              elements do
+                field :nonexistent_field, source: [:does_not_exist]
+              end
+            end
+          end
+        end
+      end
+      """
+      
+      case parse_dsl(error_dsl, AshReports.Domain) do
+        {:ok, _} -> 
+          flunk("Expected DSL to produce an error, but it was valid")
+        {:error, %Spark.Error.DslError{path: path, message: message}} ->
+          # Verify error includes proper context
+          assert is_list(path)
+          assert is_binary(message)
+          assert String.contains?(message, "field") || String.contains?(message, "element")
+        {:error, other_error} ->
+          # Accept other error types that may occur during DSL processing
+          assert other_error
+      end
+    end
+
+    test "validates component isolation during errors" do
+      # Test that errors in one report don't affect others in the same domain
+      
+      assert_raise Spark.Error.DslError, fn ->
+        defmodule IsolationTestDomain do
+          use Ash.Domain, extensions: [AshReports.Domain]
+
+          resources do
+            resource AshReports.Test.Customer
+          end
+
+          reports do
+            report :valid_report do
+              title "Valid Report"
+              driving_resource AshReports.Test.Customer
+
+              bands do
+                band :detail do
+                  elements do
+                    field :name, source: [:name]
+                  end
+                end
+              end
+            end
+
+            report :invalid_report do
+              title "Invalid Report"
+              # Missing driving_resource - should cause error
+
+              bands do
+                band :detail do
+                  elements do
+                    field :name, source: [:name]
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+      
+      # The error should prevent the entire domain from compiling
+      # This is expected behavior - one invalid report affects the whole domain
+    end
+  end
+
+  describe "performance and resource management integration" do
+    test "validates memory usage across component integration" do
+      # Test that component integration doesn't cause memory leaks
+      
+      initial_memory = :erlang.memory(:total)
+      
+      # Create multiple domains to test memory behavior
+      domains = for i <- 1..5 do
+        module_name = :"MemoryTestDomain#{i}"
+        
+        module_ast = quote do
+          defmodule unquote(module_name) do
+            use Ash.Domain, extensions: [AshReports.Domain]
+
+            resources do
+              resource AshReports.Test.Customer
+            end
+
+            reports do
+              report unquote(:"memory_test_#{i}") do
+                title unquote("Memory Test #{i}")
+                driving_resource AshReports.Test.Customer
+                formats [:html, :json]
+
+                parameters do
+                  parameter :test_param, :string, required: false
+                end
+
+                variables do
+                  parameter :test_var, type: :count, reset_on: :report
+                end
+
+                groups do
+                  group :region, field: [:region], sort: :asc
+                end
+
+                bands do
+                  band :title do
+                    elements do
+                      label "title", text: unquote("Memory Test #{i}")
+                    end
+                  end
+
+                  band :group_header, group_level: 1 do
+                    elements do
+                      field :region, source: [:region]
+                    end
+
+                    bands do
+                      band :detail do
+                        elements do
+                          field :name, source: [:name]
+                          field :email, source: [:email]
+                        end
+                      end
+                    end
+                  end
+
+                  band :group_footer, group_level: 1 do
+                    elements do
+                      aggregate :count, function: :count, source: [:id]
+                    end
+                  end
+
+                  band :summary do
+                    elements do
+                      aggregate :total, function: :count, source: [:id]
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
+        
+        {_result, _binding} = Code.eval_quoted(module_ast)
+        module_name
+      end
+      
+      final_memory = :erlang.memory(:total)
+      memory_increase = final_memory - initial_memory
+      memory_increase_mb = memory_increase / (1024 * 1024)
+      
+      IO.puts("\n=== Memory Usage Integration Test ===")
+      IO.puts("Initial memory: #{Float.round(initial_memory / (1024 * 1024), 2)}MB")
+      IO.puts("Final memory: #{Float.round(final_memory / (1024 * 1024), 2)}MB")
+      IO.puts("Memory increase: #{Float.round(memory_increase_mb, 2)}MB")
+      
+      # Verify all domains compiled successfully
+      for domain <- domains do
+        assert Code.ensure_loaded?(domain)
+      end
+      
+      # Memory increase should be reasonable for 5 domains
+      assert memory_increase_mb < 100,  # 100MB threshold
+             "Memory increase #{memory_increase_mb}MB exceeds 100MB threshold for 5 domains"
+    end
+
+    test "validates compilation time scaling with complex integration" do
+      # Test that compilation time scales reasonably with complexity
+      
+      complexity_levels = [1, 3, 5]
+      timing_results = []
+      
+      for level <- complexity_levels do
+        {time_microseconds, _result} = :timer.tc(fn ->
+          module_name = :"ScalingTestDomain#{level}"
+          
+          reports_ast = for i <- 1..level do
+            quote do
+              report unquote(:"scaling_report_#{i}") do
+                title unquote("Scaling Report #{i}")
+                driving_resource AshReports.Test.Customer
+                formats [:html, :pdf]
+
+                parameters do
+                  for j <- 1..level do
+                    parameter unquote(:"param_#{j}"), :string, required: false
+                  end
+                end
+
+                variables do
+                  for k <- 1..level do
+                    variable unquote(:"var_#{k}"), type: :count, reset_on: :report
+                  end
+                end
+
+                groups do
+                  group :region, field: [:region], sort: :asc
+                  if unquote(level) > 1 do
+                    group :status, field: [:status], sort: :desc
+                  end
+                end
+
+                bands do
+                  band :title do
+                    elements do
+                      label "title", text: unquote("Scaling Report #{i}")
+                      for l <- 1..level do
+                        expression unquote(:"expr_#{l}"), 
+                                  expression: expr("Expression " <> unquote("#{l}"))
+                      end
+                    end
+                  end
+
+                  band :group_header, group_level: 1 do
+                    elements do
+                      field :region, source: [:region]
+                    end
+
+                    bands do
+                      if unquote(level) > 1 do
+                        band :group_header, group_level: 2 do
+                          elements do
+                            field :status, source: [:status]
+                          end
+
+                          bands do
+                            band :detail do
+                              elements do
+                                field :name, source: [:name]
+                                for m <- 1..level do
+                                  field unquote(:"field_#{m}"), source: [:email]
+                                end
+                              end
+                            end
+                          end
+                        end
+
+                        band :group_footer, group_level: 2 do
+                          elements do
+                            aggregate :status_count, function: :count, source: [:id]
+                          end
+                        end
+                      else
+                        band :detail do
+                          elements do
+                            field :name, source: [:name]
+                            field :email, source: [:email]
+                          end
+                        end
+                      end
+                    end
+                  end
+
+                  band :group_footer, group_level: 1 do
+                    elements do
+                      aggregate :region_count, function: :count, source: [:id]
+                    end
+                  end
+
+                  band :summary do
+                    elements do
+                      aggregate :total_count, function: :count, source: [:id]
+                      for n <- 1..level do
+                        expression unquote(:"summary_#{n}"), 
+                                  expression: expr("Summary " <> unquote("#{n}"))
+                      end
+                    end
+                  end
+                end
+              end
+            end
+          end
+          
+          module_ast = quote do
+            defmodule unquote(module_name) do
+              use Ash.Domain, extensions: [AshReports.Domain]
+
+              resources do
+                resource AshReports.Test.Customer
+              end
+
+              reports do
+                unquote_splicing(reports_ast)
+              end
+            end
+          end
+          
+          Code.eval_quoted(module_ast)
+        end)
+        
+        time_ms = time_microseconds / 1000
+        timing_results = [{level, time_ms} | timing_results]
+        
+        IO.puts("Complexity level #{level}: #{Float.round(time_ms, 2)}ms")
+      end
+      
+      timing_results = Enum.reverse(timing_results)
+      
+      IO.puts("\n=== Compilation Scaling Integration Test ===")
+      for {level, time} <- timing_results do
+        IO.puts("Level #{level}: #{Float.round(time, 2)}ms")
+      end
+      
+      # Check that scaling is not exponential
+      [{1, level1_time}, {_, _} | _] = timing_results
+      {max_level, max_time} = List.last(timing_results)
+      
+      # Allow for reasonable scaling - should not be exponential
+      max_expected_time = level1_time * max_level * max_level  # Quadratic allowance
+      assert max_time < max_expected_time,
+             "Compilation time scaling appears worse than quadratic: #{max_time}ms for level #{max_level}"
+    end
+  end
+
+  # Setup and cleanup
+  setup do
+    on_exit(fn ->
+      cleanup_test_data()
+    end)
+  end
+end

@@ -1,0 +1,29 @@
+defmodule AshReports.Test.SimpleDomain do
+  @moduledoc """
+  Simple test domain for basic AshReports testing.
+  
+  This domain has minimal configuration to test basic DSL functionality
+  without complex nested structures.
+  """
+  
+  use Ash.Domain, extensions: [AshReports.Domain]
+  
+  resources do
+    resource AshReports.Test.Customer
+  end
+  
+  reports do
+    report :simple_test_report do
+      title "Simple Test Report"
+      driving_resource AshReports.Test.Customer
+      
+      bands do
+        band :detail do
+          elements do
+            field :name, source: [:name]
+          end
+        end
+      end
+    end
+  end
+end

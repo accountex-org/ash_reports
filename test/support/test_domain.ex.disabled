@@ -1,0 +1,45 @@
+defmodule AshReports.Test.Domain do
+  @moduledoc """
+  Main test domain for AshReports testing.
+  
+  This domain provides a complete set of test resources and serves as the
+  primary domain for comprehensive testing scenarios.
+  """
+  
+  use Ash.Domain, extensions: [AshReports.Domain]
+  
+  resources do
+    resource AshReports.Test.Customer
+    resource AshReports.Test.Order
+    resource AshReports.Test.Product
+    resource AshReports.Test.OrderItem
+  end
+  
+  reports do
+    report :customer_report do
+      title "Customer Report"
+      driving_resource AshReports.Test.Customer
+      
+      bands do
+        band :detail do
+          elements do
+            field :name, source: [:name]
+          end
+        end
+      end
+    end
+    
+    report :order_report do
+      title "Order Report"
+      driving_resource AshReports.Test.Order
+      
+      bands do
+        band :detail do
+          elements do
+            field :amount, source: [:amount]
+          end
+        end
+      end
+    end
+  end
+end
