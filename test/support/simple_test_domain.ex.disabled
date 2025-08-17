@@ -19,8 +19,11 @@ defmodule AshReports.Test.SimpleDomain do
       
       bands do
         band :detail do
+          type :detail
           elements do
-            field :name, source: [:name]
+            field :name do
+              source :name
+            end
           end
         end
       end

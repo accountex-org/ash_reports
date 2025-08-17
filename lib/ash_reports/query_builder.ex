@@ -30,7 +30,7 @@ defmodule AshReports.QueryBuilder do
   end
 
   defp apply_scope(query, nil), do: query
-  defp apply_scope(query, scope) do
+  defp apply_scope(query, _scope) do
     # In Phase 2, this will properly apply Ash expressions
     query
   end

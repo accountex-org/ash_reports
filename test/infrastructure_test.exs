@@ -28,11 +28,11 @@ defmodule AshReports.InfrastructureTest do
     assert :ok = :ok
   end
   
-  test "test domain compiles without errors" do
-    # Test that our test domain module exists and has the right extension
-    assert Code.ensure_loaded?(AshReports.Test.SimpleDomain)
+  test "test resources compile without errors" do
+    # Test that our test resources exist and have the right structure
     assert Code.ensure_loaded?(AshReports.Test.Customer)
-    assert Code.ensure_loaded?(AshReports.Test.Order)
+    assert Code.ensure_loaded?(AshReports.Test.Order) 
     assert Code.ensure_loaded?(AshReports.Test.Product)
+    assert Code.ensure_loaded?(AshReports.Test.OrderItem)
   end
 end

@@ -1,4 +1,5 @@
-defmodule AshReports.TestHelpers do
+unless Code.ensure_loaded?(AshReports.TestHelpers) do
+  defmodule AshReports.TestHelpers do
   @moduledoc """
   Standardized test helpers for AshReports testing.
   
@@ -443,5 +444,6 @@ defmodule AshReports.TestHelpers do
       {:error, error} ->
         flunk("Expected Spark.Error.DslError, but got: #{inspect(error)}")
     end
+  end
   end
 end

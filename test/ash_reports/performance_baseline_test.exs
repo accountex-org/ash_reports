@@ -606,7 +606,11 @@ defmodule AshReports.PerformanceBaselineTest do
       load_times = for module <- [base_module | format_modules] do
         {time_microseconds, _result} = measure_time(fn ->
           # Force module loading by calling a function
-          module.definition() rescue nil
+          try do
+            module.definition()
+          rescue
+            _ -> nil
+          end
           :ok
         end)
         time_microseconds / 1000  # Convert to milliseconds

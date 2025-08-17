@@ -49,7 +49,7 @@ defmodule AshReports.Element do
   """
   @spec visible?(t(), map()) :: boolean()
   def visible?(%{conditional: nil}, _context), do: true
-  def visible?(%{conditional: expr}, context) do
+  def visible?(%{conditional: _expr}, _context) do
     # This would be evaluated by the rendering engine with the actual context
     # For now, we'll just return true as a placeholder
     # In the real implementation, this would use Ash expression evaluation

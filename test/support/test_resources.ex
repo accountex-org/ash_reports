@@ -1,4 +1,5 @@
-defmodule AshReports.Test.Customer do
+unless Code.ensure_loaded?(AshReports.Test.Customer) do
+  defmodule AshReports.Test.Customer do
   @moduledoc """
   Test Customer resource for AshReports testing.
   
@@ -75,9 +76,11 @@ defmodule AshReports.Test.Customer do
   #   sum :lifetime_value, :orders, :total_amount
   #   max :last_order_date, :orders, :order_date
   # end
+  end
 end
 
-defmodule AshReports.Test.Order do
+unless Code.ensure_loaded?(AshReports.Test.Order) do
+  defmodule AshReports.Test.Order do
   @moduledoc """
   Test Order resource for AshReports testing.
   
@@ -175,9 +178,11 @@ defmodule AshReports.Test.Order do
   #   count :total_items, :order_items
   #   sum :total_quantity, :order_items, :quantity
   # end
+  end
 end
 
-defmodule AshReports.Test.Product do
+unless Code.ensure_loaded?(AshReports.Test.Product) do
+  defmodule AshReports.Test.Product do
   @moduledoc """
   Test Product resource for AshReports testing.
   
@@ -276,9 +281,11 @@ defmodule AshReports.Test.Product do
   #   count :total_orders, :order_items
   #   sum :total_quantity_sold, :order_items, :quantity
   # end
+  end
 end
 
-defmodule AshReports.Test.OrderItem do
+unless Code.ensure_loaded?(AshReports.Test.OrderItem) do
+  defmodule AshReports.Test.OrderItem do
   @moduledoc """
   Test OrderItem resource for AshReports testing.
   
@@ -339,5 +346,6 @@ defmodule AshReports.Test.OrderItem do
     ) do
       description "Effective price per unit after discounts"
     end
+  end
   end
 end

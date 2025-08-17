@@ -1,4 +1,5 @@
-defmodule AshReports.MockDataLayer do
+unless Code.ensure_loaded?(AshReports.MockDataLayer) do
+  defmodule AshReports.MockDataLayer do
   @moduledoc """
   ETS-based mock data layer for testing AshReports.
   
@@ -32,7 +33,8 @@ defmodule AshReports.MockDataLayer do
   end
   
   @impl true
-  def run_query(query, resource, _opts) do
+  def run_query(query, _opts) do
+    resource = query.resource
     table = query.table
     
     # Ensure table exists
@@ -51,7 +53,8 @@ defmodule AshReports.MockDataLayer do
   end
   
   @impl true
-  def create(resource, changeset, _opts) do
+  def create(changeset, _opts) do
+    resource = changeset.resource
     table = ets_table_name(resource)
     create_table(table)
     
@@ -71,7 +74,8 @@ defmodule AshReports.MockDataLayer do
   end
   
   @impl true
-  def update(resource, changeset, _opts) do
+  def update(changeset, _opts) do
+    resource = changeset.resource
     table = ets_table_name(resource)
     id = changeset.data.id
     
@@ -86,7 +90,8 @@ defmodule AshReports.MockDataLayer do
   end
   
   @impl true
-  def destroy(resource, changeset, _opts) do
+  def destroy(changeset, _opts) do
+    resource = changeset.resource
     table = ets_table_name(resource)
     id = changeset.data.id
     
@@ -100,25 +105,25 @@ defmodule AshReports.MockDataLayer do
   end
   
   @impl true
-  def sort(query, sort, _resource, _opts) do
+  def sort(query, sort, _opts) do
     # Basic sorting implementation for testing
     # In real usage, this would be more sophisticated
     {:ok, Map.put(query, :sort, sort)}
   end
   
   @impl true
-  def filter(query, filter, _resource, _opts) do
+  def filter(query, filter, _opts) do
     # Basic filter implementation for testing
     {:ok, Map.put(query, :filter, filter)}
   end
   
   @impl true
-  def limit(query, limit, _resource, _opts) do
+  def limit(query, limit, _opts) do
     {:ok, Map.put(query, :limit, limit)}
   end
   
   @impl true
-  def offset(query, offset, _resource, _opts) do
+  def offset(query, offset, _opts) do
     {:ok, Map.put(query, :offset, offset)}
   end
   
@@ -172,9 +177,20 @@ defmodule AshReports.MockDataLayer do
   def clear_all_test_data do
     :ets.all()
     |> Enum.filter(fn table -> 
-      table_name = Atom.to_string(table)
-      String.contains?(table_name, "EtsTable")
+      try do
+        info = :ets.info(table, :name)
+        case info do
+          :undefined -> false
+          name when is_atom(name) ->
+            table_name = Atom.to_string(name)
+            String.contains?(table_name, "EtsTable")
+          _ -> false
+        end
+      rescue
+        _ -> false
+      end
     end)
     |> Enum.each(&:ets.delete_all_objects/1)
+  end
   end
 end
