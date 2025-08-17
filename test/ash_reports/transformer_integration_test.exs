@@ -2,7 +2,7 @@ defmodule AshReports.TransformerIntegrationTest do
   use ExUnit.Case, async: false
 
   alias AshReports.Transformers.BuildReportModules
-  alias AshReports.Verifiers.{ValidateReports, ValidateBands, ValidateElements}
+  alias AshReports.Verifiers.{ValidateBands, ValidateElements, ValidateReports}
   alias Spark.Dsl.Transformer
 
   describe "transformer integration and execution order" do

@@ -11,7 +11,7 @@ defmodule AshReports.CrossComponentIntegrationTest do
   import AshReports.TestHelpers
 
   alias AshReports.Transformers.BuildReportModules
-  alias AshReports.Verifiers.{ValidateReports, ValidateBands, ValidateElements}
+  alias AshReports.Verifiers.{ValidateBands, ValidateElements, ValidateReports}
   alias Spark.Dsl.Transformer
 
   describe "transformer-verifier interaction patterns" do

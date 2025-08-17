@@ -406,19 +406,17 @@ unless Code.ensure_loaded?(AshReports.TestHelpers) do
     end
 
     defp eventually_loop(fun, timeout, start_time) do
-      try do
-        fun.()
-      rescue
-        error ->
-          current_time = System.monotonic_time(:millisecond)
+      fun.()
+    rescue
+      error ->
+        current_time = System.monotonic_time(:millisecond)
 
-          if current_time - start_time > timeout do
-            reraise error, __STACKTRACE__
-          else
-            Process.sleep(50)
-            eventually_loop(fun, timeout, start_time)
-          end
-      end
+        if current_time - start_time > timeout do
+          reraise error, __STACKTRACE__
+        else
+          Process.sleep(50)
+          eventually_loop(fun, timeout, start_time)
+        end
     end
 
     @doc """

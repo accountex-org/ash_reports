@@ -1321,7 +1321,7 @@ defmodule AshReports.EndToEndRuntimeTest do
 
       # Test that render functions accept the expected signatures
       # render(data) - single argument version
-      # render(data, params) - two argument version  
+      # render(data, params) - two argument version
       # render(data, params, options) - three argument version
 
       # The actual render function behavior would be tested in integration tests
