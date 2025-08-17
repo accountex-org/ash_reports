@@ -14,6 +14,7 @@ defmodule AshReports.Verifiers.ValidateBands do
 
   alias AshReports.Info
   alias Spark.Dsl.Verifier
+  alias Spark.Error.DslError
 
   @impl true
   def verify(dsl_state) do
@@ -47,7 +48,7 @@ defmodule AshReports.Verifiers.ValidateBands do
 
       duplicates ->
         {:error,
-         Spark.Error.DslError.exception(
+         DslError.exception(
            message:
              "Duplicate band names found in report '#{report.name}': #{inspect(duplicates)}",
            path: [:reports, report.name, :bands],
@@ -71,7 +72,7 @@ defmodule AshReports.Verifiers.ValidateBands do
       else
         {:halt,
          {:error,
-          Spark.Error.DslError.exception(
+          DslError.exception(
             message:
               "Invalid band type '#{band.type}' in band '#{band.name}'. Valid types are: #{inspect(AshReports.band_types())}",
             path: [:reports, report.name, :bands, band.name],
@@ -90,7 +91,7 @@ defmodule AshReports.Verifiers.ValidateBands do
         is_nil(band.group_level) ->
           {:halt,
            {:error,
-            Spark.Error.DslError.exception(
+            DslError.exception(
               message: "Group band '#{band.name}' must specify a group_level",
               path: [:reports, report.name, :bands, band.name],
               module: module
@@ -99,7 +100,7 @@ defmodule AshReports.Verifiers.ValidateBands do
         not is_integer(band.group_level) or band.group_level < 1 ->
           {:halt,
            {:error,
-            Spark.Error.DslError.exception(
+            DslError.exception(
               message: "Group band '#{band.name}' must have a positive integer group_level",
               path: [:reports, report.name, :bands, band.name, :group_level],
               module: module
@@ -128,7 +129,7 @@ defmodule AshReports.Verifiers.ValidateBands do
 
       if sorted != expected do
         {:error,
-         Spark.Error.DslError.exception(
+         DslError.exception(
            message:
              "Detail band numbers must be sequential starting from 1. Found: #{inspect(sorted)}",
            path: [:reports, report.name, :bands],
@@ -156,7 +157,7 @@ defmodule AshReports.Verifiers.ValidateBands do
     cond do
       title_index && title_index != 0 ->
         {:error,
-         Spark.Error.DslError.exception(
+         DslError.exception(
            message: "Title band must be the first band in the report",
            path: [:reports, report.name, :bands],
            module: module
@@ -164,7 +165,7 @@ defmodule AshReports.Verifiers.ValidateBands do
 
       summary_index && summary_index != length(band_types) - 1 ->
         {:error,
-         Spark.Error.DslError.exception(
+         DslError.exception(
            message: "Summary band must be the last band in the report",
            path: [:reports, report.name, :bands],
            module: module

@@ -13,6 +13,7 @@ defmodule AshReports.Verifiers.ValidateElements do
 
   alias AshReports.Info
   alias Spark.Dsl.Verifier
+  alias Spark.Error.DslError
 
   @impl true
   def verify(dsl_state) do
@@ -61,7 +62,7 @@ defmodule AshReports.Verifiers.ValidateElements do
 
       duplicates ->
         {:error,
-         Spark.Error.DslError.exception(
+         DslError.exception(
            message:
              "Duplicate element names found in band '#{band.name}': #{inspect(duplicates)}",
            path: [:reports, report.name, :bands, band.name, :elements],
@@ -79,7 +80,7 @@ defmodule AshReports.Verifiers.ValidateElements do
       else
         {:halt,
          {:error,
-          Spark.Error.DslError.exception(
+          DslError.exception(
             message:
               "Invalid element type '#{element.type}' in element '#{element.name}'. Valid types are: #{inspect(AshReports.element_types())}",
             path: [:reports, report.name, :bands, band.name, :elements, element.name],
@@ -103,7 +104,7 @@ defmodule AshReports.Verifiers.ValidateElements do
   defp validate_element_by_type(%{type: :label} = element, band, report, module) do
     if is_nil(element.text) do
       {:error,
-       Spark.Error.DslError.exception(
+       DslError.exception(
          message: "Label element '#{element.name}' must have text",
          path: [:reports, report.name, :bands, band.name, :elements, element.name],
          module: module
@@ -116,7 +117,7 @@ defmodule AshReports.Verifiers.ValidateElements do
   defp validate_element_by_type(%{type: :field} = element, band, report, module) do
     if is_nil(element.source) do
       {:error,
-       Spark.Error.DslError.exception(
+       DslError.exception(
          message: "Field element '#{element.name}' must have a source",
          path: [:reports, report.name, :bands, band.name, :elements, element.name],
          module: module
@@ -129,7 +130,7 @@ defmodule AshReports.Verifiers.ValidateElements do
   defp validate_element_by_type(%{type: :expression} = element, band, report, module) do
     if is_nil(element.expression) do
       {:error,
-       Spark.Error.DslError.exception(
+       DslError.exception(
          message: "Expression element '#{element.name}' must have an expression",
          path: [:reports, report.name, :bands, band.name, :elements, element.name],
          module: module
@@ -143,7 +144,7 @@ defmodule AshReports.Verifiers.ValidateElements do
     cond do
       is_nil(element.function) ->
         {:error,
-         Spark.Error.DslError.exception(
+         DslError.exception(
            message: "Aggregate element '#{element.name}' must have a function",
            path: [:reports, report.name, :bands, band.name, :elements, element.name],
            module: module
@@ -151,7 +152,7 @@ defmodule AshReports.Verifiers.ValidateElements do
 
       is_nil(element.source) ->
         {:error,
-         Spark.Error.DslError.exception(
+         DslError.exception(
            message: "Aggregate element '#{element.name}' must have a source",
            path: [:reports, report.name, :bands, band.name, :elements, element.name],
            module: module
@@ -159,7 +160,7 @@ defmodule AshReports.Verifiers.ValidateElements do
 
       element.function not in [:sum, :count, :average, :min, :max] ->
         {:error,
-         Spark.Error.DslError.exception(
+         DslError.exception(
            message:
              "Invalid aggregate function '#{element.function}' in element '#{element.name}'",
            path: [:reports, report.name, :bands, band.name, :elements, element.name, :function],
@@ -174,7 +175,7 @@ defmodule AshReports.Verifiers.ValidateElements do
   defp validate_element_by_type(%{type: :image} = element, band, report, module) do
     if is_nil(element.source) do
       {:error,
-       Spark.Error.DslError.exception(
+       DslError.exception(
          message: "Image element '#{element.name}' must have a source",
          path: [:reports, report.name, :bands, band.name, :elements, element.name],
          module: module
