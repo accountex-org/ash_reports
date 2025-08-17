@@ -131,8 +131,8 @@ defmodule AshReports.CrossComponentIntegrationTest do
       assert length(detail_band.elements) == 3
 
       # Verify format modules were generated
-      assert DataFlowTestDomain.Reports.DataFlowTest.Html
-      assert DataFlowTestDomain.Reports.DataFlowTest.Pdf
+      assert DataFlowTestDomain.Reports.Module.concat(DataFlowTest, Html)
+      assert DataFlowTestDomain.Reports.Module.concat(DataFlowTest, Pdf)
     end
 
     test "handles verifier errors before transformer execution" do
@@ -312,8 +312,8 @@ defmodule AshReports.CrossComponentIntegrationTest do
       assert length(group_header_2.bands) == 1
 
       # Verify format modules were generated correctly
-      assert report_module.Html
-      assert report_module.Json
+      assert Module.concat(report_module, Html)
+      assert Module.concat(report_module, Json)
       # Not in formats list
       refute Code.ensure_loaded?(Module.concat(report_module, Pdf))
     end
@@ -749,7 +749,13 @@ defmodule AshReports.CrossComponentIntegrationTest do
       end
 
       base_module = InterfaceConsistencyTestDomain.Reports.InterfaceConsistencyTest
-      format_modules = [base_module.Html, base_module.Pdf, base_module.Json, base_module.Heex]
+
+      format_modules = [
+        Module.concat(base_module, Html),
+        Module.concat(base_module, Pdf),
+        Module.concat(base_module, Json),
+        Module.concat(base_module, Heex)
+      ]
 
       # Test base module interface
       assert function_exported?(base_module, :definition, 0)
@@ -778,10 +784,10 @@ defmodule AshReports.CrossComponentIntegrationTest do
       assert base_module.supported_formats() == [:html, :pdf, :json, :heex]
 
       # Test format-specific behavior
-      assert base_module.Html.file_extension() == ".html"
-      assert base_module.Pdf.file_extension() == ".pdf"
-      assert base_module.Json.file_extension() == ".json"
-      assert base_module.Heex.file_extension() == ".heex"
+      assert Module.concat(base_module, Html).file_extension() == ".html"
+      assert Module.concat(base_module, Pdf).file_extension() == ".pdf"
+      assert Module.concat(base_module, Json).file_extension() == ".json"
+      assert Module.concat(base_module, Heex).file_extension() == ".heex"
 
       # Test parameter validation consistency
       valid_params = %{test_param: "test_value"}
@@ -981,8 +987,8 @@ defmodule AshReports.CrossComponentIntegrationTest do
       assert report_module.supports_format?(:pdf) == false
 
       # Step 5: Format module interfaces
-      assert report_module.Html.file_extension() == ".html"
-      assert report_module.Json.file_extension() == ".json"
+      assert Module.concat(report_module, Html).file_extension() == ".html"
+      assert Module.concat(report_module, Json).file_extension() == ".json"
 
       cleanup_test_data()
     end

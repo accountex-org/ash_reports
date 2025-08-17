@@ -359,11 +359,11 @@ defmodule AshReports.EndToEndRuntimeTest do
       assert report_module.supports_format?(:pdf) == false
 
       # Test 5: Format Module Interfaces
-      assert report_module.Html.file_extension() == ".html"
-      assert report_module.Json.file_extension() == ".json"
+      assert Module.concat(report_module, Html).file_extension() == ".html"
+      assert Module.concat(report_module, Json).file_extension() == ".json"
       # Boolean response
-      assert report_module.Html.supports_streaming?() in [true, false]
-      assert report_module.Json.supports_streaming?() in [true, false]
+      assert Module.concat(report_module, Html).supports_streaming?() in [true, false]
+      assert Module.concat(report_module, Json).supports_streaming?() in [true, false]
 
       # Test 6: Domain Reference
       assert report_module.domain() == RuntimeWorkflowDomain
@@ -1305,8 +1305,8 @@ defmodule AshReports.EndToEndRuntimeTest do
       assert function_exported?(report_module, :render, 3)
 
       # Test format module rendering interfaces
-      html_module = report_module.Html
-      json_module = report_module.Json
+      html_module = Module.concat(report_module, Html)
+      json_module = Module.concat(report_module, Json)
 
       assert function_exported?(html_module, :render, 3)
       assert function_exported?(json_module, :render, 3)
@@ -1536,15 +1536,18 @@ defmodule AshReports.EndToEndRuntimeTest do
       assert report_module.supports_format?(:csv) == false
 
       # Test that format modules exist for supported formats
-      assert Code.ensure_loaded?(report_module.Html)
-      assert Code.ensure_loaded?(report_module.Json)
+      assert Code.ensure_loaded?(Module.concat(report_module, Html))
+      assert Code.ensure_loaded?(Module.concat(report_module, Json))
 
       # Test that format modules don't exist for unsupported formats
       refute Code.ensure_loaded?(Module.concat(report_module, Pdf))
       refute Code.ensure_loaded?(Module.concat(report_module, Xml))
 
       # Test format module interfaces are consistent
-      for format_module <- [report_module.Html, report_module.Json] do
+      for format_module <- [
+            Module.concat(report_module, Html),
+            Module.concat(report_module, Json)
+          ] do
         assert function_exported?(format_module, :render, 3)
         assert function_exported?(format_module, :supports_streaming?, 0)
         assert function_exported?(format_module, :file_extension, 0)

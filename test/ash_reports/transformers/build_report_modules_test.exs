@@ -44,8 +44,8 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
       # Verify the report module was created
       assert TestDomain.Reports.TestReport
-      assert TestDomain.Reports.TestReport.Html
-      assert TestDomain.Reports.TestReport.Pdf
+      assert TestDomain.Reports.Module.concat(TestReport, Html)
+      assert TestDomain.Reports.Module.concat(TestReport, Pdf)
 
       # Test the generated module interface
       report = TestDomain.Reports.TestReport.definition()
@@ -85,7 +85,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       end
 
       # Test HTML module
-      html_module = TestDomainFormats.Reports.FormatTest.Html
+      html_module = TestDomainFormats.Reports.Module.concat(FormatTest, Html)
       assert function_exported?(html_module, :render, 3)
       assert function_exported?(html_module, :supports_streaming?, 0)
       assert function_exported?(html_module, :file_extension, 0)
@@ -93,17 +93,17 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       assert html_module.supports_streaming?() == true
 
       # Test PDF module
-      pdf_module = TestDomainFormats.Reports.FormatTest.Pdf
+      pdf_module = TestDomainFormats.Reports.Module.concat(FormatTest, Pdf)
       assert pdf_module.file_extension() == ".pdf"
       assert pdf_module.supports_streaming?() == true
 
       # Test HEEX module
-      heex_module = TestDomainFormats.Reports.FormatTest.Heex
+      heex_module = TestDomainFormats.Reports.Module.concat(FormatTest, Heex)
       assert heex_module.file_extension() == ".heex"
       assert heex_module.supports_streaming?() == true
 
       # Test JSON module
-      json_module = TestDomainFormats.Reports.FormatTest.Json
+      json_module = TestDomainFormats.Reports.Module.concat(FormatTest, Json)
       assert json_module.file_extension() == ".json"
       # JSON needs full structure
       assert json_module.supports_streaming?() == false
@@ -804,9 +804,9 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       assert PipelineTestDomain.Reports.PipelineOrderReport
 
       # Verify format modules were created
-      assert PipelineTestDomain.Reports.PipelineCustomerReport.Html
-      assert PipelineTestDomain.Reports.PipelineCustomerReport.Pdf
-      assert PipelineTestDomain.Reports.PipelineOrderReport.Json
+      assert PipelineTestDomain.Reports.Module.concat(PipelineCustomerReport, Html)
+      assert PipelineTestDomain.Reports.Module.concat(PipelineCustomerReport, Pdf)
+      assert PipelineTestDomain.Reports.Module.concat(PipelineOrderReport, Json)
 
       # Verify definitions are correct
       customer_def = PipelineTestDomain.Reports.PipelineCustomerReport.definition()

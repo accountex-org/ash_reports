@@ -291,7 +291,7 @@ defmodule AshReports.PerformanceBaselineTest do
           end)
 
         time_ms = time_microseconds / 1000
-        scaling_results = [{count, time_ms} | scaling_results]
+        _scaling_results = [{count, time_ms} | scaling_results]
 
         IO.puts("#{count} reports: #{Float.round(time_ms, 2)}ms")
       end
@@ -309,7 +309,7 @@ defmodule AshReports.PerformanceBaselineTest do
       end
 
       # Check that scaling is roughly linear (not exponential)
-      [{1, single_time}, {_, multi_time} | _] = scaling_results
+      [{1, single_time}, {_, _multi_time} | _] = scaling_results
       {max_count, max_time} = List.last(scaling_results)
 
       # Time should scale roughly linearly, allowing for overhead
@@ -664,7 +664,12 @@ defmodule AshReports.PerformanceBaselineTest do
       base_module = ModuleEfficiencyDomain.Reports.EfficiencyTestReport
 
       # Test module loading time
-      format_modules = [base_module.Html, base_module.Pdf, base_module.Json, base_module.Heex]
+      format_modules = [
+        Module.concat(base_module, Html),
+        Module.concat(base_module, Pdf),
+        Module.concat(base_module, Json),
+        Module.concat(base_module, Heex)
+      ]
 
       load_times =
         for module <- [base_module | format_modules] do

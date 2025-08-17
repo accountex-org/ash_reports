@@ -1409,7 +1409,7 @@ defmodule AshReports.Verifiers.ValidateElementsTest do
                   band :detail do
                     elements do
                       aggregate :invalid_agg do
-                        function(unquote(invalid_func))
+                        function(invalid_func)
                         source [:amount]
                       end
                     end

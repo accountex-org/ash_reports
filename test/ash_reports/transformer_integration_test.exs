@@ -116,9 +116,9 @@ defmodule AshReports.TransformerIntegrationTest do
       assert length(definition.bands) == 2
 
       # Format-specific modules should exist
-      assert PersistenceTestDomain.Reports.PersistenceTest.Html
-      assert PersistenceTestDomain.Reports.PersistenceTest.Pdf
-      assert PersistenceTestDomain.Reports.PersistenceTest.Json
+      assert PersistenceTestDomain.Reports.Module.concat(PersistenceTest, Html)
+      assert PersistenceTestDomain.Reports.Module.concat(PersistenceTest, Pdf)
+      assert PersistenceTestDomain.Reports.Module.concat(PersistenceTest, Json)
     end
 
     test "cross-transformer data sharing" do
@@ -221,10 +221,10 @@ defmodule AshReports.TransformerIntegrationTest do
       assert MultipleReportsTransformerDomain.Reports.SummaryReport
 
       # Each should have correct format modules
-      assert MultipleReportsTransformerDomain.Reports.CustomerReport.Html
-      assert MultipleReportsTransformerDomain.Reports.OrderReport.Html
-      assert MultipleReportsTransformerDomain.Reports.OrderReport.Pdf
-      assert MultipleReportsTransformerDomain.Reports.SummaryReport.Json
+      assert MultipleReportsTransformerDomain.Reports.Module.concat(CustomerReport, Html)
+      assert MultipleReportsTransformerDomain.Reports.Module.concat(OrderReport, Html)
+      assert MultipleReportsTransformerDomain.Reports.Module.concat(OrderReport, Pdf)
+      assert MultipleReportsTransformerDomain.Reports.Module.concat(SummaryReport, Json)
 
       # Each should have correct definitions
       customer_def = MultipleReportsTransformerDomain.Reports.CustomerReport.definition()
@@ -355,8 +355,8 @@ defmodule AshReports.TransformerIntegrationTest do
       assert length(group_header.bands) == 3
 
       # Format modules should exist
-      assert report_module.Html
-      assert report_module.Pdf
+      assert Module.concat(report_module, Html)
+      assert Module.concat(report_module, Pdf)
     end
   end
 

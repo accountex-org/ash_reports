@@ -450,17 +450,17 @@ defmodule AshReports.DslCompilationIntegrationTest do
       assert product_report
 
       # Verify format modules were generated
-      assert customer_report.Html
-      assert customer_report.Pdf
-      assert customer_report.Json
-      assert customer_report.Heex
+      assert Module.concat(customer_report, Html)
+      assert Module.concat(customer_report, Pdf)
+      assert Module.concat(customer_report, Json)
+      assert Module.concat(customer_report, Heex)
 
-      assert order_report.Html
-      assert order_report.Pdf
-      assert order_report.Json
+      assert Module.concat(order_report, Html)
+      assert Module.concat(order_report, Pdf)
+      assert Module.concat(order_report, Json)
 
-      assert product_report.Html
-      assert product_report.Heex
+      assert Module.concat(product_report, Html)
+      assert Module.concat(product_report, Heex)
 
       # Verify report definitions are complete
       customer_def = customer_report.definition()
@@ -811,21 +811,21 @@ defmodule AshReports.DslCompilationIntegrationTest do
       assert function_exported?(base_module, :supports_format?, 1)
 
       # Test format-specific module interfaces
-      assert function_exported?(base_module.Html, :render, 3)
-      assert function_exported?(base_module.Html, :supports_streaming?, 0)
-      assert function_exported?(base_module.Html, :file_extension, 0)
+      assert function_exported?(Module.concat(base_module, Html), :render, 3)
+      assert function_exported?(Module.concat(base_module, Html), :supports_streaming?, 0)
+      assert function_exported?(Module.concat(base_module, Html), :file_extension, 0)
 
-      assert function_exported?(base_module.Pdf, :render, 3)
-      assert function_exported?(base_module.Pdf, :supports_streaming?, 0)
-      assert function_exported?(base_module.Pdf, :file_extension, 0)
+      assert function_exported?(Module.concat(base_module, Pdf), :render, 3)
+      assert function_exported?(Module.concat(base_module, Pdf), :supports_streaming?, 0)
+      assert function_exported?(Module.concat(base_module, Pdf), :file_extension, 0)
 
-      assert function_exported?(base_module.Json, :render, 3)
-      assert function_exported?(base_module.Json, :supports_streaming?, 0)
-      assert function_exported?(base_module.Json, :file_extension, 0)
+      assert function_exported?(Module.concat(base_module, Json), :render, 3)
+      assert function_exported?(Module.concat(base_module, Json), :supports_streaming?, 0)
+      assert function_exported?(Module.concat(base_module, Json), :file_extension, 0)
 
-      assert function_exported?(base_module.Heex, :render, 3)
-      assert function_exported?(base_module.Heex, :supports_streaming?, 0)
-      assert function_exported?(base_module.Heex, :file_extension, 0)
+      assert function_exported?(Module.concat(base_module, Heex), :render, 3)
+      assert function_exported?(Module.concat(base_module, Heex), :supports_streaming?, 0)
+      assert function_exported?(Module.concat(base_module, Heex), :file_extension, 0)
 
       # Test interface behavior
       definition = base_module.definition()
@@ -838,10 +838,10 @@ defmodule AshReports.DslCompilationIntegrationTest do
       assert base_module.supports_format?(:xml) == false
 
       # Test format-specific behavior
-      assert base_module.Html.file_extension() == ".html"
-      assert base_module.Pdf.file_extension() == ".pdf"
-      assert base_module.Json.file_extension() == ".json"
-      assert base_module.Heex.file_extension() == ".heex"
+      assert Module.concat(base_module, Html).file_extension() == ".html"
+      assert Module.concat(base_module, Pdf).file_extension() == ".pdf"
+      assert Module.concat(base_module, Json).file_extension() == ".json"
+      assert Module.concat(base_module, Heex).file_extension() == ".heex"
     end
 
     test "verifies parameter validation works correctly" do
@@ -1205,9 +1205,9 @@ defmodule AshReports.DslCompilationIntegrationTest do
       for i <- 1..5 do
         report_module = Module.concat([MaxComplexityDomain.Reports, :"ComplexReport#{i}"])
         assert report_module
-        assert report_module.Html
-        assert report_module.Pdf
-        assert report_module.Json
+        assert Module.concat(report_module, Html)
+        assert Module.concat(report_module, Pdf)
+        assert Module.concat(report_module, Json)
       end
     end
   end
