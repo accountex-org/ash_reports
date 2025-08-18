@@ -177,7 +177,8 @@ defmodule AshReports.Phase23IntegrationTest do
 
       # Should process 1000 records in reasonable time
       assert length(results) == 1000
-      assert duration < 1000  # Less than 1 second
+      # Less than 1 second
+      assert duration < 1000
 
       # Verify group changes were detected appropriately
       group_changes =
@@ -187,7 +188,8 @@ defmodule AshReports.Phase23IntegrationTest do
 
       # Should have detected multiple group changes
       assert group_changes > 0
-      assert group_changes < 1000  # But not every record
+      # But not every record
+      assert group_changes < 1000
 
       # Verify metadata is added
       Enum.each(results, fn result ->
@@ -211,7 +213,8 @@ defmodule AshReports.Phase23IntegrationTest do
           %{
             region: "Region_#{rem(i, 100)}",
             amount: i,
-            description: String.duplicate("data", 100)  # Add some bulk
+            # Add some bulk
+            description: String.duplicate("data", 100)
           }
         end)
 
@@ -237,8 +240,18 @@ defmodule AshReports.Phase23IntegrationTest do
   describe "GroupProcessor utility functions" do
     test "extracts group values from complex nested structures" do
       groups = [
-        %Group{name: :customer_name, level: 1, expression: {:field, :customer, :name}, sort: :asc},
-        %Group{name: :company_region, level: 2, expression: {:field, :customer, :company, :region}, sort: :asc}
+        %Group{
+          name: :customer_name,
+          level: 1,
+          expression: {:field, :customer, :name},
+          sort: :asc
+        },
+        %Group{
+          name: :company_region,
+          level: 2,
+          expression: {:field, :customer, :company, :region},
+          sort: :asc
+        }
       ]
 
       record = %{
@@ -341,9 +354,12 @@ defmodule AshReports.Phase23IntegrationTest do
       processor = GroupProcessor.new(groups)
 
       records = [
-        %{region: "West"},                # Missing category
-        %{category: "Electronics"},       # Missing region
-        %{region: "East", category: "Books"}  # Complete
+        # Missing category
+        %{region: "West"},
+        # Missing region
+        %{category: "Electronics"},
+        # Complete
+        %{region: "East", category: "Books"}
       ]
 
       results =

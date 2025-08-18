@@ -149,7 +149,10 @@ defmodule AshReports.CalculationEngine do
   defp extract_field_refs(nil), do: []
   defp extract_field_refs(atom) when is_atom(atom), do: [atom]
   defp extract_field_refs({atom}) when is_atom(atom), do: [atom]
-  defp extract_field_refs({field1, field2}) when is_atom(field1) and is_atom(field2), do: [field1, field2]
+
+  defp extract_field_refs({field1, field2}) when is_atom(field1) and is_atom(field2),
+    do: [field1, field2]
+
   defp extract_field_refs({:field, _rel, field}) when is_atom(field), do: [field]
   defp extract_field_refs(func) when is_function(func, 1), do: []
   defp extract_field_refs(%Ash.Query.Ref{attribute: %{name: name}}), do: [name]

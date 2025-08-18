@@ -381,7 +381,8 @@ defmodule AshReports.TransformerIntegrationTest do
 
       # We can't easily create malformed DSL state at the module level,
       # but we can test the transformer directly
-      empty_state = %Spark.Dsl.State{} |> Transformer.persist(:module, TestModule)
+      # Note: Using basic map since Spark.Dsl.State struct is not accessible in tests
+      empty_state = %{} |> Transformer.persist(:module, TestModule)
 
       # Should not crash
       result = BuildReportModules.transform(empty_state)

@@ -440,7 +440,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
     test "transformer handles invalid DSL state gracefully" do
       # Create an invalid DSL state (missing required fields)
       invalid_state =
-        %Spark.Dsl.State{}
+        %{}
         |> Transformer.persist(:module, InvalidModule)
 
       # Transformer should handle this gracefully
@@ -493,7 +493,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
       # Simulate DSL state after other transformers have run
       dsl_state =
-        %Spark.Dsl.State{}
+        %{}
         |> Transformer.persist(:module, TestStateModule)
         |> Transformer.persist(:ash_reports_parsed, initial_reports)
 
@@ -518,7 +518,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       existing_data = %{some: "existing", data: "preserved"}
 
       initial_dsl_state =
-        %Spark.Dsl.State{}
+        %{}
         |> Transformer.persist(:module, TestPreserveModule)
         |> Transformer.persist(:existing_key, existing_data)
         |> Transformer.persist(:ash_reports_parsed, [
@@ -571,7 +571,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       ]
 
       dsl_state =
-        %Spark.Dsl.State{}
+        %{}
         |> Transformer.persist(:module, EdgeCaseModule)
         |> Transformer.persist(:ash_reports_parsed, edge_case_reports)
 
@@ -597,7 +597,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       }
 
       dsl_state =
-        %Spark.Dsl.State{}
+        %{}
         |> Transformer.persist(:module, NoFormatModule)
         |> Transformer.persist(:ash_reports_parsed, [no_format_report])
 

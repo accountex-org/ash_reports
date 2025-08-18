@@ -102,7 +102,9 @@ defmodule AshReports.DependencyResolver do
   @spec depends_on?(dependency_graph(), atom(), atom()) :: boolean()
   def depends_on?(graph, variable, dependency) do
     direct_deps = Map.get(graph, variable, [])
-    has_direct_dependency?(direct_deps, dependency) or has_transitive_dependency?(graph, direct_deps, dependency)
+
+    has_direct_dependency?(direct_deps, dependency) or
+      has_transitive_dependency?(graph, direct_deps, dependency)
   end
 
   defp has_direct_dependency?(direct_deps, dependency) do
@@ -205,10 +207,15 @@ defmodule AshReports.DependencyResolver do
   end
 
   defp extract_refs_by_type(func) when is_function(func, 1), do: []
-  defp extract_refs_by_type(%Ash.Query.Call{args: args}), do: Enum.flat_map(args, &extract_variable_references/1)
+
+  defp extract_refs_by_type(%Ash.Query.Call{args: args}),
+    do: Enum.flat_map(args, &extract_variable_references/1)
+
   defp extract_refs_by_type({var}) when is_atom(var), do: [var]
   defp extract_refs_by_type({var1, var2}) when is_atom(var1) and is_atom(var2), do: [var1, var2]
-  defp extract_refs_by_type(list) when is_list(list), do: Enum.flat_map(list, &extract_variable_references/1)
+
+  defp extract_refs_by_type(list) when is_list(list),
+    do: Enum.flat_map(list, &extract_variable_references/1)
 
   defp extract_refs_by_type(map) when is_map(map) and not is_struct(map) do
     map

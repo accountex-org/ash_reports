@@ -142,7 +142,7 @@ defmodule AshReports.GroupProcessorTest do
         %Group{
           name: :year,
           level: 1,
-          expression: fn record -> Map.get(record, :date) |> then(&(&1.year)) end,
+          expression: fn record -> Map.get(record, :date) |> then(& &1.year) end,
           sort: :asc
         }
       ]
@@ -381,10 +381,14 @@ defmodule AshReports.GroupProcessorTest do
       processor = GroupProcessor.new(groups)
 
       records = [
-        %{region: "West", category: "A"},    # First record: no changes
-        %{region: "West", category: "A"},    # Same values: detail change only
-        %{region: "West", category: "B"},    # Category change: level 2
-        %{region: "East", category: "A"}     # Region change: level 1 (highest)
+        # First record: no changes
+        %{region: "West", category: "A"},
+        # Same values: detail change only
+        %{region: "West", category: "A"},
+        # Category change: level 2
+        %{region: "West", category: "B"},
+        # Region change: level 1 (highest)
+        %{region: "East", category: "A"}
       ]
 
       {final_processor, results} =
@@ -397,10 +401,14 @@ defmodule AshReports.GroupProcessorTest do
       results = Enum.reverse(results)
 
       # Verify the changes detected
-      assert Enum.at(results, 0).group_changes == []  # First record
-      assert Enum.at(results, 1).group_changes == [{:detail_change}]  # Same values
-      assert Enum.at(results, 2).group_changes == [{:group_change, 2}]  # Category change
-      assert Enum.at(results, 3).group_changes == [{:group_change, 1}]  # Region change
+      # First record
+      assert Enum.at(results, 0).group_changes == []
+      # Same values
+      assert Enum.at(results, 1).group_changes == [{:detail_change}]
+      # Category change
+      assert Enum.at(results, 2).group_changes == [{:group_change, 2}]
+      # Region change
+      assert Enum.at(results, 3).group_changes == [{:group_change, 1}]
 
       # Level 1 changed once (West -> East)
       assert GroupProcessor.get_group_count(final_processor, 1) == 1
