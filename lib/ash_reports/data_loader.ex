@@ -51,15 +51,15 @@ defmodule AshReports.DataLoader do
         enable_monitoring: true,
         actor: current_user
       )
-      
+
       {:ok, result} = DataLoader.load_report(MyApp.Domain, :detailed_report, params, config)
 
   ### Streaming for Large Datasets
 
       # Stream large datasets
       {:ok, stream} = DataLoader.stream_report(MyApp.Domain, :large_report, params)
-      
-      results = 
+
+      results =
         stream
         |> Stream.map(&process_chunk/1)
         |> Enum.to_list()
@@ -175,7 +175,7 @@ defmodule AshReports.DataLoader do
         region: "West",
         start_date: ~D[2024-01-01]
       })
-      
+
       total_sales = result.variables.total_amount
       record_count = result.metadata.record_count
 
@@ -213,7 +213,7 @@ defmodule AshReports.DataLoader do
         %Variable{name: :total, type: :sum, expression: expr(amount)},
         %Variable{name: :average, type: :average, expression: expr(amount)}
       ]
-      
+
       {:ok, result} = DataLoader.load_report_with_variables(
         MyApp.Domain,
         :custom_report,
@@ -245,11 +245,11 @@ defmodule AshReports.DataLoader do
   ## Examples
 
       {:ok, stream} = DataLoader.stream_report(MyApp.Domain, :large_report, params)
-      
+
       # Process in chunks
-      total_processed = 
+      total_processed =
         stream
-        |> Stream.map(fn chunk -> 
+        |> Stream.map(fn chunk ->
              process_chunk(chunk.records)
              length(chunk.records)
            end)
@@ -380,7 +380,7 @@ defmodule AshReports.DataLoader do
         &apply_business_rules/1,
         &format_for_display/1
       ]
-      
+
       {:ok, result} = DataLoader.load_with_pipeline(
         MyApp.Domain,
         :custom_report,

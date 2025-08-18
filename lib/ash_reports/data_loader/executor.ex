@@ -24,13 +24,13 @@ defmodule AshReports.DataLoader.Executor do
   ## Usage
 
       executor = Executor.new()
-      
+
       # Execute a query
       {:ok, records} = Executor.execute_query(executor, query, domain)
-      
+
       # Load relationships in batch
       {:ok, loaded_records} = Executor.load_relationships(executor, records, [:customer, :items])
-      
+
       # Stream large datasets
       stream = Executor.stream_query(executor, query, domain, chunk_size: 1000)
 
@@ -88,7 +88,7 @@ defmodule AshReports.DataLoader.Executor do
   ## Examples
 
       executor = Executor.new()
-      
+
       executor = Executor.new(batch_size: 500, timeout: :timer.minutes(2))
 
   """
@@ -158,8 +158,8 @@ defmodule AshReports.DataLoader.Executor do
 
       query = Ash.Query.new(MyApp.Order)
       stream = Executor.stream_query(executor, query, domain, chunk_size: 500)
-      
-      results = 
+
+      results =
         stream
         |> Stream.map(&process_chunk/1)
         |> Enum.to_list()

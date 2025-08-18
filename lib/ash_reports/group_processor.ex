@@ -21,7 +21,7 @@ defmodule AshReports.GroupProcessor do
         %Group{name: :region, level: 1, expression: :region},
         %Group{name: :category, level: 2, expression: :category}
       ]
-      
+
       processor = GroupProcessor.new(groups)
 
       # Process data stream

@@ -10,12 +10,12 @@ defmodule AshReports.Domain do
       defmodule MyApp.Reporting do
         use Ash.Domain,
           extensions: [AshReports.Domain]
-        
+
         reports do
           report :user_activity do
             title "User Activity Report"
             driving_resource MyApp.Accounts.User
-            
+
             bands do
               band :header do
                 type :title
@@ -25,7 +25,7 @@ defmodule AshReports.Domain do
                   end
                 end
               end
-              
+
               band :details do
                 type :detail
                 elements do

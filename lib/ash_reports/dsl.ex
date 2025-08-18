@@ -27,13 +27,13 @@ defmodule AshReports.Dsl do
             title "Monthly Sales Report"
             description "Summary of sales by region and product"
             driving_resource Sales
-            
+
             parameters do
               parameter :start_date, :date, required: true
               parameter :end_date, :date, required: true
               parameter :region, :string
             end
-            
+
             bands do
               band :title do
                 type :title
@@ -43,7 +43,7 @@ defmodule AshReports.Dsl do
                   end
                 end
               end
-              
+
               band :details do
                 type :detail
                 elements do

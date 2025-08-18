@@ -47,7 +47,7 @@ defmodule AshReports.DataLoader.Monitor do
 
       # Start monitoring for a DataLoader instance
       {:ok, monitor} = Monitor.start_link(name: :dataloader_monitor)
-      
+
       # Record a query execution
       Monitor.record_query_execution(monitor, %{
         duration: 1500,
@@ -55,10 +55,10 @@ defmodule AshReports.DataLoader.Monitor do
         cache_hit?: false,
         memory_usage: 50_000_000
       })
-      
+
       # Get current metrics
       metrics = Monitor.get_current_metrics(monitor)
-      
+
       # Get performance summary
       summary = Monitor.get_performance_summary(monitor, :last_hour)
 
@@ -158,7 +158,7 @@ defmodule AshReports.DataLoader.Monitor do
   ## Examples
 
       {:ok, monitor} = Monitor.start_link(name: :my_monitor)
-      
+
       {:ok, monitor} = Monitor.start_link(
         name: :custom_monitor,
         history_retention: :timer.hours(48),

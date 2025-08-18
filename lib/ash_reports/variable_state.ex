@@ -2,7 +2,7 @@ defmodule AshReports.VariableState do
   @moduledoc """
   GenServer-based state management for report variables with ETS backing.
 
-  This module provides thread-safe variable storage and state management for 
+  This module provides thread-safe variable storage and state management for
   AshReports, supporting:
   - Variable value tracking and calculation
   - Hierarchical scope reset logic (detail, group, page, report)
