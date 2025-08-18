@@ -27,24 +27,24 @@ defmodule AshReports.DataLoader.Cache do
 
       # Start cache for a domain
       {:ok, cache} = Cache.start_link(name: :my_reports_cache)
-      
+
       # Cache query results
       cache_key = Cache.build_key(report, params, :query_result)
       Cache.put(cache, cache_key, query_results, ttl: :timer.minutes(15))
-      
+
       # Retrieve cached results
       case Cache.get(cache, cache_key) do
         {:hit, cached_results} -> cached_results
         :miss -> execute_query_and_cache_result()
       end
-      
+
       # Cache with conditional update
       Cache.put_if_absent(cache, cache_key, expensive_computation_result)
 
   ## Performance Characteristics
 
   - **Get Operations**: O(1) average, O(log n) worst case
-  - **Put Operations**: O(1) average, O(log n) worst case  
+  - **Put Operations**: O(1) average, O(log n) worst case
   - **Memory Usage**: Configurable limits with automatic eviction
   - **TTL Processing**: Background cleanup with minimal performance impact
 
@@ -105,7 +105,7 @@ defmodule AshReports.DataLoader.Cache do
   ## Examples
 
       {:ok, pid} = Cache.start_link(name: :reports_cache)
-      
+
       {:ok, pid} = Cache.start_link(
         name: :large_reports_cache,
         max_size: 50_000,

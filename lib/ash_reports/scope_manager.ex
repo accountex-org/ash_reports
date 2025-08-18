@@ -6,7 +6,7 @@ defmodule AshReports.ScopeManager do
   and coordinates variable resets based on the hierarchical scope system:
 
   - **Report scope**: Never resets during report execution
-  - **Page scope**: Resets when page breaks occur  
+  - **Page scope**: Resets when page breaks occur
   - **Group scope**: Resets when group values change at specified levels
   - **Detail scope**: Resets for each detail row processed
 

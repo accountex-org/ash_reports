@@ -36,12 +36,12 @@ defmodule AshReports.DataLoader.Pipeline do
         group_processor: group_processor,
         domain: MyApp.Domain
       )
-      
+
       # Process data through pipeline
       {:ok, stream} = Pipeline.process_stream(config)
-      
+
       # Consume processed results
-      results = 
+      results =
         stream
         |> Stream.map(&handle_result/1)
         |> Enum.to_list()
@@ -167,8 +167,8 @@ defmodule AshReports.DataLoader.Pipeline do
   ## Examples
 
       {:ok, stream} = Pipeline.process_stream(config)
-      
-      results = 
+
+      results =
         stream
         |> Stream.filter(&filter_record/1)
         |> Stream.map(&transform_record/1)
@@ -195,7 +195,7 @@ defmodule AshReports.DataLoader.Pipeline do
   ## Examples
 
       {:ok, result} = Pipeline.process_all(config)
-      
+
       total_records = result.summary.total_records
       processing_time = result.summary.processing_time
 

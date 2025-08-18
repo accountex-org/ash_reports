@@ -13,13 +13,13 @@ defmodule AshReports do
       defmodule MyApp.MyDomain do
         use Ash.Domain,
           extensions: [AshReports.Domain]
-        
+
         reports do
           report :sales_report do
             title "Sales Report"
             description "Monthly sales summary"
             driving_resource MyApp.Sales
-            
+
             bands do
               band :title do
                 type :title
