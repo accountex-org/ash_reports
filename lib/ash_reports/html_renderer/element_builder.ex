@@ -94,23 +94,29 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
   alias AshReports.{CalculationEngine, RenderContext}
 
   @type element_html :: %{
-    html_content: String.t(),
-    element_type: atom(),
-    element_name: String.t() | nil,
-    band_name: String.t() | nil,
-    css_classes: [String.t()],
-    attributes: map()
-  }
+          html_content: String.t(),
+          element_type: atom(),
+          element_name: String.t() | nil,
+          band_name: String.t() | nil,
+          css_classes: [String.t()],
+          attributes: map()
+        }
 
   @type build_options :: [
-    escape_html: boolean(),
-    include_data_attributes: boolean(),
-    responsive: boolean(),
-    accessibility: boolean()
-  ]
+          escape_html: boolean(),
+          include_data_attributes: boolean(),
+          responsive: boolean(),
+          accessibility: boolean()
+        ]
 
   @supported_elements [
-    :label, :field, :line, :box, :image, :aggregate, :expression
+    :label,
+    :field,
+    :line,
+    :box,
+    :image,
+    :aggregate,
+    :expression
   ]
 
   @doc """
@@ -121,7 +127,8 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       {:ok, html_elements} = ElementBuilder.build_all_elements(context)
 
   """
-  @spec build_all_elements(RenderContext.t(), build_options()) :: {:ok, [element_html()]} | {:error, term()}
+  @spec build_all_elements(RenderContext.t(), build_options()) ::
+          {:ok, [element_html()]} | {:error, term()}
   def build_all_elements(%RenderContext{} = context, options \\ []) do
     try do
       html_elements =
@@ -164,7 +171,8 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       {:ok, html} = ElementBuilder.build_element(element, context)
 
   """
-  @spec build_element(map(), RenderContext.t(), build_options()) :: {:ok, element_html()} | {:error, term()}
+  @spec build_element(map(), RenderContext.t(), build_options()) ::
+          {:ok, element_html()} | {:error, term()}
   def build_element(element, %RenderContext{} = context, options \\ []) when is_map(element) do
     element_type = Map.get(element, :type, :label)
 
@@ -244,7 +252,8 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       {:ok, html} = ElementBuilder.build_label(element, context)
 
   """
-  @spec build_label(map(), RenderContext.t(), build_options()) :: {:ok, String.t()} | {:error, term()}
+  @spec build_label(map(), RenderContext.t(), build_options()) ::
+          {:ok, String.t()} | {:error, term()}
   def build_label(element, %RenderContext{} = context, options \\ []) do
     text = resolve_element_text(element, context)
     position_style = build_position_style(element, context)
@@ -253,10 +262,11 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
     attributes = build_html_attributes(element, options)
     escaped_text = maybe_escape_html(text, options)
 
-    html = """
-    <div class="ash-element ash-element-label"#{attributes} style="#{position_style}#{font_style}">#{escaped_text}</div>
-    """
-    |> String.trim()
+    html =
+      """
+      <div class="ash-element ash-element-label"#{attributes} style="#{position_style}#{font_style}">#{escaped_text}</div>
+      """
+      |> String.trim()
 
     {:ok, html}
   end
@@ -270,11 +280,11 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       {:ok, html} = ElementBuilder.build_field(element, context)
 
   """
-  @spec build_field(map(), RenderContext.t(), build_options()) :: {:ok, String.t()} | {:error, term()}
+  @spec build_field(map(), RenderContext.t(), build_options()) ::
+          {:ok, String.t()} | {:error, term()}
   def build_field(element, %RenderContext{} = context, options \\ []) do
     with {:ok, field_value} <- resolve_field_value(element, context),
          {:ok, formatted_value} <- format_field_value(field_value, element, context) do
-
       position_style = build_position_style(element, context)
       field_style = build_field_style(element)
 
@@ -282,10 +292,11 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       data_attributes = build_field_data_attributes(element)
       escaped_value = maybe_escape_html(formatted_value, options)
 
-      html = """
-      <div class="ash-element ash-element-field"#{attributes}#{data_attributes} style="#{position_style}#{field_style}">#{escaped_value}</div>
-      """
-      |> String.trim()
+      html =
+        """
+        <div class="ash-element ash-element-field"#{attributes}#{data_attributes} style="#{position_style}#{field_style}">#{escaped_value}</div>
+        """
+        |> String.trim()
 
       {:ok, html}
     else
@@ -302,7 +313,8 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       {:ok, html} = ElementBuilder.build_line(element, context)
 
   """
-  @spec build_line(map(), RenderContext.t(), build_options()) :: {:ok, String.t()} | {:error, term()}
+  @spec build_line(map(), RenderContext.t(), build_options()) ::
+          {:ok, String.t()} | {:error, term()}
   def build_line(element, %RenderContext{} = context, options \\ []) do
     orientation = Map.get(element, :orientation, :horizontal)
     position_style = build_position_style(element, context)
@@ -310,18 +322,19 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
 
     attributes = build_html_attributes(element, options)
 
-    html = case orientation do
-      :horizontal ->
-        """
-        <hr class="ash-element ash-element-line ash-line-horizontal"#{attributes} style="#{position_style}#{line_style}">
-        """
+    html =
+      case orientation do
+        :horizontal ->
+          """
+          <hr class="ash-element ash-element-line ash-line-horizontal"#{attributes} style="#{position_style}#{line_style}">
+          """
 
-      :vertical ->
-        """
-        <div class="ash-element ash-element-line ash-line-vertical"#{attributes} style="#{position_style}#{line_style}"></div>
-        """
-    end
-    |> String.trim()
+        :vertical ->
+          """
+          <div class="ash-element ash-element-line ash-line-vertical"#{attributes} style="#{position_style}#{line_style}"></div>
+          """
+      end
+      |> String.trim()
 
     {:ok, html}
   end
@@ -335,7 +348,8 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       {:ok, html} = ElementBuilder.build_box(element, context)
 
   """
-  @spec build_box(map(), RenderContext.t(), build_options()) :: {:ok, String.t()} | {:error, term()}
+  @spec build_box(map(), RenderContext.t(), build_options()) ::
+          {:ok, String.t()} | {:error, term()}
   def build_box(element, %RenderContext{} = context, options \\ []) do
     position_style = build_position_style(element, context)
     box_style = build_box_style(element)
@@ -344,10 +358,11 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
     content = Map.get(element, :content, "")
     escaped_content = maybe_escape_html(content, options)
 
-    html = """
-    <div class="ash-element ash-element-box"#{attributes} style="#{position_style}#{box_style}">#{escaped_content}</div>
-    """
-    |> String.trim()
+    html =
+      """
+      <div class="ash-element ash-element-box"#{attributes} style="#{position_style}#{box_style}">#{escaped_content}</div>
+      """
+      |> String.trim()
 
     {:ok, html}
   end
@@ -361,7 +376,8 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       {:ok, html} = ElementBuilder.build_image(element, context)
 
   """
-  @spec build_image(map(), RenderContext.t(), build_options()) :: {:ok, String.t()} | {:error, term()}
+  @spec build_image(map(), RenderContext.t(), build_options()) ::
+          {:ok, String.t()} | {:error, term()}
   def build_image(element, %RenderContext{} = context, options \\ []) do
     src = Map.get(element, :src, "")
     alt = Map.get(element, :alt, "")
@@ -374,10 +390,11 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
     if src == "" do
       {:error, :missing_image_src}
     else
-      html = """
-      <img class="ash-element ash-element-image"#{attributes} src="#{src}" alt="#{alt}" style="#{position_style}#{image_style}">
-      """
-      |> String.trim()
+      html =
+        """
+        <img class="ash-element ash-element-image"#{attributes} src="#{src}" alt="#{alt}" style="#{position_style}#{image_style}">
+        """
+        |> String.trim()
 
       {:ok, html}
     end
@@ -441,6 +458,7 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       nil ->
         # Try to get value from data field
         field_name = Map.get(element, :field)
+
         if field_name do
           value = RenderContext.get_current_record(context, field_name, "")
           {:ok, value}
@@ -460,25 +478,26 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
   defp format_field_value(value, element, %RenderContext{} = _context) do
     format = Map.get(element, :format)
 
-    formatted_value = case format do
-      nil ->
-        to_string(value)
+    formatted_value =
+      case format do
+        nil ->
+          to_string(value)
 
-      :currency ->
-        format_currency(value)
+        :currency ->
+          format_currency(value)
 
-      :date ->
-        format_date(value)
+        :date ->
+          format_date(value)
 
-      :number ->
-        format_number(value)
+        :number ->
+          format_number(value)
 
-      custom_format when is_binary(custom_format) ->
-        apply_custom_format(value, custom_format)
+        custom_format when is_binary(custom_format) ->
+          apply_custom_format(value, custom_format)
 
-      _ ->
-        to_string(value)
-    end
+        _ ->
+          to_string(value)
+      end
 
     {:ok, formatted_value}
   end
@@ -564,7 +583,9 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
         end)
       end)
       |> case do
-        nil -> %{}
+        nil ->
+          %{}
+
         element_layout ->
           %{
             x: element_layout.position.x,

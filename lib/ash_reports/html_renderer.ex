@@ -113,7 +113,6 @@ defmodule AshReports.HtmlRenderer do
          {:ok, html_elements} <- build_html_elements(template_context),
          {:ok, final_html} <- assemble_html(template_context, css_content, html_elements),
          {:ok, result_metadata} <- build_result_metadata(template_context, start_time) do
-
       result = %{
         content: final_html,
         metadata: result_metadata,
@@ -202,13 +201,15 @@ defmodule AshReports.HtmlRenderer do
   defp prepare_template_context(%RenderContext{} = context, opts) do
     template_config = build_template_config(context, opts)
 
-    enhanced_context = %{context |
-      config: Map.merge(context.config, %{
-        html: template_config,
-        template_engine: :eex,
-        css_generation: true,
-        responsive_layout: true
-      })
+    enhanced_context = %{
+      context
+      | config:
+          Map.merge(context.config, %{
+            html: template_config,
+            template_engine: :eex,
+            css_generation: true,
+            responsive_layout: true
+          })
     }
 
     {:ok, enhanced_context}

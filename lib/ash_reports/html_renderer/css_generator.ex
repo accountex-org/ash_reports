@@ -76,18 +76,18 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
   alias AshReports.{HtmlRenderer.ResponsiveLayout, RenderContext}
 
   @type css_options :: [
-    theme: atom(),
-    responsive: boolean(),
-    minify: boolean(),
-    framework: atom(),
-    custom_rules: [String.t()]
-  ]
+          theme: atom(),
+          responsive: boolean(),
+          minify: boolean(),
+          framework: atom(),
+          custom_rules: [String.t()]
+        ]
 
   @type css_rule :: %{
-    selector: String.t(),
-    properties: %{atom() => String.t()},
-    media_query: String.t() | nil
-  }
+          selector: String.t(),
+          properties: %{atom() => String.t()},
+          media_query: String.t() | nil
+        }
 
   @default_themes %{
     default: %{
@@ -110,7 +110,6 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
         large: "16px"
       }
     },
-
     professional: %{
       colors: %{
         primary: "#2c3e50",
@@ -131,7 +130,6 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
         large: "24px"
       }
     },
-
     modern: %{
       colors: %{
         primary: "#3498db",
@@ -237,7 +235,8 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
       {:ok, css} = CssGenerator.generate_stylesheet(context, theme: :professional)
 
   """
-  @spec generate_stylesheet(RenderContext.t(), css_options()) :: {:ok, String.t()} | {:error, term()}
+  @spec generate_stylesheet(RenderContext.t(), css_options()) ::
+          {:ok, String.t()} | {:error, term()}
   def generate_stylesheet(%RenderContext{} = context, options \\ []) do
     theme = Keyword.get(options, :theme, :default)
     responsive = Keyword.get(options, :responsive, true)
@@ -249,7 +248,15 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
          {:ok, element_rules} <- generate_element_rules(context, theme_config),
          {:ok, responsive_rules} <- generate_responsive_rules(context, theme_config, responsive),
          {:ok, custom_rules} <- generate_custom_rules(options),
-         {:ok, complete_css} <- assemble_css(base_rules, layout_rules, element_rules, responsive_rules, custom_rules, minify) do
+         {:ok, complete_css} <-
+           assemble_css(
+             base_rules,
+             layout_rules,
+             element_rules,
+             responsive_rules,
+             custom_rules,
+             minify
+           ) do
       {:ok, complete_css}
     else
       {:error, _reason} = error -> error
@@ -287,7 +294,8 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
       {:ok, css} = CssGenerator.generate_responsive_styles(context)
 
   """
-  @spec generate_responsive_styles(RenderContext.t(), css_options()) :: {:ok, String.t()} | {:error, term()}
+  @spec generate_responsive_styles(RenderContext.t(), css_options()) ::
+          {:ok, String.t()} | {:error, term()}
   def generate_responsive_styles(%RenderContext{} = context, options \\ []) do
     breakpoints = ResponsiveLayout.get_breakpoints(context)
     theme = Keyword.get(options, :theme, :default)
@@ -296,7 +304,8 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
          {:ok, mobile_rules} <- generate_mobile_rules(context, theme_config, breakpoints),
          {:ok, tablet_rules} <- generate_tablet_rules(context, theme_config, breakpoints),
          {:ok, desktop_rules} <- generate_desktop_rules(context, theme_config, breakpoints),
-         {:ok, css} <- assemble_responsive_css(mobile_rules, tablet_rules, desktop_rules, breakpoints) do
+         {:ok, css} <-
+           assemble_responsive_css(mobile_rules, tablet_rules, desktop_rules, breakpoints) do
       {:ok, css}
     else
       {:error, _reason} = error -> error
@@ -437,7 +446,7 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
     # Safely access dimensions, providing defaults if missing
     dimensions = Map.get(band_layout, :dimensions, %{width: 800, height: 50})
     position = Map.get(band_layout, :position, %{x: 0, y: 0})
-    
+
     band_rule = %{
       selector: ".ash-band[data-band=\"#{band_name}\"]",
       properties: %{
@@ -449,6 +458,7 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
     }
 
     elements = Map.get(band_layout, :elements, [])
+
     element_rules =
       elements
       |> Enum.with_index()
@@ -597,7 +607,7 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
   defp generate_tablet_rules(%RenderContext{} = _context, theme_config, breakpoints) do
     mobile_config = Map.get(breakpoints, :mobile, %{max_width: "768px"})
     tablet_config = Map.get(breakpoints, :tablet, %{min_width: "769px", max_width: "1024px"})
-    
+
     tablet_min = Map.get(tablet_config, :min_width) || Map.get(mobile_config, :max_width, "768px")
     tablet_max = Map.get(tablet_config, :max_width, "1024px")
 
@@ -689,10 +699,17 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
     {:ok, rules}
   end
 
-  defp assemble_css(base_rules, layout_rules, element_rules, responsive_rules, custom_rules, minify) do
+  defp assemble_css(
+         base_rules,
+         layout_rules,
+         element_rules,
+         responsive_rules,
+         custom_rules,
+         minify
+       ) do
     all_rules = base_rules ++ layout_rules ++ element_rules ++ responsive_rules ++ custom_rules
 
-    css_content = format_css_rules(all_rules, [minify: minify])
+    css_content = format_css_rules(all_rules, minify: minify)
 
     {:ok, css_content}
   end
@@ -705,7 +722,7 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
 
   defp assemble_responsive_css(mobile_rules, tablet_rules, desktop_rules, _breakpoints) do
     all_rules = mobile_rules ++ tablet_rules ++ desktop_rules
-    css_content = format_css_rules(all_rules, [minify: false])
+    css_content = format_css_rules(all_rules, minify: false)
     {:ok, css_content}
   end
 
