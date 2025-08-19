@@ -54,13 +54,13 @@ defmodule AshReports.HeexRenderer.Components do
       </.report_container>
 
   """
-  attr :report, Report, required: true, doc: "The report struct"
-  attr :config, :map, default: %{}, doc: "Render configuration"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :data_report, :string, default: nil, doc: "Data attribute for report name"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:report, Report, required: true, doc: "The report struct")
+  attr(:config, :map, default: %{}, doc: "Render configuration")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:data_report, :string, default: nil, doc: "Data attribute for report name")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
-  slot :inner_block, required: true, doc: "Report content"
+  slot(:inner_block, required: true, doc: "Report content")
 
   def report_container(assigns) do
     assigns =
@@ -92,11 +92,11 @@ defmodule AshReports.HeexRenderer.Components do
   - `class` - Additional CSS classes
 
   """
-  attr :title, :string, required: true, doc: "Report title"
-  attr :metadata, :map, default: %{}, doc: "Additional metadata"
-  attr :show_timestamp, :boolean, default: true, doc: "Show generation timestamp"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:title, :string, required: true, doc: "Report title")
+  attr(:metadata, :map, default: %{}, doc: "Additional metadata")
+  attr(:show_timestamp, :boolean, default: true, doc: "Show generation timestamp")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
   def report_header(assigns) do
     assigns =
@@ -138,10 +138,10 @@ defmodule AshReports.HeexRenderer.Components do
   @doc """
   Report content area component that contains all bands.
   """
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
-  slot :inner_block, required: true, doc: "Report bands"
+  slot(:inner_block, required: true, doc: "Report bands")
 
   def report_content(assigns) do
     assigns =
@@ -159,10 +159,10 @@ defmodule AshReports.HeexRenderer.Components do
   @doc """
   Report footer component for displaying generation info and page numbers.
   """
-  attr :timestamp, DateTime, default: nil, doc: "Generation timestamp"
-  attr :metadata, :map, default: %{}, doc: "Footer metadata"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:timestamp, DateTime, default: nil, doc: "Generation timestamp")
+  attr(:metadata, :map, default: %{}, doc: "Footer metadata")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
   def report_footer(assigns) do
     assigns =
@@ -197,14 +197,14 @@ defmodule AshReports.HeexRenderer.Components do
   @doc """
   Band group component that manages a collection of bands.
   """
-  attr :band, Band, required: true, doc: "Band definition"
-  attr :records, :list, required: true, doc: "Data records"
-  attr :variables, :map, default: %{}, doc: "Variable values"
-  attr :layout_state, :map, default: %{}, doc: "Layout state"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:band, Band, required: true, doc: "Band definition")
+  attr(:records, :list, required: true, doc: "Data records")
+  attr(:variables, :map, default: %{}, doc: "Variable values")
+  attr(:layout_state, :map, default: %{}, doc: "Layout state")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
-  slot :inner_block, required: true, doc: "Band content"
+  slot(:inner_block, required: true, doc: "Band content")
 
   def band_group(assigns) do
     assigns =
@@ -234,13 +234,13 @@ defmodule AshReports.HeexRenderer.Components do
   - `data_band` - Data attribute for band name
 
   """
-  attr :band, Band, required: true, doc: "Band definition"
-  attr :current_record, :map, default: nil, doc: "Current record"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :data_band, :string, default: nil, doc: "Data attribute for band name"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:band, Band, required: true, doc: "Band definition")
+  attr(:current_record, :map, default: nil, doc: "Current record")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:data_band, :string, default: nil, doc: "Data attribute for band name")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
-  slot :inner_block, required: true, doc: "Band elements"
+  slot(:inner_block, required: true, doc: "Band elements")
 
   def band(assigns) do
     assigns =
@@ -276,18 +276,21 @@ defmodule AshReports.HeexRenderer.Components do
   - `data_element` - Data attribute for element name
 
   """
-  attr :element, :map, required: true, doc: "Element definition"
-  attr :record, :map, default: nil, doc: "Current record"
-  attr :variables, :map, default: %{}, doc: "Variable values"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :data_element, :string, default: nil, doc: "Data attribute for element name"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:element, :map, required: true, doc: "Element definition")
+  attr(:record, :map, default: nil, doc: "Current record")
+  attr(:variables, :map, default: %{}, doc: "Variable values")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:data_element, :string, default: nil, doc: "Data attribute for element name")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
   def element(assigns) do
     assigns =
       assigns
       |> assign_new(:data_element, fn -> assigns.element.name end)
-      |> assign(:element_value, resolve_element_value(assigns.element, assigns.record, assigns.variables))
+      |> assign(
+        :element_value,
+        resolve_element_value(assigns.element, assigns.record, assigns.variables)
+      )
       |> assign(:base_classes, element_classes(assigns.element))
       |> assign(:final_classes, build_classes([assigns.base_classes, assigns.class]))
 
@@ -307,10 +310,10 @@ defmodule AshReports.HeexRenderer.Components do
   @doc """
   Label element component for static text display.
   """
-  attr :element, Label, required: true, doc: "Label element definition"
-  attr :value, :string, default: nil, doc: "Label text value"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:element, Label, required: true, doc: "Label element definition")
+  attr(:value, :string, default: nil, doc: "Label text value")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
   def label_element(assigns) do
     assigns =
@@ -329,11 +332,11 @@ defmodule AshReports.HeexRenderer.Components do
   @doc """
   Field element component for data field display.
   """
-  attr :element, Field, required: true, doc: "Field element definition"
-  attr :value, :any, default: nil, doc: "Field value"
-  attr :record, :map, default: nil, doc: "Current record"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:element, Field, required: true, doc: "Field element definition")
+  attr(:value, :any, default: nil, doc: "Field value")
+  attr(:record, :map, default: nil, doc: "Current record")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
   def field_element(assigns) do
     assigns =
@@ -352,11 +355,11 @@ defmodule AshReports.HeexRenderer.Components do
   @doc """
   Image element component for image display.
   """
-  attr :element, Image, required: true, doc: "Image element definition"
-  attr :src, :string, required: true, doc: "Image source URL"
-  attr :alt, :string, default: "", doc: "Alternative text"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:element, Image, required: true, doc: "Image element definition")
+  attr(:src, :string, required: true, doc: "Image source URL")
+  attr(:alt, :string, default: "", doc: "Alternative text")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
   def image_element(assigns) do
     assigns =
@@ -379,9 +382,9 @@ defmodule AshReports.HeexRenderer.Components do
   @doc """
   Line element component for drawing lines and borders.
   """
-  attr :element, Line, required: true, doc: "Line element definition"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:element, Line, required: true, doc: "Line element definition")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
   def line_element(assigns) do
     assigns =
@@ -401,11 +404,11 @@ defmodule AshReports.HeexRenderer.Components do
   @doc """
   Box element component for rectangular containers.
   """
-  attr :element, Box, required: true, doc: "Box element definition"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:element, Box, required: true, doc: "Box element definition")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
-  slot :inner_block, doc: "Box content"
+  slot(:inner_block, doc: "Box content")
 
   def box_element(assigns) do
     assigns =
@@ -427,10 +430,10 @@ defmodule AshReports.HeexRenderer.Components do
   @doc """
   Aggregate element component for calculated values.
   """
-  attr :element, Aggregate, required: true, doc: "Aggregate element definition"
-  attr :value, :any, required: true, doc: "Calculated value"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:element, Aggregate, required: true, doc: "Aggregate element definition")
+  attr(:value, :any, required: true, doc: "Calculated value")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
   def aggregate_element(assigns) do
     assigns =
@@ -453,10 +456,10 @@ defmodule AshReports.HeexRenderer.Components do
   @doc """
   Expression element component for calculated expressions.
   """
-  attr :element, Expression, required: true, doc: "Expression element definition"
-  attr :value, :any, required: true, doc: "Expression result"
-  attr :class, :string, default: "", doc: "Additional CSS classes"
-  attr :rest, :global, doc: "Additional HTML attributes"
+  attr(:element, Expression, required: true, doc: "Expression element definition")
+  attr(:value, :any, required: true, doc: "Expression result")
+  attr(:class, :string, default: "", doc: "Additional CSS classes")
+  attr(:rest, :global, doc: "Additional HTML attributes")
 
   def expression_element(assigns) do
     assigns =
@@ -536,17 +539,19 @@ defmodule AshReports.HeexRenderer.Components do
   defp band_styles(band) do
     styles = []
 
-    styles = if band.height do
-      ["height: #{band.height}px" | styles]
-    else
-      styles
-    end
+    styles =
+      if band.height do
+        ["height: #{band.height}px" | styles]
+      else
+        styles
+      end
 
-    styles = if band.background_color do
-      ["background-color: #{band.background_color}" | styles]
-    else
-      styles
-    end
+    styles =
+      if band.background_color do
+        ["background-color: #{band.background_color}" | styles]
+      else
+        styles
+      end
 
     Enum.join(styles, "; ")
   end
@@ -583,7 +588,12 @@ defmodule AshReports.HeexRenderer.Components do
 
   defp add_appearance_styles(styles, style) do
     styles = if style[:color], do: ["color: #{style[:color]}" | styles], else: styles
-    styles = if style[:background_color], do: ["background-color: #{style[:background_color]}" | styles], else: styles
+
+    styles =
+      if style[:background_color],
+        do: ["background-color: #{style[:background_color]}" | styles],
+        else: styles
+
     if style[:font_size], do: ["font-size: #{style[:font_size]}px" | styles], else: styles
   end
 
@@ -634,9 +644,11 @@ defmodule AshReports.HeexRenderer.Components do
   end
 
   defp format_field_value(nil, _element), do: ""
+
   defp format_field_value(value, %Field{format: format}) when not is_nil(format) do
     apply_field_format(value, format)
   end
+
   defp format_field_value(value, _element), do: to_string(value)
 
   defp apply_field_format(value, format) do
@@ -656,11 +668,12 @@ defmodule AshReports.HeexRenderer.Components do
     styles = element_styles(element)
     style = element.style || %{}
 
-    additional = if style[:scale] do
-      "transform: scale(#{style[:scale]})"
-    else
-      ""
-    end
+    additional =
+      if style[:scale] do
+        "transform: scale(#{style[:scale]})"
+      else
+        ""
+      end
 
     [styles, additional]
     |> Enum.reject(&(&1 == ""))
@@ -673,23 +686,26 @@ defmodule AshReports.HeexRenderer.Components do
 
     additional = []
 
-    additional = if element.thickness do
-      ["border-width: #{element.thickness}px" | additional]
-    else
-      additional
-    end
+    additional =
+      if element.thickness do
+        ["border-width: #{element.thickness}px" | additional]
+      else
+        additional
+      end
 
-    additional = if style_map[:color] do
-      ["border-color: #{style_map[:color]}" | additional]
-    else
-      additional
-    end
+    additional =
+      if style_map[:color] do
+        ["border-color: #{style_map[:color]}" | additional]
+      else
+        additional
+      end
 
-    additional = if style_map[:border_style] do
-      ["border-style: #{style_map[:border_style]}" | additional]
-    else
-      ["border-style: solid" | additional]
-    end
+    additional =
+      if style_map[:border_style] do
+        ["border-style: #{style_map[:border_style]}" | additional]
+      else
+        ["border-style: solid" | additional]
+      end
 
     [styles | additional]
     |> Enum.reject(&(&1 == ""))
@@ -703,23 +719,26 @@ defmodule AshReports.HeexRenderer.Components do
 
     additional = []
 
-    additional = if border[:width] do
-      ["border-width: #{border[:width]}px" | additional]
-    else
-      additional
-    end
+    additional =
+      if border[:width] do
+        ["border-width: #{border[:width]}px" | additional]
+      else
+        additional
+      end
 
-    additional = if border[:color] do
-      ["border-color: #{border[:color]}" | additional]
-    else
-      additional
-    end
+    additional =
+      if border[:color] do
+        ["border-color: #{border[:color]}" | additional]
+      else
+        additional
+      end
 
-    additional = if fill[:color] do
-      ["background-color: #{fill[:color]}" | additional]
-    else
-      additional
-    end
+    additional =
+      if fill[:color] do
+        ["background-color: #{fill[:color]}" | additional]
+      else
+        additional
+      end
 
     [styles | additional]
     |> Enum.reject(&(&1 == ""))

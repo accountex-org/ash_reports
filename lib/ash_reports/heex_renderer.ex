@@ -118,7 +118,6 @@ defmodule AshReports.HeexRenderer do
          {:ok, component_assigns} <- build_component_assigns(heex_context),
          {:ok, heex_template} <- generate_heex_template(heex_context, component_assigns),
          {:ok, result_metadata} <- build_result_metadata(heex_context, start_time) do
-
       result = %{
         content: heex_template,
         metadata: result_metadata,
@@ -247,9 +246,13 @@ defmodule AshReports.HeexRenderer do
               component_assigns,
               heex_context
             )
-          error -> error
+
+          error ->
+            error
         end
-      error -> error
+
+      error ->
+        error
     end
   end
 
@@ -258,13 +261,15 @@ defmodule AshReports.HeexRenderer do
   defp prepare_heex_context(%RenderContext{} = context, opts) do
     heex_config = build_heex_config(context, opts)
 
-    enhanced_context = %{context |
-      config: Map.merge(context.config, %{
-        heex: heex_config,
-        template_engine: :heex,
-        component_library: true,
-        liveview_integration: heex_config.liveview_enabled
-      })
+    enhanced_context = %{
+      context
+      | config:
+          Map.merge(context.config, %{
+            heex: heex_config,
+            template_engine: :heex,
+            component_library: true,
+            liveview_integration: heex_config.liveview_enabled
+          })
     }
 
     {:ok, enhanced_context}
@@ -444,7 +449,9 @@ defmodule AshReports.HeexRenderer do
           {:module, _} -> :ok
           {:error, _} -> {:error, :phoenix_liveview_not_available}
         end
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
@@ -490,7 +497,8 @@ defmodule AshReports.HeexRenderer do
 
   defp count_components(%RenderContext{} = context) do
     # Count unique component types used in the template
-    base_components = 7  # report_container, header, content, band_group, band, element, footer
+    # report_container, header, content, band_group, band, element, footer
+    base_components = 7
     custom_components = map_size(context.config[:heex][:custom_components] || %{})
     base_components + custom_components
   end

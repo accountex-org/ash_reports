@@ -60,7 +60,7 @@ defmodule AshReports.HtmlRendererTest do
 
     test "can prepare context for rendering", %{context: context} do
       {:ok, prepared_context} = HtmlRenderer.prepare(context, [])
-      
+
       assert Map.has_key?(prepared_context.config, :html)
       assert Map.has_key?(prepared_context.metadata, :template_state)
       assert Map.has_key?(prepared_context.metadata, :css_state)

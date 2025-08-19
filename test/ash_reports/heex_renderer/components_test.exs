@@ -341,7 +341,7 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
       context = %{}
 
       assert {:error, {:unknown_component, :invalid}} =
-        Components.render_single_component(:invalid, assigns, context)
+               Components.render_single_component(:invalid, assigns, context)
     end
   end
 

@@ -9,13 +9,14 @@ defmodule AshReports.HeexRendererTest do
   use ExUnit.Case, async: true
 
   alias AshReports.{
+    Band,
+    Element,
     HeexRenderer,
     RenderContext,
-    Report,
-    Band,
-    Element
+    Report
   }
-  alias AshReports.Element.{Label, Field}
+
+  alias AshReports.Element.{Field, Label}
 
   describe "render_with_context/2" do
     test "renders basic report with HEEX components" do
@@ -80,7 +81,7 @@ defmodule AshReports.HeexRendererTest do
       opts = [static_optimization: true]
 
       assert {:ok, result} = HeexRenderer.render_with_context(context, opts)
-      
+
       # Optimized templates should have less whitespace
       refute String.contains?(result.content, "\n\s*\n")
     end
@@ -105,7 +106,7 @@ defmodule AshReports.HeexRendererTest do
       opts = [interactive: true, enable_filters: true]
 
       assert {:ok, result} = HeexRenderer.render_with_context(context, opts)
-      
+
       assert result.metadata.interactive == true
       assert result.metadata.features.filtering == true
     end
@@ -115,7 +116,7 @@ defmodule AshReports.HeexRendererTest do
       opts = [liveview_enabled: true, real_time_updates: true]
 
       assert {:ok, result} = HeexRenderer.render_with_context(context, opts)
-      
+
       assert result.metadata.features.real_time_updates == true
       assert result.context.config.heex.liveview_enabled == true
     end
@@ -126,7 +127,7 @@ defmodule AshReports.HeexRendererTest do
       context = build_test_context()
 
       assert {:ok, assigns, template} = HeexRenderer.render_for_liveview(context)
-      
+
       assert is_map(assigns)
       assert is_binary(template)
       assert Map.has_key?(assigns, :report)
@@ -138,7 +139,7 @@ defmodule AshReports.HeexRendererTest do
       context = build_test_context()
 
       assert {:ok, assigns, _template} = HeexRenderer.render_for_liveview(context)
-      
+
       assert assigns.report == context.report
       assert assigns.records == context.records
       assert assigns.variables == context.variables
@@ -152,7 +153,7 @@ defmodule AshReports.HeexRendererTest do
       context = build_test_context()
 
       assert {:ok, component_heex} = HeexRenderer.render_component(context, :report_header)
-      
+
       assert is_binary(component_heex)
       assert String.contains?(component_heex, "ash-report-header")
     end
@@ -161,7 +162,7 @@ defmodule AshReports.HeexRendererTest do
       context = build_test_context()
 
       assert {:ok, component_heex} = HeexRenderer.render_component(context, :band)
-      
+
       assert is_binary(component_heex)
       assert String.contains?(component_heex, "ash-band")
     end
@@ -169,14 +170,14 @@ defmodule AshReports.HeexRendererTest do
     test "returns error for unknown component type" do
       context = build_test_context()
 
-      assert {:error, {:unknown_component, :invalid_component}} = 
-        HeexRenderer.render_component(context, :invalid_component)
+      assert {:error, {:unknown_component, :invalid_component}} =
+               HeexRenderer.render_component(context, :invalid_component)
     end
   end
 
   describe "supports_streaming?" do
     test "returns true for streaming support" do
-      assert HeexRenderer.supports_streaming? == true
+      assert HeexRenderer.supports_streaming?() == true
     end
   end
 
@@ -225,7 +226,7 @@ defmodule AshReports.HeexRendererTest do
       opts = [component_style: :modern, interactive: true]
 
       assert {:ok, enhanced_context} = HeexRenderer.prepare(context, opts)
-      
+
       assert enhanced_context.config.heex.component_style == :modern
       assert enhanced_context.config.heex.interactive == true
       assert enhanced_context.config.template_engine == :heex
@@ -236,7 +237,7 @@ defmodule AshReports.HeexRendererTest do
       context = build_test_context()
 
       assert {:ok, enhanced_context} = HeexRenderer.prepare(context, [])
-      
+
       component_state = enhanced_context.metadata.component_state
       assert is_map(component_state)
       assert Map.has_key?(component_state, :components_loaded)
@@ -248,7 +249,7 @@ defmodule AshReports.HeexRendererTest do
       opts = [liveview_enabled: true]
 
       assert {:ok, enhanced_context} = HeexRenderer.prepare(context, opts)
-      
+
       liveview_state = enhanced_context.metadata.liveview_state
       assert is_map(liveview_state)
       assert Map.has_key?(liveview_state, :subscriptions)
@@ -302,7 +303,7 @@ defmodule AshReports.HeexRendererTest do
     test "template generation completes within reasonable time" do
       context = build_large_data_context()
 
-      {time_microseconds, {:ok, _result}} = 
+      {time_microseconds, {:ok, _result}} =
         :timer.tc(fn -> HeexRenderer.render_with_context(context) end)
 
       # Should complete within 100ms for reasonable dataset
@@ -342,18 +343,19 @@ defmodule AshReports.HeexRendererTest do
 
   defp build_large_data_context do
     report = build_test_report()
-    
+
     # Generate 1000 test records
-    records = Enum.map(1..1000, fn i ->
-      %{
-        id: i,
-        name: "Record #{i}",
-        value: :rand.uniform(1000),
-        status: Enum.random(["active", "inactive", "pending"]),
-        created_at: DateTime.utc_now()
-      }
-    end)
-    
+    records =
+      Enum.map(1..1000, fn i ->
+        %{
+          id: i,
+          name: "Record #{i}",
+          value: :rand.uniform(1000),
+          status: Enum.random(["active", "inactive", "pending"]),
+          created_at: DateTime.utc_now()
+        }
+      end)
+
     data_result = %{records: records, variables: %{}, metadata: %{}}
     config = build_test_config()
 

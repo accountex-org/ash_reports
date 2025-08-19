@@ -9,7 +9,7 @@ defmodule AshReports.HeexRenderer.LiveViewIntegrationTest do
   use ExUnit.Case, async: true
 
   alias AshReports.HeexRenderer.LiveViewIntegration
-  alias AshReports.{Report, Band, Element, RenderContext}
+  alias AshReports.{Band, Element, RenderContext, Report}
   alias AshReports.Element.Label
   alias Phoenix.LiveView.Socket
 
@@ -286,7 +286,11 @@ defmodule AshReports.HeexRenderer.LiveViewIntegrationTest do
 
     test "sorts data by field and direction" do
       socket = build_test_socket_with_data()
-      socket = %{socket | assigns: Map.put(socket.assigns, :sort, %{field: "value", direction: :desc})}
+
+      socket = %{
+        socket
+        | assigns: Map.put(socket.assigns, :sort, %{field: "value", direction: :desc})
+      }
 
       result_socket = LiveViewIntegration.apply_sort_to_data(socket)
 
@@ -347,9 +351,13 @@ defmodule AshReports.HeexRenderer.LiveViewIntegrationTest do
 
   defp build_test_socket(assigns \\ %{}) do
     %Socket{
-      assigns: Map.merge(%{
-        metadata: %{subscriptions: []}
-      }, assigns)
+      assigns:
+        Map.merge(
+          %{
+            metadata: %{subscriptions: []}
+          },
+          assigns
+        )
     }
   end
 
@@ -421,12 +429,13 @@ defmodule AshReports.HeexRenderer.LiveViewIntegrationTest do
       filters = socket.assigns[:filters] || %{}
       data = socket.assigns[:data] || []
 
-      filtered_data = Enum.filter(data, fn record ->
-        Enum.all?(filters, fn {field, value} ->
-          field_value = Map.get(record, String.to_atom(field))
-          LiveViewIntegration.matches_filter?(field_value, value)
+      filtered_data =
+        Enum.filter(data, fn record ->
+          Enum.all?(filters, fn {field, value} ->
+            field_value = Map.get(record, String.to_atom(field))
+            LiveViewIntegration.matches_filter?(field_value, value)
+          end)
         end)
-      end)
 
       %{socket | assigns: Map.put(socket.assigns, :filtered_data, filtered_data)}
   end
@@ -439,14 +448,15 @@ defmodule AshReports.HeexRenderer.LiveViewIntegrationTest do
       sort = socket.assigns[:sort]
       data = socket.assigns[:filtered_data] || socket.assigns[:data] || []
 
-      sorted_data = if sort && sort.field do
-        field = String.to_atom(sort.field)
-        direction = sort.direction || :asc
+      sorted_data =
+        if sort && sort.field do
+          field = String.to_atom(sort.field)
+          direction = sort.direction || :asc
 
-        Enum.sort_by(data, &Map.get(&1, field), direction)
-      else
-        data
-      end
+          Enum.sort_by(data, &Map.get(&1, field), direction)
+        else
+          data
+        end
 
       %{socket | assigns: Map.put(socket.assigns, :sorted_data, sorted_data)}
   end
@@ -457,16 +467,20 @@ defmodule AshReports.HeexRenderer.LiveViewIntegrationTest do
     UndefinedFunctionError ->
       # Simulate the pagination behavior for testing
       pagination = socket.assigns[:pagination]
-      data = socket.assigns[:sorted_data] || socket.assigns[:filtered_data] || socket.assigns[:data] || []
 
-      paginated_data = if pagination do
-        start_index = (pagination.page - 1) * pagination.per_page
-        end_index = start_index + pagination.per_page - 1
+      data =
+        socket.assigns[:sorted_data] || socket.assigns[:filtered_data] || socket.assigns[:data] ||
+          []
 
-        Enum.slice(data, start_index..end_index)
-      else
-        data
-      end
+      paginated_data =
+        if pagination do
+          start_index = (pagination.page - 1) * pagination.per_page
+          end_index = start_index + pagination.per_page - 1
+
+          Enum.slice(data, start_index..end_index)
+        else
+          data
+        end
 
       %{socket | assigns: Map.put(socket.assigns, :paginated_data, paginated_data)}
   end

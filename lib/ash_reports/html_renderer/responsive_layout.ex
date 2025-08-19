@@ -62,17 +62,17 @@ defmodule AshReports.HtmlRenderer.ResponsiveLayout do
 
   @type breakpoint :: :mobile | :tablet | :desktop | :print
   @type breakpoint_config :: %{
-    min_width: String.t() | nil,
-    max_width: String.t() | nil,
-    orientation: :portrait | :landscape | :any
-  }
+          min_width: String.t() | nil,
+          max_width: String.t() | nil,
+          orientation: :portrait | :landscape | :any
+        }
   @type responsive_config :: %{
-    breakpoints: %{breakpoint() => breakpoint_config()},
-    mobile_first: boolean(),
-    adapt_positioning: boolean(),
-    optimize_for_touch: boolean(),
-    print_optimization: boolean()
-  }
+          breakpoints: %{breakpoint() => breakpoint_config()},
+          mobile_first: boolean(),
+          adapt_positioning: boolean(),
+          optimize_for_touch: boolean(),
+          print_optimization: boolean()
+        }
 
   @default_breakpoints %{
     mobile: %{
@@ -151,10 +151,10 @@ defmodule AshReports.HtmlRenderer.ResponsiveLayout do
          {:ok, tablet_css} <- generate_tablet_css(context, breakpoints.tablet),
          {:ok, desktop_css} <- generate_desktop_css(context, breakpoints.desktop),
          {:ok, print_css} <- generate_print_css(context, breakpoints.print) do
-
-      complete_css = [mobile_css, tablet_css, desktop_css, print_css]
-                    |> Enum.reject(&(&1 == ""))
-                    |> Enum.join("\n\n")
+      complete_css =
+        [mobile_css, tablet_css, desktop_css, print_css]
+        |> Enum.reject(&(&1 == ""))
+        |> Enum.join("\n\n")
 
       {:ok, complete_css}
     else
@@ -335,41 +335,48 @@ defmodule AshReports.HtmlRenderer.ResponsiveLayout do
     if media_query != "" do
       touch_opts = get_touch_optimizations(context)
 
-      css_rules = [
-        "#{media_query} {",
-        "  .ash-report {",
-        "    padding: 0.5rem;",
-        "    max-width: 100%;",
-        "  }",
-        "",
-        "  .ash-element {",
-        "    position: static !important;",
-        "    display: block;",
-        "    width: 100%;",
-        "    margin-bottom: 0.5rem;",
-        if(touch_opts[:min_touch_target], do: "    min-height: #{touch_opts[:min_touch_target]};", else: ""),
-        if(touch_opts[:touch_padding], do: "    padding: #{touch_opts[:touch_padding]};", else: ""),
-        "  }",
-        "",
-        "  .ash-band {",
-        "    margin-bottom: 1rem;",
-        "    min-height: auto;",
-        "  }",
-        "",
-        "  .ash-element-line {",
-        "    width: 100% !important;",
-        "    position: static !important;",
-        "  }",
-        "",
-        "  .ash-report-header,",
-        "  .ash-report-footer {",
-        "    text-align: center;",
-        "    padding: 1rem 0;",
-        "  }",
-        "}"
-      ]
-      |> Enum.reject(&(&1 == ""))
-      |> Enum.join("\n")
+      css_rules =
+        [
+          "#{media_query} {",
+          "  .ash-report {",
+          "    padding: 0.5rem;",
+          "    max-width: 100%;",
+          "  }",
+          "",
+          "  .ash-element {",
+          "    position: static !important;",
+          "    display: block;",
+          "    width: 100%;",
+          "    margin-bottom: 0.5rem;",
+          if(touch_opts[:min_touch_target],
+            do: "    min-height: #{touch_opts[:min_touch_target]};",
+            else: ""
+          ),
+          if(touch_opts[:touch_padding],
+            do: "    padding: #{touch_opts[:touch_padding]};",
+            else: ""
+          ),
+          "  }",
+          "",
+          "  .ash-band {",
+          "    margin-bottom: 1rem;",
+          "    min-height: auto;",
+          "  }",
+          "",
+          "  .ash-element-line {",
+          "    width: 100% !important;",
+          "    position: static !important;",
+          "  }",
+          "",
+          "  .ash-report-header,",
+          "  .ash-report-footer {",
+          "    text-align: center;",
+          "    padding: 1rem 0;",
+          "  }",
+          "}"
+        ]
+        |> Enum.reject(&(&1 == ""))
+        |> Enum.join("\n")
 
       {:ok, css_rules}
     else
@@ -381,23 +388,24 @@ defmodule AshReports.HtmlRenderer.ResponsiveLayout do
     media_query = build_media_query_from_config(tablet_config)
 
     if media_query != "" do
-      css_rules = [
-        "#{media_query} {",
-        "  .ash-report {",
-        "    padding: 1rem;",
-        "    max-width: 95%;",
-        "  }",
-        "",
-        "  .ash-element {",
-        "    /* Hybrid positioning - some absolute, some responsive */",
-        "  }",
-        "",
-        "  .ash-band {",
-        "    margin-bottom: 1.5rem;",
-        "  }",
-        "}"
-      ]
-      |> Enum.join("\n")
+      css_rules =
+        [
+          "#{media_query} {",
+          "  .ash-report {",
+          "    padding: 1rem;",
+          "    max-width: 95%;",
+          "  }",
+          "",
+          "  .ash-element {",
+          "    /* Hybrid positioning - some absolute, some responsive */",
+          "  }",
+          "",
+          "  .ash-band {",
+          "    margin-bottom: 1.5rem;",
+          "  }",
+          "}"
+        ]
+        |> Enum.join("\n")
 
       {:ok, css_rules}
     else
@@ -409,20 +417,21 @@ defmodule AshReports.HtmlRenderer.ResponsiveLayout do
     media_query = build_media_query_from_config(desktop_config)
 
     if media_query != "" do
-      css_rules = [
-        "#{media_query} {",
-        "  .ash-report {",
-        "    max-width: 1200px;",
-        "    margin: 0 auto;",
-        "  }",
-        "",
-        "  /* Desktop uses precise positioning from LayoutEngine */",
-        "  .ash-element {",
-        "    position: absolute;",
-        "  }",
-        "}"
-      ]
-      |> Enum.join("\n")
+      css_rules =
+        [
+          "#{media_query} {",
+          "  .ash-report {",
+          "    max-width: 1200px;",
+          "    margin: 0 auto;",
+          "  }",
+          "",
+          "  /* Desktop uses precise positioning from LayoutEngine */",
+          "  .ash-element {",
+          "    position: absolute;",
+          "  }",
+          "}"
+        ]
+        |> Enum.join("\n")
 
       {:ok, css_rules}
     else
@@ -434,39 +443,40 @@ defmodule AshReports.HtmlRenderer.ResponsiveLayout do
     print_opts = get_print_optimizations(context)
 
     if print_opts != %{} do
-      css_rules = [
-        "@media print {",
-        "  .ash-report {",
-        "    max-width: none;",
-        "    width: 100%;",
-        "    margin: 0;",
-        "    padding: 0;",
-        if(print_opts[:remove_backgrounds], do: "    background: white;", else: ""),
-        "  }",
-        "",
-        "  .ash-element {",
-        "    position: absolute;",
-        if(print_opts[:optimize_colors], do: "    -webkit-print-color-adjust: exact;", else: ""),
-        "  }",
-        "",
-        if(print_opts[:page_breaks], do: "  .ash-band { page-break-inside: avoid; }", else: ""),
-        "",
-        "  .ash-report-header {",
-        "    position: running(header);",
-        "  }",
-        "",
-        "  .ash-report-footer {",
-        "    position: running(footer);",
-        "  }",
-        "",
-        "  @page {",
-        "    margin: 1in;",
-        if(print_opts[:dpi_optimization], do: "    size: auto;", else: ""),
-        "  }",
-        "}"
-      ]
-      |> Enum.reject(&(&1 == ""))
-      |> Enum.join("\n")
+      css_rules =
+        [
+          "@media print {",
+          "  .ash-report {",
+          "    max-width: none;",
+          "    width: 100%;",
+          "    margin: 0;",
+          "    padding: 0;",
+          if(print_opts[:remove_backgrounds], do: "    background: white;", else: ""),
+          "  }",
+          "",
+          "  .ash-element {",
+          "    position: absolute;",
+          if(print_opts[:optimize_colors], do: "    -webkit-print-color-adjust: exact;", else: ""),
+          "  }",
+          "",
+          if(print_opts[:page_breaks], do: "  .ash-band { page-break-inside: avoid; }", else: ""),
+          "",
+          "  .ash-report-header {",
+          "    position: running(header);",
+          "  }",
+          "",
+          "  .ash-report-footer {",
+          "    position: running(footer);",
+          "  }",
+          "",
+          "  @page {",
+          "    margin: 1in;",
+          if(print_opts[:dpi_optimization], do: "    size: auto;", else: ""),
+          "  }",
+          "}"
+        ]
+        |> Enum.reject(&(&1 == ""))
+        |> Enum.join("\n")
 
       {:ok, css_rules}
     else
@@ -507,9 +517,11 @@ defmodule AshReports.HtmlRenderer.ResponsiveLayout do
           adapted_elements =
             band_layout.elements
             |> Enum.map(fn element_layout ->
-              %{element_layout |
-                position: %{x: 0, y: 0},  # Remove absolute positioning
-                dimensions: %{element_layout.dimensions | width: "100%"}
+              %{
+                element_layout
+                | # Remove absolute positioning
+                  position: %{x: 0, y: 0},
+                  dimensions: %{element_layout.dimensions | width: "100%"}
               }
             end)
 

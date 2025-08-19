@@ -195,7 +195,6 @@ defmodule AshReports.HeexRenderer.LiveViewIntegration do
   def create_live_report_assigns(%Socket{} = socket) do
     with {:ok, context} <- build_render_context(socket),
          {:ok, result} <- HeexRenderer.render_with_context(context) do
-
       assigns = %{
         report_content: result.content,
         report_metadata: result.metadata,
@@ -324,9 +323,10 @@ defmodule AshReports.HeexRenderer.LiveViewIntegration do
   """
   @spec create_filter_assigns(Socket.t(), [atom()]) :: {:ok, map()} | {:error, term()}
   def create_filter_assigns(%Socket{} = socket, filter_fields) do
-    filter_configs = Enum.map(filter_fields, fn field ->
-      {field, create_filter_config(field, socket)}
-    end)
+    filter_configs =
+      Enum.map(filter_fields, fn field ->
+        {field, create_filter_config(field, socket)}
+      end)
 
     assigns = %{
       filter_fields: filter_fields,
@@ -357,12 +357,13 @@ defmodule AshReports.HeexRenderer.LiveViewIntegration do
     filters = socket.assigns[:filters] || %{}
     data = socket.assigns[:data] || []
 
-    filtered_data = Enum.filter(data, fn record ->
-      Enum.all?(filters, fn {field, value} ->
-        field_value = Map.get(record, String.to_atom(field))
-        matches_filter?(field_value, value)
+    filtered_data =
+      Enum.filter(data, fn record ->
+        Enum.all?(filters, fn {field, value} ->
+          field_value = Map.get(record, String.to_atom(field))
+          matches_filter?(field_value, value)
+        end)
       end)
-    end)
 
     assign_to_socket(socket, :filtered_data, filtered_data)
   end
@@ -371,39 +372,45 @@ defmodule AshReports.HeexRenderer.LiveViewIntegration do
     sort = socket.assigns[:sort]
     data = socket.assigns[:filtered_data] || socket.assigns[:data] || []
 
-    sorted_data = if sort && sort.field do
-      field = String.to_atom(sort.field)
-      direction = sort.direction || :asc
+    sorted_data =
+      if sort && sort.field do
+        field = String.to_atom(sort.field)
+        direction = sort.direction || :asc
 
-      Enum.sort_by(data, &Map.get(&1, field), direction)
-    else
-      data
-    end
+        Enum.sort_by(data, &Map.get(&1, field), direction)
+      else
+        data
+      end
 
     assign_to_socket(socket, :sorted_data, sorted_data)
   end
 
   defp apply_pagination_to_data(%Socket{} = socket) do
     pagination = socket.assigns[:pagination]
-    data = socket.assigns[:sorted_data] || socket.assigns[:filtered_data] || socket.assigns[:data] || []
 
-    paginated_data = if pagination do
-      start_index = (pagination.page - 1) * pagination.per_page
-      end_index = start_index + pagination.per_page - 1
+    data =
+      socket.assigns[:sorted_data] || socket.assigns[:filtered_data] || socket.assigns[:data] ||
+        []
 
-      Enum.slice(data, start_index..end_index)
-    else
-      data
-    end
+    paginated_data =
+      if pagination do
+        start_index = (pagination.page - 1) * pagination.per_page
+        end_index = start_index + pagination.per_page - 1
+
+        Enum.slice(data, start_index..end_index)
+      else
+        data
+      end
 
     assign_to_socket(socket, :paginated_data, paginated_data)
   end
 
   defp update_report_context(%Socket{} = socket) do
-    current_data = socket.assigns[:paginated_data] ||
-                   socket.assigns[:sorted_data] ||
-                   socket.assigns[:filtered_data] ||
-                   socket.assigns[:data] || []
+    current_data =
+      socket.assigns[:paginated_data] ||
+        socket.assigns[:sorted_data] ||
+        socket.assigns[:filtered_data] ||
+        socket.assigns[:data] || []
 
     data_result = %{
       records: current_data,
@@ -421,10 +428,12 @@ defmodule AshReports.HeexRenderer.LiveViewIntegration do
 
   defp build_render_context(%Socket{} = socket) do
     report = socket.assigns[:report]
-    data = socket.assigns[:paginated_data] ||
-           socket.assigns[:sorted_data] ||
-           socket.assigns[:filtered_data] ||
-           socket.assigns[:data] || []
+
+    data =
+      socket.assigns[:paginated_data] ||
+        socket.assigns[:sorted_data] ||
+        socket.assigns[:filtered_data] ||
+        socket.assigns[:data] || []
 
     data_result = %{
       records: data,
@@ -432,16 +441,17 @@ defmodule AshReports.HeexRenderer.LiveViewIntegration do
       metadata: socket.assigns[:metadata] || %{}
     }
 
-    config = Map.merge(
-      socket.assigns[:config] || %{},
-      %{
-        heex: %{
-          liveview_enabled: true,
-          interactive: get_config(socket, :interactive, false),
-          real_time_updates: get_config(socket, :real_time, false)
+    config =
+      Map.merge(
+        socket.assigns[:config] || %{},
+        %{
+          heex: %{
+            liveview_enabled: true,
+            interactive: get_config(socket, :interactive, false),
+            real_time_updates: get_config(socket, :real_time, false)
+          }
         }
-      }
-    )
+      )
 
     context = RenderContext.new(report, data_result, config)
     {:ok, context}
@@ -501,6 +511,7 @@ defmodule AshReports.HeexRenderer.LiveViewIntegration do
   end
 
   defp determine_filter_type([]), do: :text
+
   defp determine_filter_type(values) do
     first_value = List.first(values)
 

@@ -9,8 +9,8 @@ defmodule AshReports.HeexRenderer.HelpersTest do
   use ExUnit.Case, async: true
 
   alias AshReports.HeexRenderer.Helpers
-  alias AshReports.{Report, Band, Element}
-  alias AshReports.Element.{Label, Field, Image, Line, Box}
+  alias AshReports.{Band, Element, Report}
+  alias AshReports.Element.{Box, Field, Image, Label, Line}
 
   describe "element_classes/2" do
     test "generates basic element classes" do
@@ -422,7 +422,7 @@ defmodule AshReports.HeexRenderer.HelpersTest do
 
   describe "format_number/2" do
     test "formats integer with thousands separators" do
-      result = Helpers.format_number(1234567)
+      result = Helpers.format_number(1_234_567)
       assert result == "1,234,567"
     end
 
@@ -508,14 +508,16 @@ defmodule AshReports.HeexRenderer.HelpersTest do
       id = Helpers.element_id(element)
 
       assert String.starts_with?(id, "ash-element-customer_name-")
-      assert String.length(id) > 20  # Should include timestamp
+      # Should include timestamp
+      assert String.length(id) > 20
     end
 
     test "generates different IDs for multiple calls" do
       element = %Label{name: :test}
 
       id1 = Helpers.element_id(element)
-      Process.sleep(1)  # Ensure different timestamp
+      # Ensure different timestamp
+      Process.sleep(1)
       id2 = Helpers.element_id(element)
 
       assert id1 != id2

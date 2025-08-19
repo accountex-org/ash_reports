@@ -156,23 +156,26 @@ defmodule AshReports.HeexRenderer.Helpers do
   def band_styles(band) do
     styles = []
 
-    styles = if band.height do
-      ["height: #{band.height}px" | styles]
-    else
-      styles
-    end
+    styles =
+      if band.height do
+        ["height: #{band.height}px" | styles]
+      else
+        styles
+      end
 
-    styles = if band.background_color do
-      ["background-color: #{band.background_color}" | styles]
-    else
-      styles
-    end
+    styles =
+      if band.background_color do
+        ["background-color: #{band.background_color}" | styles]
+      else
+        styles
+      end
 
-    styles = if band.padding do
-      ["padding: #{band.padding}px" | styles]
-    else
-      styles
-    end
+    styles =
+      if band.padding do
+        ["padding: #{band.padding}px" | styles]
+      else
+        styles
+      end
 
     build_style_string(styles)
   end
@@ -354,9 +357,11 @@ defmodule AshReports.HeexRenderer.Helpers do
   def get_field_value(record, field, default \\ nil)
 
   def get_field_value(nil, _field, default), do: default
+
   def get_field_value(record, field, default) when is_map(record) do
     Map.get(record, field, default)
   end
+
   def get_field_value(_, _, default), do: default
 
   @doc """
@@ -371,12 +376,14 @@ defmodule AshReports.HeexRenderer.Helpers do
   @spec get_nested_field(map() | nil, [atom()], term()) :: term()
   def get_nested_field(nil, _path, default), do: default
   def get_nested_field(record, [], _default), do: record
+
   def get_nested_field(record, [field | rest], default) when is_map(record) do
     case Map.get(record, field) do
       nil -> default
       value -> get_nested_field(value, rest, default)
     end
   end
+
   def get_nested_field(_, _, default), do: default
 
   @doc """
@@ -441,17 +448,19 @@ defmodule AshReports.HeexRenderer.Helpers do
   def responsive_classes(config) do
     classes = []
 
-    classes = if config[:responsive] do
-      ["responsive" | classes]
-    else
-      classes
-    end
+    classes =
+      if config[:responsive] do
+        ["responsive" | classes]
+      else
+        classes
+      end
 
-    classes = if config[:mobile_first] do
-      ["mobile-first" | classes]
-    else
-      classes
-    end
+    classes =
+      if config[:mobile_first] do
+        ["mobile-first" | classes]
+      else
+        classes
+      end
 
     build_css_classes(classes)
   end
@@ -469,18 +478,20 @@ defmodule AshReports.HeexRenderer.Helpers do
   def accessibility_attrs(element) do
     attrs = %{}
 
-    attrs = case element_type(element) do
-      "label" -> Map.put(attrs, :role, "text")
-      "field" -> Map.put(attrs, :role, "text")
-      "image" -> Map.put(attrs, :role, "img")
-      _ -> attrs
-    end
+    attrs =
+      case element_type(element) do
+        "label" -> Map.put(attrs, :role, "text")
+        "field" -> Map.put(attrs, :role, "text")
+        "image" -> Map.put(attrs, :role, "img")
+        _ -> attrs
+      end
 
-    attrs = if element.description do
-      Map.put(attrs, "aria-label", element.description)
-    else
-      attrs
-    end
+    attrs =
+      if element.description do
+        Map.put(attrs, "aria-label", element.description)
+      else
+        attrs
+      end
 
     attrs
   end
@@ -498,6 +509,7 @@ defmodule AshReports.HeexRenderer.Helpers do
 
   defp positioning_class(element) do
     position = element.position || %{}
+
     if position[:x] && position[:y] do
       "position-absolute"
     else
@@ -507,6 +519,7 @@ defmodule AshReports.HeexRenderer.Helpers do
 
   defp sizing_class(element) do
     position = element.position || %{}
+
     cond do
       position[:width] && position[:height] -> "sized-fixed"
       position[:width] -> "sized-width"
@@ -560,6 +573,7 @@ defmodule AshReports.HeexRenderer.Helpers do
 
   defp add_position_styles(styles, element) do
     position = element.position || %{}
+
     if position[:x] && position[:y] do
       [
         "position: absolute",
@@ -573,11 +587,13 @@ defmodule AshReports.HeexRenderer.Helpers do
 
   defp add_dimension_styles(styles, element) do
     position = element.position || %{}
-    styles = if position[:width] do
-      ["width: #{position[:width]}px" | styles]
-    else
-      styles
-    end
+
+    styles =
+      if position[:width] do
+        ["width: #{position[:width]}px" | styles]
+      else
+        styles
+      end
 
     if position[:height] do
       ["height: #{position[:height]}px" | styles]
@@ -588,17 +604,20 @@ defmodule AshReports.HeexRenderer.Helpers do
 
   defp add_appearance_styles(styles, element) do
     style = element.style || %{}
-    styles = if style[:color] do
-      ["color: #{style[:color]}" | styles]
-    else
-      styles
-    end
 
-    styles = if style[:background_color] do
-      ["background-color: #{style[:background_color]}" | styles]
-    else
-      styles
-    end
+    styles =
+      if style[:color] do
+        ["color: #{style[:color]}" | styles]
+      else
+        styles
+      end
+
+    styles =
+      if style[:background_color] do
+        ["background-color: #{style[:background_color]}" | styles]
+      else
+        styles
+      end
 
     if style[:font_size] do
       ["font-size: #{style[:font_size]}px" | styles]
@@ -611,6 +630,7 @@ defmodule AshReports.HeexRenderer.Helpers do
     case String.split(number_string, ".") do
       [integer_part] ->
         add_commas_to_integer(integer_part)
+
       [integer_part, decimal_part] ->
         "#{add_commas_to_integer(integer_part)}.#{decimal_part}"
     end
