@@ -346,9 +346,8 @@ defmodule AshReports.RenderPipeline do
   @spec stage_assembly(RenderContext.t(), module()) ::
           {:ok, %{content: binary(), context: RenderContext.t()}} | {:error, term()}
   def stage_assembly(%RenderContext{} = context, renderer) do
-    try do
-      # Call the renderer's main rendering function
-      case renderer.render_with_context(context, []) do
+    # Call the renderer's main rendering function
+    case renderer.render_with_context(context, []) do
         {:ok, render_result} ->
           {:ok,
            %{
@@ -356,13 +355,12 @@ defmodule AshReports.RenderPipeline do
              context: render_result.context
            }}
 
-        {:error, reason} ->
-          {:error, {:assembly_failed, reason}}
-      end
-    rescue
-      error ->
-        {:error, {:assembly_failed, error}}
+      {:error, reason} ->
+        {:error, {:assembly_failed, reason}}
     end
+  rescue
+    error ->
+      {:error, {:assembly_failed, error}}
   end
 
   @doc """
@@ -377,23 +375,21 @@ defmodule AshReports.RenderPipeline do
           {:ok, %{content: binary(), context: RenderContext.t(), metadata: map()}}
           | {:error, term()}
   def stage_finalization(assembly_result, pipeline_metadata) do
-    try do
-      final_metadata =
-        pipeline_metadata
-        |> Map.put(:finalized_at, DateTime.utc_now())
-        |> Map.put(:success, true)
+    final_metadata =
+      pipeline_metadata
+      |> Map.put(:finalized_at, DateTime.utc_now())
+      |> Map.put(:success, true)
 
-      final_result = %{
-        content: assembly_result.content,
-        context: assembly_result.context,
-        metadata: final_metadata
-      }
+    final_result = %{
+      content: assembly_result.content,
+      context: assembly_result.context,
+      metadata: final_metadata
+    }
 
-      {:ok, final_result}
-    rescue
-      error ->
-        {:error, {:finalization_failed, error}}
-    end
+    {:ok, final_result}
+  rescue
+    error ->
+      {:error, {:finalization_failed, error}}
   end
 
   @doc """

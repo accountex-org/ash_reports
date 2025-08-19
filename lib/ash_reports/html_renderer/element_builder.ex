@@ -130,8 +130,7 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
   @spec build_all_elements(RenderContext.t(), build_options()) ::
           {:ok, [element_html()]} | {:error, term()}
   def build_all_elements(%RenderContext{} = context, options \\ []) do
-    try do
-      html_elements =
+    html_elements =
         context.report.bands
         |> Enum.flat_map(fn band ->
           band_elements = Map.get(band, :elements, [])
@@ -155,11 +154,10 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
           end)
         end)
 
-      {:ok, html_elements}
-    rescue
-      error ->
-        {:error, {:element_building_failed, error}}
-    end
+    {:ok, html_elements}
+  rescue
+    error ->
+      {:error, {:element_building_failed, error}}
   end
 
   @doc """
