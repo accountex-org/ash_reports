@@ -204,8 +204,9 @@ defmodule AshReports.DataLoader.Pipeline do
   def process_all(config) do
     start_time = System.monotonic_time(:millisecond)
 
-    with {:ok, stream} <- process_stream(config) do
-      try do
+    case process_stream(config) do
+      {:ok, stream} ->
+        try do
         {records, errors} =
           stream
           |> Enum.reduce({[], []}, fn
@@ -231,12 +232,13 @@ defmodule AshReports.DataLoader.Pipeline do
         }
 
         {:ok, result}
-      catch
-        kind, reason ->
-          {:error, {kind, reason}}
-      end
-    else
-      {:error, _reason} = error -> error
+        catch
+          kind, reason ->
+            {:error, {kind, reason}}
+        end
+
+      {:error, _reason} = error -> 
+        error
     end
   end
 

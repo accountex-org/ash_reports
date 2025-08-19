@@ -303,19 +303,17 @@ defmodule AshReports.RenderPipeline do
   """
   @spec stage_data_processing(RenderContext.t()) :: stage_result()
   def stage_data_processing(%RenderContext{} = context) do
-    try do
-      processed_context =
-        context.records
-        |> Enum.with_index()
-        |> Enum.reduce(context, fn {record, index}, acc_context ->
-          RenderContext.set_current_record(acc_context, record, index)
-        end)
+    processed_context =
+      context.records
+      |> Enum.with_index()
+      |> Enum.reduce(context, fn {record, index}, acc_context ->
+        RenderContext.set_current_record(acc_context, record, index)
+      end)
 
-      {:ok, processed_context}
-    rescue
-      error ->
-        {:error, {:data_processing_failed, error}}
-    end
+    {:ok, processed_context}
+  rescue
+    error ->
+      {:error, {:data_processing_failed, error}}
   end
 
   @doc """
@@ -328,15 +326,13 @@ defmodule AshReports.RenderPipeline do
   """
   @spec stage_element_rendering(RenderContext.t(), module()) :: stage_result()
   def stage_element_rendering(%RenderContext{} = context, renderer) do
-    try do
-      # This would be implemented with actual element rendering logic
-      # For now, we'll simulate the process
-      rendered_context = simulate_element_rendering(context, renderer)
-      {:ok, rendered_context}
-    rescue
-      error ->
-        {:error, {:element_rendering_failed, error}}
-    end
+    # This would be implemented with actual element rendering logic
+    # For now, we'll simulate the process
+    rendered_context = simulate_element_rendering(context, renderer)
+    {:ok, rendered_context}
+  rescue
+    error ->
+      {:error, {:element_rendering_failed, error}}
   end
 
   @doc """
