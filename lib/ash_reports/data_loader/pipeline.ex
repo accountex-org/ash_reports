@@ -237,7 +237,7 @@ defmodule AshReports.DataLoader.Pipeline do
             {:error, {kind, reason}}
         end
 
-      {:error, _reason} = error -> 
+      {:error, _reason} = error ->
         error
     end
   end
