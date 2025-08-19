@@ -146,12 +146,7 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
                 {:error, reason}
             end
           end)
-          |> Enum.filter(fn result ->
-            case result do
-              {:error, _} -> false
-              _ -> true
-            end
-          end)
+          |> Enum.filter(&filter_successful_elements/1)
         end)
 
     {:ok, html_elements}
@@ -786,6 +781,13 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       escape_html(text)
     else
       text
+    end
+  end
+
+  defp filter_successful_elements(result) do
+    case result do
+      {:error, _} -> false
+      _ -> true
     end
   end
 
