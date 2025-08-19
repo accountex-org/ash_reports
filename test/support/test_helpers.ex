@@ -9,6 +9,8 @@ unless Code.ensure_loaded?(AshReports.TestHelpers) do
 
     import ExUnit.Assertions
 
+    alias Spark.Dsl.Extension
+
     @doc """
     Parses DSL content and returns the DSL state.
 
@@ -29,7 +31,7 @@ unless Code.ensure_loaded?(AshReports.TestHelpers) do
         """)
 
         # Extract DSL state using Spark APIs
-        dsl_state = Spark.Dsl.Extension.get_persisted(module_name, :dsl_state)
+        dsl_state = Extension.get_persisted(module_name, :dsl_state)
         {:ok, dsl_state}
       rescue
         error -> {:error, error}
@@ -72,14 +74,14 @@ unless Code.ensure_loaded?(AshReports.TestHelpers) do
     Extracts entities from a DSL state for testing.
     """
     def get_dsl_entities(dsl_state, path) do
-      Spark.Dsl.Extension.get_entities(dsl_state, path)
+      Extension.get_entities(dsl_state, path)
     end
 
     @doc """
     Extracts options from a DSL state for testing.
     """
     def get_dsl_option(dsl_state, path, option_name, default \\ nil) do
-      Spark.Dsl.Extension.get_opt(dsl_state, path, option_name, default)
+      Extension.get_opt(dsl_state, path, option_name, default)
     end
 
     @doc """
