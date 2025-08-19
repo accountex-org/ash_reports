@@ -581,33 +581,19 @@ defmodule AshReports.HtmlRenderer.ResponsiveLayout do
   end
 
   defp get_default_element_behavior(element_type, breakpoint) do
-    case {element_type, breakpoint} do
-      {:label, :mobile} ->
-        %{positioning: :static, width: "100%", display: :block}
-
-      {:field, :mobile} ->
-        %{positioning: :static, width: "100%", display: :block}
-
-      {:line, :mobile} ->
-        %{positioning: :static, width: "100%", display: :block}
-
-      {:box, :mobile} ->
-        %{positioning: :static, width: "100%", display: :block}
-
-      {:image, :mobile} ->
-        %{positioning: :static, max_width: "100%", height: :auto}
-
-      {_, :tablet} ->
-        %{positioning: :hybrid}
-
-      {_, :desktop} ->
-        %{positioning: :absolute}
-
-      {_, :print} ->
-        %{positioning: :absolute, optimize_colors: true}
-
-      _ ->
-        %{}
+    case breakpoint do
+      :mobile -> get_mobile_behavior(element_type)
+      :tablet -> %{positioning: :hybrid}
+      :desktop -> %{positioning: :absolute}
+      :print -> %{positioning: :absolute, optimize_colors: true}
+      _ -> %{}
     end
   end
+
+  defp get_mobile_behavior(:label), do: %{positioning: :static, width: "100%", display: :block}
+  defp get_mobile_behavior(:field), do: %{positioning: :static, width: "100%", display: :block}
+  defp get_mobile_behavior(:line), do: %{positioning: :static, width: "100%", display: :block}
+  defp get_mobile_behavior(:box), do: %{positioning: :static, width: "100%", display: :block}
+  defp get_mobile_behavior(:image), do: %{positioning: :static, max_width: "100%", height: :auto}
+  defp get_mobile_behavior(_), do: %{positioning: :static, width: "100%", display: :block}
 end

@@ -136,16 +136,7 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
           band_elements = Map.get(band, :elements, [])
 
           band_elements
-          |> Enum.map(fn element ->
-            case build_element(element, context, options) do
-              {:ok, element_html} ->
-                Map.put(element_html, :band_name, band.name)
-
-              {:error, reason} ->
-                # Log error but continue with other elements
-                {:error, reason}
-            end
-          end)
+          |> Enum.map(&build_single_element(&1, context, options, band.name))
           |> Enum.filter(&filter_successful_elements/1)
         end)
 
@@ -781,6 +772,17 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       escape_html(text)
     else
       text
+    end
+  end
+
+  defp build_single_element(element, context, options, band_name) do
+    case build_element(element, context, options) do
+      {:ok, element_html} ->
+        Map.put(element_html, :band_name, band_name)
+
+      {:error, reason} ->
+        # Log error but continue with other elements
+        {:error, reason}
     end
   end
 
