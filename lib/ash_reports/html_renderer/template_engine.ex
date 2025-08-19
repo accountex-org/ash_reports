@@ -113,7 +113,6 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
     </body>
     </html>
     """,
-
     report: """
     <div class="ash-report">
       <header class="ash-report-header">
@@ -129,13 +128,11 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
       </footer>
     </div>
     """,
-
     band: """
     <section class="ash-band ash-band-<%= @band_type %>" data-band="<%= @band_name %>">
       <%= @elements_content %>
     </section>
     """,
-
     element_wrapper: """
     <div class="ash-element ash-element-<%= @element_type %>" data-element="<%= @element_name %>">
       <%= @element_content %>
@@ -151,7 +148,8 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
       {:ok, html} = TemplateEngine.render_complete_html(context, css_content, html_elements)
 
   """
-  @spec render_complete_html(RenderContext.t(), String.t(), [map()]) :: {:ok, String.t()} | {:error, term()}
+  @spec render_complete_html(RenderContext.t(), String.t(), [map()]) ::
+          {:ok, String.t()} | {:error, term()}
   def render_complete_html(%RenderContext{} = context, css_content, html_elements) do
     with {:ok, bands_content} <- render_all_bands(context, html_elements),
          {:ok, report_content} <- render_report_content(context, bands_content),
@@ -171,7 +169,8 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
       {:ok, html} = TemplateEngine.render_template(:master, assigns)
 
   """
-  @spec render_template(template_name(), template_assigns()) :: {:ok, String.t()} | {:error, term()}
+  @spec render_template(template_name(), template_assigns()) ::
+          {:ok, String.t()} | {:error, term()}
   def render_template(template_name, assigns) do
     try do
       case get_compiled_template(template_name) do
@@ -251,6 +250,7 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
     if :ets.whereis(:template_cache) != :undefined do
       :ets.delete_all_objects(:template_cache)
     end
+
     :ok
   end
 
@@ -364,7 +364,6 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
     render_template(:master, assigns)
   end
 
-
   defp get_config_value(%RenderContext{} = context, key, default) do
     context.config
     |> Map.get(:html, %{})
@@ -375,6 +374,7 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
     if :ets.whereis(:template_cache) == :undefined do
       :ets.new(:template_cache, [:set, :public, :named_table])
     end
+
     :ok
   end
 
