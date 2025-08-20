@@ -119,6 +119,7 @@ defmodule AshReports.JsonRenderer do
   @behaviour AshReports.Renderer
 
   alias AshReports.{
+    Formatter,
     JsonRenderer.DataSerializer,
     JsonRenderer.SchemaManager,
     JsonRenderer.StreamingEngine,
@@ -217,14 +218,15 @@ defmodule AshReports.JsonRenderer do
 
   defp render_complete(%RenderContext{} = context, opts, start_time) do
     with {:ok, json_context} <- prepare_json_context(context, opts),
-         {:ok, serialized_data} <- serialize_report_data(json_context),
-         {:ok, json_structure} <- build_json_structure(json_context, serialized_data),
+         {:ok, formatted_context} <- apply_json_locale_formatting(json_context),
+         {:ok, serialized_data} <- serialize_report_data(formatted_context),
+         {:ok, json_structure} <- build_json_structure(formatted_context, serialized_data),
          {:ok, final_json} <- encode_final_json(json_structure),
-         {:ok, result_metadata} <- build_result_metadata(json_context, start_time) do
+         {:ok, result_metadata} <- build_result_metadata(formatted_context, start_time) do
       result = %{
         content: final_json,
         metadata: result_metadata,
-        context: json_context
+        context: formatted_context
       }
 
       {:ok, result}
@@ -266,16 +268,23 @@ defmodule AshReports.JsonRenderer do
     {:ok, enhanced_context}
   end
 
-  defp build_json_config(_context, opts) do
+  defp build_json_config(context, opts) do
     %{
-      schema_version: Keyword.get(opts, :schema_version, "3.5.0"),
+      schema_version: Keyword.get(opts, :schema_version, "4.1.0"),
       include_metadata: Keyword.get(opts, :include_metadata, true),
-      format_numbers: Keyword.get(opts, :format_numbers, false),
+      format_numbers: Keyword.get(opts, :format_numbers, true),
       date_format: Keyword.get(opts, :date_format, :iso8601),
       include_schema_info: Keyword.get(opts, :include_schema_info, true),
       pretty_print: Keyword.get(opts, :pretty_print, false),
       null_handling: Keyword.get(opts, :null_handling, :include),
-      chunk_size: Keyword.get(opts, :chunk_size, 1000)
+      chunk_size: Keyword.get(opts, :chunk_size, 1000),
+      # Phase 4.1 CLDR Integration settings
+      locale_formatting: Keyword.get(opts, :locale_formatting, true),
+      locale: RenderContext.get_locale(context),
+      text_direction: RenderContext.get_text_direction(context),
+      include_locale_metadata: Keyword.get(opts, :include_locale_metadata, true),
+      # Include both raw and formatted values
+      dual_value_format: Keyword.get(opts, :dual_value_format, true)
     }
   end
 
@@ -294,6 +303,106 @@ defmodule AshReports.JsonRenderer do
     end
   end
 
+  defp apply_json_locale_formatting(%RenderContext{} = context) do
+    json_config = context.config[:json] || %{}
+
+    if json_config[:locale_formatting] do
+      locale = json_config[:locale]
+      dual_format = json_config[:dual_value_format]
+
+      # Format the records with locale-aware formatting for JSON output
+      formatted_records =
+        context.records
+        |> Enum.map(fn record ->
+          format_record_for_json(record, locale, dual_format)
+        end)
+
+      # Update context with formatted records
+      updated_context = %{context | records: formatted_records}
+
+      # Add locale metadata to the context metadata
+      locale_metadata = %{
+        locale_formatting_applied: true,
+        locale: locale,
+        text_direction: json_config[:text_direction],
+        dual_value_format: dual_format,
+        locale_metadata: RenderContext.get_locale_metadata(context)
+      }
+
+      updated_metadata = Map.put(context.metadata, :json_locale_formatting, locale_metadata)
+      final_context = %{updated_context | metadata: updated_metadata}
+
+      {:ok, final_context}
+    else
+      {:ok, context}
+    end
+  end
+
+  defp format_record_for_json(record, locale, dual_format) when is_map(record) do
+    Enum.reduce(record, %{}, fn {key, value}, acc ->
+      if dual_format do
+        # Include both raw value and formatted value
+        formatted_result = format_value_for_json(key, value, locale)
+
+        acc
+        # Original value
+        |> Map.put(key, value)
+        # Add formatted values
+        |> Map.merge(formatted_result)
+      else
+        # Only include formatted values
+        case format_value_for_json(key, value, locale) do
+          %{} = formatted_map ->
+            # If formatting returned a map, merge it
+            Map.merge(acc, formatted_map)
+
+          formatted_value ->
+            # If formatting returned a single value, use it
+            Map.put(acc, key, formatted_value)
+        end
+      end
+    end)
+  end
+
+  defp format_record_for_json(record, _locale, _dual_format), do: record
+
+  defp format_value_for_json(key, value, locale) do
+    case Formatter.format_for_json(value,
+           locale: locale,
+           type: detect_json_field_type(key, value)
+         ) do
+      {:ok, json_formatted} ->
+        # Return a map with the formatted field
+        %{"#{key}_formatted" => json_formatted}
+
+      {:error, _} ->
+        # If formatting fails, just return the original value
+        %{}
+    end
+  end
+
+  defp detect_json_field_type(key, value) do
+    key_string = to_string(key)
+
+    cond do
+      String.contains?(key_string, ["amount", "price", "cost", "total", "salary"]) and
+          is_number(value) ->
+        :currency
+
+      String.contains?(key_string, ["rate", "percent", "ratio"]) and is_number(value) ->
+        :percentage
+
+      match?(%Date{}, value) or match?(%DateTime{}, value) or match?(%NaiveDateTime{}, value) ->
+        :date
+
+      is_number(value) ->
+        :number
+
+      true ->
+        :auto
+    end
+  end
+
   defp build_result_metadata(%RenderContext{} = context, start_time) do
     end_time = System.monotonic_time(:microsecond)
     render_time = end_time - start_time
@@ -308,12 +417,20 @@ defmodule AshReports.JsonRenderer do
       variable_count: map_size(context.variables),
       group_count: map_size(context.groups),
       json_size_bytes: estimate_json_size(context),
-      phase: "3.5.0",
+      phase: "4.1.0",
+      # Phase 4.1 CLDR Integration metadata
+      locale: RenderContext.get_locale(context),
+      text_direction: RenderContext.get_text_direction(context),
+      locale_formatting_applied:
+        get_in(context.metadata, [:json_locale_formatting, :locale_formatting_applied]) || false,
+      dual_value_format: get_in(context.config, [:json, :dual_value_format]) || false,
       components_used: [
         :schema_manager,
         :data_serializer,
         :structure_builder,
-        :streaming_engine
+        :streaming_engine,
+        # New component
+        :cldr_formatter
       ]
     }
 
@@ -390,5 +507,4 @@ defmodule AshReports.JsonRenderer do
     # For now, return a placeholder that can be implemented later
     0
   end
-
 end

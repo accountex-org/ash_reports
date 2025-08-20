@@ -228,7 +228,10 @@ defmodule AshReports.JsonRenderer.SchemaManager do
       "type" => "object",
       "properties" => %{
         "name" => %{"type" => "string"},
-        "type" => %{"type" => "string", "enum" => ["header", "detail", "footer", "group_header", "group_footer"]},
+        "type" => %{
+          "type" => "string",
+          "enum" => ["header", "detail", "footer", "group_header", "group_footer"]
+        },
         "elements" => %{
           "type" => "array",
           "items" => element_schema()
@@ -243,14 +246,19 @@ defmodule AshReports.JsonRenderer.SchemaManager do
     %{
       "type" => "object",
       "properties" => %{
-        "type" => %{"type" => "string", "enum" => ["field", "label", "line", "rectangle", "image"]},
+        "type" => %{
+          "type" => "string",
+          "enum" => ["field", "label", "line", "rectangle", "image"]
+        },
         "field" => %{"type" => "string"},
-        "value" => %{"oneOf" => [
-          %{"type" => "string"},
-          %{"type" => "number"},
-          %{"type" => "boolean"},
-          %{"type" => "null"}
-        ]},
+        "value" => %{
+          "oneOf" => [
+            %{"type" => "string"},
+            %{"type" => "number"},
+            %{"type" => "boolean"},
+            %{"type" => "null"}
+          ]
+        },
         "position" => %{
           "type" => "object",
           "properties" => %{
@@ -281,42 +289,96 @@ defmodule AshReports.JsonRenderer.SchemaManager do
   end
 
   defp validate_report_structure(errors, %RenderContext{report: nil}) do
-    [%{path: [:report], message: "Report is required", expected: "Report struct", actual: nil} | errors]
+    [
+      %{path: [:report], message: "Report is required", expected: "Report struct", actual: nil}
+      | errors
+    ]
   end
 
   defp validate_report_structure(errors, %RenderContext{report: report}) do
     cond do
       is_nil(Map.get(report, :name)) ->
-        [%{path: [:report, :name], message: "Report name is required", expected: "string", actual: nil} | errors]
+        [
+          %{
+            path: [:report, :name],
+            message: "Report name is required",
+            expected: "string",
+            actual: nil
+          }
+          | errors
+        ]
 
       not is_list(Map.get(report, :bands, [])) ->
-        [%{path: [:report, :bands], message: "Report bands must be a list", expected: "list", actual: typeof(report.bands)} | errors]
+        [
+          %{
+            path: [:report, :bands],
+            message: "Report bands must be a list",
+            expected: "list",
+            actual: typeof(report.bands)
+          }
+          | errors
+        ]
 
       true ->
         errors
     end
   end
 
-  defp validate_data_structure(errors, %RenderContext{records: records}) when not is_list(records) do
-    [%{path: [:data, :records], message: "Records must be a list", expected: "list", actual: typeof(records)} | errors]
+  defp validate_data_structure(errors, %RenderContext{records: records})
+       when not is_list(records) do
+    [
+      %{
+        path: [:data, :records],
+        message: "Records must be a list",
+        expected: "list",
+        actual: typeof(records)
+      }
+      | errors
+    ]
   end
 
   defp validate_data_structure(errors, _context), do: errors
 
-  defp validate_variable_structure(errors, %RenderContext{variables: variables}) when not is_map(variables) do
-    [%{path: [:data, :variables], message: "Variables must be a map", expected: "map", actual: typeof(variables)} | errors]
+  defp validate_variable_structure(errors, %RenderContext{variables: variables})
+       when not is_map(variables) do
+    [
+      %{
+        path: [:data, :variables],
+        message: "Variables must be a map",
+        expected: "map",
+        actual: typeof(variables)
+      }
+      | errors
+    ]
   end
 
   defp validate_variable_structure(errors, _context), do: errors
 
   defp validate_group_structure(errors, %RenderContext{groups: groups}) when not is_map(groups) do
-    [%{path: [:data, :groups], message: "Groups must be a map", expected: "map", actual: typeof(groups)} | errors]
+    [
+      %{
+        path: [:data, :groups],
+        message: "Groups must be a map",
+        expected: "map",
+        actual: typeof(groups)
+      }
+      | errors
+    ]
   end
 
   defp validate_group_structure(errors, _context), do: errors
 
-  defp validate_metadata_structure(errors, %RenderContext{metadata: metadata}) when not is_map(metadata) do
-    [%{path: [:metadata], message: "Metadata must be a map", expected: "map", actual: typeof(metadata)} | errors]
+  defp validate_metadata_structure(errors, %RenderContext{metadata: metadata})
+       when not is_map(metadata) do
+    [
+      %{
+        path: [:metadata],
+        message: "Metadata must be a map",
+        expected: "map",
+        actual: typeof(metadata)
+      }
+      | errors
+    ]
   end
 
   defp validate_metadata_structure(errors, _context), do: errors
@@ -359,10 +421,11 @@ defmodule AshReports.JsonRenderer.SchemaManager do
             validate_against_schema(item, item_schema, path ++ [index])
           end)
 
-        errors = Enum.flat_map(results, fn
-          {:error, errors} -> errors
-          {:ok, _} -> []
-        end)
+        errors =
+          Enum.flat_map(results, fn
+            {:error, errors} -> errors
+            {:ok, _} -> []
+          end)
 
         if errors == [] do
           {:ok, data}
@@ -393,7 +456,12 @@ defmodule AshReports.JsonRenderer.SchemaManager do
 
     missing_errors =
       Enum.map(missing, fn prop ->
-        %{path: path ++ [prop], message: "Required property missing", expected: "present", actual: "missing"}
+        %{
+          path: path ++ [prop],
+          message: "Required property missing",
+          expected: "present",
+          actual: "missing"
+        }
       end)
 
     errors ++ missing_errors
@@ -424,7 +492,14 @@ defmodule AshReports.JsonRenderer.SchemaManager do
     if Map.get(schema, "additionalProperties", true) do
       []
     else
-      [%{path: path ++ [key], message: "Additional property not allowed", expected: "allowed", actual: "forbidden"}]
+      [
+        %{
+          path: path ++ [key],
+          message: "Additional property not allowed",
+          expected: "allowed",
+          actual: "forbidden"
+        }
+      ]
     end
   end
 
