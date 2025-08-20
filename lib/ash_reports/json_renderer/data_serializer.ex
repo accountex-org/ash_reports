@@ -290,13 +290,20 @@ defmodule AshReports.JsonRenderer.DataSerializer do
   defp collection_type?(_), do: false
 
   defp serialize_datetime_value(%DateTime{} = dt, opts), do: format_datetime(dt, opts)
-  defp serialize_datetime_value(%NaiveDateTime{} = ndt, opts), do: format_naive_datetime(ndt, opts)
+
+  defp serialize_datetime_value(%NaiveDateTime{} = ndt, opts),
+    do: format_naive_datetime(ndt, opts)
+
   defp serialize_datetime_value(%Date{} = date, opts), do: format_date(date, opts)
   defp serialize_datetime_value(%Time{} = time, opts), do: format_time(time, opts)
 
-  defp serialize_collection_value(value, opts) when is_list(value), do: serialize_list(value, opts)
+  defp serialize_collection_value(value, opts) when is_list(value),
+    do: serialize_list(value, opts)
+
   defp serialize_collection_value(value, opts) when is_map(value), do: serialize_map(value, opts)
-  defp serialize_collection_value(value, opts) when is_tuple(value), do: serialize_tuple(value, opts)
+
+  defp serialize_collection_value(value, opts) when is_tuple(value),
+    do: serialize_tuple(value, opts)
 
   defp serialize_key(key, _opts) when is_atom(key), do: to_string(key)
   defp serialize_key(key, _opts) when is_binary(key), do: key
@@ -422,6 +429,7 @@ defmodule AshReports.JsonRenderer.DataSerializer do
 
   defp implements_jason_encoder?(module) do
     Code.ensure_loaded(module)
+
     function_exported?(module, :__impl__, 1) and
       Jason.Encoder in module.__impl__(:protocols)
   rescue
@@ -442,5 +450,4 @@ defmodule AshReports.JsonRenderer.DataSerializer do
     |> Map.drop([:__struct__, :__meta__, :aggregates, :calculations])
     |> serialize_map(opts)
   end
-
 end

@@ -180,7 +180,8 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
       {:ok, band_structure} = StructureBuilder.build_band_structure(band, elements, context)
 
   """
-  @spec build_band_structure(map(), [map()], RenderContext.t(), build_options()) :: structure_result()
+  @spec build_band_structure(map(), [map()], RenderContext.t(), build_options()) ::
+          structure_result()
   def build_band_structure(band, elements, context, opts \\ []) do
     band_structure = %{
       name: get_band_name(band),
@@ -341,7 +342,9 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
     end
   end
 
-  defp should_include_section?(:variables, variables, _opts) when map_size(variables) > 0, do: true
+  defp should_include_section?(:variables, variables, _opts) when map_size(variables) > 0,
+    do: true
+
   defp should_include_section?(:groups, groups, _opts) when map_size(groups) > 0, do: true
   defp should_include_section?(_, _, _), do: false
 
@@ -407,7 +410,9 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   defp get_report_name(%RenderContext{report: report}) when is_atom(report), do: to_string(report)
   defp get_report_name(_), do: "unknown_report"
 
-  defp get_report_version(%RenderContext{report: %{version: version}}) when is_binary(version), do: version
+  defp get_report_version(%RenderContext{report: %{version: version}}) when is_binary(version),
+    do: version
+
   defp get_report_version(_), do: "1.0"
 
   defp get_report_bands(%RenderContext{report: %{bands: bands}}) when is_list(bands), do: bands
@@ -483,5 +488,4 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   defp get_schema_specification_url do
     "https://github.com/ash-project/ash_reports/blob/main/docs/json_schema_v3.5.0.json"
   end
-
 end

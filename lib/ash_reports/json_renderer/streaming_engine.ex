@@ -448,5 +448,4 @@ defmodule AshReports.JsonRenderer.StreamingEngine do
   defp get_context_id(%RenderContext{created_at: created_at}) do
     :erlang.phash2({created_at, self()}, 1_000_000)
   end
-
 end
