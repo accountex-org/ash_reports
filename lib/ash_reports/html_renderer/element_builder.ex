@@ -130,36 +130,20 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
   @spec build_all_elements(RenderContext.t(), build_options()) ::
           {:ok, [element_html()]} | {:error, term()}
   def build_all_elements(%RenderContext{} = context, options \\ []) do
-    try do
-      html_elements =
+    html_elements =
         context.report.bands
         |> Enum.flat_map(fn band ->
           band_elements = Map.get(band, :elements, [])
 
           band_elements
-          |> Enum.map(fn element ->
-            case build_element(element, context, options) do
-              {:ok, element_html} ->
-                Map.put(element_html, :band_name, band.name)
-
-              {:error, reason} ->
-                # Log error but continue with other elements
-                {:error, reason}
-            end
-          end)
-          |> Enum.filter(fn result ->
-            case result do
-              {:error, _} -> false
-              _ -> true
-            end
-          end)
+          |> Enum.map(&build_single_element(&1, context, options, band.name))
+          |> Enum.filter(&filter_successful_elements/1)
         end)
 
-      {:ok, html_elements}
-    rescue
-      error ->
-        {:error, {:element_building_failed, error}}
-    end
+    {:ok, html_elements}
+  rescue
+    error ->
+      {:error, {:element_building_failed, error}}
   end
 
   @doc """
@@ -788,6 +772,24 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       escape_html(text)
     else
       text
+    end
+  end
+
+  defp build_single_element(element, context, options, band_name) do
+    case build_element(element, context, options) do
+      {:ok, element_html} ->
+        Map.put(element_html, :band_name, band_name)
+
+      {:error, reason} ->
+        # Log error but continue with other elements
+        {:error, reason}
+    end
+  end
+
+  defp filter_successful_elements(result) do
+    case result do
+      {:error, _} -> false
+      _ -> true
     end
   end
 

@@ -10,6 +10,8 @@ defmodule AshReports.Info do
     extension: AshReports.Domain,
     sections: [:reports]
 
+  alias Spark.Dsl.Extension
+
   @doc """
   Gets a specific report by name from a domain.
   """
@@ -25,7 +27,7 @@ defmodule AshReports.Info do
   """
   @spec reports(Ash.Domain.t() | Spark.Dsl.t()) :: [AshReports.Report.t()]
   def reports(domain_or_dsl_state) do
-    Spark.Dsl.Extension.get_entities(domain_or_dsl_state, [:reports])
+    Extension.get_entities(domain_or_dsl_state, [:reports])
   end
 
   @doc """

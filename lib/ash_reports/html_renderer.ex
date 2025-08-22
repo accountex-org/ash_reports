@@ -111,11 +111,12 @@ defmodule AshReports.HtmlRenderer do
     start_time = System.monotonic_time(:microsecond)
 
     with {:ok, template_context} <- prepare_template_context(context, opts),
-         {:ok, formatted_context} <- apply_locale_formatting(template_context),
-         {:ok, css_content} <- generate_css(formatted_context),
-         {:ok, html_elements} <- build_html_elements(formatted_context),
-         {:ok, final_html} <- assemble_html(formatted_context, css_content, html_elements),
-         {:ok, result_metadata} <- build_result_metadata(formatted_context, start_time) do
+
+         {:ok, css_content} <- generate_css(template_context),
+         {:ok, html_elements} <- build_html_elements(template_context),
+         {:ok, final_html} <- assemble_html(template_context, css_content, html_elements),
+         {:ok, result_metadata} <- build_result_metadata(template_context, start_time) do
+
       result = %{
         content: final_html,
         metadata: result_metadata,

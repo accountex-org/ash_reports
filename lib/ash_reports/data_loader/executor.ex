@@ -334,30 +334,28 @@ defmodule AshReports.DataLoader.Executor do
   end
 
   defp load_batch_relationships(batch, relationships, domain, actor) do
-    try do
-      # Load each relationship for the batch
-      loaded_batch =
-        Enum.reduce_while(relationships, batch, fn relationship, acc_records ->
-          case Ash.load(acc_records, relationship, actor: actor, domain: domain) do
-            {:ok, loaded} ->
-              {:cont, loaded}
+    # Load each relationship for the batch
+    loaded_batch =
+      Enum.reduce_while(relationships, batch, fn relationship, acc_records ->
+        case Ash.load(acc_records, relationship, actor: actor, domain: domain) do
+          {:ok, loaded} ->
+            {:cont, loaded}
 
-            loaded when is_list(loaded) ->
-              {:cont, loaded}
+          loaded when is_list(loaded) ->
+            {:cont, loaded}
 
-            {:error, _reason} = error ->
-              {:halt, error}
+          {:error, _reason} = error ->
+            {:halt, error}
           end
         end)
 
-      case loaded_batch do
-        {:error, _reason} = error -> error
-        loaded when is_list(loaded) -> {:ok, loaded}
-      end
-    catch
-      kind, reason ->
-        {:error, {kind, reason}}
+    case loaded_batch do
+      {:error, _reason} = error -> error
+      loaded when is_list(loaded) -> {:ok, loaded}
     end
+  catch
+    kind, reason ->
+      {:error, {kind, reason}}
   end
 
   defp do_execute_with_retry(executor, query, domain, opts, 0) do
@@ -403,22 +401,20 @@ defmodule AshReports.DataLoader.Executor do
   end
 
   defp validate_resource_in_domain(resource, domain) do
-    try do
-      case apply(domain, :resources, []) do
-        resources when is_list(resources) ->
-          if resource in resources do
-            :ok
-          else
-            {:error, {:resource_not_in_domain, resource, domain}}
-          end
+    case apply(domain, :resources, []) do
+      resources when is_list(resources) ->
+        if resource in resources do
+          :ok
+        else
+          {:error, {:resource_not_in_domain, resource, domain}}
+        end
 
-        _ ->
-          {:error, {:domain_resources_unavailable, domain}}
-      end
-    catch
-      _kind, _reason ->
-        {:error, {:domain_validation_failed, domain}}
+      _ ->
+        {:error, {:domain_resources_unavailable, domain}}
     end
+  catch
+    _kind, _reason ->
+      {:error, {:domain_validation_failed, domain}}
   end
 
   defp validate_query_structure(%Ash.Query{resource: resource}) when is_atom(resource) do

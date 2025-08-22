@@ -204,8 +204,9 @@ defmodule AshReports.DataLoader.Pipeline do
   def process_all(config) do
     start_time = System.monotonic_time(:millisecond)
 
-    with {:ok, stream} <- process_stream(config) do
-      try do
+    case process_stream(config) do
+      {:ok, stream} ->
+        try do
         {records, errors} =
           stream
           |> Enum.reduce({[], []}, fn
@@ -231,12 +232,13 @@ defmodule AshReports.DataLoader.Pipeline do
         }
 
         {:ok, result}
-      catch
-        kind, reason ->
-          {:error, {kind, reason}}
-      end
-    else
-      {:error, _reason} = error -> error
+        catch
+          kind, reason ->
+            {:error, {kind, reason}}
+        end
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
@@ -286,15 +288,17 @@ defmodule AshReports.DataLoader.Pipeline do
   @spec create_custom_pipeline(pipeline_config(), [function()]) ::
           {:ok, Enumerable.t()} | {:error, term()}
   def create_custom_pipeline(config, transformations) do
-    with {:ok, base_stream} <- process_stream(config) do
-      custom_stream =
-        Enum.reduce(transformations, base_stream, fn transform_fn, stream ->
-          Stream.map(stream, transform_fn)
-        end)
+    case process_stream(config) do
+      {:ok, base_stream} ->
+        custom_stream =
+          Enum.reduce(transformations, base_stream, fn transform_fn, stream ->
+            Stream.map(stream, transform_fn)
+          end)
 
-      {:ok, custom_stream}
-    else
-      {:error, _reason} = error -> error
+        {:ok, custom_stream}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 

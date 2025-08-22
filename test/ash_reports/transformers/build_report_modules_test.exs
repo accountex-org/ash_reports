@@ -3,6 +3,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
 
   alias AshReports.Transformers.BuildReportModules
   alias Spark.Dsl.Transformer
+  alias Spark.Error.DslError
 
   describe "BuildReportModules transformer" do
     test "transforms DSL state by generating report modules" do

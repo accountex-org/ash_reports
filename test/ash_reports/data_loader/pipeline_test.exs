@@ -2,7 +2,7 @@ defmodule AshReports.DataLoader.PipelineTest do
   use ExUnit.Case, async: true
 
   alias AshReports.DataLoader.Pipeline
-  alias AshReports.{GroupProcessor, VariableState, Variable}
+  alias AshReports.{GroupProcessor, Variable, VariableState}
 
   describe "new/1" do
     test "creates pipeline config with required options" do
