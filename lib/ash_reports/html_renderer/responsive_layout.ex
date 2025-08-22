@@ -590,10 +590,12 @@ defmodule AshReports.HtmlRenderer.ResponsiveLayout do
     end
   end
 
+
   defp get_mobile_behavior(:label), do: %{positioning: :static, width: "100%", display: :block}
   defp get_mobile_behavior(:field), do: %{positioning: :static, width: "100%", display: :block}
   defp get_mobile_behavior(:line), do: %{positioning: :static, width: "100%", display: :block}
   defp get_mobile_behavior(:box), do: %{positioning: :static, width: "100%", display: :block}
   defp get_mobile_behavior(:image), do: %{positioning: :static, max_width: "100%", height: :auto}
   defp get_mobile_behavior(_), do: %{positioning: :static, width: "100%", display: :block}
+
 end

@@ -92,6 +92,8 @@ defmodule AshReports.HtmlRenderer do
   @behaviour AshReports.Renderer
 
   alias AshReports.{
+    Cldr,
+    Formatter,
     HtmlRenderer.CssGenerator,
     HtmlRenderer.ElementBuilder,
     HtmlRenderer.ResponsiveLayout,
@@ -109,14 +111,16 @@ defmodule AshReports.HtmlRenderer do
     start_time = System.monotonic_time(:microsecond)
 
     with {:ok, template_context} <- prepare_template_context(context, opts),
+
          {:ok, css_content} <- generate_css(template_context),
          {:ok, html_elements} <- build_html_elements(template_context),
          {:ok, final_html} <- assemble_html(template_context, css_content, html_elements),
          {:ok, result_metadata} <- build_result_metadata(template_context, start_time) do
+
       result = %{
         content: final_html,
         metadata: result_metadata,
-        context: template_context
+        context: formatted_context
       }
 
       {:ok, result}
@@ -215,7 +219,7 @@ defmodule AshReports.HtmlRenderer do
     {:ok, enhanced_context}
   end
 
-  defp build_template_config(_context, opts) do
+  defp build_template_config(context, opts) do
     %{
       template: Keyword.get(opts, :template, :default),
       responsive: Keyword.get(opts, :responsive, true),
@@ -223,7 +227,13 @@ defmodule AshReports.HtmlRenderer do
       embed_css: Keyword.get(opts, :embed_css, true),
       include_viewport: Keyword.get(opts, :include_viewport, true),
       semantic_html: Keyword.get(opts, :semantic_html, true),
-      accessibility: Keyword.get(opts, :accessibility, true)
+      accessibility: Keyword.get(opts, :accessibility, true),
+      # Locale-aware formatting settings
+      locale_formatting: Keyword.get(opts, :locale_formatting, true),
+      text_direction: RenderContext.get_text_direction(context),
+      locale_css_classes: RenderContext.locale_css_classes(context),
+      decimal_separator: Cldr.decimal_separator(RenderContext.get_locale(context)),
+      thousands_separator: Cldr.thousands_separator(RenderContext.get_locale(context))
     }
   end
 
@@ -239,6 +249,112 @@ defmodule AshReports.HtmlRenderer do
     TemplateEngine.render_complete_html(context, css_content, html_elements)
   end
 
+  defp apply_locale_formatting(%RenderContext{} = context) do
+    # Apply locale-aware formatting to data records if enabled
+    html_config = context.config[:html] || %{}
+
+    if html_config[:locale_formatting] do
+      locale = RenderContext.get_locale(context)
+
+      # Format the records with locale-aware formatting
+      formatted_records =
+        context.records
+        |> Enum.map(fn record ->
+          apply_record_formatting(record, locale, context)
+        end)
+
+      # Update context with formatted records
+      updated_context = %{context | records: formatted_records}
+
+      # Add formatted metadata
+      locale_metadata = RenderContext.get_locale_metadata(context)
+
+      updated_metadata =
+        Map.put(context.metadata, :locale_formatting, %{
+          applied: true,
+          locale: locale,
+          text_direction: RenderContext.get_text_direction(context),
+          formatting_metadata: locale_metadata
+        })
+
+      final_context = %{updated_context | metadata: updated_metadata}
+      {:ok, final_context}
+    else
+      {:ok, context}
+    end
+  end
+
+  defp apply_record_formatting(record, locale, _context) when is_map(record) do
+    # Apply locale-specific formatting to numeric and date fields
+    Enum.reduce(record, %{}, fn {key, value}, acc ->
+      formatted_value =
+        case detect_field_format_type(key, value) do
+          :number ->
+            case Formatter.format_value(value, locale: locale, type: :number) do
+              {:ok, formatted} -> formatted
+              {:error, _} -> value
+            end
+
+          :currency ->
+            case Formatter.format_value(value, locale: locale, type: :currency, currency: :USD) do
+              {:ok, formatted} -> formatted
+              {:error, _} -> value
+            end
+
+          :date ->
+            case Formatter.format_value(value, locale: locale, type: :date) do
+              {:ok, formatted} -> formatted
+              {:error, _} -> value
+            end
+
+          :percentage ->
+            case Formatter.format_value(value, locale: locale, type: :percentage) do
+              {:ok, formatted} -> formatted
+              {:error, _} -> value
+            end
+
+          _ ->
+            value
+        end
+
+      # Store both original and formatted values
+      acc
+      # Keep original for calculations
+      |> Map.put(key, value)
+      # Add formatted for display
+      |> Map.put(String.to_atom("#{key}_formatted"), formatted_value)
+    end)
+  end
+
+  defp apply_record_formatting(record, _locale, _context), do: record
+
+  defp detect_field_format_type(key, value) do
+    key_string = to_string(key)
+
+    cond do
+      # Currency fields
+      String.contains?(key_string, ["amount", "price", "cost", "total", "salary", "wage"]) and
+          is_number(value) ->
+        :currency
+
+      # Percentage fields
+      String.contains?(key_string, ["rate", "percent", "ratio", "margin"]) and is_number(value) ->
+        :percentage
+
+      # Date fields
+      match?(%Date{}, value) or match?(%DateTime{}, value) or match?(%NaiveDateTime{}, value) ->
+        :date
+
+      # Numeric fields
+      is_number(value) ->
+        :number
+
+      # Default to no special formatting
+      true ->
+        :string
+    end
+  end
+
   defp build_result_metadata(%RenderContext{} = context, start_time) do
     end_time = System.monotonic_time(:microsecond)
     render_time = end_time - start_time
@@ -252,12 +368,20 @@ defmodule AshReports.HtmlRenderer do
       element_count: length(context.rendered_elements),
       css_rules_count: get_css_rules_count(context),
       html_size_bytes: get_estimated_html_size(context),
-      phase: "3.2.0",
+      phase: "4.1.0",
+      # Phase 4.1 CLDR Integration metadata
+      locale: RenderContext.get_locale(context),
+      text_direction: RenderContext.get_text_direction(context),
+      locale_formatting_applied:
+        get_in(context.metadata, [:locale_formatting, :applied]) || false,
+      locale_css_classes: RenderContext.locale_css_classes(context),
       components_used: [
         :template_engine,
         :css_generator,
         :element_builder,
-        :responsive_layout
+        :responsive_layout,
+        # New component
+        :cldr_formatter
       ]
     }
 

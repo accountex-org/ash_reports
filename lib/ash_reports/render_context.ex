@@ -22,6 +22,7 @@ defmodule AshReports.RenderContext do
 
   - **Report Definition**: The report struct with bands, elements, and metadata
   - **Processed Data**: Records from DataLoader with group and variable processing
+  - **Internationalization**: Locale information, text direction, and formatting metadata
   - **Layout State**: Current layout calculations and positioning information
   - **Render Configuration**: Output format, styling, and rendering options
   - **Variable Values**: Resolved variable values from Phase 2 processing
@@ -51,6 +52,20 @@ defmodule AshReports.RenderContext do
       |> RenderContext.add_layout_info(layout_data)
       |> RenderContext.update_variable_context(new_values)
 
+  ### Locale Management
+
+      # Create context with specific locale
+      config = %{locale: "fr", format: :html}
+      context = RenderContext.new(report, data_result, config)
+
+      # Change locale during rendering
+      context = RenderContext.set_locale(context, "de")
+
+      # Get locale information
+      locale = RenderContext.get_locale(context)
+      direction = RenderContext.get_text_direction(context)
+      is_rtl = RenderContext.rtl?(context)
+
   ### Error Handling
 
       case RenderContext.validate(context) do
@@ -67,7 +82,7 @@ defmodule AshReports.RenderContext do
 
   """
 
-  alias AshReports.{Band, Element, Group, Report}
+  alias AshReports.{Band, Cldr, Element, Group, Report}
 
   @type t :: %__MODULE__{
           # Core context
@@ -86,6 +101,11 @@ defmodule AshReports.RenderContext do
           variables: %{atom() => term()},
           groups: %{term() => map()},
           metadata: map(),
+
+          # Internationalization context
+          locale: String.t(),
+          text_direction: String.t(),
+          locale_metadata: map(),
 
           # Layout context
           layout_state: map(),
@@ -123,6 +143,11 @@ defmodule AshReports.RenderContext do
     groups: %{},
     metadata: %{},
 
+    # Internationalization context
+    locale: "en",
+    text_direction: "ltr",
+    locale_metadata: %{},
+
     # Layout context
     layout_state: %{},
     current_position: %{x: 0, y: 0},
@@ -153,6 +178,7 @@ defmodule AshReports.RenderContext do
   @spec new(Report.t(), map(), map()) :: t()
   def new(report, data_result, config \\ %{}) do
     now = DateTime.utc_now()
+    locale = determine_locale(config, data_result)
 
     %__MODULE__{
       report: report,
@@ -162,6 +188,9 @@ defmodule AshReports.RenderContext do
       variables: Map.get(data_result, :variables, %{}),
       groups: Map.get(data_result, :groups, %{}),
       metadata: Map.get(data_result, :metadata, %{}),
+      locale: locale,
+      text_direction: Cldr.text_direction(locale),
+      locale_metadata: build_locale_metadata(locale),
       layout_state: initialize_layout_state(report, config),
       page_dimensions: get_page_dimensions(config),
       created_at: now,
@@ -458,6 +487,112 @@ defmodule AshReports.RenderContext do
     }
   end
 
+  @doc """
+  Sets the locale for the context and updates related locale metadata.
+
+  ## Examples
+
+      context = RenderContext.set_locale(context, "fr")
+
+  """
+  @spec set_locale(t(), String.t()) :: t()
+  def set_locale(%__MODULE__{} = context, locale) do
+    if Cldr.locale_supported?(locale) do
+      %{
+        context
+        | locale: locale,
+          text_direction: Cldr.text_direction(locale),
+          locale_metadata: build_locale_metadata(locale),
+          updated_at: DateTime.utc_now()
+      }
+    else
+      add_warning(context, %{
+        type: :unsupported_locale,
+        message: "Locale '#{locale}' is not supported, keeping current locale '#{context.locale}'"
+      })
+    end
+  end
+
+  @doc """
+  Gets the current locale for the context.
+
+  ## Examples
+
+      locale = RenderContext.get_locale(context)
+
+  """
+  @spec get_locale(t()) :: String.t()
+  def get_locale(%__MODULE__{locale: locale}), do: locale
+
+  @doc """
+  Gets the text direction for the current locale.
+
+  ## Examples
+
+      direction = RenderContext.get_text_direction(context)
+      # => "ltr" or "rtl"
+
+  """
+  @spec get_text_direction(t()) :: String.t()
+  def get_text_direction(%__MODULE__{text_direction: direction}), do: direction
+
+  @doc """
+  Gets locale-specific metadata for formatting.
+
+  ## Examples
+
+      metadata = RenderContext.get_locale_metadata(context)
+      # => %{decimal_separator: ".", thousands_separator: ",", ...}
+
+  """
+  @spec get_locale_metadata(t()) :: map()
+  def get_locale_metadata(%__MODULE__{locale_metadata: metadata}), do: metadata
+
+  @doc """
+  Updates the locale metadata in the context.
+
+  ## Examples
+
+      metadata = %{custom_format: "yyyy-MM-dd"}
+      context = RenderContext.update_locale_metadata(context, metadata)
+
+  """
+  @spec update_locale_metadata(t(), map()) :: t()
+  def update_locale_metadata(%__MODULE__{} = context, new_metadata) do
+    merged_metadata = Map.merge(context.locale_metadata, new_metadata)
+    %{context | locale_metadata: merged_metadata, updated_at: DateTime.utc_now()}
+  end
+
+  @doc """
+  Determines if the context uses a right-to-left locale.
+
+  ## Examples
+
+      RenderContext.rtl?(context)
+      # => true or false
+
+  """
+  @spec rtl?(t()) :: boolean()
+  def rtl?(%__MODULE__{text_direction: "rtl"}), do: true
+  def rtl?(%__MODULE__{}), do: false
+
+  @doc """
+  Gets CSS classes appropriate for the current locale.
+
+  ## Examples
+
+      classes = RenderContext.locale_css_classes(context)
+      # => ["dir-ltr", "locale-en"]
+
+  """
+  @spec locale_css_classes(t()) :: [String.t()]
+  def locale_css_classes(%__MODULE__{} = context) do
+    [
+      "dir-#{context.text_direction}",
+      "locale-#{String.replace(context.locale, "-", "_")}"
+    ]
+  end
+
   # Private helper functions
 
   defp merge_default_config(config) do
@@ -529,4 +664,39 @@ defmodule AshReports.RenderContext do
   end
 
   defp validate_config(errors, _context), do: errors
+
+  # Locale-related helper functions
+
+  @spec determine_locale(map(), map()) :: String.t()
+  defp determine_locale(config, data_result) do
+    # Priority order for locale determination:
+    # 1. Explicit locale in config
+    # 2. Locale from data_result metadata
+    # 3. Current process locale
+    # 4. Application default
+    # 5. System default
+
+    sources = %{
+      locale: Map.get(config, :locale),
+      data_locale: get_in(data_result, [:metadata, :locale]),
+      process_locale: Process.get(:ash_reports_locale),
+      accept_language: Map.get(config, :accept_language)
+    }
+
+    case Cldr.detect_locale(sources) do
+      {:ok, locale} -> locale
+      _error -> Cldr.default_locale() |> to_string()
+    end
+  end
+
+  @spec build_locale_metadata(String.t()) :: map()
+  defp build_locale_metadata(locale) do
+    %{
+      decimal_separator: Cldr.decimal_separator(locale),
+      thousands_separator: Cldr.thousands_separator(locale),
+      text_direction: Cldr.text_direction(locale),
+      locale_name: locale,
+      supported: Cldr.locale_supported?(locale)
+    }
+  end
 end
