@@ -130,37 +130,35 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
   @spec build_all_elements(RenderContext.t(), build_options()) ::
           {:ok, [element_html()]} | {:error, term()}
   def build_all_elements(%RenderContext{} = context, options \\ []) do
-    try do
-      html_elements =
-        context.report.bands
-        |> Enum.flat_map(fn band ->
-          band_elements = Map.get(band, :elements, [])
+    html_elements =
+      context.report.bands
+      |> Enum.flat_map(fn band ->
+        band_elements = Map.get(band, :elements, [])
 
-          band_elements
-          |> Enum.map(fn element ->
-            case build_element(element, context, options) do
-              {:ok, element_html} ->
-                Map.put(element_html, :band_name, band.name)
+        band_elements
+        |> Enum.map(&build_band_element(&1, band.name, context, options))
+        |> Enum.filter(&filter_successful_elements/1)
+      end)
 
-              {:error, reason} ->
-                # Log error but continue with other elements
-                {:error, reason}
-            end
-          end)
-          |> Enum.filter(fn result ->
-            case result do
-              {:error, _} -> false
-              _ -> true
-            end
-          end)
-        end)
+    {:ok, html_elements}
+  rescue
+    error ->
+      {:error, {:element_building_failed, error}}
+  end
 
-      {:ok, html_elements}
-    rescue
-      error ->
-        {:error, {:element_building_failed, error}}
+  defp build_band_element(element, band_name, context, options) do
+    case build_element(element, context, options) do
+      {:ok, element_html} ->
+        Map.put(element_html, :band_name, band_name)
+
+      {:error, reason} ->
+        # Log error but continue with other elements
+        {:error, reason}
     end
   end
+
+  defp filter_successful_elements({:error, _}), do: false
+  defp filter_successful_elements(_), do: true
 
   @doc """
   Builds HTML for a single element.
@@ -533,26 +531,30 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
 
     case AshReports.FormatSpecification.compile(spec) do
       {:ok, compiled_spec} ->
-        locale = get_locale_from_context(context)
-        format_context = %{locale: locale, element: element}
-
-        case AshReports.FormatSpecification.get_effective_format(
-               compiled_spec,
-               value,
-               format_context
-             ) do
-          {:ok, {pattern, options}} ->
-            case AshReports.Formatter.format_with_custom_pattern(value, pattern, locale, options) do
-              {:ok, formatted} -> {:ok, formatted}
-              {:error, _reason} -> {:ok, to_string(value)}
-            end
-
-          {:error, _reason} ->
-            {:ok, to_string(value)}
-        end
+        apply_compiled_conditional_format(value, compiled_spec, element, context)
 
       {:error, _reason} ->
         {:ok, to_string(value)}
+    end
+  end
+
+  defp apply_compiled_conditional_format(value, compiled_spec, element, context) do
+    locale = get_locale_from_context(context)
+    format_context = %{locale: locale, element: element}
+
+    case AshReports.FormatSpecification.get_effective_format(compiled_spec, value, format_context) do
+      {:ok, {pattern, options}} ->
+        format_with_pattern_and_options(value, pattern, locale, options)
+
+      {:error, _reason} ->
+        {:ok, to_string(value)}
+    end
+  end
+
+  defp format_with_pattern_and_options(value, pattern, locale, options) do
+    case AshReports.Formatter.format_with_custom_pattern(value, pattern, locale, options) do
+      {:ok, formatted} -> {:ok, formatted}
+      {:error, _reason} -> {:ok, to_string(value)}
     end
   end
 
@@ -663,28 +665,33 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
     element_name = Map.get(element, :name)
 
     if element_name do
-      # Look for element position in layout state
-      context.layout_state.bands
-      |> Enum.find_value(fn {_band_name, band_layout} ->
-        Enum.find(band_layout.elements, fn element_layout ->
-          element_layout.element.name == element_name
-        end)
-      end)
-      |> case do
-        nil ->
-          %{}
-
-        element_layout ->
-          %{
-            x: element_layout.position.x,
-            y: element_layout.position.y,
-            width: element_layout.dimensions.width,
-            height: element_layout.dimensions.height
-          }
-      end
+      find_element_in_layout(context.layout_state.bands, element_name)
     else
       %{}
     end
+  end
+
+  defp find_element_in_layout(bands, element_name) do
+    bands
+    |> Enum.find_value(&find_element_in_band(&1, element_name))
+    |> convert_element_layout_to_position()
+  end
+
+  defp find_element_in_band({_band_name, band_layout}, element_name) do
+    Enum.find(band_layout.elements, fn element_layout ->
+      element_layout.element.name == element_name
+    end)
+  end
+
+  defp convert_element_layout_to_position(nil), do: %{}
+
+  defp convert_element_layout_to_position(element_layout) do
+    %{
+      x: element_layout.position.x,
+      y: element_layout.position.y,
+      width: element_layout.dimensions.width,
+      height: element_layout.dimensions.height
+    }
   end
 
   defp build_font_style(element) do

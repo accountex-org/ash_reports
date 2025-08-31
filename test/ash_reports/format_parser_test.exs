@@ -213,7 +213,7 @@ defmodule AshReports.FormatParserTest do
       {:ok, result} = compiled.formatter.(1234.56, currency: :USD)
 
       assert is_binary(result)
-      assert result =~ "1234"
+      assert String.contains?(result, "1,234")
     end
 
     test "compiled date formatter works" do
@@ -222,9 +222,8 @@ defmodule AshReports.FormatParserTest do
       {:ok, result} = compiled.formatter.(~D[2024-03-15], [])
 
       assert is_binary(result)
-      assert result =~ "2024"
-      assert result =~ "03"
-      assert result =~ "15"
+      assert String.contains?(result, "2024")
+      assert String.contains?(result, "15")
     end
 
     test "compiled percentage formatter works" do

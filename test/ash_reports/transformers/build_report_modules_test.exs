@@ -2,7 +2,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
   use ExUnit.Case, async: false
 
   alias AshReports.Transformers.BuildReportModules
-  alias Spark.Dsl.Transformer
+  alias Spark.Dsl.{Extension, Transformer}
 
   describe "BuildReportModules transformer" do
     test "transforms DSL state by generating report modules" do
@@ -48,15 +48,16 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       assert TestDomain.Reports.Module.concat(TestReport, Pdf)
 
       # Test the generated module interface
-      report = TestDomain.Reports.TestReport.definition()
+      test_report_module = TestDomain.Reports.TestReport
+      report = test_report_module.definition()
       assert report.name == :test_report
       assert report.title == "Test Report"
       assert report.driving_resource == AshReports.Test.Customer
 
-      assert TestDomain.Reports.TestReport.domain() == TestDomain
-      assert TestDomain.Reports.TestReport.supported_formats() == [:html, :pdf]
-      assert TestDomain.Reports.TestReport.supports_format?(:html) == true
-      assert TestDomain.Reports.TestReport.supports_format?(:json) == false
+      assert test_report_module.domain() == TestDomain
+      assert test_report_module.supported_formats() == [:html, :pdf]
+      assert test_report_module.supports_format?(:html) == true
+      assert test_report_module.supports_format?(:json) == false
     end
 
     test "generates format-specific modules with correct interfaces" do
@@ -112,7 +113,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
     test "persists report data in DSL state" do
       # Create a minimal domain to test DSL state manipulation
       dsl_state =
-        Spark.Dsl.Extension.build_entity_entities(
+        Extension.build_entity_entities(
           AshReports.Domain,
           [],
           :reports,

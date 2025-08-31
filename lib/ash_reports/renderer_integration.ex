@@ -431,19 +431,21 @@ defmodule AshReports.RendererIntegration do
 
   defp get_output_format(config) do
     if config.renderer do
-      # Try to determine format from renderer module name
-      case Atom.to_string(config.renderer) do
-        module_name ->
-          cond do
-            String.contains?(module_name, "Html") -> :html
-            String.contains?(module_name, "Pdf") -> :pdf
-            String.contains?(module_name, "Json") -> :json
-            String.contains?(module_name, "Csv") -> :csv
-            true -> :unknown
-          end
-      end
+      determine_format_from_renderer(config.renderer)
     else
       :unknown
+    end
+  end
+
+  defp determine_format_from_renderer(renderer) do
+    module_name = Atom.to_string(renderer)
+
+    cond do
+      String.contains?(module_name, "Html") -> :html
+      String.contains?(module_name, "Pdf") -> :pdf
+      String.contains?(module_name, "Json") -> :json
+      String.contains?(module_name, "Csv") -> :csv
+      true -> :unknown
     end
   end
 
@@ -455,54 +457,49 @@ defmodule AshReports.RendererIntegration do
 
     if config.variables != [] do
       # For now, streaming with variables uses standard load then stream transformation
-      case DataLoader.load_report_with_variables(
-             domain,
-             report_name,
-             params,
-             config.variables,
-             data_config
-           ) do
-        {:ok, data_result} ->
-          stream =
-            data_result.records
-            |> Stream.chunk_every(data_config[:chunk_size] || 1000)
-            |> Stream.map(fn chunk ->
-              %{data_result | records: chunk}
-            end)
+      data_result =
+        DataLoader.load_report_with_variables(
+          domain,
+          report_name,
+          params,
+          config.variables,
+          data_config
+        )
 
-          {:ok, stream}
-
-        {:error, _reason} = error ->
-          error
-      end
+      create_chunked_stream(data_result, data_config)
     else
       DataLoader.stream_report(domain, report_name, params, data_config)
     end
   end
 
-  defp create_render_stream(report, data_stream, config) do
-    render_stream =
-      data_stream
-      |> Stream.map(fn data_chunk ->
-        case create_render_context(report, data_chunk, config) do
-          {:ok, context} ->
-            case execute_render_pipeline(context, config) do
-              {:ok, pipeline_result} ->
-                %{
-                  content: pipeline_result.content,
-                  metadata: pipeline_result.metadata
-                }
-
-              {:error, reason} ->
-                {:error, reason}
-            end
-
-          {:error, reason} ->
-            {:error, reason}
-        end
+  defp create_chunked_stream({:ok, data_result}, data_config) do
+    stream =
+      data_result.records
+      |> Stream.chunk_every(data_config[:chunk_size] || 1000)
+      |> Stream.map(fn chunk ->
+        %{data_result | records: chunk}
       end)
 
+    {:ok, stream}
+  end
+
+  defp create_chunked_stream({:error, _reason} = error, _data_config), do: error
+
+  defp create_render_stream(report, data_stream, config) do
+    render_stream = Stream.map(data_stream, &render_data_chunk(&1, report, config))
     {:ok, render_stream}
+  end
+
+  defp render_data_chunk(data_chunk, report, config) do
+    with {:ok, context} <- create_render_context(report, data_chunk, config),
+         {:ok, pipeline_result} <- execute_render_pipeline(context, config) do
+      %{
+        content: pipeline_result.content,
+        metadata: pipeline_result.metadata
+      }
+    else
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp validate_renderer_compatibility(renderer) when is_atom(renderer) do

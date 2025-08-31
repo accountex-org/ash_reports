@@ -172,19 +172,17 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
   @spec render_template(template_name(), template_assigns()) ::
           {:ok, String.t()} | {:error, term()}
   def render_template(template_name, assigns) do
-    try do
-      case get_compiled_template(template_name) do
-        {:ok, compiled_template} ->
-          html = compiled_template.(assigns)
-          {:ok, html}
+    case get_compiled_template(template_name) do
+      {:ok, compiled_template} ->
+        html = compiled_template.(assigns)
+        {:ok, html}
 
-        {:error, _reason} = error ->
-          error
-      end
-    rescue
-      error ->
-        {:error, {:template_render_error, error}}
+      {:error, _reason} = error ->
+        error
     end
+  rescue
+    error ->
+      {:error, {:template_render_error, error}}
   end
 
   @doc """
@@ -198,13 +196,11 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
   """
   @spec compile_template_string(String.t()) :: {:ok, compiled_template()} | {:error, term()}
   def compile_template_string(template_string) when is_binary(template_string) do
-    try do
-      compiled = EEx.compile_string(template_string, trim: true)
-      {:ok, compiled}
-    rescue
-      error ->
-        {:error, {:compilation_error, error}}
-    end
+    compiled = EEx.compile_string(template_string, trim: true)
+    {:ok, compiled}
+  rescue
+    error ->
+      {:error, {:compilation_error, error}}
   end
 
   @doc """
@@ -386,16 +382,19 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
         {:ok, compiled}
 
       [] ->
-        # Try to compile from default templates
-        case Map.get(@default_templates, template_name) do
-          nil ->
-            {:error, {:template_not_found, template_name}}
+        compile_from_default_templates(template_name)
+    end
+  end
 
-          template_content ->
-            case compile_and_cache_template(template_name, template_content) do
-              {:ok, compiled} -> {:ok, compiled}
-              {:error, _reason} = error -> error
-            end
+  defp compile_from_default_templates(template_name) do
+    case Map.get(@default_templates, template_name) do
+      nil ->
+        {:error, {:template_not_found, template_name}}
+
+      template_content ->
+        case compile_and_cache_template(template_name, template_content) do
+          {:ok, compiled} -> {:ok, compiled}
+          {:error, _reason} = error -> error
         end
     end
   end

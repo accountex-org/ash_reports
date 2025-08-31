@@ -2,7 +2,7 @@ defmodule AshReports.DataLoader.PipelineTest do
   use ExUnit.Case, async: true
 
   alias AshReports.DataLoader.Pipeline
-  alias AshReports.{GroupProcessor, VariableState, Variable}
+  alias AshReports.{GroupProcessor, Variable, VariableState}
 
   describe "new/1" do
     test "creates pipeline config with required options" do
@@ -382,15 +382,15 @@ defmodule AshReports.DataLoader.PipelineTest do
     )
   end
 
-  defp with_mock_stream(mock_data) do
+  defp with_mock_stream(mock_data, test_block) do
     # Mock the internal stream processing
     # In a real implementation, you would mock the specific stream functions
-    mock_data
+    test_block.()
   end
 
-  defp with_mock_data_stream(mock_data) do
+  defp with_mock_data_stream(mock_data, test_block) do
     # Mock data stream for testing
-    mock_data
+    test_block.()
   end
 end
 

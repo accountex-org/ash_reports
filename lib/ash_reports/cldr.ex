@@ -116,6 +116,8 @@ defmodule AshReports.Cldr do
 
   """
 
+  alias Cldr.Number.Symbol
+
   use Cldr,
     otp_app: :ash_reports,
     locales: [
@@ -486,7 +488,7 @@ defmodule AshReports.Cldr do
   """
   @spec decimal_separator(String.t()) :: String.t()
   def decimal_separator(locale) do
-    case Cldr.Number.Symbol.number_symbols_for(locale, :latn) do
+    case Symbol.number_symbols_for(locale, :latn) do
       {:ok, symbols} -> Map.get(symbols, :decimal, ".")
       {:error, _} -> "."
     end
@@ -506,7 +508,7 @@ defmodule AshReports.Cldr do
   """
   @spec thousands_separator(String.t()) :: String.t()
   def thousands_separator(locale) do
-    case Cldr.Number.Symbol.number_symbols_for(locale, :latn) do
+    case Symbol.number_symbols_for(locale, :latn) do
       {:ok, symbols} -> Map.get(symbols, :group, ",")
       {:error, _} -> ","
     end

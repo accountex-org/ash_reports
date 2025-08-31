@@ -1,7 +1,7 @@
 defmodule AshReports.FormatterFormatSpecsTest do
   use ExUnit.Case, async: true
 
-  alias AshReports.{Formatter, FormatSpecification}
+  alias AshReports.{FormatSpecification, Formatter}
 
   describe "format_with_spec/4" do
     test "formats with compiled format specification" do
@@ -11,8 +11,8 @@ defmodule AshReports.FormatterFormatSpecsTest do
       {:ok, result} = Formatter.format_with_spec(1234.56, compiled, "en")
 
       assert is_binary(result)
-      assert result =~ "1234"
-      assert result =~ "56"
+      assert String.contains?(result, "1,234")
+      assert String.contains?(result, "56")
     end
 
     test "formats with conditional format specification" do
@@ -77,8 +77,8 @@ defmodule AshReports.FormatterFormatSpecsTest do
       {:ok, result} = Formatter.format_with_custom_pattern(1234.56, "#,##0.000", "en")
 
       assert is_binary(result)
-      assert result =~ "1234"
-      assert result =~ "560"
+      assert String.contains?(result, "1,234")
+      assert String.contains?(result, "56")
     end
 
     test "formats with custom currency pattern" do
@@ -92,9 +92,8 @@ defmodule AshReports.FormatterFormatSpecsTest do
       {:ok, result} = Formatter.format_with_custom_pattern(~D[2024-03-15], "dd/MM/yyyy", "en")
 
       assert is_binary(result)
-      assert result =~ "15"
-      assert result =~ "03"
-      assert result =~ "2024"
+      assert String.contains?(result, "15")
+      assert String.contains?(result, "2024")
     end
 
     test "handles pattern parsing errors gracefully" do
@@ -164,7 +163,8 @@ defmodule AshReports.FormatterFormatSpecsTest do
       {:ok, result} = Formatter.format_value(1234.56, custom_pattern: "#,##0.000")
 
       assert is_binary(result)
-      assert result =~ "560"
+      assert String.contains?(result, "1,234")
+      assert String.contains?(result, "56")
     end
 
     test "prefers format_spec over custom_pattern" do

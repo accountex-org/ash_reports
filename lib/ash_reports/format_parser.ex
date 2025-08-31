@@ -467,9 +467,14 @@ defmodule AshReports.FormatParser do
   end
 
   @spec check_valid_sequences([token()], String.t()) :: :ok | {:error, parse_error()}
-  defp check_valid_sequences(_tokens, _pattern) do
-    # Simplified validation - a real implementation would check for invalid sequences
-    :ok
+  defp check_valid_sequences(_tokens, pattern) do
+    # Check for invalid nested braces like {{}}
+    if String.contains?(pattern, ["{{", "}}"]) do
+      {:error,
+       format_parse_error("Invalid pattern syntax: nested braces not allowed", 0, pattern)}
+    else
+      :ok
+    end
   end
 
   @spec parse_tokens([token()], String.t()) :: {:ok, any()} | {:error, parse_error()}
@@ -481,19 +486,26 @@ defmodule AshReports.FormatParser do
   @spec validate_pattern_type(any(), String.t(), keyword()) ::
           {:ok, format_type()} | {:error, parse_error()}
   defp validate_pattern_type(_ast, pattern, options) do
-    detected_type = detect_type(pattern)
-    expected_type = Keyword.get(options, :type)
+    # Handle empty pattern as error
+    if String.length(pattern) == 0 do
+      {:error, format_parse_error("Pattern cannot be empty", 0, pattern)}
+    else
+      detected_type = detect_type(pattern)
+      expected_type = Keyword.get(options, :type)
 
-    case expected_type do
-      nil ->
-        {:ok, detected_type}
+      case expected_type do
+        nil ->
+          {:ok, detected_type}
 
-      ^detected_type ->
-        {:ok, detected_type}
+        ^detected_type ->
+          {:ok, detected_type}
 
-      _ ->
-        error_msg = "Pattern type mismatch: expected #{expected_type}, detected #{detected_type}"
-        {:error, format_parse_error(error_msg, 0, pattern)}
+        _ ->
+          error_msg =
+            "Pattern type mismatch: expected #{expected_type}, detected #{detected_type}"
+
+          {:error, format_parse_error(error_msg, 0, pattern)}
+      end
     end
   end
 
@@ -571,7 +583,7 @@ defmodule AshReports.FormatParser do
   @spec generate_suggestions(String.t(), String.t()) :: [String.t()]
   defp generate_suggestions(message, _context) do
     cond do
-      String.contains?(message, "unmatched") ->
+      String.contains?(message, ["unmatched", "brace", "nested"]) ->
         [
           "Check for unmatched braces {} or brackets []",
           "Ensure all opening symbols have corresponding closing symbols"

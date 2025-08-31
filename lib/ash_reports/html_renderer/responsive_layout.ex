@@ -510,31 +510,33 @@ defmodule AshReports.HtmlRenderer.ResponsiveLayout do
 
   defp adapt_mobile_layout(layout_result, responsive_config) do
     if responsive_config.adapt_positioning do
-      # Convert absolute positioning to responsive flow
-      adapted_bands =
-        layout_result.bands
-        |> Enum.map(fn {band_name, band_layout} ->
-          adapted_elements =
-            band_layout.elements
-            |> Enum.map(fn element_layout ->
-              %{
-                element_layout
-                | # Remove absolute positioning
-                  position: %{x: 0, y: 0},
-                  dimensions: %{element_layout.dimensions | width: "100%"}
-              }
-            end)
-
-          adapted_band_layout = %{band_layout | elements: adapted_elements}
-          {band_name, adapted_band_layout}
-        end)
-        |> Enum.into(%{})
-
+      adapted_bands = convert_bands_to_responsive_flow(layout_result.bands)
       adapted_layout = %{layout_result | bands: adapted_bands}
       {:ok, adapted_layout}
     else
       {:ok, layout_result}
     end
+  end
+
+  defp convert_bands_to_responsive_flow(bands) do
+    bands
+    |> Enum.map(&convert_band_to_responsive_flow/1)
+    |> Enum.into(%{})
+  end
+
+  defp convert_band_to_responsive_flow({band_name, band_layout}) do
+    adapted_elements = Enum.map(band_layout.elements, &convert_element_to_responsive/1)
+    adapted_band_layout = %{band_layout | elements: adapted_elements}
+    {band_name, adapted_band_layout}
+  end
+
+  defp convert_element_to_responsive(element_layout) do
+    %{
+      element_layout
+      | # Remove absolute positioning
+        position: %{x: 0, y: 0},
+        dimensions: %{element_layout.dimensions | width: "100%"}
+    }
   end
 
   defp adapt_tablet_layout(layout_result, responsive_config) do
@@ -581,33 +583,24 @@ defmodule AshReports.HtmlRenderer.ResponsiveLayout do
   end
 
   defp get_default_element_behavior(element_type, breakpoint) do
-    case {element_type, breakpoint} do
-      {:label, :mobile} ->
-        %{positioning: :static, width: "100%", display: :block}
-
-      {:field, :mobile} ->
-        %{positioning: :static, width: "100%", display: :block}
-
-      {:line, :mobile} ->
-        %{positioning: :static, width: "100%", display: :block}
-
-      {:box, :mobile} ->
-        %{positioning: :static, width: "100%", display: :block}
-
-      {:image, :mobile} ->
-        %{positioning: :static, max_width: "100%", height: :auto}
-
-      {_, :tablet} ->
-        %{positioning: :hybrid}
-
-      {_, :desktop} ->
-        %{positioning: :absolute}
-
-      {_, :print} ->
-        %{positioning: :absolute, optimize_colors: true}
-
-      _ ->
-        %{}
+    case breakpoint do
+      :mobile -> get_mobile_behavior(element_type)
+      :tablet -> %{positioning: :hybrid}
+      :desktop -> %{positioning: :absolute}
+      :print -> %{positioning: :absolute, optimize_colors: true}
+      _ -> %{}
     end
+  end
+
+  defp get_mobile_behavior(:image) do
+    %{positioning: :static, max_width: "100%", height: :auto}
+  end
+
+  defp get_mobile_behavior(element_type) when element_type in [:label, :field, :line, :box] do
+    %{positioning: :static, width: "100%", display: :block}
+  end
+
+  defp get_mobile_behavior(_element_type) do
+    %{positioning: :static, width: "100%", display: :block}
   end
 end

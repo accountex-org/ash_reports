@@ -392,7 +392,8 @@ defmodule AshReports.DataLoader.CacheTest do
 
       # All should be present
       for i <- 1..3 do
-        assert {:hit, "value_#{i}"} = Cache.get(small_cache, "key_#{i}")
+        expected_value = "value_#{i}"
+        assert {:hit, ^expected_value} = Cache.get(small_cache, "key_#{i}")
       end
 
       # Add one more (should trigger eviction)

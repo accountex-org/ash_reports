@@ -63,7 +63,8 @@ defmodule AshReports.Application do
       {TempFileCleanup, cleanup_config()}
     ]
 
-    if chromic_pdf_available?() do
+    if chromic_pdf_available?() and
+         not Application.get_env(:ash_reports, :disable_pdf_generation, false) do
       [chromic_pdf_supervisor() | base_children]
     else
       base_children
@@ -76,11 +77,9 @@ defmodule AshReports.Application do
   def chromic_pdf_available? do
     case Code.ensure_loaded(ChromicPDF) do
       {:module, ChromicPDF} ->
-        # Check if ChromicPDF can start properly
-        case Application.ensure_all_started(:chromic_pdf) do
-          {:ok, _} -> true
-          _ -> false
-        end
+        # For now, just check if module is loaded without starting
+        # to avoid Chrome dependency issues in tests
+        true
 
       _ ->
         false

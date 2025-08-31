@@ -1,6 +1,8 @@
 defmodule AshReports.Verifiers.ValidateReportsTest do
   use ExUnit.Case, async: false
 
+  alias DslError
+
   describe "ValidateReports verifier" do
     test "accepts valid report definitions" do
       # This should compile without errors
@@ -33,7 +35,7 @@ defmodule AshReports.Verifiers.ValidateReportsTest do
     end
 
     test "rejects reports with duplicate names" do
-      assert_raise Spark.Error.DslError, ~r/Duplicate report names found/, fn ->
+      assert_raise DslError, ~r/Duplicate report names found/, fn ->
         defmodule DuplicateNamesDomain do
           use Ash.Domain, extensions: [AshReports.Domain]
 
@@ -73,7 +75,7 @@ defmodule AshReports.Verifiers.ValidateReportsTest do
     end
 
     test "rejects reports without driving_resource" do
-      assert_raise Spark.Error.DslError, ~r/must specify a driving_resource/, fn ->
+      assert_raise DslError, ~r/must specify a driving_resource/, fn ->
         defmodule NoDrivingResourceDomain do
           use Ash.Domain, extensions: [AshReports.Domain]
 
@@ -100,7 +102,7 @@ defmodule AshReports.Verifiers.ValidateReportsTest do
     end
 
     test "rejects reports without detail bands" do
-      assert_raise Spark.Error.DslError, ~r/must have at least one detail band/, fn ->
+      assert_raise DslError, ~r/must have at least one detail band/, fn ->
         defmodule NoDetailBandDomain do
           use Ash.Domain, extensions: [AshReports.Domain]
 
@@ -133,7 +135,7 @@ defmodule AshReports.Verifiers.ValidateReportsTest do
     end
 
     test "validates driving_resource is an atom" do
-      assert_raise Spark.Error.DslError, ~r/must be an atom representing an Ash\.Resource/, fn ->
+      assert_raise DslError, ~r/must be an atom representing an Ash\.Resource/, fn ->
         defmodule InvalidDrivingResourceDomain do
           use Ash.Domain, extensions: [AshReports.Domain]
 
@@ -352,7 +354,7 @@ defmodule AshReports.Verifiers.ValidateReportsTest do
 
     test "error messages include proper DSL path context" do
       error =
-        assert_raise Spark.Error.DslError, fn ->
+        assert_raise DslError, fn ->
           defmodule DslPathTestDomain do
             use Ash.Domain, extensions: [AshReports.Domain]
 

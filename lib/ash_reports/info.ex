@@ -6,6 +6,8 @@ defmodule AshReports.Info do
   information from domains that use the AshReports extension.
   """
 
+  alias Spark.Dsl.Extension
+
   use Spark.InfoGenerator,
     extension: AshReports.Domain,
     sections: [:reports]
@@ -25,7 +27,7 @@ defmodule AshReports.Info do
   """
   @spec reports(Ash.Domain.t() | Spark.Dsl.t()) :: [AshReports.Report.t()]
   def reports(domain_or_dsl_state) do
-    Spark.Dsl.Extension.get_entities(domain_or_dsl_state, [:reports])
+    Extension.get_entities(domain_or_dsl_state, [:reports])
   end
 
   @doc """

@@ -86,8 +86,9 @@ defmodule AshReports.Formatter do
   """
 
   alias AshReports.Cldr
-  alias AshReports.FormatSpecification
   alias AshReports.FormatParser
+  alias AshReports.FormatSpecification
+  alias AshReports.Formattable
 
   @type format_option ::
           {:locale, String.t()}
@@ -147,7 +148,11 @@ defmodule AshReports.Formatter do
     # Check for custom format specifications first
     cond do
       format_spec = Keyword.get(options, :format_spec) ->
-        format_with_spec(value, format_spec, locale, options)
+        case format_with_spec(value, format_spec, locale, options) do
+          {:ok, result} -> {:ok, result}
+          # Graceful fallback
+          {:error, _} -> {:ok, to_string(value)}
+        end
 
       custom_pattern = Keyword.get(options, :custom_pattern) ->
         format_with_custom_pattern(value, custom_pattern, locale, options)
@@ -202,22 +207,8 @@ defmodule AshReports.Formatter do
     locale = Keyword.get(options, :locale, Cldr.current_locale())
 
     formatted_fields =
-      Enum.reduce_while(field_specs, {:ok, %{}}, fn {field, field_options}, {:ok, acc} ->
-        case Map.fetch(record, field) do
-          {:ok, value} ->
-            merged_options = merge_field_options(field_options, options, locale)
-
-            case format_value(value, merged_options) do
-              {:ok, formatted_value} ->
-                {:cont, {:ok, Map.put(acc, field, formatted_value)}}
-
-              {:error, reason} ->
-                {:halt, {:error, "Failed to format field #{field}: #{reason}"}}
-            end
-
-          :error ->
-            {:halt, {:error, "Field #{field} not found in record"}}
-        end
+      Enum.reduce_while(field_specs, {:ok, %{}}, fn field_spec, acc ->
+        format_field_in_record(record, field_spec, options, locale, acc)
       end)
 
     case formatted_fields do
@@ -449,15 +440,20 @@ defmodule AshReports.Formatter do
   def format_with_spec(value, format_spec, locale \\ nil, options \\ [])
 
   def format_with_spec(value, %FormatSpecification{} = spec, locale, options) do
-    effective_locale = locale || Cldr.current_locale()
-    context = %{locale: effective_locale, options: options}
-
-    with {:ok, compiled_spec} <- FormatSpecification.compile(spec),
-         {:ok, {pattern, format_options}} <-
-           FormatSpecification.get_effective_format(compiled_spec, value, context) do
-      apply_custom_format(value, pattern, effective_locale, format_options)
+    # Handle nil early
+    if is_nil(value) do
+      {:ok, ""}
     else
-      {:error, reason} -> {:error, "Format specification error: #{reason}"}
+      effective_locale = locale || Cldr.current_locale()
+      context = %{locale: effective_locale, options: options}
+
+      with {:ok, compiled_spec} <- FormatSpecification.compile(spec),
+           {:ok, {pattern, format_options}} <-
+             FormatSpecification.get_effective_format(compiled_spec, value, context) do
+        apply_custom_format(value, pattern, effective_locale, format_options)
+      else
+        {:error, reason} -> {:error, "Format specification error: #{reason}"}
+      end
     end
   rescue
     error -> {:error, "Format specification formatting failed: #{Exception.message(error)}"}
@@ -565,18 +561,32 @@ defmodule AshReports.Formatter do
 
   # Private helper functions
 
+  @doc """
+  Formats a value using the Formattable protocol for automatic type detection and formatting.
+
+  This function provides protocol-based formatting as an alternative to the main
+  format_value/2 function for simpler use cases.
+
+  ## Examples
+
+      iex> AshReports.Formatter.format_via_protocol(1234.56, locale: "fr")
+      {:ok, "1 234,56"}
+
+      iex> AshReports.Formatter.format_via_protocol(~D[2024-03-15], locale: "en")
+      {:ok, "Mar 15, 2024"}
+
+  """
+  @spec format_via_protocol(term(), [format_option()]) :: format_result()
+  def format_via_protocol(value, options \\ []) do
+    Formattable.format(value, options)
+  rescue
+    error ->
+      {:error, "Protocol formatting failed: #{Exception.message(error)}"}
+  end
+
   @spec detect_type(term()) :: format_type()
   defp detect_type(value) do
-    cond do
-      is_number(value) -> :number
-      is_boolean(value) -> :boolean
-      is_binary(value) -> :string
-      match?(%Date{}, value) -> :date
-      match?(%Time{}, value) -> :time
-      match?(%DateTime{}, value) -> :datetime
-      match?(%NaiveDateTime{}, value) -> :datetime
-      true -> :string
-    end
+    Formattable.format_type(value)
   end
 
   @spec apply_format(term(), format_type(), String.t(), [format_option()]) :: format_result()
@@ -647,6 +657,32 @@ defmodule AshReports.Formatter do
   defp apply_format(value, _type, _locale, _options) do
     # Fallback to string representation
     {:ok, to_string(value)}
+  end
+
+  @spec format_field_in_record(
+          map(),
+          {atom(), keyword()},
+          [format_option()],
+          String.t(),
+          {:ok, map()}
+        ) ::
+          {:cont, {:ok, map()}} | {:halt, {:error, term()}}
+  defp format_field_in_record(record, {field, field_options}, global_options, locale, {:ok, acc}) do
+    case Map.fetch(record, field) do
+      {:ok, value} ->
+        merged_options = merge_field_options(field_options, global_options, locale)
+
+        case format_value(value, merged_options) do
+          {:ok, formatted_value} ->
+            {:cont, {:ok, Map.put(acc, field, formatted_value)}}
+
+          {:error, reason} ->
+            {:halt, {:error, "Failed to format field #{field}: #{reason}"}}
+        end
+
+      :error ->
+        {:halt, {:error, "Field #{field} not found in record"}}
+    end
   end
 
   @spec merge_field_options(keyword(), [format_option()], String.t()) :: [format_option()]

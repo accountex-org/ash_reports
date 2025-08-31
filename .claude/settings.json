@@ -3,29 +3,4 @@
   "gitCommitMessages": {
     "excludeClaudeReference": true
   },
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "arden claude hook Stop"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "arden claude hook SubagentStop"
-          }
-        ]
-      }
-    ]
-  },
-  "feedbackSurveyState": {
-    "lastShownTime": 1754078347577
-  }
 }

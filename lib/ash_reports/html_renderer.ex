@@ -286,35 +286,8 @@ defmodule AshReports.HtmlRenderer do
   defp apply_record_formatting(record, locale, _context) when is_map(record) do
     # Apply locale-specific formatting to numeric and date fields
     Enum.reduce(record, %{}, fn {key, value}, acc ->
-      formatted_value =
-        case detect_field_format_type(key, value) do
-          :number ->
-            case Formatter.format_value(value, locale: locale, type: :number) do
-              {:ok, formatted} -> formatted
-              {:error, _} -> value
-            end
-
-          :currency ->
-            case Formatter.format_value(value, locale: locale, type: :currency, currency: :USD) do
-              {:ok, formatted} -> formatted
-              {:error, _} -> value
-            end
-
-          :date ->
-            case Formatter.format_value(value, locale: locale, type: :date) do
-              {:ok, formatted} -> formatted
-              {:error, _} -> value
-            end
-
-          :percentage ->
-            case Formatter.format_value(value, locale: locale, type: :percentage) do
-              {:ok, formatted} -> formatted
-              {:error, _} -> value
-            end
-
-          _ ->
-            value
-        end
+      format_type = detect_field_format_type(key, value)
+      formatted_value = format_field_by_type(value, format_type, locale)
 
       # Store both original and formatted values
       acc
@@ -327,31 +300,60 @@ defmodule AshReports.HtmlRenderer do
 
   defp apply_record_formatting(record, _locale, _context), do: record
 
-  defp detect_field_format_type(key, value) do
-    key_string = to_string(key)
-
-    cond do
-      # Currency fields
-      String.contains?(key_string, ["amount", "price", "cost", "total", "salary", "wage"]) and
-          is_number(value) ->
-        :currency
-
-      # Percentage fields
-      String.contains?(key_string, ["rate", "percent", "ratio", "margin"]) and is_number(value) ->
-        :percentage
-
-      # Date fields
-      match?(%Date{}, value) or match?(%DateTime{}, value) or match?(%NaiveDateTime{}, value) ->
-        :date
-
-      # Numeric fields
-      is_number(value) ->
-        :number
-
-      # Default to no special formatting
-      true ->
-        :string
+  defp format_field_by_type(value, :number, locale) do
+    case Formatter.format_value(value, locale: locale, type: :number) do
+      {:ok, formatted} -> formatted
+      {:error, _} -> value
     end
+  end
+
+  defp format_field_by_type(value, :currency, locale) do
+    case Formatter.format_value(value, locale: locale, type: :currency, currency: :USD) do
+      {:ok, formatted} -> formatted
+      {:error, _} -> value
+    end
+  end
+
+  defp format_field_by_type(value, :date, locale) do
+    case Formatter.format_value(value, locale: locale, type: :date) do
+      {:ok, formatted} -> formatted
+      {:error, _} -> value
+    end
+  end
+
+  defp format_field_by_type(value, :percentage, locale) do
+    case Formatter.format_value(value, locale: locale, type: :percentage) do
+      {:ok, formatted} -> formatted
+      {:error, _} -> value
+    end
+  end
+
+  defp format_field_by_type(value, _, _locale), do: value
+
+  defp detect_field_format_type(key, value) do
+    cond do
+      currency_field?(key, value) -> :currency
+      percentage_field?(key, value) -> :percentage
+      date_field?(value) -> :date
+      is_number(value) -> :number
+      true -> :string
+    end
+  end
+
+  defp currency_field?(key, value) do
+    key_string = to_string(key)
+    currency_keywords = ["amount", "price", "cost", "total", "salary", "wage"]
+    String.contains?(key_string, currency_keywords) and is_number(value)
+  end
+
+  defp percentage_field?(key, value) do
+    key_string = to_string(key)
+    percentage_keywords = ["rate", "percent", "ratio", "margin"]
+    String.contains?(key_string, percentage_keywords) and is_number(value)
+  end
+
+  defp date_field?(value) do
+    match?(%Date{}, value) or match?(%DateTime{}, value) or match?(%NaiveDateTime{}, value)
   end
 
   defp build_result_metadata(%RenderContext{} = context, start_time) do
