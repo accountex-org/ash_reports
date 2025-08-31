@@ -86,6 +86,8 @@ defmodule AshReports.Formatter do
   """
 
   alias AshReports.Cldr
+  alias AshReports.FormatSpecification
+  alias AshReports.FormatParser
 
   @type format_option ::
           {:locale, String.t()}
@@ -94,6 +96,9 @@ defmodule AshReports.Formatter do
           | {:precision, non_neg_integer()}
           | {:format, atom()}
           | {:timezone, String.t()}
+          | {:format_spec,
+             FormatSpecification.format_spec_name() | FormatSpecification.format_spec()}
+          | {:custom_pattern, String.t()}
 
   @type format_type ::
           :auto
@@ -105,6 +110,7 @@ defmodule AshReports.Formatter do
           | :datetime
           | :boolean
           | :string
+          | :custom
 
   @type format_result :: {:ok, String.t()} | {:error, term()}
 
@@ -130,19 +136,27 @@ defmodule AshReports.Formatter do
       iex> AshReports.Formatter.format_value(~D[2024-03-15], type: :date, format: :long)
       {:ok, "March 15, 2024"}
 
+      iex> AshReports.Formatter.format_value(1234.56, custom_pattern: "#,##0.000")
+      {:ok, "1,234.560"}
+
   """
   @spec format_value(term(), [format_option()]) :: format_result()
   def format_value(value, options \\ []) do
     locale = Keyword.get(options, :locale, Cldr.current_locale())
-    format_type = Keyword.get(options, :type, :auto)
 
-    effective_type =
-      case format_type do
-        :auto -> detect_type(value)
-        type -> type
-      end
+    # Check for custom format specifications first
+    cond do
+      format_spec = Keyword.get(options, :format_spec) ->
+        format_with_spec(value, format_spec, locale, options)
 
-    apply_format(value, effective_type, locale, options)
+      custom_pattern = Keyword.get(options, :custom_pattern) ->
+        format_with_custom_pattern(value, custom_pattern, locale, options)
+
+      true ->
+        format_type = Keyword.get(options, :type, :auto)
+        effective_type = if format_type == :auto, do: detect_type(value), else: format_type
+        apply_format(value, effective_type, locale, options)
+    end
   rescue
     error ->
       {:error, "Formatting failed: #{Exception.message(error)}"}
@@ -397,6 +411,158 @@ defmodule AshReports.Formatter do
     end
   end
 
+  @doc """
+  Formats a value using a custom format specification.
+
+  Provides advanced formatting capabilities through format specifications that
+  can include conditional formatting, custom patterns, and complex transformations.
+
+  ## Parameters
+
+  - `value` - The value to format
+  - `format_spec` - Format specification name or compiled specification
+  - `locale` - Locale for formatting (default: current locale)
+  - `options` - Additional formatting options
+
+  ## Examples
+
+      # Using a predefined format specification
+      spec = AshReports.FormatSpecification.new(:custom_currency, pattern: "¤ #,##0.00")
+      {:ok, compiled} = AshReports.FormatSpecification.compile(spec)
+      {:ok, formatted} = AshReports.Formatter.format_with_spec(1234.56, compiled)
+
+      # Using conditional formatting
+      spec = AshReports.FormatSpecification.new(:conditional_number)
+      |> AshReports.FormatSpecification.add_condition({:>, 1000}, pattern: "#,##0K", color: :green)
+      |> AshReports.FormatSpecification.set_default_pattern("#,##0.00")
+      {:ok, compiled} = AshReports.FormatSpecification.compile(spec)
+      {:ok, formatted} = AshReports.Formatter.format_with_spec(1500, compiled)
+
+  """
+  @spec format_with_spec(
+          term(),
+          FormatSpecification.format_spec_name() | FormatSpecification.format_spec(),
+          String.t(),
+          [format_option()]
+        ) ::
+          format_result()
+  def format_with_spec(value, format_spec, locale \\ nil, options \\ [])
+
+  def format_with_spec(value, %FormatSpecification{} = spec, locale, options) do
+    effective_locale = locale || Cldr.current_locale()
+    context = %{locale: effective_locale, options: options}
+
+    with {:ok, compiled_spec} <- FormatSpecification.compile(spec),
+         {:ok, {pattern, format_options}} <-
+           FormatSpecification.get_effective_format(compiled_spec, value, context) do
+      apply_custom_format(value, pattern, effective_locale, format_options)
+    else
+      {:error, reason} -> {:error, "Format specification error: #{reason}"}
+    end
+  rescue
+    error -> {:error, "Format specification formatting failed: #{Exception.message(error)}"}
+  end
+
+  def format_with_spec(value, format_spec_name, locale, options) when is_atom(format_spec_name) do
+    case get_registered_format_spec(format_spec_name) do
+      {:ok, spec} ->
+        format_with_spec(value, spec, locale, options)
+
+      {:error, reason} ->
+        {:error, "Format specification '#{format_spec_name}' not found: #{reason}"}
+    end
+  end
+
+  @doc """
+  Formats a value using a custom pattern string.
+
+  Provides direct formatting using pattern strings without requiring
+  a formal format specification definition.
+
+  ## Parameters
+
+  - `value` - The value to format
+  - `pattern` - The custom format pattern string
+  - `locale` - Locale for formatting (default: current locale) 
+  - `options` - Additional formatting options
+
+  ## Examples
+
+      iex> AshReports.Formatter.format_with_custom_pattern(1234.56, "#,##0.000")
+      {:ok, "1,234.560"}
+
+      iex> AshReports.Formatter.format_with_custom_pattern(1234.56, "¤#,##0.00", "en", currency: :EUR)
+      {:ok, "€1,234.56"}
+
+  """
+  @spec format_with_custom_pattern(term(), String.t(), String.t(), [format_option()]) ::
+          format_result()
+  def format_with_custom_pattern(value, pattern, locale \\ nil, options \\ []) do
+    effective_locale = locale || Cldr.current_locale()
+
+    case FormatParser.parse(pattern, Keyword.put(options, :locale, effective_locale)) do
+      {:ok, compiled_format} ->
+        apply_compiled_format(value, compiled_format, effective_locale, options)
+
+      {:error, parse_error} ->
+        {:error, "Pattern parsing failed: #{inspect(parse_error)}"}
+    end
+  rescue
+    error -> {:error, "Custom pattern formatting failed: #{Exception.message(error)}"}
+  end
+
+  @doc """
+  Registers a format specification for reuse by name.
+
+  Allows format specifications to be defined once and referenced by name
+  throughout the application, promoting consistency and reusability.
+
+  ## Parameters
+
+  - `name` - Unique name for the format specification
+  - `spec` - The format specification to register
+
+  ## Examples
+
+      spec = AshReports.FormatSpecification.new(:company_currency, 
+        pattern: "¤ #,##0.00",
+        currency: :USD
+      )
+      AshReports.Formatter.register_format_spec(:company_currency, spec)
+
+  """
+  @spec register_format_spec(
+          FormatSpecification.format_spec_name(),
+          FormatSpecification.format_spec()
+        ) ::
+          :ok | {:error, term()}
+  def register_format_spec(name, %FormatSpecification{} = spec) when is_atom(name) do
+    case FormatSpecification.compile(spec) do
+      {:ok, compiled_spec} ->
+        put_format_spec_registry(name, compiled_spec)
+        :ok
+
+      {:error, reason} ->
+        {:error, "Failed to register format specification: #{reason}"}
+    end
+  rescue
+    error -> {:error, "Format specification registration failed: #{Exception.message(error)}"}
+  end
+
+  @doc """
+  Gets a list of all registered format specifications.
+
+  ## Examples
+
+      iex> AshReports.Formatter.list_format_specs()
+      [:company_currency, :report_number, :conditional_status]
+
+  """
+  @spec list_format_specs() :: [FormatSpecification.format_spec_name()]
+  def list_format_specs do
+    get_format_spec_registry_keys()
+  end
+
   # Private helper functions
 
   @spec detect_type(term()) :: format_type()
@@ -498,6 +664,7 @@ defmodule AshReports.Formatter do
   defp type_base_class(:time), do: "time-value"
   defp type_base_class(:datetime), do: "datetime-value"
   defp type_base_class(:boolean), do: "boolean-value"
+  defp type_base_class(:custom), do: "custom-value"
   defp type_base_class(_), do: "text-value"
 
   @spec alignment_class_for_type(format_type(), String.t()) :: String.t()
@@ -513,5 +680,77 @@ defmodule AshReports.Formatter do
       "rtl" -> "text-right"
       _ -> "text-left"
     end
+  end
+
+  # Custom format specification support functions
+
+  @spec apply_custom_format(term(), String.t(), String.t(), keyword()) :: format_result()
+  defp apply_custom_format(value, pattern, locale, options) when is_binary(pattern) do
+    # Use the format parser to handle the custom pattern
+    case FormatParser.parse(pattern, Keyword.put(options, :locale, locale)) do
+      {:ok, compiled_format} ->
+        apply_compiled_format(value, compiled_format, locale, options)
+
+      {:error, _parse_error} ->
+        # Fallback to standard formatting if pattern parsing fails
+        format_type = FormatParser.detect_type(pattern)
+        apply_format(value, format_type, locale, options)
+    end
+  end
+
+  defp apply_custom_format(value, _pattern, locale, options) do
+    # Fallback when no pattern is provided
+    format_type = detect_type(value)
+    apply_format(value, format_type, locale, options)
+  end
+
+  @spec apply_compiled_format(term(), FormatParser.compiled_format(), String.t(), keyword()) ::
+          format_result()
+  defp apply_compiled_format(value, %{formatter: formatter_fn}, locale, options)
+       when is_function(formatter_fn) do
+    # Apply the compiled formatter function
+    formatter_options = Keyword.put(options, :locale, locale)
+    formatter_fn.(value, formatter_options)
+  rescue
+    error -> {:error, "Compiled format application failed: #{Exception.message(error)}"}
+  end
+
+  defp apply_compiled_format(value, compiled_format, locale, options) do
+    # Fallback if compiled format is invalid
+    format_type = Map.get(compiled_format, :type, detect_type(value))
+    apply_format(value, format_type, locale, options)
+  end
+
+  # Format specification registry functions (simplified implementation)
+
+  @spec get_registered_format_spec(FormatSpecification.format_spec_name()) ::
+          {:ok, FormatSpecification.format_spec()} | {:error, String.t()}
+  defp get_registered_format_spec(name) do
+    case Process.get({:format_spec_registry, name}) do
+      nil ->
+        {:error, "Format specification not registered"}
+
+      spec ->
+        {:ok, spec}
+    end
+  end
+
+  @spec put_format_spec_registry(
+          FormatSpecification.format_spec_name(),
+          FormatSpecification.format_spec()
+        ) :: :ok
+  defp put_format_spec_registry(name, spec) do
+    Process.put({:format_spec_registry, name}, spec)
+    :ok
+  end
+
+  @spec get_format_spec_registry_keys() :: [FormatSpecification.format_spec_name()]
+  defp get_format_spec_registry_keys do
+    Process.get()
+    |> Enum.filter(fn
+      {{:format_spec_registry, _name}, _spec} -> true
+      _ -> false
+    end)
+    |> Enum.map(fn {{:format_spec_registry, name}, _spec} -> name end)
   end
 end

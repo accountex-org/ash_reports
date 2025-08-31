@@ -34,6 +34,20 @@ defmodule AshReports.Dsl do
               parameter :region, :string
             end
 
+            format_specs do
+              format_spec :sales_currency do
+                pattern "¤ #,##0.00"
+                currency :USD
+                locale "en"
+              end
+
+              format_spec :conditional_amount do
+                condition value > 10000, pattern: "#,##0K", color: :green
+                condition value < 0, pattern: "(#,##0)", color: :red
+                pattern "#,##0.00"
+              end
+            end
+
             bands do
               band :title do
                 type :title
@@ -56,7 +70,7 @@ defmodule AshReports.Dsl do
                   end
                   field :total do
                     source :total_amount
-                    format :currency
+                    format_spec :conditional_amount
                   end
                 end
               end
@@ -94,7 +108,8 @@ defmodule AshReports.Dsl do
         parameters: [parameter_entity()],
         bands: [band_entity()],
         variables: [variable_entity()],
-        groups: [group_entity()]
+        groups: [group_entity()],
+        format_specs: [format_spec_entity()]
       ]
     }
   end
@@ -183,6 +198,39 @@ defmodule AshReports.Dsl do
       target: AshReports.Variable,
       args: [:name],
       schema: variable_schema()
+    }
+  end
+
+  @doc """
+  The format specification entity for defining custom formatting patterns.
+  """
+  def format_spec_entity do
+    %Entity{
+      name: :format_spec,
+      describe: """
+      Defines a reusable format specification for consistent formatting across the report.
+
+      Format specifications allow you to define complex formatting rules that can be
+      referenced by name in field, expression, and aggregate elements.
+      """,
+      examples: [
+        """
+        format_spec :company_currency do
+          pattern "¤ #,##0.00"
+          currency :USD
+          locale "en"
+        end
+
+        format_spec :conditional_amount do
+          condition value > 1000, pattern: "#,##0K", color: :green
+          condition value < 0, pattern: "(#,##0)", color: :red
+          default_pattern "#,##0.00"
+        end
+        """
+      ],
+      target: AshReports.FormatSpecification,
+      args: [:name],
+      schema: format_spec_schema()
     }
   end
 
@@ -481,6 +529,64 @@ defmodule AshReports.Dsl do
     ]
   end
 
+  defp format_spec_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The format specification identifier."
+      ],
+      pattern: [
+        type: :string,
+        doc: "The default format pattern string."
+      ],
+      type: [
+        type: {:in, [:number, :currency, :percentage, :date, :time, :datetime, :text, :custom]},
+        doc: "The expected data type for this format specification."
+      ],
+      locale: [
+        type: :string,
+        doc: "Specific locale for this format specification."
+      ],
+      currency: [
+        type: :atom,
+        doc: "Currency code for currency formatting."
+      ],
+      conditions: [
+        type: :keyword_list,
+        default: [],
+        doc: "List of conditional formatting rules as {condition, options} pairs."
+      ],
+      fallback: [
+        type: :any,
+        doc: "Fallback format specification or pattern when formatting fails."
+      ],
+      cache: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to cache the compiled format specification."
+      ],
+      transform: [
+        type: {:in, [:none, :uppercase, :lowercase, :titlecase]},
+        default: :none,
+        doc: "Text transformation to apply."
+      ],
+      precision: [
+        type: :non_neg_integer,
+        doc: "Number of decimal places for number formatting."
+      ],
+      max_length: [
+        type: :pos_integer,
+        doc: "Maximum length for text formatting."
+      ],
+      truncate_suffix: [
+        type: :string,
+        default: "...",
+        doc: "Suffix to add when text is truncated."
+      ]
+    ]
+  end
+
   # Element schemas
 
   defp base_element_schema do
@@ -528,7 +634,20 @@ defmodule AshReports.Dsl do
         ],
         format: [
           type: :any,
-          doc: "Format specification for the field value."
+          doc:
+            "Format specification for the field value. Can be a format type atom (:number, :currency, :date), a custom pattern string, or a format specification name."
+        ],
+        format_spec: [
+          type: :atom,
+          doc: "Named format specification to use for formatting this field."
+        ],
+        custom_pattern: [
+          type: :string,
+          doc: "Custom format pattern string for specialized formatting."
+        ],
+        conditional_format: [
+          type: :keyword_list,
+          doc: "List of conditional formatting rules as {condition, format_options} pairs."
         ]
       ]
   end
@@ -543,7 +662,20 @@ defmodule AshReports.Dsl do
         ],
         format: [
           type: :any,
-          doc: "Format specification for the expression result."
+          doc:
+            "Format specification for the expression result. Can be a format type atom (:number, :currency, :date), a custom pattern string, or a format specification name."
+        ],
+        format_spec: [
+          type: :atom,
+          doc: "Named format specification to use for formatting this expression result."
+        ],
+        custom_pattern: [
+          type: :string,
+          doc: "Custom format pattern string for specialized formatting."
+        ],
+        conditional_format: [
+          type: :keyword_list,
+          doc: "List of conditional formatting rules as {condition, format_options} pairs."
         ]
       ]
   end
@@ -568,7 +700,20 @@ defmodule AshReports.Dsl do
         ],
         format: [
           type: :any,
-          doc: "Format specification for the aggregate result."
+          doc:
+            "Format specification for the aggregate result. Can be a format type atom (:number, :currency, :date), a custom pattern string, or a format specification name."
+        ],
+        format_spec: [
+          type: :atom,
+          doc: "Named format specification to use for formatting this aggregate result."
+        ],
+        custom_pattern: [
+          type: :string,
+          doc: "Custom format pattern string for specialized formatting."
+        ],
+        conditional_format: [
+          type: :keyword_list,
+          doc: "List of conditional formatting rules as {condition, format_options} pairs."
         ]
       ]
   end

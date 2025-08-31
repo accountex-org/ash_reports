@@ -459,7 +459,88 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
     end
   end
 
-  defp format_field_value(value, element, %RenderContext{} = _context) do
+  defp format_field_value(value, element, %RenderContext{} = context) do
+    # Check for new format specification options first
+    cond do
+      format_spec = Map.get(element, :format_spec) ->
+        format_with_specification(value, format_spec, element, context)
+
+      custom_pattern = Map.get(element, :custom_pattern) ->
+        format_with_custom_pattern(value, custom_pattern, element, context)
+
+      conditional_format = Map.get(element, :conditional_format) ->
+        format_with_conditional_rules(value, conditional_format, element, context)
+
+      true ->
+        # Fallback to existing format logic
+        format_with_legacy_format(value, element, context)
+    end
+  end
+
+  # New format specification support functions
+
+  defp format_with_specification(value, format_spec, _element, context) do
+    locale = get_locale_from_context(context)
+
+    case AshReports.Formatter.format_with_spec(value, format_spec, locale) do
+      {:ok, formatted} ->
+        {:ok, formatted}
+
+      {:error, _reason} ->
+        # Log warning and fallback to string representation
+        {:ok, to_string(value)}
+    end
+  end
+
+  defp format_with_custom_pattern(value, custom_pattern, _element, context) do
+    locale = get_locale_from_context(context)
+
+    case AshReports.Formatter.format_with_custom_pattern(value, custom_pattern, locale) do
+      {:ok, formatted} ->
+        {:ok, formatted}
+
+      {:error, _reason} ->
+        # Log warning and fallback to string representation
+        {:ok, to_string(value)}
+    end
+  end
+
+  defp format_with_conditional_rules(value, conditional_format, element, context) do
+    # Convert conditional format rules to format specification conditions
+    conditions =
+      Enum.map(conditional_format, fn {condition, options} ->
+        {condition, options}
+      end)
+
+    # Create a temporary format specification with conditions
+    spec = AshReports.FormatSpecification.new(:temp_conditional, conditions: conditions)
+
+    case AshReports.FormatSpecification.compile(spec) do
+      {:ok, compiled_spec} ->
+        locale = get_locale_from_context(context)
+        format_context = %{locale: locale, element: element}
+
+        case AshReports.FormatSpecification.get_effective_format(
+               compiled_spec,
+               value,
+               format_context
+             ) do
+          {:ok, {pattern, options}} ->
+            case AshReports.Formatter.format_with_custom_pattern(value, pattern, locale, options) do
+              {:ok, formatted} -> {:ok, formatted}
+              {:error, _reason} -> {:ok, to_string(value)}
+            end
+
+          {:error, _reason} ->
+            {:ok, to_string(value)}
+        end
+
+      {:error, _reason} ->
+        {:ok, to_string(value)}
+    end
+  end
+
+  defp format_with_legacy_format(value, element, _context) do
     format = Map.get(element, :format)
 
     formatted_value =
@@ -484,6 +565,13 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       end
 
     {:ok, formatted_value}
+  end
+
+  defp get_locale_from_context(%RenderContext{} = context) do
+    # Extract locale from context options or use default
+    context
+    |> Map.get(:options, %{})
+    |> Map.get(:locale, AshReports.Cldr.current_locale())
   end
 
   defp format_currency(value) when is_number(value) do
