@@ -3,6 +3,9 @@ ExUnit.start()
 # Configure ExUnit
 ExUnit.configure(exclude: [:performance])
 
+# Setup CLDR backend before running tests
+Application.put_env(:ex_cldr, :default_backend, AshReports.Cldr)
+
 # Add support directory to code path
 Code.require_file("support/mock_data_layer.ex", __DIR__)
 Code.require_file("support/test_resources.ex", __DIR__)

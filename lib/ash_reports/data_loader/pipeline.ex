@@ -207,31 +207,31 @@ defmodule AshReports.DataLoader.Pipeline do
     case process_stream(config) do
       {:ok, stream} ->
         try do
-        {records, errors} =
-          stream
-          |> Enum.reduce({[], []}, fn
-            {:ok, result}, {acc_records, acc_errors} ->
-              {[result | acc_records], acc_errors}
+          {records, errors} =
+            stream
+            |> Enum.reduce({[], []}, fn
+              {:ok, result}, {acc_records, acc_errors} ->
+                {[result | acc_records], acc_errors}
 
-            {:error, error}, {acc_records, acc_errors} ->
-              {acc_records, [error | acc_errors]}
-          end)
+              {:error, error}, {acc_records, acc_errors} ->
+                {acc_records, [error | acc_errors]}
+            end)
 
-        end_time = System.monotonic_time(:millisecond)
-        processing_time = end_time - start_time
+          end_time = System.monotonic_time(:millisecond)
+          processing_time = end_time - start_time
 
-        result = %{
-          records: Enum.reverse(records),
-          summary: %{
-            total_records: length(records),
-            processing_time: processing_time,
-            memory_peak: get_memory_peak(),
-            cache_hits: count_cache_hits(records),
-            errors: Enum.reverse(errors)
+          result = %{
+            records: Enum.reverse(records),
+            summary: %{
+              total_records: length(records),
+              processing_time: processing_time,
+              memory_peak: get_memory_peak(),
+              cache_hits: count_cache_hits(records),
+              errors: Enum.reverse(errors)
+            }
           }
-        }
 
-        {:ok, result}
+          {:ok, result}
         catch
           kind, reason ->
             {:error, {kind, reason}}

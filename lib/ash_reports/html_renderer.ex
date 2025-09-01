@@ -1,10 +1,11 @@
 defmodule AshReports.HtmlRenderer do
   @moduledoc """
-  Phase 3.2 HTML Renderer - Complete HTML output system for AshReports.
+  Phase 3.2 HTML Renderer with Phase 4.3 Locale-aware Rendering - Complete HTML output system for AshReports.
 
   The HtmlRenderer provides comprehensive HTML generation capabilities, implementing
   the Phase 3.1 Renderer Interface with sophisticated template processing, CSS
-  generation, element building, and responsive layout support.
+  generation, element building, responsive layout support, and comprehensive RTL
+  (Right-to-Left) rendering for international locales.
 
   ## Phase 3.2 Components
 
@@ -98,7 +99,9 @@ defmodule AshReports.HtmlRenderer do
     HtmlRenderer.ElementBuilder,
     HtmlRenderer.ResponsiveLayout,
     HtmlRenderer.TemplateEngine,
-    RenderContext
+    RenderContext,
+    RtlLayoutEngine,
+    Translation
   }
 
   @doc """
@@ -111,16 +114,14 @@ defmodule AshReports.HtmlRenderer do
     start_time = System.monotonic_time(:microsecond)
 
     with {:ok, template_context} <- prepare_template_context(context, opts),
-
          {:ok, css_content} <- generate_css(template_context),
          {:ok, html_elements} <- build_html_elements(template_context),
          {:ok, final_html} <- assemble_html(template_context, css_content, html_elements),
          {:ok, result_metadata} <- build_result_metadata(template_context, start_time) do
-
       result = %{
         content: final_html,
         metadata: result_metadata,
-        context: formatted_context
+        context: template_context
       }
 
       {:ok, result}
@@ -204,6 +205,7 @@ defmodule AshReports.HtmlRenderer do
 
   defp prepare_template_context(%RenderContext{} = context, opts) do
     template_config = build_template_config(context, opts)
+    rtl_config = build_rtl_config(context)
 
     enhanced_context = %{
       context
@@ -212,11 +214,24 @@ defmodule AshReports.HtmlRenderer do
             html: template_config,
             template_engine: :eex,
             css_generation: true,
-            responsive_layout: true
+            responsive_layout: true,
+            rtl_support: rtl_config
           })
     }
 
     {:ok, enhanced_context}
+  end
+
+  defp build_rtl_config(%RenderContext{} = context) do
+    locale = RenderContext.get_locale(context)
+    text_direction = Cldr.text_direction(locale)
+
+    %{
+      locale: locale,
+      text_direction: text_direction,
+      rtl_enabled: RtlLayoutEngine.rtl_locale?(locale),
+      rtl_layout_adaptations: text_direction == "rtl"
+    }
   end
 
   defp build_template_config(context, opts) do
@@ -246,8 +261,60 @@ defmodule AshReports.HtmlRenderer do
   end
 
   defp assemble_html(%RenderContext{} = context, css_content, html_elements) do
-    TemplateEngine.render_complete_html(context, css_content, html_elements)
+    # Apply RTL layout adaptations if needed
+    adapted_context = apply_rtl_layout_adaptations(context)
+    adapted_elements = apply_rtl_element_adaptations(html_elements, adapted_context)
+
+    TemplateEngine.render_complete_html(adapted_context, css_content, adapted_elements)
   end
+
+  defp apply_rtl_layout_adaptations(%RenderContext{} = context) do
+    rtl_config = context.config[:rtl_support] || %{}
+
+    if rtl_config[:rtl_layout_adaptations] do
+      # Adapt layout data for RTL if present
+      case Map.get(context, :layout_state) do
+        nil ->
+          context
+
+        layout_state ->
+          {:ok, adapted_layout} =
+            RtlLayoutEngine.adapt_container_layout(
+              layout_state,
+              text_direction: rtl_config[:text_direction],
+              locale: rtl_config[:locale]
+            )
+
+          %{context | layout_state: adapted_layout}
+      end
+    else
+      context
+    end
+  end
+
+  defp apply_rtl_element_adaptations(html_elements, %RenderContext{} = context) do
+    rtl_config = context.config[:rtl_support] || %{}
+
+    if rtl_config[:rtl_enabled] do
+      Enum.map(html_elements, fn element ->
+        add_rtl_attributes_to_element(element, rtl_config)
+      end)
+    else
+      html_elements
+    end
+  end
+
+  defp add_rtl_attributes_to_element(element, rtl_config) when is_map(element) do
+    rtl_attributes = %{
+      dir: rtl_config[:text_direction],
+      lang: rtl_config[:locale],
+      class: "#{Map.get(element, :class, "")} rtl-element"
+    }
+
+    Map.merge(element, rtl_attributes)
+  end
+
+  defp add_rtl_attributes_to_element(element, _rtl_config), do: element
 
   defp apply_locale_formatting(%RenderContext{} = context) do
     # Apply locale-aware formatting to data records if enabled
@@ -266,18 +333,22 @@ defmodule AshReports.HtmlRenderer do
       # Update context with formatted records
       updated_context = %{context | records: formatted_records}
 
+      # Apply translation enhancements
+      translated_context = apply_translation_enhancements(updated_context)
+
       # Add formatted metadata
       locale_metadata = RenderContext.get_locale_metadata(context)
 
       updated_metadata =
-        Map.put(context.metadata, :locale_formatting, %{
+        Map.put(translated_context.metadata, :locale_formatting, %{
           applied: true,
           locale: locale,
           text_direction: RenderContext.get_text_direction(context),
-          formatting_metadata: locale_metadata
+          formatting_metadata: locale_metadata,
+          translations_applied: true
         })
 
-      final_context = %{updated_context | metadata: updated_metadata}
+      final_context = %{translated_context | metadata: updated_metadata}
       {:ok, final_context}
     else
       {:ok, context}
@@ -287,35 +358,8 @@ defmodule AshReports.HtmlRenderer do
   defp apply_record_formatting(record, locale, _context) when is_map(record) do
     # Apply locale-specific formatting to numeric and date fields
     Enum.reduce(record, %{}, fn {key, value}, acc ->
-      formatted_value =
-        case detect_field_format_type(key, value) do
-          :number ->
-            case Formatter.format_value(value, locale: locale, type: :number) do
-              {:ok, formatted} -> formatted
-              {:error, _} -> value
-            end
-
-          :currency ->
-            case Formatter.format_value(value, locale: locale, type: :currency, currency: :USD) do
-              {:ok, formatted} -> formatted
-              {:error, _} -> value
-            end
-
-          :date ->
-            case Formatter.format_value(value, locale: locale, type: :date) do
-              {:ok, formatted} -> formatted
-              {:error, _} -> value
-            end
-
-          :percentage ->
-            case Formatter.format_value(value, locale: locale, type: :percentage) do
-              {:ok, formatted} -> formatted
-              {:error, _} -> value
-            end
-
-          _ ->
-            value
-        end
+      format_type = detect_field_format_type(key, value)
+      formatted_value = format_field_by_type(value, format_type, locale)
 
       # Store both original and formatted values
       acc
@@ -328,31 +372,60 @@ defmodule AshReports.HtmlRenderer do
 
   defp apply_record_formatting(record, _locale, _context), do: record
 
-  defp detect_field_format_type(key, value) do
-    key_string = to_string(key)
-
-    cond do
-      # Currency fields
-      String.contains?(key_string, ["amount", "price", "cost", "total", "salary", "wage"]) and
-          is_number(value) ->
-        :currency
-
-      # Percentage fields
-      String.contains?(key_string, ["rate", "percent", "ratio", "margin"]) and is_number(value) ->
-        :percentage
-
-      # Date fields
-      match?(%Date{}, value) or match?(%DateTime{}, value) or match?(%NaiveDateTime{}, value) ->
-        :date
-
-      # Numeric fields
-      is_number(value) ->
-        :number
-
-      # Default to no special formatting
-      true ->
-        :string
+  defp format_field_by_type(value, :number, locale) do
+    case Formatter.format_value(value, locale: locale, type: :number) do
+      {:ok, formatted} -> formatted
+      {:error, _} -> value
     end
+  end
+
+  defp format_field_by_type(value, :currency, locale) do
+    case Formatter.format_value(value, locale: locale, type: :currency, currency: :USD) do
+      {:ok, formatted} -> formatted
+      {:error, _} -> value
+    end
+  end
+
+  defp format_field_by_type(value, :date, locale) do
+    case Formatter.format_value(value, locale: locale, type: :date) do
+      {:ok, formatted} -> formatted
+      {:error, _} -> value
+    end
+  end
+
+  defp format_field_by_type(value, :percentage, locale) do
+    case Formatter.format_value(value, locale: locale, type: :percentage) do
+      {:ok, formatted} -> formatted
+      {:error, _} -> value
+    end
+  end
+
+  defp format_field_by_type(value, _, _locale), do: value
+
+  defp detect_field_format_type(key, value) do
+    cond do
+      currency_field?(key, value) -> :currency
+      percentage_field?(key, value) -> :percentage
+      date_field?(value) -> :date
+      is_number(value) -> :number
+      true -> :string
+    end
+  end
+
+  defp currency_field?(key, value) do
+    key_string = to_string(key)
+    currency_keywords = ["amount", "price", "cost", "total", "salary", "wage"]
+    String.contains?(key_string, currency_keywords) and is_number(value)
+  end
+
+  defp percentage_field?(key, value) do
+    key_string = to_string(key)
+    percentage_keywords = ["rate", "percent", "ratio", "margin"]
+    String.contains?(key_string, percentage_keywords) and is_number(value)
+  end
+
+  defp date_field?(value) do
+    match?(%Date{}, value) or match?(%DateTime{}, value) or match?(%NaiveDateTime{}, value)
   end
 
   defp build_result_metadata(%RenderContext{} = context, start_time) do
@@ -478,5 +551,77 @@ defmodule AshReports.HtmlRenderer do
     # This would calculate the estimated HTML size
     # For now, return a placeholder
     0
+  end
+
+  # Phase 4.3 Translation and RTL Support Functions
+
+  defp apply_translation_enhancements(%RenderContext{} = context) do
+    locale = RenderContext.get_locale(context)
+
+    # Add translated UI elements to context metadata
+    ui_translations = %{
+      field_labels: prepare_field_label_translations(context, locale),
+      band_titles: prepare_band_title_translations(context, locale),
+      status_messages: prepare_status_message_translations(locale)
+    }
+
+    updated_metadata = Map.put(context.metadata, :translations, ui_translations)
+    %{context | metadata: updated_metadata}
+  end
+
+  defp prepare_field_label_translations(%RenderContext{} = context, locale) do
+    # Extract field names from report definition and create translation map
+    field_names = extract_field_names_from_report(context.report)
+
+    Enum.reduce(field_names, %{}, fn field_name, acc ->
+      translated_label = Translation.translate_field_label(field_name, locale)
+      Map.put(acc, field_name, translated_label)
+    end)
+  end
+
+  defp prepare_band_title_translations(%RenderContext{} = context, locale) do
+    # Extract band names from report definition and create translation map
+    band_names = extract_band_names_from_report(context.report)
+
+    Enum.reduce(band_names, %{}, fn band_name, acc ->
+      translated_title = Translation.translate_band_title(band_name, locale)
+      Map.put(acc, band_name, translated_title)
+    end)
+  end
+
+  defp prepare_status_message_translations(locale) do
+    status_keys = ["status.loading", "status.complete", "status.no_data"]
+
+    Enum.reduce(status_keys, %{}, fn key, acc ->
+      case Translation.translate_ui(key, [], locale) do
+        {:ok, translated} ->
+          status_name = key |> String.split(".") |> List.last()
+          Map.put(acc, status_name, translated)
+
+        {:error, _} ->
+          acc
+      end
+    end)
+  end
+
+  defp extract_field_names_from_report(report) do
+    report.bands
+    |> Enum.flat_map(fn band ->
+      Map.get(band, :elements, [])
+      |> Enum.filter(fn element ->
+        Map.get(element, :type) == :field
+      end)
+      |> Enum.map(fn element ->
+        Map.get(element, :source) || Map.get(element, :name)
+      end)
+    end)
+    |> Enum.filter(&(&1 != nil))
+    |> Enum.uniq()
+  end
+
+  defp extract_band_names_from_report(report) do
+    report.bands
+    |> Enum.map(fn band -> Map.get(band, :name) end)
+    |> Enum.filter(&(&1 != nil))
   end
 end

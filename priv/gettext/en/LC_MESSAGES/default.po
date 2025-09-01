@@ -1,0 +1,76 @@
+## English translations for AshReports
+## Language: English (en)
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Project-Id-Version: ash_reports\n"
+"Language: en\n"
+
+## UI Elements
+msgid "report.title.default"
+msgstr "Report"
+
+msgid "band.title.header"
+msgstr "Header"
+
+msgid "band.title.detail" 
+msgstr "Detail"
+
+msgid "band.title.footer"
+msgstr "Footer"
+
+msgid "field.label.total"
+msgstr "Total"
+
+msgid "field.label.amount"
+msgstr "Amount"
+
+msgid "field.label.date"
+msgstr "Date"
+
+msgid "field.label.name"
+msgstr "Name"
+
+msgid "field.label.description"
+msgstr "Description"
+
+msgid "field.label.count"
+msgstr "Count"
+
+msgid "field.label.percentage"
+msgstr "Percentage"
+
+## Navigation and Actions
+msgid "action.print"
+msgstr "Print"
+
+msgid "action.export"
+msgstr "Export"
+
+msgid "action.refresh"
+msgstr "Refresh"
+
+msgid "navigation.next"
+msgstr "Next"
+
+msgid "navigation.previous"
+msgstr "Previous"
+
+msgid "navigation.first"
+msgstr "First"
+
+msgid "navigation.last"
+msgstr "Last"
+
+## Status Messages
+msgid "status.loading"
+msgstr "Loading..."
+
+msgid "status.complete"
+msgstr "Complete"
+
+msgid "status.processing"
+msgstr "Processing"
+
+msgid "status.no_data"
+msgstr "No data available"

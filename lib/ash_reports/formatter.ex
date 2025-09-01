@@ -86,8 +86,8 @@ defmodule AshReports.Formatter do
   """
 
   alias AshReports.Cldr
-  alias AshReports.FormatSpecification
   alias AshReports.FormatParser
+  alias AshReports.FormatSpecification
 
   @type format_option ::
           {:locale, String.t()}
@@ -202,22 +202,8 @@ defmodule AshReports.Formatter do
     locale = Keyword.get(options, :locale, Cldr.current_locale())
 
     formatted_fields =
-      Enum.reduce_while(field_specs, {:ok, %{}}, fn {field, field_options}, {:ok, acc} ->
-        case Map.fetch(record, field) do
-          {:ok, value} ->
-            merged_options = merge_field_options(field_options, options, locale)
-
-            case format_value(value, merged_options) do
-              {:ok, formatted_value} ->
-                {:cont, {:ok, Map.put(acc, field, formatted_value)}}
-
-              {:error, reason} ->
-                {:halt, {:error, "Failed to format field #{field}: #{reason}"}}
-            end
-
-          :error ->
-            {:halt, {:error, "Field #{field} not found in record"}}
-        end
+      Enum.reduce_while(field_specs, {:ok, %{}}, fn field_spec, acc ->
+        format_field_in_record(record, field_spec, options, locale, acc)
       end)
 
     case formatted_fields do
@@ -752,5 +738,31 @@ defmodule AshReports.Formatter do
       _ -> false
     end)
     |> Enum.map(fn {{:format_spec_registry, name}, _spec} -> name end)
+  end
+
+  @spec format_field_in_record(
+          map(),
+          {atom(), keyword()},
+          [format_option()],
+          String.t(),
+          {:ok, map()}
+        ) ::
+          {:cont, {:ok, map()}} | {:halt, {:error, term()}}
+  defp format_field_in_record(record, {field, field_options}, global_options, locale, {:ok, acc}) do
+    case Map.fetch(record, field) do
+      {:ok, value} ->
+        merged_options = merge_field_options(field_options, global_options, locale)
+
+        case format_value(value, merged_options) do
+          {:ok, formatted_value} ->
+            {:cont, {:ok, Map.put(acc, field, formatted_value)}}
+
+          {:error, reason} ->
+            {:halt, {:error, "Failed to format field #{field}: #{reason}"}}
+        end
+
+      :error ->
+        {:halt, {:error, "Field #{field} not found in record"}}
+    end
   end
 end

@@ -341,25 +341,9 @@ defmodule AshReports.JsonRenderer do
   defp format_record_for_json(record, locale, dual_format) when is_map(record) do
     Enum.reduce(record, %{}, fn {key, value}, acc ->
       if dual_format do
-        # Include both raw value and formatted value
-        formatted_result = format_value_for_json(key, value, locale)
-
-        acc
-        # Original value
-        |> Map.put(key, value)
-        # Add formatted values
-        |> Map.merge(formatted_result)
+        format_record_dual_format(acc, key, value, locale)
       else
-        # Only include formatted values
-        case format_value_for_json(key, value, locale) do
-          %{} = formatted_map ->
-            # If formatting returned a map, merge it
-            Map.merge(acc, formatted_map)
-
-          formatted_value ->
-            # If formatting returned a single value, use it
-            Map.put(acc, key, formatted_value)
-        end
+        format_record_single_format(acc, key, value, locale)
       end
     end)
   end
@@ -382,25 +366,29 @@ defmodule AshReports.JsonRenderer do
   end
 
   defp detect_json_field_type(key, value) do
-    key_string = to_string(key)
-
     cond do
-      String.contains?(key_string, ["amount", "price", "cost", "total", "salary"]) and
-          is_number(value) ->
-        :currency
-
-      String.contains?(key_string, ["rate", "percent", "ratio"]) and is_number(value) ->
-        :percentage
-
-      match?(%Date{}, value) or match?(%DateTime{}, value) or match?(%NaiveDateTime{}, value) ->
-        :date
-
-      is_number(value) ->
-        :number
-
-      true ->
-        :auto
+      json_currency_field?(key, value) -> :currency
+      json_percentage_field?(key, value) -> :percentage
+      json_date_field?(value) -> :date
+      is_number(value) -> :number
+      true -> :auto
     end
+  end
+
+  defp json_currency_field?(key, value) do
+    key_string = to_string(key)
+    currency_keywords = ["amount", "price", "cost", "total", "salary"]
+    String.contains?(key_string, currency_keywords) and is_number(value)
+  end
+
+  defp json_percentage_field?(key, value) do
+    key_string = to_string(key)
+    percentage_keywords = ["rate", "percent", "ratio"]
+    String.contains?(key_string, percentage_keywords) and is_number(value)
+  end
+
+  defp json_date_field?(value) do
+    match?(%Date{}, value) or match?(%DateTime{}, value) or match?(%NaiveDateTime{}, value)
   end
 
   defp build_result_metadata(%RenderContext{} = context, start_time) do
@@ -506,5 +494,27 @@ defmodule AshReports.JsonRenderer do
     # This would calculate the estimated JSON size
     # For now, return a placeholder that can be implemented later
     0
+  end
+
+  defp format_record_dual_format(acc, key, value, locale) do
+    formatted_result = format_value_for_json(key, value, locale)
+
+    acc
+    # Original value
+    |> Map.put(key, value)
+    # Add formatted values
+    |> Map.merge(formatted_result)
+  end
+
+  defp format_record_single_format(acc, key, value, locale) do
+    case format_value_for_json(key, value, locale) do
+      %{} = formatted_map ->
+        # If formatting returned a map, merge it
+        Map.merge(acc, formatted_map)
+
+      formatted_value ->
+        # If formatting returned a single value, use it
+        Map.put(acc, key, formatted_value)
+    end
   end
 end

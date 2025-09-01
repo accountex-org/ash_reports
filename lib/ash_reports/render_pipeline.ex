@@ -348,12 +348,12 @@ defmodule AshReports.RenderPipeline do
   def stage_assembly(%RenderContext{} = context, renderer) do
     # Call the renderer's main rendering function
     case renderer.render_with_context(context, []) do
-        {:ok, render_result} ->
-          {:ok,
-           %{
-             content: render_result.content,
-             context: render_result.context
-           }}
+      {:ok, render_result} ->
+        {:ok,
+         %{
+           content: render_result.content,
+           context: render_result.context
+         }}
 
       {:error, reason} ->
         {:error, {:assembly_failed, reason}}
@@ -504,30 +504,8 @@ defmodule AshReports.RenderPipeline do
   defp execute_stages_sequence(stages, pipeline_state) do
     {final_state, result} =
       Enum.reduce_while(stages, {pipeline_state, nil}, fn stage, {state, _} ->
-        case execute_single_stage(stage, state) do
-          {:ok, new_state} ->
-            {:cont, {new_state, nil}}
-
-          {:warning, warning, new_state} ->
-            updated_state = add_warning(new_state, warning)
-            {:cont, {updated_state, nil}}
-
-          {:error, reason} ->
-            case state.config.error_strategy do
-              :fail_fast ->
-                {:halt, {state, {:error, reason}}}
-
-              :continue_on_error ->
-                updated_state = add_error(state, reason)
-                {:cont, {updated_state, nil}}
-
-              _ ->
-                {:halt, {state, {:error, reason}}}
-            end
-
-          final_result when is_map(final_result) ->
-            {:halt, {state, {:ok, final_result}}}
-        end
+        stage_result = execute_single_stage(stage, state)
+        handle_stage_result(stage_result, state)
       end)
 
     case result do
@@ -535,6 +513,33 @@ defmodule AshReports.RenderPipeline do
       {:error, reason} -> {:error, reason}
       nil -> generate_final_result(final_state)
     end
+  end
+
+  defp handle_stage_result({:ok, new_state}, _state) do
+    {:cont, {new_state, nil}}
+  end
+
+  defp handle_stage_result({:warning, warning, new_state}, _state) do
+    updated_state = add_warning(new_state, warning)
+    {:cont, {updated_state, nil}}
+  end
+
+  defp handle_stage_result({:error, reason}, state) do
+    case state.config.error_strategy do
+      :fail_fast ->
+        {:halt, {state, {:error, reason}}}
+
+      :continue_on_error ->
+        updated_state = add_error(state, reason)
+        {:cont, {updated_state, nil}}
+
+      _ ->
+        {:halt, {state, {:error, reason}}}
+    end
+  end
+
+  defp handle_stage_result(final_result, state) when is_map(final_result) do
+    {:halt, {state, {:ok, final_result}}}
   end
 
   defp execute_single_stage(stage, pipeline_state) when is_function(stage, 1) do

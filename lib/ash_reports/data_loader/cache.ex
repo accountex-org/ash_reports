@@ -544,25 +544,18 @@ defmodule AshReports.DataLoader.Cache do
 
   defp get_ttl(table_id, key) do
     case :ets.lookup(table_id, key) do
-      [{^key, entry}] ->
-        case entry.expires_at do
-          :never ->
-            :never
-
-          expires_at ->
-            now = System.monotonic_time(:millisecond)
-            remaining = expires_at - now
-
-            if remaining > 0 do
-              remaining
-            else
-              :not_found
-            end
-        end
-
-      [] ->
-        :not_found
+      [{^key, entry}] -> calculate_remaining_ttl(entry.expires_at)
+      [] -> :not_found
     end
+  end
+
+  defp calculate_remaining_ttl(:never), do: :never
+
+  defp calculate_remaining_ttl(expires_at) do
+    now = System.monotonic_time(:millisecond)
+    remaining = expires_at - now
+
+    if remaining > 0, do: remaining, else: :not_found
   end
 
   # Utility functions

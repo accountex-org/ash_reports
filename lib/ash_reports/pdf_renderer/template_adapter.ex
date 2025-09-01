@@ -141,19 +141,17 @@ defmodule AshReports.PdfRenderer.TemplateAdapter do
 
   defp parse_html_content(html_content) do
     # Simple HTML parsing - in production, you might want to use a proper HTML parser
-    try do
-      parsed = %{
-        doctype: extract_doctype(html_content),
-        html_tag: extract_html_tag(html_content),
-        head: extract_head_section(html_content),
-        body: extract_body_section(html_content),
-        raw_content: html_content
-      }
+    parsed = %{
+      doctype: extract_doctype(html_content),
+      html_tag: extract_html_tag(html_content),
+      head: extract_head_section(html_content),
+      body: extract_body_section(html_content),
+      raw_content: html_content
+    }
 
-      {:ok, parsed}
-    rescue
-      error -> {:error, {:html_parse_error, error}}
-    end
+    {:ok, parsed}
+  rescue
+    error -> {:error, {:html_parse_error, error}}
   end
 
   defp enhance_html_head(parsed_html, print_css, page_layout, %RenderContext{} = context) do
