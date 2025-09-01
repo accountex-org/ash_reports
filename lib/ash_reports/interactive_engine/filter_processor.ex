@@ -161,7 +161,7 @@ defmodule AshReports.InteractiveEngine.FilterProcessor do
       :not_equals ->
         field_value != value
 
-      # Comparison operations  
+      # Comparison operations
       op when op in [:greater_than, :less_than, :greater_equal, :less_equal] ->
         compare_values(field_value, value, operation, context)
 
@@ -301,7 +301,7 @@ defmodule AshReports.InteractiveEngine.FilterProcessor do
         |> String.replace(~r/[ؤئ]/, "و")
 
       "he" ->
-        # Hebrew text normalization  
+        # Hebrew text normalization
         term
         |> String.downcase()
         # Final kaf to regular kaf
