@@ -382,16 +382,19 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
         {:ok, compiled}
 
       [] ->
-        # Try to compile from default templates
-        case Map.get(@default_templates, template_name) do
-          nil ->
-            {:error, {:template_not_found, template_name}}
+        compile_from_default_templates(template_name)
+    end
+  end
 
-          template_content ->
-            case compile_and_cache_template(template_name, template_content) do
-              {:ok, compiled} -> {:ok, compiled}
-              {:error, _reason} = error -> error
-            end
+  defp compile_from_default_templates(template_name) do
+    case Map.get(@default_templates, template_name) do
+      nil ->
+        {:error, {:template_not_found, template_name}}
+
+      template_content ->
+        case compile_and_cache_template(template_name, template_content) do
+          {:ok, compiled} -> {:ok, compiled}
+          {:error, _reason} = error -> error
         end
     end
   end

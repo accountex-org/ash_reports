@@ -346,8 +346,8 @@ defmodule AshReports.DataLoader.Executor do
 
           {:error, _reason} = error ->
             {:halt, error}
-          end
-        end)
+        end
+      end)
 
     case loaded_batch do
       {:error, _reason} = error -> error

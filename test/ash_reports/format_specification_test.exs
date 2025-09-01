@@ -160,7 +160,7 @@ defmodule AshReports.FormatSpecificationTest do
       assert pattern == "#,##0"
       assert Keyword.get(options, :color) == :green
 
-      # Should match first condition  
+      # Should match first condition
       {:ok, {pattern, options}} = FormatSpecification.get_effective_format(compiled, 15000, %{})
       assert pattern == "#,##0K"
       assert Keyword.get(options, :color) == :blue

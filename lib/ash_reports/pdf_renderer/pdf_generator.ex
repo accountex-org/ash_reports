@@ -272,17 +272,15 @@ defmodule AshReports.PdfRenderer.PdfGenerator do
   end
 
   defp execute_chromic_conversion(html_file_path, chromic_options) do
-    try do
-      case ChromicPDF.print_to_pdf({:url, "file://#{html_file_path}"}, chromic_options) do
-        {:ok, pdf_binary} ->
-          {:ok, pdf_binary}
+    case ChromicPDF.print_to_pdf({:url, "file://#{html_file_path}"}, chromic_options) do
+      {:ok, pdf_binary} ->
+        {:ok, pdf_binary}
 
-        {:error, reason} ->
-          {:error, {:chromic_conversion_failed, reason}}
-      end
-    rescue
-      error -> {:error, {:chromic_conversion_error, error}}
+      {:error, reason} ->
+        {:error, {:chromic_conversion_failed, reason}}
     end
+  rescue
+    error -> {:error, {:chromic_conversion_error, error}}
   end
 
   defp cleanup_temporary_files(temp_file_path, session_id) do
@@ -462,18 +460,24 @@ defmodule AshReports.PdfRenderer.PdfGenerator do
         :ok
 
       files ->
-        Enum.each(files, fn file ->
-          # Only delete files older than 1 hour to avoid conflicts
-          case File.stat(file) do
-            {:ok, %{mtime: mtime}} ->
-              file_age = System.os_time(:second) - :calendar.datetime_to_gregorian_seconds(mtime)
-              # 1 hour
-              if file_age > 3600, do: File.rm(file)
+        cleanup_old_temp_files(files)
+    end
+  end
 
-            _ ->
-              File.rm(file)
-          end
-        end)
+  defp cleanup_old_temp_files(files) do
+    Enum.each(files, &cleanup_temp_file_if_old/1)
+  end
+
+  defp cleanup_temp_file_if_old(file) do
+    # Only delete files older than 1 hour to avoid conflicts
+    case File.stat(file) do
+      {:ok, %{mtime: mtime}} ->
+        file_age = System.os_time(:second) - :calendar.datetime_to_gregorian_seconds(mtime)
+        # 1 hour
+        if file_age > 3600, do: File.rm(file)
+
+      _ ->
+        File.rm(file)
     end
   end
 

@@ -1,0 +1,76 @@
+## Hebrew translations for AshReports
+## Language: Hebrew (he)
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Project-Id-Version: ash_reports\n"
+"Language: he\n"
+
+## UI Elements
+msgid "report.title.default"
+msgstr "דוח"
+
+msgid "band.title.header"
+msgstr "כותרת"
+
+msgid "band.title.detail"
+msgstr "פרטים"
+
+msgid "band.title.footer"
+msgstr "כותרת תחתונה"
+
+msgid "field.label.total"
+msgstr "סה\"כ"
+
+msgid "field.label.amount"
+msgstr "סכום"
+
+msgid "field.label.date"
+msgstr "תאריך"
+
+msgid "field.label.name"
+msgstr "שם"
+
+msgid "field.label.description"
+msgstr "תיאור"
+
+msgid "field.label.count"
+msgstr "ספירה"
+
+msgid "field.label.percentage"
+msgstr "אחוז"
+
+## Navigation and Actions
+msgid "action.print"
+msgstr "הדפס"
+
+msgid "action.export"
+msgstr "יצא"
+
+msgid "action.refresh"
+msgstr "רענן"
+
+msgid "navigation.next"
+msgstr "הבא"
+
+msgid "navigation.previous"
+msgstr "הקודם"
+
+msgid "navigation.first"
+msgstr "ראשון"
+
+msgid "navigation.last"
+msgstr "אחרון"
+
+## Status Messages
+msgid "status.loading"
+msgstr "טוען..."
+
+msgid "status.complete"
+msgstr "הושלם"
+
+msgid "status.processing"
+msgstr "מעבד"
+
+msgid "status.no_data"
+msgstr "אין נתונים זמינים"

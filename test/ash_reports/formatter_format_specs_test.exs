@@ -1,7 +1,7 @@
 defmodule AshReports.FormatterFormatSpecsTest do
   use ExUnit.Case, async: true
 
-  alias AshReports.{Formatter, FormatSpecification}
+  alias AshReports.{FormatSpecification, Formatter}
 
   describe "format_with_spec/4" do
     test "formats with compiled format specification" do

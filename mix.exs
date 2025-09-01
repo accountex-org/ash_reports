@@ -57,6 +57,9 @@ defmodule AshReports.MixProject do
       {:ex_cldr_currencies, "~> 2.16"},
       {:ex_cldr_calendars, "~> 1.26"},
 
+      # Translation dependencies
+      {:gettext, "~> 0.24"},
+
       # Optional dependencies
       {:chromic_pdf, "~> 1.17", optional: true},
       {:phoenix_live_view, "~> 0.20", optional: true},
@@ -72,6 +75,7 @@ defmodule AshReports.MixProject do
       # Test dependencies
       {:mox, "~> 1.1", only: :test},
       {:benchee, "~> 1.3", only: [:dev, :test]},
+      {:benchee_html, "~> 1.0", only: [:dev, :test]},
       {:stream_data, "~> 1.0"},
       {:bypass, "~> 2.1", only: :test}
     ]

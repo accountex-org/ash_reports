@@ -1,0 +1,76 @@
+## Arabic translations for AshReports  
+## Language: Arabic (ar)
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Project-Id-Version: ash_reports\n"
+"Language: ar\n"
+
+## UI Elements
+msgid "report.title.default"
+msgstr "تقرير"
+
+msgid "band.title.header"
+msgstr "رأس"
+
+msgid "band.title.detail"
+msgstr "تفاصيل"
+
+msgid "band.title.footer"
+msgstr "تذييل"
+
+msgid "field.label.total"
+msgstr "المجموع"
+
+msgid "field.label.amount"
+msgstr "المبلغ"
+
+msgid "field.label.date"
+msgstr "التاريخ"
+
+msgid "field.label.name"
+msgstr "الاسم"
+
+msgid "field.label.description"
+msgstr "الوصف"
+
+msgid "field.label.count"
+msgstr "العدد"
+
+msgid "field.label.percentage"
+msgstr "النسبة المئوية"
+
+## Navigation and Actions
+msgid "action.print"
+msgstr "طباعة"
+
+msgid "action.export"
+msgstr "تصدير"
+
+msgid "action.refresh"
+msgstr "تحديث"
+
+msgid "navigation.next"
+msgstr "التالي"
+
+msgid "navigation.previous"
+msgstr "السابق"
+
+msgid "navigation.first"
+msgstr "الأول"
+
+msgid "navigation.last"
+msgstr "الأخير"
+
+## Status Messages
+msgid "status.loading"
+msgstr "جاري التحميل..."
+
+msgid "status.complete"
+msgstr "مكتمل"
+
+msgid "status.processing"
+msgstr "جاري المعالجة"
+
+msgid "status.no_data"
+msgstr "لا توجد بيانات متاحة"
