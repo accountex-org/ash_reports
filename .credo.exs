@@ -184,7 +184,7 @@
           {Credo.Check.Consistency.UnusedVariableNames, false},
           {Credo.Check.Design.DuplicatedCode, false},
           {Credo.Check.Design.SkipTestWithoutComment, false},
-          {Credo.Check.Readability.AliasAs, false},
+          {Credo.Check.Readability.AliasAs, []},
           {Credo.Check.Readability.BlockPipe, false},
           {Credo.Check.Readability.ImplTrue, false},
           {Credo.Check.Readability.MultiAlias, false},

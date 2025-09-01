@@ -352,11 +352,9 @@ defmodule AshReports.DataLoader.ExecutorTest do
   defp with_mocks(_mocks, fun) do
     # Simple mock implementation for testing
     # In a real test suite, you might use a library like Mox
-    try do
-      fun.()
-    catch
-      _, _ -> :ok
-    end
+    fun.()
+  catch
+    _, _ -> :ok
   end
 end
 
