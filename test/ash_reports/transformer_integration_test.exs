@@ -5,6 +5,9 @@ defmodule AshReports.TransformerIntegrationTest do
   alias AshReports.Verifiers.{ValidateBands, ValidateElements, ValidateReports}
   alias Spark.Dsl.Transformer
 
+  # Base domain alias for dynamic module resolution
+  alias __MODULE__.MultipleReportsTransformerDomain, as: TestDomain
+
   describe "transformer integration and execution order" do
     test "verifiers run before transformers" do
       # This test ensures that validation happens before module generation
@@ -227,9 +230,9 @@ defmodule AshReports.TransformerIntegrationTest do
       assert MultipleReportsTransformerDomain.Reports.Module.concat(SummaryReport, Json)
 
       # Each should have correct definitions
-      customer_def = MultipleReportsTransformerDomain.Reports.CustomerReport.definition()
-      order_def = MultipleReportsTransformerDomain.Reports.OrderReport.definition()
-      summary_def = MultipleReportsTransformerDomain.Reports.SummaryReport.definition()
+      customer_def = Module.concat([TestDomain, Reports, CustomerReport]).definition()
+      order_def = Module.concat([TestDomain, Reports, OrderReport]).definition()
+      summary_def = Module.concat([TestDomain, Reports, SummaryReport]).definition()
 
       assert customer_def.driving_resource == AshReports.Test.Customer
       assert order_def.driving_resource == AshReports.Test.Order

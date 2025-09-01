@@ -2,8 +2,14 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
   use ExUnit.Case, async: false
 
   alias AshReports.Transformers.BuildReportModules
-  alias Spark.Dsl.Transformer
+  alias Spark.Dsl.{Extension, Transformer}
   alias Spark.Error.DslError
+
+  # Base domain aliases for dynamic module resolution
+  alias __MODULE__.MultiReportDomain, as: MultiReportBase
+  alias __MODULE__.NamingDomain, as: NamingBase
+  alias __MODULE__.PipelineTestDomain, as: PipelineBase
+  alias __MODULE__.TestDomain, as: TestDomainBase
 
   describe "BuildReportModules transformer" do
     test "transforms DSL state by generating report modules" do
@@ -49,15 +55,16 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       assert TestDomain.Reports.Module.concat(TestReport, Pdf)
 
       # Test the generated module interface
-      report = TestDomain.Reports.TestReport.definition()
+      test_report_module = Module.concat([TestDomainBase, Reports, TestReport])
+      report = test_report_module.definition()
       assert report.name == :test_report
       assert report.title == "Test Report"
       assert report.driving_resource == AshReports.Test.Customer
 
-      assert TestDomain.Reports.TestReport.domain() == TestDomain
-      assert TestDomain.Reports.TestReport.supported_formats() == [:html, :pdf]
-      assert TestDomain.Reports.TestReport.supports_format?(:html) == true
-      assert TestDomain.Reports.TestReport.supports_format?(:json) == false
+      assert test_report_module.domain() == TestDomain
+      assert test_report_module.supported_formats() == [:html, :pdf]
+      assert test_report_module.supports_format?(:html) == true
+      assert test_report_module.supports_format?(:json) == false
     end
 
     test "generates format-specific modules with correct interfaces" do
@@ -113,7 +120,7 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
     test "persists report data in DSL state" do
       # Create a minimal domain to test DSL state manipulation
       dsl_state =
-        Spark.Dsl.Extension.build_entity_entities(
+        Extension.build_entity_entities(
           AshReports.Domain,
           [],
           :reports,
@@ -193,8 +200,8 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       assert MultiReportDomain.Reports.OrderReport
 
       # Verify they have different configurations
-      customer_def = MultiReportDomain.Reports.CustomerReport.definition()
-      order_def = MultiReportDomain.Reports.OrderReport.definition()
+      customer_def = Module.concat([MultiReportBase, Reports, CustomerReport]).definition()
+      order_def = Module.concat([MultiReportBase, Reports, OrderReport]).definition()
 
       assert customer_def.name == :customer_report
       assert order_def.name == :order_report
@@ -340,8 +347,11 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       assert NamingDomain.Reports.CamelCaseReport
 
       # Verify the original names are preserved in definitions
-      assert NamingDomain.Reports.SnakeCaseReport.definition().name == :snake_case_report
-      assert NamingDomain.Reports.CamelCaseReport.definition().name == :camelCaseReport
+      assert Module.concat([NamingBase, Reports, SnakeCaseReport]).definition().name ==
+               :snake_case_report
+
+      assert Module.concat([NamingBase, Reports, CamelCaseReport]).definition().name ==
+               :camelCaseReport
     end
   end
 
@@ -810,8 +820,8 @@ defmodule AshReports.Transformers.BuildReportModulesTest do
       assert PipelineTestDomain.Reports.Module.concat(PipelineOrderReport, Json)
 
       # Verify definitions are correct
-      customer_def = PipelineTestDomain.Reports.PipelineCustomerReport.definition()
-      order_def = PipelineTestDomain.Reports.PipelineOrderReport.definition()
+      customer_def = Module.concat([PipelineBase, Reports, PipelineCustomerReport]).definition()
+      order_def = Module.concat([PipelineBase, Reports, PipelineOrderReport]).definition()
 
       assert customer_def.name == :pipeline_customer_report
       assert order_def.name == :pipeline_order_report
