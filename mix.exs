@@ -75,6 +75,7 @@ defmodule AshReports.MixProject do
       # Test dependencies
       {:mox, "~> 1.1", only: :test},
       {:benchee, "~> 1.3", only: [:dev, :test]},
+      {:benchee_html, "~> 1.0", only: [:dev, :test]},
       {:stream_data, "~> 1.0"},
       {:bypass, "~> 2.1", only: :test}
     ]
