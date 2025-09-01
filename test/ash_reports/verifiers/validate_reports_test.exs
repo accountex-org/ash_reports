@@ -1,6 +1,8 @@
 defmodule AshReports.Verifiers.ValidateReportsTest do
   use ExUnit.Case, async: false
 
+  alias ValidDomain.Reports.ValidReport
+
   describe "ValidateReports verifier" do
     test "accepts valid report definitions" do
       # This should compile without errors
@@ -29,7 +31,7 @@ defmodule AshReports.Verifiers.ValidateReportsTest do
 
       # If we get here, validation passed
       assert ValidDomain
-      assert ValidDomain.Reports.ValidReport.definition().name == :valid_report
+      assert ValidReport.definition().name == :valid_report
     end
 
     test "rejects reports with duplicate names" do
