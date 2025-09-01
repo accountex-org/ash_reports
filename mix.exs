@@ -74,7 +74,7 @@ defmodule AshReports.MixProject do
 
       # Phase 5.1 - Interactive Data Visualization dependencies
       {:jason, "~> 1.4"},
-      
+
       # Test dependencies
       {:mox, "~> 1.1", only: :test},
       {:benchee, "~> 1.3", only: [:dev, :test]},
