@@ -45,7 +45,7 @@ defmodule AshReports.InteractiveEngine do
 
   """
 
-  alias AshReports.{RenderContext, Cldr}
+  alias AshReports.{Cldr, RenderContext}
   alias AshReports.InteractiveEngine.{FilterProcessor, PivotProcessor, StatisticalAnalyzer}
 
   @type filter_criteria :: map()
