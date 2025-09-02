@@ -52,7 +52,7 @@ defmodule AshReports.HtmlRenderer.ChartIntegrator do
 
   alias AshReports.ChartEngine
   alias AshReports.ChartEngine.{ChartConfig, ChartData}
-  alias AshReports.HtmlRenderer.{JavaScriptGenerator, AssetManager}
+  alias AshReports.HtmlRenderer.{AssetManager, JavaScriptGenerator}
   alias AshReports.{RenderContext, Translation}
 
   @type chart_output :: %{

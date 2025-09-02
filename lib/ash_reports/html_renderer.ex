@@ -689,7 +689,7 @@ defmodule AshReports.HtmlRenderer do
 
   defp generate_charts_javascript(%RenderContext{} = context, chart_assets) do
     chart_configs = extract_chart_configs_from_context(context)
-    
+
     case chart_configs do
       [] -> {:ok, ""}
       configs -> build_complete_javascript(configs, chart_assets, context)
@@ -697,9 +697,11 @@ defmodule AshReports.HtmlRenderer do
   end
 
   defp build_complete_javascript(chart_configs, chart_assets, %RenderContext{} = context) do
-    asset_loading_js = JavaScriptGenerator.generate_asset_loading_javascript(chart_assets.assets, context)
+    asset_loading_js =
+      JavaScriptGenerator.generate_asset_loading_javascript(chart_assets.assets, context)
+
     chart_javascript = generate_all_chart_javascript(chart_configs, context)
-    
+
     complete_javascript = """
     <script>
     #{asset_loading_js}
@@ -707,7 +709,7 @@ defmodule AshReports.HtmlRenderer do
     #{chart_javascript}
     </script>
     """
-    
+
     {:ok, complete_javascript}
   end
 
