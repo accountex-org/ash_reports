@@ -95,8 +95,11 @@ defmodule AshReports.HtmlRenderer do
   alias AshReports.{
     Cldr,
     Formatter,
+    HtmlRenderer.AssetManager,
+    HtmlRenderer.ChartIntegrator,
     HtmlRenderer.CssGenerator,
     HtmlRenderer.ElementBuilder,
+    HtmlRenderer.JavaScriptGenerator,
     HtmlRenderer.ResponsiveLayout,
     HtmlRenderer.TemplateEngine,
     RenderContext,
@@ -114,9 +117,19 @@ defmodule AshReports.HtmlRenderer do
     start_time = System.monotonic_time(:microsecond)
 
     with {:ok, template_context} <- prepare_template_context(context, opts),
+         {:ok, chart_assets} <- process_chart_requirements(template_context),
          {:ok, css_content} <- generate_css(template_context),
          {:ok, html_elements} <- build_html_elements(template_context),
-         {:ok, final_html} <- assemble_html(template_context, css_content, html_elements),
+         {:ok, charts_html} <- generate_charts_html(template_context),
+         {:ok, javascript_code} <- generate_charts_javascript(template_context, chart_assets),
+         {:ok, final_html} <-
+           assemble_html_with_charts(
+             template_context,
+             css_content,
+             html_elements,
+             charts_html,
+             javascript_code
+           ),
          {:ok, result_metadata} <- build_result_metadata(template_context, start_time) do
       result = %{
         content: final_html,
@@ -623,5 +636,186 @@ defmodule AshReports.HtmlRenderer do
     report.bands
     |> Enum.map(fn band -> Map.get(band, :name) end)
     |> Enum.filter(&(&1 != nil))
+  end
+
+  # Phase 5.2: Chart Integration Functions
+
+  defp process_chart_requirements(%RenderContext{} = context) do
+    # Check if report has chart configurations
+    chart_configs = extract_chart_configs_from_context(context)
+
+    if length(chart_configs) > 0 do
+      required_providers = chart_configs |> Enum.map(& &1.provider) |> Enum.uniq()
+
+      asset_requirements =
+        required_providers |> Enum.flat_map(&AssetManager.get_provider_assets/1)
+
+      {:ok,
+       %{
+         providers: required_providers,
+         assets: asset_requirements,
+         chart_configs: chart_configs,
+         optimization: AssetManager.get_optimization_recommendations(required_providers, context)
+       }}
+    else
+      {:ok, %{providers: [], assets: [], chart_configs: [], optimization: %{}}}
+    end
+  end
+
+  defp generate_charts_html(%RenderContext{} = context) do
+    chart_configs = extract_chart_configs_from_context(context)
+
+    case chart_configs do
+      [] -> {:ok, ""}
+      configs -> process_chart_configs(configs, context)
+    end
+  end
+
+  defp process_chart_configs(chart_configs, %RenderContext{} = context) do
+    charts_html =
+      chart_configs
+      |> Enum.map(&render_single_chart(&1, context))
+      |> Enum.join("\n")
+
+    {:ok, charts_html}
+  end
+
+  defp render_single_chart(chart_config, %RenderContext{} = context) do
+    case ChartIntegrator.render_chart(chart_config, context) do
+      {:ok, chart_output} -> chart_output.html
+      {:error, _reason} -> generate_chart_error_fallback(chart_config, context)
+    end
+  end
+
+  defp generate_charts_javascript(%RenderContext{} = context, chart_assets) do
+    chart_configs = extract_chart_configs_from_context(context)
+    
+    case chart_configs do
+      [] -> {:ok, ""}
+      configs -> build_complete_javascript(configs, chart_assets, context)
+    end
+  end
+
+  defp build_complete_javascript(chart_configs, chart_assets, %RenderContext{} = context) do
+    asset_loading_js = JavaScriptGenerator.generate_asset_loading_javascript(chart_assets.assets, context)
+    chart_javascript = generate_all_chart_javascript(chart_configs, context)
+    
+    complete_javascript = """
+    <script>
+    #{asset_loading_js}
+
+    #{chart_javascript}
+    </script>
+    """
+    
+    {:ok, complete_javascript}
+  end
+
+  defp generate_all_chart_javascript(chart_configs, %RenderContext{} = context) do
+    chart_configs
+    |> Enum.map(&build_chart_js_config(&1, context))
+    |> Enum.map(&generate_single_chart_javascript(&1, context))
+    |> Enum.filter(&(String.length(&1) > 0))
+    |> Enum.join("\n\n")
+  end
+
+  defp build_chart_js_config(chart_config, %RenderContext{} = context) do
+    %{
+      chart_id: generate_chart_id(chart_config),
+      provider: chart_config.provider,
+      chart_config: chart_config,
+      interactive: chart_config.interactive,
+      events: chart_config.interactions || []
+    }
+  end
+
+  defp generate_single_chart_javascript(js_config, %RenderContext{} = context) do
+    case JavaScriptGenerator.generate_chart_javascript(js_config, context) do
+      {:ok, js_code} -> js_code
+      {:error, _reason} -> ""
+    end
+  end
+
+  defp assemble_html_with_charts(
+         %RenderContext{} = context,
+         css_content,
+         html_elements,
+         charts_html,
+         javascript_code
+       ) do
+    # Enhanced HTML assembly with Phase 5.2 chart integration
+    enhanced_html = """
+    <!DOCTYPE html>
+    <html lang="#{context.locale}" dir="#{context.text_direction}">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>#{get_page_title(context)}</title>
+      
+      <!-- Phase 5.2: Chart Assets -->
+      #{AssetManager.generate_css_links(context)}
+      
+      <style>
+      #{css_content}
+      </style>
+    </head>
+    <body class="ash-reports #{if context.text_direction == "rtl", do: "rtl", else: "ltr"}">
+      <main class="ash-report-content">
+        #{html_elements}
+        
+        <!-- Phase 5.2: Charts Section -->
+        #{if String.length(charts_html) > 0, do: "<section class=\"ash-charts-section\">#{charts_html}</section>", else: ""}
+      </main>
+      
+      <!-- Phase 5.2: Chart JavaScript -->
+      #{javascript_code}
+    </body>
+    </html>
+    """
+
+    {:ok, enhanced_html}
+  end
+
+  # Helper functions for Phase 5.2 integration
+
+  defp extract_chart_configs_from_context(%RenderContext{} = context) do
+    # Extract chart configurations from report definition or context metadata
+    # This is a placeholder - would need to be integrated with report DSL
+    context.metadata[:chart_configs] || []
+  end
+
+  defp generate_chart_id(chart_config) do
+    # Generate unique chart ID based on config
+    chart_name = chart_config.title || "chart"
+    chart_type = chart_config.type
+
+    hash =
+      :crypto.hash(:md5, "#{chart_name}_#{chart_type}")
+      |> Base.encode16(case: :lower)
+      |> String.slice(0, 8)
+
+    "ash_chart_#{chart_type}_#{hash}"
+  end
+
+  defp generate_chart_error_fallback(chart_config, %RenderContext{} = context) do
+    error_message =
+      case context.locale do
+        "ar" -> "فشل في عرض الرسم البياني"
+        "es" -> "Error al mostrar el gráfico"
+        "fr" -> "Erreur d'affichage du graphique"
+        _ -> "Chart display error"
+      end
+
+    """
+    <div class="ash-chart-error">
+      <h4>#{chart_config.title || "Chart"}</h4>
+      <p class="error">#{error_message}</p>
+    </div>
+    """
+  end
+
+  defp get_page_title(%RenderContext{} = context) do
+    # Extract title from report or use default
+    context.metadata[:title] || "AshReports Interactive Report"
   end
 end
