@@ -103,9 +103,9 @@ defmodule AshReports.HeexRenderer do
     HeexRenderer.LiveViewIntegration,
     RenderContext
   }
-  
+
   # Phase 6.2: Chart Integration
-  alias AshReports.LiveView.{ChartLiveComponent, ChartHooks}
+  alias AshReports.LiveView.{ChartHooks, ChartLiveComponent}
   alias AshReports.HtmlRenderer.{AssetManager, ChartIntegrator}
 
   @doc """
@@ -121,7 +121,8 @@ defmodule AshReports.HeexRenderer do
     with {:ok, heex_context} <- prepare_heex_context(context, opts),
          {:ok, chart_components} <- prepare_chart_components(heex_context),
          {:ok, component_assigns} <- build_component_assigns(heex_context, chart_components),
-         {:ok, heex_template} <- generate_enhanced_heex_template(heex_context, component_assigns, chart_components),
+         {:ok, heex_template} <-
+           generate_enhanced_heex_template(heex_context, component_assigns, chart_components),
          {:ok, result_metadata} <- build_enhanced_result_metadata(heex_context, start_time) do
       result = %{
         content: heex_template,
@@ -519,20 +520,22 @@ defmodule AshReports.HeexRenderer do
   defp prepare_chart_components(%RenderContext{} = context) do
     # Extract chart configurations from context
     chart_configs = extract_chart_configs_from_context(context)
-    
+
     if length(chart_configs) > 0 do
-      chart_components = chart_configs
-      |> Enum.with_index()
-      |> Enum.map(fn {chart_config, index} ->
-        build_chart_component_data(chart_config, index, context)
-      end)
-      
-      {:ok, %{
-        chart_components: chart_components,
-        count: length(chart_components),
-        requires_live_view: true,
-        requires_hooks: true
-      }}
+      chart_components =
+        chart_configs
+        |> Enum.with_index()
+        |> Enum.map(fn {chart_config, index} ->
+          build_chart_component_data(chart_config, index, context)
+        end)
+
+      {:ok,
+       %{
+         chart_components: chart_components,
+         count: length(chart_components),
+         requires_live_view: true,
+         requires_hooks: true
+       }}
     else
       {:ok, %{chart_components: [], count: 0, requires_live_view: false, requires_hooks: false}}
     end
@@ -550,14 +553,18 @@ defmodule AshReports.HeexRenderer do
       requires_live_view: chart_components.requires_live_view,
       dashboard_id: context.metadata[:dashboard_id] || "default"
     }
-    
+
     {:ok, base_assigns}
   end
 
-  defp generate_enhanced_heex_template(%RenderContext{} = context, component_assigns, chart_components) do
+  defp generate_enhanced_heex_template(
+         %RenderContext{} = context,
+         component_assigns,
+         chart_components
+       ) do
     # Generate HEEX template with chart integration
     base_template = generate_base_report_template(context, component_assigns)
-    
+
     if chart_components.count > 0 do
       chart_section = generate_chart_components_heex(chart_components, context)
       enhanced_template = integrate_charts_into_template(base_template, chart_section, context)
@@ -570,7 +577,7 @@ defmodule AshReports.HeexRenderer do
   defp build_enhanced_result_metadata(%RenderContext{} = context, start_time) do
     processing_time = System.monotonic_time(:microsecond) - start_time
     chart_configs = extract_chart_configs_from_context(context)
-    
+
     metadata = %{
       renderer: :heex,
       processing_time_microseconds: processing_time,
@@ -585,7 +592,7 @@ defmodule AshReports.HeexRenderer do
         interactive_charts: true
       }
     }
-    
+
     {:ok, metadata}
   end
 
@@ -596,7 +603,7 @@ defmodule AshReports.HeexRenderer do
 
   defp build_chart_component_data(chart_config, index, %RenderContext{} = context) do
     component_id = "chart_#{index}"
-    
+
     %{
       id: component_id,
       chart_config: chart_config,
@@ -634,15 +641,16 @@ defmodule AshReports.HeexRenderer do
   end
 
   defp generate_chart_components_heex(chart_components, %RenderContext{} = context) do
-    charts_heex = chart_components.chart_components
-    |> Enum.map(&generate_single_chart_component_heex(&1, context))
-    |> Enum.join("\n")
-    
+    charts_heex =
+      chart_components.chart_components
+      |> Enum.map(&generate_single_chart_component_heex(&1, context))
+      |> Enum.join("\n")
+
     """
     <div class="ash-charts-section #{if context.text_direction == "rtl", do: "rtl", else: "ltr"}">
       #{charts_heex}
     </div>
-    
+
     <script>
     // Phase 6.2: Chart hooks integration
     <%= raw(#{ChartHooks.generate_hooks_javascript()}) %>
@@ -673,18 +681,18 @@ defmodule AshReports.HeexRenderer do
     # Add chart assets and integrate chart section
     asset_links = AssetManager.generate_css_links(context)
     chart_css = ChartHooks.generate_liveview_chart_css()
-    
+
     """
     <!-- Phase 6.2: Chart Assets -->
     #{asset_links}
-    
+
     <style>
     #{chart_css}
     </style>
-    
+
     <!-- Report Content -->
     #{base_template}
-    
+
     <!-- Chart Components -->
     #{chart_section}
     """

@@ -80,7 +80,8 @@ defmodule AshReports.MixProject do
       {:benchee, "~> 1.3", only: [:dev, :test]},
       {:benchee_html, "~> 1.0", only: [:dev, :test]},
       {:stream_data, "~> 1.0"},
-      {:bypass, "~> 2.1", only: :test}
+      {:bypass, "~> 2.1", only: :test},
+      {:wallaby, "~> 0.30", only: :test}
     ]
   end
 
