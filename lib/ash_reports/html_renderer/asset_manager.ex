@@ -33,7 +33,7 @@ defmodule AshReports.HtmlRenderer.AssetManager do
 
   """
 
-  alias AshReports.{RenderContext, Cldr}
+  alias AshReports.{Cldr, RenderContext}
 
   @chart_providers %{
     chartjs: %{
