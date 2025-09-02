@@ -103,6 +103,10 @@ defmodule AshReports.HeexRenderer do
     HeexRenderer.LiveViewIntegration,
     RenderContext
   }
+  
+  # Phase 6.2: Chart Integration
+  alias AshReports.LiveView.{ChartLiveComponent, ChartHooks}
+  alias AshReports.HtmlRenderer.{AssetManager, ChartIntegrator}
 
   @doc """
   Enhanced render callback with full Phase 3.3 HEEX generation.
@@ -115,9 +119,10 @@ defmodule AshReports.HeexRenderer do
     start_time = System.monotonic_time(:microsecond)
 
     with {:ok, heex_context} <- prepare_heex_context(context, opts),
-         {:ok, component_assigns} <- build_component_assigns(heex_context),
-         {:ok, heex_template} <- generate_heex_template(heex_context, component_assigns),
-         {:ok, result_metadata} <- build_result_metadata(heex_context, start_time) do
+         {:ok, chart_components} <- prepare_chart_components(heex_context),
+         {:ok, component_assigns} <- build_component_assigns(heex_context, chart_components),
+         {:ok, heex_template} <- generate_enhanced_heex_template(heex_context, component_assigns, chart_components),
+         {:ok, result_metadata} <- build_enhanced_result_metadata(heex_context, start_time) do
       result = %{
         content: heex_template,
         metadata: result_metadata,
@@ -507,5 +512,181 @@ defmodule AshReports.HeexRenderer do
     # This would calculate the estimated template size
     # For now, return a placeholder based on typical HEEX template size
     2048
+  end
+
+  # Phase 6.2: Chart Integration Functions
+
+  defp prepare_chart_components(%RenderContext{} = context) do
+    # Extract chart configurations from context
+    chart_configs = extract_chart_configs_from_context(context)
+    
+    if length(chart_configs) > 0 do
+      chart_components = chart_configs
+      |> Enum.with_index()
+      |> Enum.map(fn {chart_config, index} ->
+        build_chart_component_data(chart_config, index, context)
+      end)
+      
+      {:ok, %{
+        chart_components: chart_components,
+        count: length(chart_components),
+        requires_live_view: true,
+        requires_hooks: true
+      }}
+    else
+      {:ok, %{chart_components: [], count: 0, requires_live_view: false, requires_hooks: false}}
+    end
+  end
+
+  defp build_component_assigns(%RenderContext{} = context, chart_components) do
+    # Enhanced component assigns with chart support
+    base_assigns = %{
+      locale: context.locale,
+      text_direction: context.text_direction,
+      reports: context.records,
+      charts: chart_components.chart_components,
+      chart_count: chart_components.count,
+      supports_charts: chart_components.count > 0,
+      requires_live_view: chart_components.requires_live_view,
+      dashboard_id: context.metadata[:dashboard_id] || "default"
+    }
+    
+    {:ok, base_assigns}
+  end
+
+  defp generate_enhanced_heex_template(%RenderContext{} = context, component_assigns, chart_components) do
+    # Generate HEEX template with chart integration
+    base_template = generate_base_report_template(context, component_assigns)
+    
+    if chart_components.count > 0 do
+      chart_section = generate_chart_components_heex(chart_components, context)
+      enhanced_template = integrate_charts_into_template(base_template, chart_section, context)
+      {:ok, enhanced_template}
+    else
+      {:ok, base_template}
+    end
+  end
+
+  defp build_enhanced_result_metadata(%RenderContext{} = context, start_time) do
+    processing_time = System.monotonic_time(:microsecond) - start_time
+    chart_configs = extract_chart_configs_from_context(context)
+    
+    metadata = %{
+      renderer: :heex,
+      processing_time_microseconds: processing_time,
+      chart_integration_enabled: length(chart_configs) > 0,
+      chart_count: length(chart_configs),
+      live_view_required: length(chart_configs) > 0,
+      generated_at: DateTime.utc_now(),
+      locale: context.locale,
+      features: %{
+        phase_6_2_charts: length(chart_configs) > 0,
+        real_time_capable: true,
+        interactive_charts: true
+      }
+    }
+    
+    {:ok, metadata}
+  end
+
+  defp extract_chart_configs_from_context(%RenderContext{} = context) do
+    # Extract chart configurations from context metadata
+    context.metadata[:chart_configs] || context.config[:charts] || []
+  end
+
+  defp build_chart_component_data(chart_config, index, %RenderContext{} = context) do
+    component_id = "chart_#{index}"
+    
+    %{
+      id: component_id,
+      chart_config: chart_config,
+      locale: context.locale,
+      text_direction: context.text_direction,
+      interactive: chart_config[:interactive] || false,
+      real_time: chart_config[:real_time] || false,
+      provider: chart_config[:provider] || :chartjs,
+      dashboard_id: context.metadata[:dashboard_id]
+    }
+  end
+
+  defp generate_base_report_template(%RenderContext{} = context, component_assigns) do
+    # Generate base HEEX template for report
+    """
+    <div class="ash-report #{if component_assigns.text_direction == "rtl", do: "rtl", else: "ltr"}" 
+         data-locale="#{component_assigns.locale}">
+      
+      <%= if @supports_charts do %>
+        <!-- Phase 6.2: Chart-enabled report -->
+        <div class="ash-report-with-charts">
+          <div class="ash-report-data">
+            <%= render_report_bands(@reports) %>
+          </div>
+        </div>
+      <% else %>
+        <!-- Standard report -->
+        <div class="ash-report-standard">
+          <%= render_report_bands(@reports) %>
+        </div>
+      <% end %>
+      
+    </div>
+    """
+  end
+
+  defp generate_chart_components_heex(chart_components, %RenderContext{} = context) do
+    charts_heex = chart_components.chart_components
+    |> Enum.map(&generate_single_chart_component_heex(&1, context))
+    |> Enum.join("\n")
+    
+    """
+    <div class="ash-charts-section #{if context.text_direction == "rtl", do: "rtl", else: "ltr"}">
+      #{charts_heex}
+    </div>
+    
+    <script>
+    // Phase 6.2: Chart hooks integration
+    <%= raw(#{ChartHooks.generate_hooks_javascript()}) %>
+    </script>
+    """
+  end
+
+  defp generate_single_chart_component_heex(chart_data, %RenderContext{} = _context) do
+    """
+    <.live_component
+      module={AshReports.LiveView.ChartLiveComponent}
+      id="#{chart_data.id}"
+      chart_config={%{
+        type: #{inspect(chart_data.chart_config[:type] || :bar)},
+        data: #{inspect(chart_data.chart_config[:data] || [])},
+        title: #{inspect(chart_data.chart_config[:title])},
+        provider: #{inspect(chart_data.provider)},
+        interactive: #{chart_data.interactive},
+        real_time: #{chart_data.real_time}
+      }}
+      locale="#{chart_data.locale}"
+      dashboard_id="#{chart_data.dashboard_id}"
+    />
+    """
+  end
+
+  defp integrate_charts_into_template(base_template, chart_section, %RenderContext{} = context) do
+    # Add chart assets and integrate chart section
+    asset_links = AssetManager.generate_css_links(context)
+    chart_css = ChartHooks.generate_liveview_chart_css()
+    
+    """
+    <!-- Phase 6.2: Chart Assets -->
+    #{asset_links}
+    
+    <style>
+    #{chart_css}
+    </style>
+    
+    <!-- Report Content -->
+    #{base_template}
+    
+    <!-- Chart Components -->
+    #{chart_section}
+    """
   end
 end
