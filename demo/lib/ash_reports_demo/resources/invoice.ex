@@ -44,27 +44,27 @@ defmodule AshReportsDemo.Invoice do
       allow_nil? false
       description "Invoice subtotal before tax"
       default Decimal.new("0.00")
-      constraints decimal: [min: Decimal.new("0.00")]
+      constraints min: Decimal.new("0.00")
     end
 
     attribute :tax_rate, :decimal do
       description "Tax rate applied"
       default Decimal.new("8.25")
-      constraints decimal: [min: Decimal.new("0.00"), max: Decimal.new("50.00")]
+      constraints [min: Decimal.new("0.00"), max: Decimal.new("50.00")]
     end
 
     attribute :tax_amount, :decimal do
       allow_nil? false
       description "Tax amount"
       default Decimal.new("0.00")
-      constraints decimal: [min: Decimal.new("0.00")]
+      constraints min: Decimal.new("0.00")
     end
 
     attribute :total, :decimal do
       allow_nil? false
       description "Total invoice amount"
       default Decimal.new("0.00")
-      constraints decimal: [min: Decimal.new("0.00")]
+      constraints min: Decimal.new("0.00")
     end
 
     attribute :payment_terms, :string do
@@ -240,11 +240,11 @@ defmodule AshReportsDemo.Invoice do
       description "Number of line items on this invoice"
     end
 
-    sum :line_items_subtotal, :line_items, field: :line_total do
+    sum :line_items_subtotal, :line_items, :line_total do
       description "Subtotal from line items"
     end
 
-    avg :average_line_item_amount, :line_items, field: :line_total do
+    avg :average_line_item_amount, :line_items, :line_total do
       description "Average line item amount"
     end
   end

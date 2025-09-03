@@ -43,7 +43,7 @@ defmodule AshReportsDemo.Customer do
     attribute :credit_limit, :decimal do
       description "Customer credit limit"
       default Decimal.new("5000.00")
-      constraints decimal: [max: Decimal.new("100000.00"), min: Decimal.new("0.00")]
+      constraints [max: Decimal.new("100000.00"), min: Decimal.new("0.00")]
     end
 
     attribute :created_at, :utc_datetime_usec do
@@ -186,15 +186,15 @@ defmodule AshReportsDemo.Customer do
       description "Total number of invoices for this customer"
     end
 
-    sum :total_invoice_amount, :invoices, field: :total do
+    sum :total_invoice_amount, :invoices, :total do
       description "Total amount of all customer invoices"
     end
 
-    max :last_invoice_date, :invoices, field: :date do
+    max :last_invoice_date, :invoices, :date do
       description "Date of most recent invoice"
     end
 
-    avg :average_invoice_amount, :invoices, field: :total do
+    avg :average_invoice_amount, :invoices, :total do
       description "Average invoice amount for this customer"
     end
   end

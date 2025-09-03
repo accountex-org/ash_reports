@@ -37,18 +37,18 @@ defmodule AshReportsDemo.Product do
     attribute :price, :decimal do
       allow_nil? false
       description "Product selling price"
-      constraints decimal: [min: Decimal.new("0.01")]
+      constraints min: Decimal.new("0.01")
     end
 
     attribute :cost, :decimal do
       allow_nil? false
       description "Product cost"
-      constraints decimal: [min: Decimal.new("0.00")]
+      constraints min: Decimal.new("0.00")
     end
 
     attribute :weight, :decimal do
       description "Product weight in pounds"
-      constraints decimal: [min: Decimal.new("0.00")]
+      constraints min: Decimal.new("0.00")
     end
 
     attribute :active, :boolean do
@@ -198,11 +198,11 @@ defmodule AshReportsDemo.Product do
       description "Number of times this product has been ordered"
     end
 
-    sum :total_quantity_sold, :invoice_line_items, field: :quantity do
+    sum :total_quantity_sold, :invoice_line_items, :quantity do
       description "Total quantity of this product sold"
     end
 
-    sum :total_revenue, :invoice_line_items, field: :line_total do
+    sum :total_revenue, :invoice_line_items, :line_total do
       description "Total revenue from this product"
     end
   end
