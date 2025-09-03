@@ -1,0 +1,13 @@
+{application,cldr_utils,
+             [{modules,['Elixir.Cldr.Code','Elixir.Cldr.Decimal',
+                        'Elixir.Cldr.Digits','Elixir.Cldr.Enum',
+                        'Elixir.Cldr.Helpers','Elixir.Cldr.Http',
+                        'Elixir.Cldr.Json','Elixir.Cldr.Macros',
+                        'Elixir.Cldr.Map','Elixir.Cldr.Math',
+                        'Elixir.Cldr.String','Elixir.Cldr.Utils']},
+              {optional_applications,[castore,certifi]},
+              {applications,[kernel,stdlib,elixir,logger,inets,ssl,decimal,
+                             castore,certifi]},
+              {description,"Map, Calendar, Digits, Decimal, HTTP, Macro, Math, and String helpers for ex_cldr.\n"},
+              {registered,[]},
+              {vsn,"2.28.3"}]}.
