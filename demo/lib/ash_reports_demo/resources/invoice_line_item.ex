@@ -20,32 +20,32 @@ defmodule AshReportsDemo.InvoiceLineItem do
     attribute :quantity, :decimal do
       allow_nil? false
       description "Quantity ordered"
-      constraints decimal: [min: Decimal.new("0.01")]
+      constraints min: Decimal.new("0.01")
     end
 
     attribute :unit_price, :decimal do
       allow_nil? false
       description "Price per unit"
-      constraints decimal: [min: Decimal.new("0.01")]
+      constraints min: Decimal.new("0.01")
     end
 
     attribute :line_total, :decimal do
       allow_nil? false
       description "Total for this line item"
       default Decimal.new("0.00")
-      constraints decimal: [min: Decimal.new("0.00")]
+      constraints min: Decimal.new("0.00")
     end
 
     attribute :discount_percentage, :decimal do
       description "Discount percentage applied to this line"
       default Decimal.new("0.00")
-      constraints decimal: [min: Decimal.new("0.00"), max: Decimal.new("100.00")]
+      constraints [min: Decimal.new("0.00"), max: Decimal.new("100.00")]
     end
 
     attribute :discount_amount, :decimal do
       description "Dollar amount of discount applied"
       default Decimal.new("0.00")
-      constraints decimal: [min: Decimal.new("0.00")]
+      constraints min: Decimal.new("0.00")
     end
 
     attribute :description, :string do
