@@ -78,12 +78,16 @@ defmodule AshReports.PdfRenderer do
 
   alias AshReports.{
     HtmlRenderer,
+    PdfRenderer.ChartImageGenerator,
     PdfRenderer.PageManager,
     PdfRenderer.PdfGenerator,
     PdfRenderer.PrintOptimizer,
     PdfRenderer.TemplateAdapter,
     RenderContext
   }
+
+  # Phase 6.3: Chart Integration
+  alias AshReports.ChartEngine.{ChartConfig, ChartDataProcessor}
 
   @doc """
   Enhanced render callback with full Phase 3.4 PDF generation.
@@ -96,7 +100,9 @@ defmodule AshReports.PdfRenderer do
     start_time = System.monotonic_time(:microsecond)
 
     with {:ok, pdf_context} <- prepare_pdf_context(context, opts),
-         {:ok, optimized_html} <- generate_print_optimized_html(pdf_context),
+         {:ok, chart_images} <- generate_chart_images_for_pdf(pdf_context),
+         {:ok, optimized_html} <-
+           generate_print_optimized_html_with_charts(pdf_context, chart_images),
          {:ok, pdf_binary} <- generate_pdf_from_html(pdf_context, optimized_html),
          {:ok, result_metadata} <- build_pdf_metadata(pdf_context, start_time) do
       result = %{
@@ -442,5 +448,77 @@ defmodule AshReports.PdfRenderer do
     # Rough estimation: 50KB base + 10KB per page
     estimated_pages = estimate_page_count(context)
     50_000 + estimated_pages * 10_000
+  end
+
+  # Phase 6.3: Chart Integration Functions
+
+  defp generate_chart_images_for_pdf(%RenderContext{} = context) do
+    # Extract chart configurations from context
+    chart_configs = extract_chart_configs_from_context(context)
+
+    if length(chart_configs) > 0 do
+      case ChartImageGenerator.generate_multiple_images(chart_configs, context, %{
+             format: :png,
+             width: 800,
+             height: 600,
+             quality: 300
+           }) do
+        {:ok, chart_images} ->
+          {:ok, chart_images}
+
+        {:error, reason} ->
+          Logger.warn("Chart image generation failed: #{reason}")
+          # Continue without charts
+          {:ok, %{}}
+      end
+    else
+      {:ok, %{}}
+    end
+  end
+
+  defp generate_print_optimized_html_with_charts(%RenderContext{} = context, chart_images) do
+    # Get base HTML from existing system
+    with {:ok, base_html} <- generate_print_optimized_html(context) do
+      enhanced_html =
+        if map_size(chart_images) > 0 do
+          embed_chart_images_in_html(base_html, chart_images, context)
+        else
+          base_html
+        end
+
+      {:ok, enhanced_html}
+    end
+  end
+
+  defp extract_chart_configs_from_context(%RenderContext{} = context) do
+    # Extract chart configurations from context metadata
+    context.metadata[:chart_configs] || context.config[:charts] || []
+  end
+
+  defp embed_chart_images_in_html(html_content, chart_images, %RenderContext{} = context) do
+    # Embed chart images as base64 data URLs in HTML
+    chart_html_sections =
+      chart_images
+      |> Enum.map(fn {chart_id, {:ok, image_binary}} ->
+        base64_image = Base.encode64(image_binary)
+
+        """
+        <div class="pdf-chart-container">
+          <img src="data:image/png;base64,#{base64_image}" 
+               alt="Chart: #{chart_id}"
+               style="max-width: 100%; height: auto; page-break-inside: avoid;">
+        </div>
+        """
+      end)
+      |> Enum.join("\n")
+
+    # Insert chart images before closing body tag
+    case String.contains?(html_content, "</body>") do
+      true ->
+        String.replace(html_content, "</body>", "#{chart_html_sections}</body>")
+
+      false ->
+        html_content <> chart_html_sections
+    end
   end
 end
