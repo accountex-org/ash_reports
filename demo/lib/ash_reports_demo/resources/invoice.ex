@@ -307,6 +307,23 @@ defmodule AshReportsDemo.Invoice do
         changeset
       end
     end
+
+    # Phase 7.4: Advanced lifecycle management
+    change fn changeset, _context ->
+      # Auto-update status based on due date for sent invoices
+      if changeset.action_type == :update do
+        current_status = Ash.Changeset.get_attribute(changeset, :status)
+        due_date = Ash.Changeset.get_attribute(changeset, :due_date)
+        
+        if current_status == :sent && due_date && Date.compare(Date.utc_today(), due_date) == :gt do
+          Ash.Changeset.change_attribute(changeset, :status, :overdue)
+        else
+          changeset
+        end
+      else
+        changeset
+      end
+    end
   end
 
   resource do

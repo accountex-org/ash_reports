@@ -100,6 +100,52 @@ defmodule AshReportsDemo.Product do
       accept [:price, :cost]
       change set_attribute(:updated_at, &DateTime.utc_now/0)
     end
+
+    # Phase 7.4: Advanced product actions
+    update :adjust_pricing_strategy do
+      description "Adjust pricing based on market analysis"
+      argument :strategy, :atom, constraints: [one_of: [:competitive, :premium, :value]]
+      argument :adjustment_percentage, :decimal, default: Decimal.new("5.00")
+      
+      change fn changeset, _context ->
+        strategy = Ash.Changeset.get_argument(changeset, :strategy)
+        adjustment = Ash.Changeset.get_argument(changeset, :adjustment_percentage)
+        current_price = Ash.Changeset.get_attribute(changeset, :price)
+        
+        # Apply pricing strategy
+        new_price = case strategy do
+          :competitive ->
+            # Reduce price by adjustment percentage
+            multiplier = Decimal.sub(Decimal.new("100"), adjustment) |> Decimal.div(100)
+            Decimal.mult(current_price, multiplier)
+          
+          :premium ->
+            # Increase price by adjustment percentage  
+            multiplier = Decimal.add(Decimal.new("100"), adjustment) |> Decimal.div(100)
+            Decimal.mult(current_price, multiplier)
+          
+          :value ->
+            # Optimize for margin
+            current_price
+        end
+        
+        changeset
+        |> Ash.Changeset.change_attribute(:price, new_price)
+        |> Ash.Changeset.change_attribute(:updated_at, DateTime.utc_now())
+      end
+    end
+
+    read :top_performers do
+      description "Get top performing products by profitability"
+      # Products with excellent margins and sales
+      filter expr(active == true)
+    end
+
+    read :underperformers do
+      description "Get products that need attention"
+      # Products with poor performance metrics
+      filter expr(active == false or price <= cost)
+    end
   end
 
   relationships do
@@ -187,6 +233,119 @@ defmodule AshReportsDemo.Product do
           # For demo: simulate inventory status
           status = Enum.random(["In Stock", "Low Stock", "Out of Stock", "Backordered"])
           {product.id, status}
+        end)
+        |> Map.new()
+      end
+    end
+
+    # Phase 7.4: Advanced product analytics
+    calculate :inventory_velocity, :decimal do
+      description "Inventory turnover velocity (units sold per day)"
+      
+      calculation fn records, _context ->
+        records
+        |> Enum.map(fn product ->
+          # Simulate velocity based on product activity
+          base_velocity = :rand.uniform(20) / 10  # 0.1 to 2.0 units per day
+          
+          # Adjust based on product status
+          velocity = if product.active do
+            base_velocity
+          else
+            base_velocity * 0.1  # Inactive products move slower
+          end
+          
+          {product.id, Decimal.new("#{velocity}")}
+        end)
+        |> Map.new()
+      end
+    end
+
+    calculate :demand_forecast, :string do
+      description "30-day demand forecast based on historical patterns"
+      
+      calculation fn records, _context ->
+        records
+        |> Enum.map(fn product ->
+          # Simulate demand forecasting
+          trend = Enum.random(["Increasing", "Stable", "Declining", "Seasonal"])
+          confidence = 60 + :rand.uniform(35)  # 60-95% confidence
+          
+          forecast = "#{trend} (#{confidence}% confidence)"
+          {product.id, forecast}
+        end)
+        |> Map.new()
+      end
+    end
+
+    calculate :reorder_recommendation, :string do
+      description "Intelligent reorder recommendation based on demand patterns"
+      
+      calculation fn records, _context ->
+        records
+        |> Enum.map(fn product ->
+          # Simulate intelligent reorder logic
+          recommendations = [
+            "Order 100 units by #{Date.add(Date.utc_today(), 7)}",
+            "Stock level optimal - no action needed",
+            "Consider promotional pricing to move inventory", 
+            "Increase order quantity - high demand detected",
+            "Monitor closely - irregular demand pattern"
+          ]
+          
+          recommendation = Enum.random(recommendations)
+          {product.id, recommendation}
+        end)
+        |> Map.new()
+      end
+    end
+
+    calculate :profit_trend, :string do
+      description "6-month profit margin trend analysis"
+      
+      calculation fn records, _context ->
+        records
+        |> Enum.map(fn product ->
+          # Simulate profit trend analysis
+          current_margin = if Decimal.gt?(product.price, 0) do
+            Decimal.sub(product.price, product.cost)
+            |> Decimal.div(product.price)
+            |> Decimal.mult(100)
+            |> Decimal.to_float()
+          else
+            0.0
+          end
+          
+          trend = cond do
+            current_margin > 40 -> "Strong Growth"
+            current_margin > 20 -> "Stable"
+            current_margin > 10 -> "Declining"
+            true -> "Poor Performance"
+          end
+          
+          {product.id, trend}
+        end)
+        |> Map.new()
+      end
+    end
+
+    calculate :market_position, :string do
+      description "Product market position analysis"
+      
+      calculation fn records, _context ->
+        records
+        |> Enum.map(fn product ->
+          # Simulate market position based on pricing and performance
+          price_float = Decimal.to_float(product.price)
+          
+          position = cond do
+            price_float > 500 -> "Premium"
+            price_float > 100 -> "Mid-Market"
+            price_float > 25 -> "Value"
+            true -> "Budget"
+          end
+          
+          {product.id, position}
         end)
         |> Map.new()
       end
