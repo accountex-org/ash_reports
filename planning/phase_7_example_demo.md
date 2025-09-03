@@ -1,4 +1,4 @@
-# Phase 7: Comprehensive Example Demo Implementation
+# Phase 7: Comprehensive AshReportsDemo Demo Implementation
 
 **Duration: 2-3 weeks**  
 **Goal: Create a complete working example demonstrating all ash_reports features with realistic business data**
@@ -7,21 +7,21 @@
 
 Phase 7 creates a comprehensive example demo of the ash_reports library that showcases all implemented features through a realistic business scenario. This example will serve as both documentation and validation of the library's capabilities, providing developers with a complete reference implementation.
 
-The example will implement a business invoicing system with customers, products, and invoices, using an ETS data layer for simplicity while demonstrating all ash_reports features including hierarchical bands, variables, calculations, grouping, and multiple output formats.
+The demo will implement a business invoicing system with customers, products, and invoices, using an ETS data layer for simplicity while demonstrating all ash_reports features including hierarchical bands, variables, calculations, grouping, and multiple output formats.
 
 ## Phase 7.1: Project Structure and Dependencies ✅
 
 ### Implementation Tasks:
-- [ ] 7.1.1 Create example directory structure
+- [ ] 7.1.1 Create ash_reports_demo directory structure
 - [ ] 7.1.2 Add Faker dependency for realistic data generation
-- [ ] 7.1.3 Set up example project configuration
+- [ ] 7.1.3 Set up demo project configuration
 - [ ] 7.1.4 Create base module structure
 
 ### Code Structure:
 ```
-example/
+demo/
 ├── lib/
-│   ├── example/
+│   ├── ash_reports_demo/
 │   │   ├── application.ex
 │   │   ├── domain.ex
 │   │   ├── resources/
@@ -39,9 +39,9 @@ example/
 │   │       ├── product_inventory.ex
 │   │       ├── invoice_details.ex
 │   │       └── financial_summary.ex
-│   └── example.ex
+│   └── ash_reports_demo.ex
 ├── test/
-│   ├── example/
+│   ├── ash_reports_demo/
 │   │   ├── resources/
 │   │   ├── reports/
 │   │   └── integration/
@@ -55,26 +55,26 @@ example/
 
 ### Testing:
 ```elixir
-# test/example/project_structure_test.exs
-defmodule Example.ProjectStructureTest do
+# test/ash_reports_demo/project_structure_test.exs
+defmodule AshReportsDemo.ProjectStructureTest do
   use ExUnit.Case
 
-  test "example module loads successfully" do
-    assert Code.ensure_loaded?(Example)
-    assert Code.ensure_loaded?(Example.Domain)
-    assert Code.ensure_loaded?(Example.DataGenerator)
+  test "demo module loads successfully" do
+    assert Code.ensure_loaded?(AshReportsDemo)
+    assert Code.ensure_loaded?(AshReportsDemo.Domain)
+    assert Code.ensure_loaded?(AshReportsDemo.DataGenerator)
   end
 
-  test "all example resources load successfully" do
+  test "all demo resources load successfully" do
     resources = [
-      Example.Customer,
-      Example.CustomerAddress,
-      Example.CustomerType,
-      Example.Product,
-      Example.ProductCategory,
-      Example.Inventory,
-      Example.Invoice,
-      Example.InvoiceLineItem
+      AshReportsDemo.Customer,
+      AshReportsDemo.CustomerAddress,
+      AshReportsDemo.CustomerType,
+      AshReportsDemo.Product,
+      AshReportsDemo.ProductCategory,
+      AshReportsDemo.Inventory,
+      AshReportsDemo.Invoice,
+      AshReportsDemo.InvoiceLineItem
     ]
 
     for resource <- resources do
@@ -98,21 +98,21 @@ end
 
 ### Domain Model:
 ```
-Customer (1) ──── (*) CustomerAddress
-    │                     │
-    │ (*)                 │ (1)
-    │                     │
-CustomerType (1) ──── (*) │
-                          │
-Invoice (1) ──────── (*) InvoiceLineItem (*) ──── (1) Product
-    │                                                   │
-    │ (*)                                              │ (1)
-    │                                                   │
-    └─────────────── Customer (1)               ProductCategory (1)
-                                                        │
-                                                        │ (1)
-                                                        │
-                                                 Inventory (*)
+AshReportsDemo.Customer (1) ──── (*) AshReportsDemo.CustomerAddress
+    │                                              │
+    │ (*)                                          │ (1)
+    │                                              │
+AshReportsDemo.CustomerType (1) ──── (*) ──────── │
+                                                   │
+AshReportsDemo.Invoice (1) ──────── (*) AshReportsDemo.InvoiceLineItem (*) ──── (1) AshReportsDemo.Product
+    │                                                                                        │
+    │ (*)                                                                                   │ (1)
+    │                                                                                        │
+    └─────────────── AshReportsDemo.Customer (1)                                    AshReportsDemo.ProductCategory (1)
+                                                                                              │
+                                                                                              │ (1)
+                                                                                              │
+                                                                                      AshReportsDemo.Inventory (*)
 ```
 
 ### Resource Specifications:
@@ -143,14 +143,14 @@ Invoice (1) ──────── (*) InvoiceLineItem (*) ──── (1) Pr
 
 ### Testing:
 ```elixir
-# test/example/resources/customer_test.exs
-defmodule Example.CustomerTest do
+# test/ash_reports_demo/resources/customer_test.exs
+defmodule AshReportsDemo.CustomerTest do
   use ExUnit.Case
-  alias Example.{Customer, CustomerType, CustomerAddress}
+  alias AshReportsDemo.{Customer, CustomerType, CustomerAddress}
 
   setup do
     # Setup test data with ETS
-    Example.DataGenerator.reset_data()
+    AshReportsDemo.DataGenerator.reset_data()
     :ok
   end
 
@@ -196,11 +196,11 @@ end
 
 ### Data Generator Design:
 ```elixir
-defmodule Example.DataGenerator do
+defmodule AshReportsDemo.DataGenerator do
   @moduledoc """
   GenServer that generates realistic test data using Faker library.
   
-  Provides seeding functions for all example resources with proper
+  Provides seeding functions for all demo resources with proper
   relationship integrity and configurable data volumes.
   """
   
@@ -238,10 +238,10 @@ end
 
 ### Testing:
 ```elixir
-# test/example/data_generator_test.exs
-defmodule Example.DataGeneratorTest do
+# test/ash_reports_demo/data_generator_test.exs
+defmodule AshReportsDemo.DataGeneratorTest do
   use ExUnit.Case
-  alias Example.DataGenerator
+  alias AshReportsDemo.DataGenerator
 
   setup do
     {:ok, _pid} = start_supervised(DataGenerator)
@@ -251,9 +251,9 @@ defmodule Example.DataGeneratorTest do
   test "generates small dataset successfully" do
     assert :ok = DataGenerator.generate_sample_data(:small)
     
-    customers = Example.Customer.list!()
-    products = Example.Product.list!()
-    invoices = Example.Invoice.list!()
+    customers = AshReportsDemo.Customer.list!()
+    products = AshReportsDemo.Product.list!()
+    invoices = AshReportsDemo.Invoice.list!()
     
     assert length(customers) == 10
     assert length(products) == 50
@@ -263,7 +263,7 @@ defmodule Example.DataGeneratorTest do
   test "maintains relationship integrity" do
     DataGenerator.generate_sample_data(:small)
     
-    invoice = Example.Invoice.list!(load: [:customer, :line_items]) |> hd()
+    invoice = AshReportsDemo.Invoice.list!(load: [:customer, :line_items]) |> hd()
     
     assert invoice.customer != nil
     assert length(invoice.line_items) > 0
@@ -271,14 +271,14 @@ defmodule Example.DataGeneratorTest do
     # Verify all line items reference valid products
     for line_item <- invoice.line_items do
       assert line_item.product_id != nil
-      assert Example.Product.get!(line_item.product_id)
+      assert AshReportsDemo.Product.get!(line_item.product_id)
     end
   end
 
   test "generates realistic data patterns" do
     DataGenerator.generate_sample_data(:medium)
     
-    customers = Example.Customer.list!()
+    customers = AshReportsDemo.Customer.list!()
     
     # Test realistic email patterns
     email_domains = customers |> Enum.map(&(&1.email)) |> Enum.map(fn email ->
@@ -361,13 +361,13 @@ end
 
 ### Testing:
 ```elixir
-# test/example/advanced_features_test.exs
-defmodule Example.AdvancedFeaturesTest do
+# test/demo/advanced_features_test.exs
+defmodule AshReportsDemo.AdvancedFeaturesTest do
   use ExUnit.Case
-  alias Example.{Customer, Product, Invoice}
+  alias AshReportsDemo.{Customer, Product, Invoice}
 
   setup do
-    Example.DataGenerator.generate_sample_data(:medium)
+    AshReportsDemo.DataGenerator.generate_sample_data(:medium)
     :ok
   end
 
@@ -433,7 +433,7 @@ end
 report :customer_summary do
   title "Customer Summary Report"
   description "Comprehensive customer analysis with addresses and payment history"
-  driving_resource Example.Customer
+  driving_resource AshReportsDemo.Customer
   
   parameters do
     parameter :customer_type, :string
@@ -657,7 +657,7 @@ end
 report :financial_summary do
   title "Financial Performance Summary"
   description "Revenue, profitability, and payment analysis"
-  driving_resource Example.Invoice
+  driving_resource AshReportsDemo.Invoice
   
   parameters do
     parameter :start_date, :date, required: true
@@ -666,7 +666,7 @@ report :financial_summary do
   end
 
   scope fn params ->
-    Example.Invoice
+    AshReportsDemo.Invoice
     |> Ash.Query.filter(date >= ^params.start_date and date <= ^params.end_date)
     |> Ash.Query.filter(if ^params.include_pending, do: true, else: status != :pending)
     |> Ash.Query.load([:customer, :line_items])
@@ -716,13 +716,13 @@ end
 
 ### Testing:
 ```elixir
-# test/example/reports/comprehensive_reports_test.exs
-defmodule Example.Reports.ComprehensiveReportsTest do
+# test/ash_reports_demo/reports/comprehensive_reports_test.exs
+defmodule AshReportsDemo.Reports.ComprehensiveReportsTest do
   use ExUnit.Case
-  alias Example.Domain
+  alias AshReportsDemo.Domain
 
   setup do
-    Example.DataGenerator.generate_sample_data(:medium)
+    AshReportsDemo.DataGenerator.generate_sample_data(:medium)
     :ok
   end
 
@@ -732,7 +732,7 @@ defmodule Example.Reports.ComprehensiveReportsTest do
       
       for format <- formats do
         assert {:ok, result} = AshReports.Runner.run_report(
-          Domain,
+          AshReportsDemo.Domain,
           :customer_summary,
           %{},
           format: format
@@ -854,13 +854,13 @@ end
 ### Integration Testing:
 ```elixir
 # test/integration/complete_workflow_test.exs
-defmodule Example.Integration.CompleteWorkflowTest do
+defmodule AshReportsDemo.Integration.CompleteWorkflowTest do
   use ExUnit.Case
   
   @tag :integration
   test "complete business scenario workflow" do
     # 1. Generate realistic business data
-    Example.DataGenerator.generate_sample_data(:large)
+    AshReportsDemo.DataGenerator.generate_sample_data(:large)
     
     # 2. Run all reports in all formats
     reports = [:customer_summary, :product_inventory, :invoice_details, :financial_summary]
@@ -894,13 +894,13 @@ defmodule Example.Integration.CompleteWorkflowTest do
 
   @tag :integration
   test "concurrent report generation" do
-    Example.DataGenerator.generate_sample_data(:medium)
+    AshReportsDemo.DataGenerator.generate_sample_data(:medium)
     
     # Generate 20 concurrent reports
     tasks = for i <- 1..20 do
       Task.async(fn ->
         AshReports.Runner.run_report(
-          Example.Domain,
+          AshReportsDemo.Domain,
           :customer_summary,
           %{region: Enum.random(["North", "South", "East", "West"])},
           format: Enum.random([:html, :pdf, :json])
@@ -924,7 +924,7 @@ end
 ### Performance Benchmarks:
 ```elixir
 # test/benchmarks/report_performance_test.exs
-defmodule Example.Benchmarks.ReportPerformanceTest do
+defmodule AshReportsDemo.Benchmarks.ReportPerformanceTest do
   use ExUnit.Case
   import Benchee
 
@@ -934,14 +934,14 @@ defmodule Example.Benchmarks.ReportPerformanceTest do
     data_sizes = [:small, :medium, :large]
     
     for size <- data_sizes do
-      Example.DataGenerator.reset_data()
-      Example.DataGenerator.generate_sample_data(size)
+      AshReportsDemo.DataGenerator.reset_data()
+      AshReportsDemo.DataGenerator.generate_sample_data(size)
       
       Benchee.run(
         %{
           "customer_summary_html" => fn ->
             AshReports.Runner.run_report(
-              Example.Domain,
+              AshReportsDemo.Domain,
               :customer_summary,
               %{},
               format: :html
@@ -949,7 +949,7 @@ defmodule Example.Benchmarks.ReportPerformanceTest do
           end,
           "customer_summary_pdf" => fn ->
             AshReports.Runner.run_report(
-              Example.Domain,
+              AshReportsDemo.Domain,
               :customer_summary,
               %{},
               format: :pdf
@@ -957,7 +957,7 @@ defmodule Example.Benchmarks.ReportPerformanceTest do
           end,
           "financial_summary_json" => fn ->
             AshReports.Runner.run_report(
-              Example.Domain,
+              AshReportsDemo.Domain,
               :financial_summary,
               %{
                 start_date: Date.add(Date.utc_today(), -90),
@@ -982,9 +982,9 @@ end
 
 ### Documentation Structure:
 ```markdown
-# Example Documentation Structure
+# AshReportsDemo Documentation Structure
 
-example/
+demo/
 ├── README.md                    # Quick start and overview
 ├── docs/
 │   ├── setup.md                 # Installation and configuration
@@ -1011,7 +1011,7 @@ defmodule AshReports.Phase7IntegrationTest do
   use ExUnit.Case
 
   @moduledoc """
-  Complete integration test for Phase 7 Example Demo.
+  Complete integration test for Phase 7 AshReportsDemo Demo.
   
   Validates the entire example implementation including:
   - Domain model and resources
@@ -1022,27 +1022,27 @@ defmodule AshReports.Phase7IntegrationTest do
   """
 
   setup_all do
-    # Ensure example application is started
-    {:ok, _} = Application.ensure_all_started(:example)
+    # Ensure demo application is started
+    {:ok, _} = Application.ensure_all_started(:ash_reports_demo)
     
     # Generate comprehensive test data
-    Example.DataGenerator.generate_sample_data(:medium)
+    AshReportsDemo.DataGenerator.generate_sample_data(:medium)
     
     :ok
   end
 
   test "complete example domain functionality" do
     # 1. Verify all resources are properly configured
-    domain_resources = Example.Domain.Info.resources()
+    domain_resources = AshReportsDemo.Domain.Info.resources()
     expected_resources = [
-      Example.Customer,
-      Example.CustomerAddress,
-      Example.CustomerType,
-      Example.Product,
-      Example.ProductCategory,
-      Example.Inventory,
-      Example.Invoice,
-      Example.InvoiceLineItem
+      AshReportsDemo.Customer,
+      AshReportsDemo.CustomerAddress,
+      AshReportsDemo.CustomerType,
+      AshReportsDemo.Product,
+      AshReportsDemo.ProductCategory,
+      AshReportsDemo.Inventory,
+      AshReportsDemo.Invoice,
+      AshReportsDemo.InvoiceLineItem
     ]
     
     for resource <- expected_resources do
@@ -1050,7 +1050,7 @@ defmodule AshReports.Phase7IntegrationTest do
     end
     
     # 2. Verify all reports are properly registered
-    domain_reports = AshReports.Info.reports(Example.Domain)
+    domain_reports = AshReports.Info.reports(AshReportsDemo.Domain)
     expected_reports = [:customer_summary, :product_inventory, :invoice_details, :financial_summary]
     
     for report_name <- expected_reports do
@@ -1059,12 +1059,12 @@ defmodule AshReports.Phase7IntegrationTest do
     end
     
     # 3. Test data relationships and integrity
-    customer = Example.Customer.list!(load: [:addresses, :invoices]) |> hd()
+    customer = AshReportsDemo.Customer.list!(load: [:addresses, :invoices]) |> hd()
     assert length(customer.addresses) > 0
     assert length(customer.invoices) > 0
     
     invoice = hd(customer.invoices)
-    loaded_invoice = Example.Invoice.get!(invoice.id, load: [:line_items])
+    loaded_invoice = AshReportsDemo.Invoice.get!(invoice.id, load: [:line_items])
     assert length(loaded_invoice.line_items) > 0
     
     # 4. Test all reports in all formats
@@ -1088,7 +1088,7 @@ defmodule AshReports.Phase7IntegrationTest do
       end
       
       assert {:ok, result} = AshReports.Runner.run_report(
-        Example.Domain,
+        AshReportsDemo.Domain,
         report,
         params,
         format: format
@@ -1111,7 +1111,7 @@ defmodule AshReports.Phase7IntegrationTest do
     # Small report should be fast
     {time, {:ok, _}} = :timer.tc(fn ->
       AshReports.Runner.run_report(
-        Example.Domain,
+        AshReportsDemo.Domain,
         :customer_summary,
         %{customer_type: "Premium"},  # Filtered for smaller result set
         format: :html
@@ -1158,16 +1158,16 @@ end
 ```bash
 # Clone and setup
 git clone <repository>
-cd ash_reports/example
+cd ash_reports/demo
 mix deps.get
 
 # Generate sample data
 iex -S mix
-Example.DataGenerator.generate_sample_data(:medium)
+AshReportsDemo.DataGenerator.generate_sample_data(:medium)
 
 # Run sample reports  
-AshReports.Runner.run_report(Example.Domain, :customer_summary, %{}, format: :html)
-AshReports.Runner.run_report(Example.Domain, :financial_summary, %{
+AshReports.Runner.run_report(AshReportsDemo.Domain, :customer_summary, %{}, format: :html)
+AshReports.Runner.run_report(AshReportsDemo.Domain, :financial_summary, %{
   start_date: ~D[2024-01-01], 
   end_date: ~D[2024-12-31]
 }, format: :pdf)
@@ -1176,19 +1176,19 @@ AshReports.Runner.run_report(Example.Domain, :financial_summary, %{
 ### Interactive Demo:
 ```elixir
 # Start interactive session
-Example.InteractiveDemo.start()
+AshReportsDemo.InteractiveDemo.start()
 
 # Available commands:
-Example.InteractiveDemo.run(:all_reports)
-Example.InteractiveDemo.run(:customer_analysis)  
-Example.InteractiveDemo.run(:financial_dashboard)
-Example.InteractiveDemo.benchmark(:performance_test)
+AshReportsDemo.InteractiveDemo.run(:all_reports)
+AshReportsDemo.InteractiveDemo.run(:customer_analysis)  
+AshReportsDemo.InteractiveDemo.run(:financial_dashboard)
+AshReportsDemo.InteractiveDemo.benchmark(:performance_test)
 ```
 
 ### Production Deployment:
 ```elixir
 # config/prod.exs
-config :example, Example.DataGenerator,
+config :ash_reports_demo, AshReportsDemo.DataGenerator,
   auto_generate: false,  # Disable in production
   data_volume: :large
 
