@@ -7,6 +7,8 @@ defmodule AshReportsDemo.Domain do
   """
 
   use Ash.Domain, extensions: [AshReports.Domain]
+  
+  import Ash.Expr
 
   resources do
     # Phase 7.2: Business resources
@@ -21,11 +23,232 @@ defmodule AshReportsDemo.Domain do
   end
 
   reports do
-    # Phase 7.5: Will be implemented with comprehensive report definitions
-    # report :customer_summary
-    # report :product_inventory
-    # report :invoice_details
-    # report :financial_summary
+    # Phase 7.5: Comprehensive report definitions demonstrating all AshReports features
+    
+    # Customer Summary Report - Multi-level grouping with business intelligence
+    report :customer_summary do
+      title "Customer Summary Report"
+      description "Comprehensive customer analysis with geographic and tier grouping"
+      driving_resource AshReportsDemo.Customer
+
+      parameter :region, :string, description: "Filter by state/region"
+      parameter :tier, :string, description: "Filter by customer tier", constraints: [one_of: ["Bronze", "Silver", "Gold", "Platinum"]]
+      parameter :min_health_score, :integer, default: 0, description: "Minimum health score threshold", constraints: [min: 0, max: 100]
+      parameter :include_inactive, :boolean, default: false, description: "Include inactive customers"
+
+      variable :customer_count do
+        type :count
+        expression expr(1)
+        reset_on :report
+      end
+
+      variable :total_lifetime_value do
+        type :sum
+        expression expr(lifetime_value)
+        reset_on :report
+      end
+
+      group :region do
+        level 1
+        expression expr(addresses.state)
+      end
+
+      band :title do
+        type :title
+        elements do
+          label :report_title do
+            text "Customer Summary Report"
+          end
+        end
+      end
+
+      band :customer_detail do
+        type :detail
+        elements do
+          field :customer_name do
+            source :name
+          end
+          field :health_score do
+            source :customer_health_score
+          end
+          field :tier do
+            source :customer_tier
+          end
+        end
+      end
+
+      band :summary do
+        type :summary
+        elements do
+          expression :total_customers do
+            expression expr("Total Customers: #{@customer_count}")
+          end
+          expression :total_value do
+            expression expr("Total Lifetime Value: $#{:erlang.float_to_binary(@total_lifetime_value, [{:decimals, 2}])}")
+          end
+        end
+      end
+    end
+
+    # Product Inventory Report - Profitability analytics
+    report :product_inventory do
+      title "Product Inventory Report"
+      description "Inventory analysis with profitability metrics"
+      driving_resource AshReportsDemo.Product
+
+      parameter :category_id, :uuid, description: "Filter by product category"
+      parameter :include_inactive, :boolean, default: false, description: "Include inactive products"
+
+      variable :total_products do
+        type :count
+        expression expr(1)
+        reset_on :report
+      end
+
+      variable :total_inventory_value do
+        type :sum
+        expression expr(price)
+        reset_on :report
+      end
+
+      band :title do
+        type :title
+        elements do
+          label :report_title do
+            text "Product Inventory Report"
+          end
+        end
+      end
+
+      band :product_detail do
+        type :detail
+        elements do
+          field :product_name do
+            source :name
+          end
+          field :sku do
+            source :sku
+          end
+          field :price do
+            source :price
+          end
+          field :margin do
+            source :margin_percentage
+          end
+        end
+      end
+
+      band :inventory_summary do
+        type :summary
+        elements do
+          expression :total_products_summary do
+            expression expr("Total Products: #{@total_products}")
+          end
+          expression :inventory_value_summary do
+            expression expr("Total Inventory Value: $#{:erlang.float_to_binary(@total_inventory_value, [{:decimals, 2}])}")
+          end
+        end
+      end
+    end
+
+    # Invoice Details Report - Master-detail financial analysis
+    report :invoice_details do
+      title "Invoice Details Report"
+      description "Comprehensive invoice analysis with payment performance"
+      driving_resource AshReportsDemo.Invoice
+
+      parameter :status, :atom, description: "Filter by invoice status", constraints: [one_of: [:draft, :sent, :paid, :overdue, :cancelled]]
+      parameter :customer_id, :uuid, description: "Filter by specific customer"
+      parameter :include_paid, :boolean, default: true, description: "Include paid invoices"
+
+      variable :total_invoices do
+        type :count
+        expression expr(1)
+        reset_on :report
+      end
+
+      variable :total_invoice_amount do
+        type :sum
+        expression expr(total)
+        reset_on :report
+      end
+
+      band :title do
+        type :title
+        elements do
+          label :report_title do
+            text "Invoice Details Report"
+          end
+        end
+      end
+
+      band :invoice_detail do
+        type :detail
+        elements do
+          field :invoice_number do
+            source :invoice_number
+          end
+          field :date do
+            source :date
+          end
+          field :status do
+            source :status
+          end
+          field :total do
+            source :total
+          end
+        end
+      end
+
+      band :financial_summary do
+        type :summary
+        elements do
+          expression :invoice_metrics do
+            expression expr("Total Invoices: #{@total_invoices} | Total Amount: $#{:erlang.float_to_binary(@total_invoice_amount, [{:decimals, 2}])}")
+          end
+        end
+      end
+    end
+
+    # Financial Summary Report - Executive dashboard
+    report :financial_summary do
+      title "Executive Financial Summary"
+      description "Comprehensive financial dashboard with business intelligence"
+      driving_resource AshReportsDemo.Invoice
+
+      parameter :period_type, :string, default: "monthly", description: "Reporting period type", constraints: [one_of: ["monthly", "quarterly", "yearly"]]
+      parameter :fiscal_year, :integer, default: Date.utc_today().year, description: "Fiscal year for reporting"
+
+      variable :total_revenue do
+        type :sum
+        expression expr(total)
+        reset_on :report
+      end
+
+      variable :invoice_count do
+        type :count
+        expression expr(1)
+        reset_on :report
+      end
+
+      band :executive_title do
+        type :title
+        elements do
+          label :report_title do
+            text "Executive Financial Summary"
+          end
+        end
+      end
+
+      band :executive_summary do
+        type :summary
+        elements do
+          expression :revenue_summary do
+            expression expr("Total Revenue: $#{:erlang.float_to_binary(@total_revenue, [{:decimals, 2}])} across #{@invoice_count} transactions")
+          end
+        end
+      end
+    end
   end
 
   authorization do
