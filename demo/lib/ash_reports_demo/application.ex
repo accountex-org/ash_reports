@@ -1,7 +1,7 @@
 defmodule AshReportsDemo.Application do
   @moduledoc """
   OTP Application for AshReports Demo.
-  
+
   Manages the lifecycle of the demo application including ETS data layer,
   data generation services, and report processing capabilities.
   """
@@ -13,10 +13,10 @@ defmodule AshReportsDemo.Application do
     children = [
       # ETS Data Layer for Demo
       {AshReportsDemo.EtsDataLayer, []},
-      
+
       # Data Generation Service
       {AshReportsDemo.DataGenerator, []},
-      
+
       # PubSub for real-time features if needed
       {Phoenix.PubSub, name: AshReportsDemo.PubSub}
     ]

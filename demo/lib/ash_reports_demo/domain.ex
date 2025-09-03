@@ -1,7 +1,7 @@
 defmodule AshReportsDemo.Domain do
   @moduledoc """
   Ash Domain for AshReports Demo application.
-  
+
   Defines the business domain with resources, reports, and policies
   for the comprehensive invoicing system demonstration.
   """
@@ -9,15 +9,15 @@ defmodule AshReportsDemo.Domain do
   use Ash.Domain, extensions: [AshReports.Domain]
 
   resources do
-    # Phase 7.2: Business resources will be added here
-    # resource AshReportsDemo.Customer
-    # resource AshReportsDemo.CustomerAddress
-    # resource AshReportsDemo.CustomerType
-    # resource AshReportsDemo.Product
-    # resource AshReportsDemo.ProductCategory
-    # resource AshReportsDemo.Inventory
-    # resource AshReportsDemo.Invoice
-    # resource AshReportsDemo.InvoiceLineItem
+    # Phase 7.2: Business resources
+    resource AshReportsDemo.Customer
+    resource AshReportsDemo.CustomerAddress
+    resource AshReportsDemo.CustomerType
+    resource AshReportsDemo.Product
+    resource AshReportsDemo.ProductCategory
+    resource AshReportsDemo.Inventory
+    resource AshReportsDemo.Invoice
+    resource AshReportsDemo.InvoiceLineItem
   end
 
   reports do
