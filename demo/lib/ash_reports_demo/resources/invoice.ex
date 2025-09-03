@@ -240,11 +240,11 @@ defmodule AshReportsDemo.Invoice do
       description "Number of line items on this invoice"
     end
 
-    sum :line_items_subtotal, :line_items, field: :line_total do
+    sum :line_items_subtotal, :line_items, :line_total do
       description "Subtotal from line items"
     end
 
-    avg :average_line_item_amount, :line_items, field: :line_total do
+    avg :average_line_item_amount, :line_items, :line_total do
       description "Average line item amount"
     end
   end
@@ -303,6 +303,23 @@ defmodule AshReportsDemo.Invoice do
         due_date = Date.add(invoice_date, 30)
 
         Ash.Changeset.change_attribute(changeset, :due_date, due_date)
+      else
+        changeset
+      end
+    end
+
+    # Phase 7.4: Advanced lifecycle management
+    change fn changeset, _context ->
+      # Auto-update status based on due date for sent invoices
+      if changeset.action_type == :update do
+        current_status = Ash.Changeset.get_attribute(changeset, :status)
+        due_date = Ash.Changeset.get_attribute(changeset, :due_date)
+        
+        if current_status == :sent && due_date && Date.compare(Date.utc_today(), due_date) == :gt do
+          Ash.Changeset.change_attribute(changeset, :status, :overdue)
+        else
+          changeset
+        end
       else
         changeset
       end
