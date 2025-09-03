@@ -9,19 +9,15 @@ defmodule AshReportsDemo.Domain do
   use Ash.Domain, extensions: [AshReports.Domain]
 
   resources do
-    # Customer Management
-    resource AshReportsDemo.Customer
-    resource AshReportsDemo.CustomerAddress
-    resource AshReportsDemo.CustomerType
-
-    # Product Catalog
-    resource AshReportsDemo.Product
-    resource AshReportsDemo.ProductCategory
-    resource AshReportsDemo.Inventory
-
-    # Invoicing System
-    resource AshReportsDemo.Invoice
-    resource AshReportsDemo.InvoiceLineItem
+    # Phase 7.2: Business resources will be added here
+    # resource AshReportsDemo.Customer
+    # resource AshReportsDemo.CustomerAddress
+    # resource AshReportsDemo.CustomerType
+    # resource AshReportsDemo.Product
+    # resource AshReportsDemo.ProductCategory
+    # resource AshReportsDemo.Inventory
+    # resource AshReportsDemo.Invoice
+    # resource AshReportsDemo.InvoiceLineItem
   end
 
   reports do

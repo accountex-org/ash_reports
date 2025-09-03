@@ -97,9 +97,9 @@ defmodule AshReportsDemo do
   @spec data_summary() :: map()
   def data_summary do
     %{
-      customers: count_records(AshReportsDemo.Customer),
-      products: count_records(AshReportsDemo.Product),
-      invoices: count_records(AshReportsDemo.Invoice),
+      customers: count_records_by_table(:demo_customers),
+      products: count_records_by_table(:demo_products),
+      invoices: count_records_by_table(:demo_invoices),
       generated_at: DateTime.utc_now()
     }
   end
@@ -165,9 +165,9 @@ defmodule AshReportsDemo do
 
   # Private helper functions
 
-  defp count_records(resource) do
+  defp count_records_by_table(table_name) do
     try do
-      resource.count!()
+      :ets.info(table_name, :size) || 0
     rescue
       _ -> 0
     end

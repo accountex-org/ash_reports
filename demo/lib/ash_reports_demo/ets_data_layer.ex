@@ -33,17 +33,23 @@ defmodule AshReportsDemo.EtsDataLayer do
 
   @doc """
   Get ETS table name for a resource.
+  Phase 7.2: Resource mappings will be added when resources are implemented.
   """
   @spec table_name(atom()) :: atom()
-  def table_name(AshReportsDemo.Customer), do: :demo_customers
-  def table_name(AshReportsDemo.CustomerAddress), do: :demo_customer_addresses
-  def table_name(AshReportsDemo.CustomerType), do: :demo_customer_types
-  def table_name(AshReportsDemo.Product), do: :demo_products
-  def table_name(AshReportsDemo.ProductCategory), do: :demo_product_categories
-  def table_name(AshReportsDemo.Inventory), do: :demo_inventory
-  def table_name(AshReportsDemo.Invoice), do: :demo_invoices
-  def table_name(AshReportsDemo.InvoiceLineItem), do: :demo_invoice_line_items
-  def table_name(_), do: :demo_unknown
+  def table_name(resource_module) when is_atom(resource_module) do
+    # Phase 7.2: Will map actual resource modules to tables
+    case to_string(resource_module) do
+      "Elixir.AshReportsDemo.Customer" -> :demo_customers
+      "Elixir.AshReportsDemo.CustomerAddress" -> :demo_customer_addresses
+      "Elixir.AshReportsDemo.CustomerType" -> :demo_customer_types
+      "Elixir.AshReportsDemo.Product" -> :demo_products
+      "Elixir.AshReportsDemo.ProductCategory" -> :demo_product_categories
+      "Elixir.AshReportsDemo.Inventory" -> :demo_inventory
+      "Elixir.AshReportsDemo.Invoice" -> :demo_invoices
+      "Elixir.AshReportsDemo.InvoiceLineItem" -> :demo_invoice_line_items
+      _ -> :demo_unknown
+    end
+  end
 
   @doc """
   Clear all data from ETS tables.
