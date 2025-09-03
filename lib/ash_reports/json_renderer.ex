@@ -120,12 +120,16 @@ defmodule AshReports.JsonRenderer do
 
   alias AshReports.{
     Formatter,
+    JsonRenderer.ChartApi,
     JsonRenderer.DataSerializer,
     JsonRenderer.SchemaManager,
     JsonRenderer.StreamingEngine,
     JsonRenderer.StructureBuilder,
     RenderContext
   }
+
+  # Phase 6.3: Chart Integration
+  alias AshReports.ChartEngine.{ChartConfig, ChartDataProcessor}
 
   @doc """
   Enhanced render callback with full Phase 3.5 JSON generation.
@@ -137,9 +141,9 @@ defmodule AshReports.JsonRenderer do
     start_time = System.monotonic_time(:microsecond)
 
     if Keyword.get(opts, :streaming, false) do
-      render_streaming(context, opts, start_time)
+      render_streaming_with_charts(context, opts, start_time)
     else
-      render_complete(context, opts, start_time)
+      render_complete_with_charts(context, opts, start_time)
     end
   end
 
@@ -516,5 +520,89 @@ defmodule AshReports.JsonRenderer do
         # If formatting returned a single value, use it
         Map.put(acc, key, formatted_value)
     end
+  end
+
+  # Phase 6.3: Chart Integration Functions
+
+  defp render_complete_with_charts(%RenderContext{} = context, opts, start_time) do
+    # Enhanced JSON rendering with chart metadata
+    with {:ok, base_json} <- render_complete(context, opts, start_time),
+         {:ok, chart_metadata} <- generate_chart_metadata_for_json(context) do
+      enhanced_json =
+        if map_size(chart_metadata) > 0 do
+          add_chart_metadata_to_json(base_json, chart_metadata)
+        else
+          base_json
+        end
+
+      enhanced_json
+    else
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp render_streaming_with_charts(%RenderContext{} = context, opts, start_time) do
+    # Enhanced streaming JSON rendering with chart support
+    render_streaming(context, opts, start_time)
+  end
+
+  defp generate_chart_metadata_for_json(%RenderContext{} = context) do
+    chart_configs = extract_chart_configs_from_context(context)
+
+    if length(chart_configs) > 0 do
+      chart_metadata =
+        chart_configs
+        |> Enum.map(&serialize_chart_for_json(&1, context))
+        |> Map.new(fn chart -> {chart.chart_id, chart} end)
+
+      {:ok, chart_metadata}
+    else
+      {:ok, %{}}
+    end
+  end
+
+  defp extract_chart_configs_from_context(%RenderContext{} = context) do
+    context.metadata[:chart_configs] || context.config[:charts] || []
+  end
+
+  defp serialize_chart_for_json(chart_config, context) do
+    chart_id = ChartDataProcessor.generate_chart_id(chart_config)
+
+    %{
+      chart_id: chart_id,
+      type: chart_config.type,
+      title: chart_config.title,
+      data: chart_config.data,
+      provider: chart_config.provider,
+      interactive: chart_config.interactive,
+      real_time: chart_config.real_time,
+      api_endpoints: ChartDataProcessor.generate_chart_endpoints(chart_config),
+      metadata: %{
+        locale: context.locale,
+        text_direction: context.text_direction,
+        created_at: DateTime.utc_now()
+      }
+    }
+  end
+
+  defp add_chart_metadata_to_json({:ok, %{content: json_content} = result}, chart_metadata) do
+    # Parse existing JSON and add chart metadata
+    case Jason.decode(json_content) do
+      {:ok, json_data} ->
+        enhanced_json_data = Map.put(json_data, "charts", chart_metadata)
+        enhanced_json_content = Jason.encode!(enhanced_json_data)
+
+        enhanced_result = %{result | content: enhanced_json_content}
+        {:ok, enhanced_result}
+
+      {:error, _reason} ->
+        # If JSON parsing fails, return original result
+        {:ok, result}
+    end
+  end
+
+  defp add_chart_metadata_to_json(result, _chart_metadata) do
+    # Return original result if not in expected format
+    result
   end
 end
