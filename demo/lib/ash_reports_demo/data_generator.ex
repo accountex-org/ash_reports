@@ -1,7 +1,7 @@
 defmodule AshReportsDemo.DataGenerator do
   @moduledoc """
   GenServer that generates realistic test data using Faker library.
-  
+
   Provides seeding functions for all demo resources with proper
   relationship integrity and configurable data volumes.
   """
@@ -72,12 +72,13 @@ defmodule AshReportsDemo.DataGenerator do
     else
       case generate_data_internal(volume) do
         :ok ->
-          updated_state = %{state |
-            generation_in_progress: false,
-            last_generated: DateTime.utc_now(),
-            current_volume: volume
+          updated_state = %{
+            state
+            | generation_in_progress: false,
+              last_generated: DateTime.utc_now(),
+              current_volume: volume
           }
-          
+
           Logger.info("Generated #{volume} dataset successfully")
           {:reply, :ok, updated_state}
 
@@ -93,11 +94,8 @@ defmodule AshReportsDemo.DataGenerator do
   def handle_call(:reset, _from, state) do
     case reset_data_internal() do
       :ok ->
-        updated_state = %{state |
-          last_generated: nil,
-          current_volume: nil
-        }
-        
+        updated_state = %{state | last_generated: nil, current_volume: nil}
+
         Logger.info("Data reset successfully")
         {:reply, :ok, updated_state}
 
@@ -123,12 +121,12 @@ defmodule AshReportsDemo.DataGenerator do
 
   defp generate_data_internal(volume) do
     volume_config = Map.get(@data_volumes, volume)
-    
+
     if volume_config do
       try do
         # Phase 7.1: Basic structure setup - actual data generation in Phase 7.3
         Logger.info("Data generation for #{volume} volume: #{inspect(volume_config)}")
-        
+
         # Placeholder for actual data generation
         # Will be implemented in Phase 7.3 with Faker integration
         :ok
@@ -137,18 +135,17 @@ defmodule AshReportsDemo.DataGenerator do
           {:error, Exception.message(error)}
       end
     else
-      {:error, "Unknown volume: #{volume}. Available: #{Map.keys(@data_volumes) |> Enum.join(", ")}"}
+      {:error,
+       "Unknown volume: #{volume}. Available: #{Map.keys(@data_volumes) |> Enum.join(", ")}"}
     end
   end
 
   defp reset_data_internal do
-    try do
-      # Phase 7.1: Basic structure - actual reset logic in Phase 7.3
-      Logger.info("Resetting demo data")
-      :ok
-    rescue
-      error ->
-        {:error, Exception.message(error)}
-    end
+    # Phase 7.1: Basic structure - actual reset logic in Phase 7.3
+    Logger.info("Resetting demo data")
+    :ok
+  rescue
+    error ->
+      {:error, Exception.message(error)}
   end
 end

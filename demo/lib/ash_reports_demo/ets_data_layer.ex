@@ -1,7 +1,7 @@
 defmodule AshReportsDemo.EtsDataLayer do
   @moduledoc """
   ETS-based data layer for AshReports Demo.
-  
+
   Provides in-memory storage using ETS tables for demonstration purposes,
   allowing zero-configuration startup and easy data manipulation.
   """
@@ -37,19 +37,20 @@ defmodule AshReportsDemo.EtsDataLayer do
   """
   @spec table_name(atom()) :: atom()
   def table_name(resource_module) when is_atom(resource_module) do
-    # Phase 7.2: Will map actual resource modules to tables
-    case to_string(resource_module) do
-      "Elixir.AshReportsDemo.Customer" -> :demo_customers
-      "Elixir.AshReportsDemo.CustomerAddress" -> :demo_customer_addresses
-      "Elixir.AshReportsDemo.CustomerType" -> :demo_customer_types
-      "Elixir.AshReportsDemo.Product" -> :demo_products
-      "Elixir.AshReportsDemo.ProductCategory" -> :demo_product_categories
-      "Elixir.AshReportsDemo.Inventory" -> :demo_inventory
-      "Elixir.AshReportsDemo.Invoice" -> :demo_invoices
-      "Elixir.AshReportsDemo.InvoiceLineItem" -> :demo_invoice_line_items
-      _ -> :demo_unknown
-    end
+    # Phase 7.2: Map resource modules to ETS tables
+    resource_string = to_string(resource_module)
+    map_resource_to_table(resource_string)
   end
+
+  defp map_resource_to_table("Elixir.AshReportsDemo.Customer"), do: :demo_customers
+  defp map_resource_to_table("Elixir.AshReportsDemo.CustomerAddress"), do: :demo_customer_addresses
+  defp map_resource_to_table("Elixir.AshReportsDemo.CustomerType"), do: :demo_customer_types
+  defp map_resource_to_table("Elixir.AshReportsDemo.Product"), do: :demo_products
+  defp map_resource_to_table("Elixir.AshReportsDemo.ProductCategory"), do: :demo_product_categories
+  defp map_resource_to_table("Elixir.AshReportsDemo.Inventory"), do: :demo_inventory
+  defp map_resource_to_table("Elixir.AshReportsDemo.Invoice"), do: :demo_invoices
+  defp map_resource_to_table("Elixir.AshReportsDemo.InvoiceLineItem"), do: :demo_invoice_line_items
+  defp map_resource_to_table(_), do: :demo_unknown
 
   @doc """
   Clear all data from ETS tables.
@@ -72,17 +73,19 @@ defmodule AshReportsDemo.EtsDataLayer do
   @impl true
   def init(_opts) do
     # Create all ETS tables
-    tables = Enum.map(@table_names, fn table_name ->
-      table = :ets.new(table_name, [
-        :set,
-        :public,
-        :named_table,
-        {:read_concurrency, true},
-        {:write_concurrency, true}
-      ])
-      
-      {table_name, table}
-    end)
+    tables =
+      Enum.map(@table_names, fn table_name ->
+        table =
+          :ets.new(table_name, [
+            :set,
+            :public,
+            :named_table,
+            {:read_concurrency, true},
+            {:write_concurrency, true}
+          ])
+
+        {table_name, table}
+      end)
 
     state = %{
       tables: Map.new(tables),
@@ -105,13 +108,14 @@ defmodule AshReportsDemo.EtsDataLayer do
 
   @impl true
   def handle_call(:stats, _from, state) do
-    stats = @table_names
-    |> Enum.map(fn table_name ->
-      size = :ets.info(table_name, :size)
-      memory = :ets.info(table_name, :memory)
-      {table_name, %{size: size, memory_words: memory}}
-    end)
-    |> Map.new()
+    stats =
+      @table_names
+      |> Enum.map(fn table_name ->
+        size = :ets.info(table_name, :size)
+        memory = :ets.info(table_name, :memory)
+        {table_name, %{size: size, memory_words: memory}}
+      end)
+      |> Map.new()
 
     total_size = stats |> Map.values() |> Enum.map(& &1.size) |> Enum.sum()
     total_memory = stats |> Map.values() |> Enum.map(& &1.memory_words) |> Enum.sum()

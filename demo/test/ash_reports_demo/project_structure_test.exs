@@ -24,7 +24,7 @@ defmodule AshReportsDemo.ProjectStructureTest do
   describe "data generator" do
     test "provides data statistics" do
       stats = AshReportsDemo.DataGenerator.data_stats()
-      
+
       assert is_map(stats)
       assert Map.has_key?(stats, :current_volume)
       assert Map.has_key?(stats, :available_volumes)
@@ -39,7 +39,7 @@ defmodule AshReportsDemo.ProjectStructureTest do
   describe "ETS data layer" do
     test "provides table statistics" do
       stats = AshReportsDemo.EtsDataLayer.table_stats()
-      
+
       assert is_map(stats)
       assert Map.has_key?(stats, :tables)
       assert Map.has_key?(stats, :total_records)
@@ -54,7 +54,7 @@ defmodule AshReportsDemo.ProjectStructureTest do
   describe "domain configuration" do
     test "domain module exists and is configured" do
       assert Code.ensure_loaded?(AshReportsDemo.Domain)
-      
+
       # Check that domain module has basic Ash domain structure
       # Phase 7.1: Basic validation that domain module loads and compiles
       assert AshReportsDemo.Domain.__info__(:module) == AshReportsDemo.Domain
@@ -64,13 +64,13 @@ defmodule AshReportsDemo.ProjectStructureTest do
   describe "public API" do
     test "provides data summary functionality" do
       summary = AshReportsDemo.data_summary()
-      
+
       assert is_map(summary)
       assert Map.has_key?(summary, :customers)
-      assert Map.has_key?(summary, :products) 
+      assert Map.has_key?(summary, :products)
       assert Map.has_key?(summary, :invoices)
       assert Map.has_key?(summary, :generated_at)
-      
+
       # All counts should be 0 since no resources exist yet
       assert summary.customers == 0
       assert summary.products == 0
