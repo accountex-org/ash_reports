@@ -305,6 +305,14 @@ defmodule AshReportsDemo.DataGenerator do
     end
   end
 
+  defp get_available_customer_types do
+    case CustomerType.read(domain: AshReportsDemo.Domain) do
+      {:ok, []} -> {:error, "No customer types available - run foundation data first"}
+      {:ok, customer_types} -> {:ok, customer_types}
+      {:error, error} -> {:error, "Failed to load customer types: #{inspect(error)}"}
+    end
+  end
+
   defp get_available_product_categories do
     case ProductCategory.read(domain: AshReportsDemo.Domain) do
       {:ok, []} -> {:error, "No product categories available - run foundation data first"}
@@ -556,68 +564,6 @@ defmodule AshReportsDemo.DataGenerator do
 
   defp determine_address_type(1), do: :billing
   defp determine_address_type(_), do: Enum.random([:shipping, :mailing])
-
-  defp create_products_batch(categories, product_count) do
-    products = for i <- 1..product_count do
-      category = Enum.random(categories)
-      
-      # Generate realistic pricing with proper margins
-      cost = Decimal.new("#{:rand.uniform(500) + 10}")  # $10-$510
-      margin_multiplier = 1.2 + (:rand.uniform(100) / 100)  # 1.2x to 2.2x markup
-      price = Decimal.mult(cost, Decimal.new("#{margin_multiplier}"))
-
-      product_attrs = %{
-        name: Faker.Commerce.product_name(),
-        sku: generate_unique_sku(i),
-        description: Faker.Lorem.sentence(10),
-        price: price,
-        cost: cost,
-        weight: Decimal.new("#{:rand.uniform(100) / 10}"),  # 0.1 to 10.0 lbs
-        category_id: category.id,
-        active: Enum.random([true, true, true, false])  # 75% active
-      }
-
-      case Product.create(product_attrs, domain: AshReportsDemo.Domain) do
-        {:ok, product} -> product
-        {:error, error} ->
-          Logger.error("Failed to create product #{i}: #{inspect(error)}")
-          nil
-      end
-    end
-
-    valid_products = Enum.reject(products, &is_nil/1)
-    
-    if length(valid_products) > 0 do
-      {:ok, valid_products}
-    else
-      {:error, "Failed to create any products"}
-    end
-  end
-
-  defp create_inventory_for_products(products) do
-    inventory_records = for product <- products do
-      inventory_attrs = %{
-        product_id: product.id,
-        current_stock: :rand.uniform(1000),
-        reserved_stock: :rand.uniform(50),
-        reorder_point: 10 + :rand.uniform(40),  # 10-50
-        reorder_quantity: 50 + :rand.uniform(200),  # 50-250
-        location: Enum.random(["Main Warehouse", "East Coast", "West Coast", "Central"]),
-        last_received_date: Faker.Date.backward(:rand.uniform(90)),  # Within last 90 days
-        last_received_quantity: 25 + :rand.uniform(200)
-      }
-
-      case Inventory.create(inventory_attrs, domain: AshReportsDemo.Domain) do
-        {:ok, inventory} -> inventory
-        {:error, error} ->
-          Logger.error("Failed to create inventory for product #{product.id}: #{inspect(error)}")
-          nil
-      end
-    end
-
-    valid_inventory = Enum.reject(inventory_records, &is_nil/1)
-    {:ok, valid_inventory}
-  end
 
   defp generate_unique_sku(index) do
     "SKU-#{String.pad_leading(Integer.to_string(index), 6, "0")}-#{:rand.uniform(999)}"

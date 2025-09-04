@@ -61,7 +61,7 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
       # Should handle duplicate generation gracefully
       result = DataGenerator.generate_foundation_data()
       # Should either succeed or fail gracefully
-      assert result in [:ok, {:error, _}]
+      assert match?(:ok, result) or match?({:error, _}, result)
     end
   end
 
@@ -258,7 +258,7 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
       result = DataGenerator.generate_sample_data(:invalid_volume)
       
       # Should handle gracefully
-      assert result in [:ok, {:error, _}]
+      assert match?(:ok, result) or match?({:error, _}, result)
     end
 
     test "handles concurrent generation attempts" do
@@ -272,8 +272,10 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
       results = Task.await_many(tasks, 5000)
       
       # All should complete (either successfully or with handled errors)
-      assert Enum.all?(results, fn result -> 
-        result in [:ok, {:error, _}]
+      assert Enum.all?(results, fn 
+        :ok -> true
+        {:error, _} -> true
+        _ -> false
       end)
     end
   end
