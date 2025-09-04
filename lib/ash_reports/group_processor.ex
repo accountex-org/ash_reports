@@ -375,7 +375,7 @@ defmodule AshReports.GroupProcessor do
 
   @doc """
   Processes multiple records and returns group summary information.
-  
+
   Simplified version for Phase 8.1 integration.
   """
   @spec process_records(group_state(), [map()]) :: %{term() => map()}
@@ -392,12 +392,13 @@ defmodule AshReports.GroupProcessor do
       end)
     end)
     |> Enum.into(%{}, fn {group_key, group_records} ->
-      {group_key, %{
-        record_count: length(group_records),
-        first_record: List.first(group_records),
-        last_record: List.last(group_records),
-        group_level_values: group_key
-      }}
+      {group_key,
+       %{
+         record_count: length(group_records),
+         first_record: List.first(group_records),
+         last_record: List.last(group_records),
+         group_level_values: group_key
+       }}
     end)
   end
 end

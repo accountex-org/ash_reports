@@ -78,7 +78,7 @@ defmodule AshReports.VariableState do
   def get_all_values(server) when is_pid(server) do
     GenServer.call(server, :get_all_values)
   end
-  
+
   def get_all_values(%{values: values}), do: values
 
   @doc """
@@ -152,7 +152,7 @@ defmodule AshReports.VariableState do
 
   @doc """
   Creates a new VariableState struct with initialized variables.
-  
+
   Simplified non-GenServer version for direct use in data processing.
   """
   @spec new([Variable.t()]) :: variable_state()
@@ -167,7 +167,7 @@ defmodule AshReports.VariableState do
 
   @doc """
   Updates a variable with a new record value.
-  
+
   Simplified version that works directly with variable state struct.
   """
   @spec update_from_record(variable_state(), Variable.t(), map()) :: variable_state()
@@ -177,13 +177,12 @@ defmodule AshReports.VariableState do
         current_value = Map.get(state.values, variable.name, variable.initial_value)
         calculated_value = Variable.calculate_next_value(variable, current_value, new_value)
         put_in(state.values[variable.name], calculated_value)
-      
+
       {:error, _reason} ->
         # If expression evaluation fails, keep current state
         state
     end
   end
-
 
   # Private helper functions
 

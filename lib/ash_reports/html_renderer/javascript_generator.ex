@@ -684,5 +684,4 @@ defmodule AshReports.HtmlRenderer.JavaScriptGenerator do
     backButton.style.display = 'block';
     """
   end
-
 end

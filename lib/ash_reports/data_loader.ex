@@ -455,35 +455,39 @@ defmodule AshReports.DataLoader do
   defp process_records_with_variables_and_groups(report, records) do
     # Initialize variable state
     variable_state = VariableState.new(report.variables || [])
-    
-    # Initialize group processor  
-    group_processor = if report.groups && length(report.groups) > 0 do
-      GroupProcessor.new(report.groups)
-    else
-      nil
-    end
+
+    # Initialize group processor
+    group_processor =
+      if report.groups && length(report.groups) > 0 do
+        GroupProcessor.new(report.groups)
+      else
+        nil
+      end
 
     # Process each record through variables
-    final_variable_state = Enum.reduce(records, variable_state, fn record, state ->
-      Enum.reduce(report.variables || [], state, fn variable, acc_state ->
-        VariableState.update_from_record(acc_state, variable, record)
+    final_variable_state =
+      Enum.reduce(records, variable_state, fn record, state ->
+        Enum.reduce(report.variables || [], state, fn variable, acc_state ->
+          VariableState.update_from_record(acc_state, variable, record)
+        end)
       end)
-    end)
 
     # Extract final variable values
     variables = VariableState.get_all_values(final_variable_state)
 
     # Basic group processing (simplified for Phase 8.1)
-    groups = if group_processor do
-      GroupProcessor.process_records(group_processor, records)
-    else
-      %{}
-    end
+    groups =
+      if group_processor do
+        GroupProcessor.process_records(group_processor, records)
+      else
+        %{}
+      end
 
-    {:ok, %{
-      variables: variables,
-      groups: groups
-    }}
+    {:ok,
+     %{
+       variables: variables,
+       groups: groups
+     }}
   end
 
   defp do_stream_report(domain, report, params, config) do

@@ -347,10 +347,11 @@ defmodule AshReports.QueryBuilder do
 
   @doc """
   Builds a query for a report by domain and report name.
-  
+
   Convenience function for use with domain/report name instead of report struct.
   """
-  @spec build_by_name(module(), atom(), map(), Keyword.t()) :: {:ok, Ash.Query.t()} | {:error, term()}
+  @spec build_by_name(module(), atom(), map(), Keyword.t()) ::
+          {:ok, Ash.Query.t()} | {:error, term()}
   def build_by_name(domain, report_name, params \\ %{}, opts \\ []) do
     case AshReports.Info.report(domain, report_name) do
       nil -> {:error, "Report #{report_name} not found in domain #{domain}"}

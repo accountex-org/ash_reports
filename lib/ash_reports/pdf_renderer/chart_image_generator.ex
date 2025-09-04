@@ -218,7 +218,7 @@ defmodule AshReports.PdfRenderer.ChartImageGenerator do
         rescue
           _ -> {:error, "ChromicPDF rendering failed"}
         end
-      
+
       _ ->
         {:error, "ChromicPDF not available"}
     end

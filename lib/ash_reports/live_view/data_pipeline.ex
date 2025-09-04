@@ -333,7 +333,9 @@ defmodule AshReports.LiveView.DataPipeline do
 
       {:error, reason} ->
         # Handle data fetch error
-        Logger.warning("Data fetch failed for pipeline #{pipeline.pipeline_id}: #{inspect(reason)}")
+        Logger.warning(
+          "Data fetch failed for pipeline #{pipeline.pipeline_id}: #{inspect(reason)}"
+        )
 
         retry_count = pipeline.retry_count + 1
 

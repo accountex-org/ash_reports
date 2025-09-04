@@ -42,15 +42,17 @@ defmodule AshReports.Runner do
   @spec run_report(module(), atom(), map(), Keyword.t()) :: {:ok, any()} | {:error, term()}
   def run_report(domain, report_name, params \\ %{}, opts \\ []) do
     format = Keyword.get(opts, :format, :html)
-    
+
     with {:ok, data_result} <- AshReports.DataLoader.load_report(domain, report_name, params),
          {:ok, rendered_result} <- render_report(data_result, format, opts) do
-      {:ok, %{
-        content: rendered_result.content,
-        metadata: Map.merge(data_result.metadata, rendered_result.metadata || %{}),
-        format: format,
-        data: data_result  # Include data for debugging
-      }}
+      {:ok,
+       %{
+         content: rendered_result.content,
+         metadata: Map.merge(data_result.metadata, rendered_result.metadata || %{}),
+         format: format,
+         # Include data for debugging
+         data: data_result
+       }}
     else
       {:error, reason} -> {:error, reason}
     end
@@ -61,7 +63,7 @@ defmodule AshReports.Runner do
       {:ok, renderer} ->
         context = AshReports.RenderContext.new(data_result.report || %{}, data_result)
         renderer.render_with_context(context, opts)
-        
+
       {:error, _} = error ->
         error
     end
