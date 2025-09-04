@@ -171,12 +171,12 @@ defmodule AshReportsDemo.DataGenerator do
 
     # Create customer types
     Enum.each(customer_types, fn type_attrs ->
-      CustomerType.create!(type_attrs)
+      CustomerType.create!(type_attrs, domain: AshReportsDemo.Domain)
     end)
 
     # Create product categories
     Enum.each(product_categories, fn category_attrs ->
-      ProductCategory.create!(category_attrs)
+      ProductCategory.create!(category_attrs, domain: AshReportsDemo.Domain)
     end)
 
     Logger.info("Generated foundation data: #{length(customer_types)} customer types, #{length(product_categories)} product categories")
@@ -191,7 +191,7 @@ defmodule AshReportsDemo.DataGenerator do
     Logger.info("Generating #{customer_count} customers with addresses")
 
     # Get available customer types
-    customer_types = CustomerType.read!()
+    customer_types = CustomerType.read!(domain: AshReportsDemo.Domain)
 
     # Generate customers
     customers = for _i <- 1..customer_count do
@@ -207,7 +207,7 @@ defmodule AshReportsDemo.DataGenerator do
         customer_type_id: customer_type.id
       }
 
-      customer = Customer.create!(customer_attrs)
+      customer = Customer.create!(customer_attrs, domain: AshReportsDemo.Domain)
 
       # Generate 1-3 addresses per customer
       address_count = :rand.uniform(3)
@@ -224,7 +224,7 @@ defmodule AshReportsDemo.DataGenerator do
           primary: i == 1  # First address is primary
         }
 
-        CustomerAddress.create!(address_attrs)
+        CustomerAddress.create!(address_attrs, domain: AshReportsDemo.Domain)
       end
 
       customer
@@ -242,7 +242,7 @@ defmodule AshReportsDemo.DataGenerator do
     Logger.info("Generating #{product_count} products with inventory")
 
     # Get available product categories
-    categories = ProductCategory.read!()
+    categories = ProductCategory.read!(domain: AshReportsDemo.Domain)
 
     # Generate products
     products = for _i <- 1..product_count do
@@ -264,7 +264,7 @@ defmodule AshReportsDemo.DataGenerator do
         active: Enum.random([true, true, true, false])  # 75% active
       }
 
-      product = AshReportsDemo.Product.create!(product_attrs)
+      product = AshReportsDemo.Product.create!(product_attrs, domain: AshReportsDemo.Domain)
 
       # Generate inventory for each product
       inventory_attrs = %{
@@ -278,7 +278,7 @@ defmodule AshReportsDemo.DataGenerator do
         last_received_quantity: 25 + :rand.uniform(200)
       }
 
-      AshReportsDemo.Inventory.create!(inventory_attrs)
+      AshReportsDemo.Inventory.create!(inventory_attrs, domain: AshReportsDemo.Domain)
 
       product
     end
@@ -295,8 +295,8 @@ defmodule AshReportsDemo.DataGenerator do
     Logger.info("Generating #{invoice_count} invoices with line items")
 
     # Get available customers and products
-    customers = Customer.read!()
-    products = AshReportsDemo.Product.read!()
+    customers = Customer.read!(domain: AshReportsDemo.Domain)
+    products = AshReportsDemo.Product.read!(domain: AshReportsDemo.Domain)
 
     if Enum.empty?(customers) or Enum.empty?(products) do
       {:error, "Cannot generate invoices without customers and products"}
@@ -319,7 +319,7 @@ defmodule AshReportsDemo.DataGenerator do
           notes: if(:rand.uniform(3) == 1, do: Faker.Lorem.sentence(), else: "")
         }
 
-        invoice = AshReportsDemo.Invoice.create!(invoice_attrs)
+        invoice = AshReportsDemo.Invoice.create!(invoice_attrs, domain: AshReportsDemo.Domain)
 
         # Generate 1-10 line items per invoice
         line_item_count = 1 + :rand.uniform(9)
@@ -350,7 +350,7 @@ defmodule AshReportsDemo.DataGenerator do
             description: if(:rand.uniform(3) == 1, do: Faker.Lorem.sentence(5), else: "")
           }
 
-          AshReportsDemo.InvoiceLineItem.create!(line_item_attrs)
+          AshReportsDemo.InvoiceLineItem.create!(line_item_attrs, domain: AshReportsDemo.Domain)
         end
 
         # Update invoice totals
@@ -361,7 +361,7 @@ defmodule AshReportsDemo.DataGenerator do
           subtotal: subtotal,
           tax_amount: tax_amount,
           total: total
-        })
+        }, domain: AshReportsDemo.Domain)
       end
 
       Logger.info("Generated #{invoice_count} invoices with line items")

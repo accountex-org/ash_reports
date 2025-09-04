@@ -372,4 +372,32 @@ defmodule AshReports.GroupProcessor do
   defp add_processing_metadata(result) do
     Map.put(result, :processed_at, System.monotonic_time(:millisecond))
   end
+
+  @doc """
+  Processes multiple records and returns group summary information.
+  
+  Simplified version for Phase 8.1 integration.
+  """
+  @spec process_records(group_state(), [map()]) :: %{term() => map()}
+  def process_records(_group_state, []), do: %{}
+
+  def process_records(group_state, records) when is_list(records) do
+    # Group records by their group values
+    records
+    |> Enum.group_by(fn record ->
+      # Extract group values for this record
+      Enum.reduce(group_state.groups, %{}, fn group, acc ->
+        group_value = evaluate_group_expression(group.expression, record)
+        Map.put(acc, group.level, group_value)
+      end)
+    end)
+    |> Enum.into(%{}, fn {group_key, group_records} ->
+      {group_key, %{
+        record_count: length(group_records),
+        first_record: List.first(group_records),
+        last_record: List.last(group_records),
+        group_level_values: group_key
+      }}
+    end)
+  end
 end

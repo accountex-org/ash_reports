@@ -407,45 +407,83 @@ defmodule AshReports.DataLoader do
   # Private Implementation Functions
 
   defp get_report(domain, report_name) do
-    # Get report from domain using Ash info
-    case apply(domain, :__ash_reports_config__, []) do
-      %{reports: reports} ->
-        case Enum.find(reports, &(&1.name == report_name)) do
-          nil -> {:error, {:report_not_found, report_name}}
-          report -> {:ok, report}
-        end
-
-      _ ->
-        {:error, {:no_reports_configured, domain}}
+    case AshReports.Info.report(domain, report_name) do
+      nil -> {:error, {:report_not_found, report_name}}
+      report -> {:ok, report}
     end
-  catch
-    _, _ ->
-      {:error, {:invalid_domain, domain}}
   end
 
   defp do_load_report(domain, report, params, config) do
     start_time = System.monotonic_time(:millisecond)
 
-    with {:ok, components} <- initialize_components(domain, report, params, config),
-         {:ok, result} <- process_with_components(components, config) do
+    with {:ok, query} <- QueryBuilder.build(report, params),
+         {:ok, records} <- execute_query(domain, query),
+         {:ok, processed_data} <- process_records_with_variables_and_groups(report, records) do
       # Add metadata
       end_time = System.monotonic_time(:millisecond)
       processing_time = end_time - start_time
 
-      enhanced_result = %{
-        result
-        | metadata:
-            Map.merge(result.metadata, %{
-              processing_time: processing_time,
-              memory_usage_mb: :erlang.memory(:total) / (1024 * 1024),
-              loader_version: "2.4.0"
-            })
+      result = %{
+        records: records,
+        variables: processed_data.variables,
+        groups: processed_data.groups,
+        metadata: %{
+          record_count: length(records),
+          processing_time: processing_time,
+          memory_usage_mb: :erlang.memory(:total) / (1024 * 1024),
+          cache_hit?: false,
+          loader_version: "8.1.0",
+          pipeline_stats: %{}
+        }
       }
 
-      {:ok, enhanced_result}
+      {:ok, result}
     else
       {:error, _reason} = error -> error
     end
+  end
+
+  defp execute_query(domain, query) do
+    case Ash.read(query, domain: domain) do
+      {:ok, records} -> {:ok, records}
+      {:error, error} -> {:error, "Query execution failed: #{inspect(error)}"}
+    end
+  rescue
+    error -> {:error, "Query execution error: #{Exception.message(error)}"}
+  end
+
+  defp process_records_with_variables_and_groups(report, records) do
+    # Initialize variable state
+    variable_state = VariableState.new(report.variables || [])
+    
+    # Initialize group processor  
+    group_processor = if report.groups && length(report.groups) > 0 do
+      GroupProcessor.new(report.groups)
+    else
+      nil
+    end
+
+    # Process each record through variables
+    final_variable_state = Enum.reduce(records, variable_state, fn record, state ->
+      Enum.reduce(report.variables || [], state, fn variable, acc_state ->
+        VariableState.update_from_record(acc_state, variable, record)
+      end)
+    end)
+
+    # Extract final variable values
+    variables = VariableState.get_all_values(final_variable_state)
+
+    # Basic group processing (simplified for Phase 8.1)
+    groups = if group_processor do
+      GroupProcessor.process_records(group_processor, records)
+    else
+      %{}
+    end
+
+    {:ok, %{
+      variables: variables,
+      groups: groups
+    }}
   end
 
   defp do_stream_report(domain, report, params, config) do

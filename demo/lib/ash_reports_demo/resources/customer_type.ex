@@ -55,13 +55,9 @@ defmodule AshReportsDemo.CustomerType do
 
   code_interface do
     define :create, action: :create
-    define :read, action: :read  
+    define :read, action: :read
     define :update, action: :update
     define :destroy, action: :destroy
-    define :create!
-    define :read!
-    define :update!
-    define :destroy!
   end
 
   actions do

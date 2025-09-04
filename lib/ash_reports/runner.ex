@@ -41,22 +41,35 @@ defmodule AshReports.Runner do
   """
   @spec run_report(module(), atom(), map(), Keyword.t()) :: {:ok, any()} | {:error, term()}
   def run_report(domain, report_name, params \\ %{}, opts \\ []) do
-    case AshReports.Info.report(domain, report_name) do
-      nil ->
-        {:error, "Report #{report_name} not found in domain #{domain}"}
-      
-      report ->
-        # For now, return a placeholder result
-        {:ok,
-         %{
-           content: "Report #{report.title || report_name} placeholder",
-           metadata: %{
-             report_name: report_name,
-             generated_at: DateTime.utc_now(),
-             format: opts[:format] || :html,
-             params: params
-           }
-         }}
+    format = Keyword.get(opts, :format, :html)
+    
+    with {:ok, data_result} <- AshReports.DataLoader.load_report(domain, report_name, params),
+         {:ok, rendered_result} <- render_report(data_result, format, opts) do
+      {:ok, %{
+        content: rendered_result.content,
+        metadata: Map.merge(data_result.metadata, rendered_result.metadata || %{}),
+        format: format,
+        data: data_result  # Include data for debugging
+      }}
+    else
+      {:error, reason} -> {:error, reason}
     end
   end
+
+  defp render_report(data_result, format, opts) do
+    case get_renderer_for_format(format) do
+      {:ok, renderer} ->
+        context = AshReports.RenderContext.new(data_result.report || %{}, data_result)
+        renderer.render_with_context(context, opts)
+        
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  defp get_renderer_for_format(:html), do: {:ok, AshReports.HtmlRenderer}
+  defp get_renderer_for_format(:pdf), do: {:ok, AshReports.PdfRenderer}
+  defp get_renderer_for_format(:heex), do: {:ok, AshReports.HeexRenderer}
+  defp get_renderer_for_format(:json), do: {:ok, AshReports.JsonRenderer}
+  defp get_renderer_for_format(format), do: {:error, "Unknown format: #{format}"}
 end

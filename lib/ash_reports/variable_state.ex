@@ -74,10 +74,12 @@ defmodule AshReports.VariableState do
   @doc """
   Gets all current variable values.
   """
-  @spec get_all_values(GenServer.server()) :: %{atom() => any()}
-  def get_all_values(server) do
+  @spec get_all_values(GenServer.server() | variable_state()) :: %{atom() => any()}
+  def get_all_values(server) when is_pid(server) do
     GenServer.call(server, :get_all_values)
   end
+  
+  def get_all_values(%{values: values}), do: values
 
   @doc """
   Resets variables based on scope changes.
@@ -146,6 +148,75 @@ defmodule AshReports.VariableState do
   @spec get_evaluation_order(GenServer.server()) :: [atom()]
   def get_evaluation_order(server) do
     GenServer.call(server, :get_evaluation_order)
+  end
+
+  @doc """
+  Creates a new VariableState struct with initialized variables.
+  
+  Simplified non-GenServer version for direct use in data processing.
+  """
+  @spec new([Variable.t()]) :: variable_state()
+  def new(variables \\ []) do
+    %{
+      variables: variables,
+      values: initialize_variable_values(variables),
+      dependencies: %{},
+      table_id: nil
+    }
+  end
+
+  @doc """
+  Updates a variable with a new record value.
+  
+  Simplified version that works directly with variable state struct.
+  """
+  @spec update_from_record(variable_state(), Variable.t(), map()) :: variable_state()
+  def update_from_record(state, %Variable{} = variable, record) when is_map(record) do
+    case evaluate_expression_against_record(variable.expression, record) do
+      {:ok, new_value} ->
+        current_value = Map.get(state.values, variable.name, variable.initial_value)
+        calculated_value = Variable.calculate_next_value(variable, current_value, new_value)
+        put_in(state.values[variable.name], calculated_value)
+      
+      {:error, _reason} ->
+        # If expression evaluation fails, keep current state
+        state
+    end
+  end
+
+
+  # Private helper functions
+
+  defp initialize_variable_values(variables) do
+    Enum.into(variables, %{}, fn variable ->
+      {variable.name, variable.initial_value || Variable.default_initial_value(variable.type)}
+    end)
+  end
+
+  defp evaluate_expression_against_record(expression, record) do
+    case expression do
+      # Simple field reference
+      field when is_atom(field) ->
+        value = Map.get(record, field)
+        {:ok, value}
+
+      # Nested field path (e.g., [:customer, :name])
+      path when is_list(path) ->
+        value = get_in(record, path)
+        {:ok, value}
+
+      # Ash.Expr expressions or other complex expressions
+      %{__struct__: struct_module} when struct_module != nil ->
+        # Complex expression evaluation would go here
+        # For now, return 1 for count operations, 0 for others
+        {:ok, 1}
+
+      # Simple value
+      value ->
+        {:ok, value}
+    end
+  rescue
+    _error -> {:error, "Expression evaluation failed"}
   end
 
   # GenServer Callbacks

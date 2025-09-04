@@ -69,10 +69,6 @@ defmodule AshReportsDemo.Customer do
     define :read, action: :read
     define :update, action: :update
     define :destroy, action: :destroy
-    define :create!
-    define :read!
-    define :update!
-    define :destroy!
   end
 
   actions do
