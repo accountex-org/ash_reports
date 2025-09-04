@@ -341,7 +341,7 @@ defmodule AshReports.LiveView.PerformanceTelemetry do
   defp process_alerts(alerts) do
     # Process alerts (would integrate with notification systems)
     Enum.each(alerts, fn alert ->
-      Logger.warn("Performance alert: #{alert.type} = #{alert.value} (#{alert.level})")
+      Logger.warning("Performance alert: #{alert.type} = #{alert.value} (#{alert.level})")
     end)
   end
 

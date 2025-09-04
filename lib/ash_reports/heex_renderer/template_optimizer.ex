@@ -7,12 +7,7 @@ defmodule AshReports.HeexRenderer.TemplateOptimizer do
   analysis and runtime optimization.
   """
 
-  alias AshReports.RenderContext
-
   @template_cache_name :ash_reports_template_cache
-  @max_cache_size 100
-  # 1 hour in milliseconds
-  @cache_ttl 3600_000
 
   @doc """
   Optimize a HEEX template for performance.
@@ -102,7 +97,7 @@ defmodule AshReports.HeexRenderer.TemplateOptimizer do
       :ets.new(@template_cache_name, [:set, :public, :named_table])
     rescue
       # Table already exists
-      :badarg -> :ok
+      ArgumentError -> :ok
     end
 
     :ets.insert(@template_cache_name, {cache_key, optimized_template})

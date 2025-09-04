@@ -33,4 +33,30 @@ defmodule AshReports.Runner do
        }
      }}
   end
+
+  @doc """
+  Runs a report by domain and report name with parameters and options.
+
+  Alternative API for running reports by name instead of module.
+  """
+  @spec run_report(module(), atom(), map(), Keyword.t()) :: {:ok, any()} | {:error, term()}
+  def run_report(domain, report_name, params \\ %{}, opts \\ []) do
+    case AshReports.Info.report(domain, report_name) do
+      nil ->
+        {:error, "Report #{report_name} not found in domain #{domain}"}
+      
+      report ->
+        # For now, return a placeholder result
+        {:ok,
+         %{
+           content: "Report #{report.title || report_name} placeholder",
+           metadata: %{
+             report_name: report_name,
+             generated_at: DateTime.utc_now(),
+             format: opts[:format] || :html,
+             params: params
+           }
+         }}
+    end
+  end
 end

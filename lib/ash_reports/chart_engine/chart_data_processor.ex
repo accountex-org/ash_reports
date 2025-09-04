@@ -47,8 +47,8 @@ defmodule AshReports.ChartEngine.ChartDataProcessor do
 
   """
 
-  alias AshReports.ChartEngine.{ChartConfig, ChartData}
-  alias AshReports.{InteractiveEngine, RenderContext}
+  alias AshReports.ChartEngine.ChartConfig
+  alias AshReports.RenderContext
 
   @cache_name :ash_reports_chart_data_cache
   # 1 hour
@@ -223,7 +223,7 @@ defmodule AshReports.ChartEngine.ChartDataProcessor do
 
   defp normalize_data_point({x, y}), do: %{x: x, y: y}
   defp normalize_data_point([x, y]), do: %{x: x, y: y}
-  defp normalize_data_point(%{x: x, y: y} = point), do: point
+  defp normalize_data_point(%{x: _x, y: _y} = point), do: point
   defp normalize_data_point(value) when is_number(value), do: %{x: 0, y: value}
   defp normalize_data_point(value), do: %{x: to_string(value), y: 0}
 
@@ -253,7 +253,7 @@ defmodule AshReports.ChartEngine.ChartDataProcessor do
 
   defp optimize_for_static_rendering(data), do: data
 
-  defp prepare_image_generation_config(chart_config, context) do
+  defp prepare_image_generation_config(_chart_config, context) do
     %{
       width: 800,
       height: 600,
@@ -378,7 +378,7 @@ defmodule AshReports.ChartEngine.ChartDataProcessor do
       :ets.new(@cache_name, [:set, :public, :named_table])
     rescue
       # Table already exists
-      :badarg -> :ok
+      ArgumentError -> :ok
     end
 
     expires_at = DateTime.add(DateTime.utc_now(), @cache_ttl, :millisecond)

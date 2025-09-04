@@ -70,6 +70,17 @@ defmodule AshReportsDemo.Product do
     end
   end
 
+  code_interface do
+    define :create, action: :create
+    define :read, action: :read  
+    define :update, action: :update
+    define :destroy, action: :destroy
+    define :create!
+    define :read!
+    define :update!
+    define :destroy!
+  end
+
   actions do
     defaults [:create, :read, :update, :destroy]
 
@@ -97,6 +108,7 @@ defmodule AshReportsDemo.Product do
 
     update :update_pricing do
       description "Update product price and cost"
+      require_atomic? false
       accept [:price, :cost]
       change set_attribute(:updated_at, &DateTime.utc_now/0)
     end
@@ -104,6 +116,7 @@ defmodule AshReportsDemo.Product do
     # Phase 7.4: Advanced product actions
     update :adjust_pricing_strategy do
       description "Adjust pricing based on market analysis"
+      require_atomic? false
       argument :strategy, :atom, constraints: [one_of: [:competitive, :premium, :value]]
       argument :adjustment_percentage, :decimal, default: Decimal.new("5.00")
       
@@ -379,6 +392,7 @@ defmodule AshReportsDemo.Product do
   identities do
     identity :unique_sku, [:sku] do
       message "SKU must be unique"
+      pre_check_with AshReportsDemo.Domain
     end
   end
 

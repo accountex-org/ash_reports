@@ -60,6 +60,17 @@ defmodule AshReportsDemo.InvoiceLineItem do
     end
   end
 
+  code_interface do
+    define :create, action: :create
+    define :read, action: :read  
+    define :update, action: :update
+    define :destroy, action: :destroy
+    define :create!
+    define :read!
+    define :update!
+    define :destroy!
+  end
+
   actions do
     defaults [:create, :read, :update, :destroy]
 
@@ -77,6 +88,7 @@ defmodule AshReportsDemo.InvoiceLineItem do
 
     update :apply_discount do
       description "Apply discount to line item"
+      require_atomic? false
       argument :discount_type, :atom, constraints: [one_of: [:percentage, :amount]]
       argument :discount_value, :decimal, allow_nil?: false
 

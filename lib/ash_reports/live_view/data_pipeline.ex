@@ -333,7 +333,7 @@ defmodule AshReports.LiveView.DataPipeline do
 
       {:error, reason} ->
         # Handle data fetch error
-        Logger.warn("Data fetch failed for pipeline #{pipeline.pipeline_id}: #{inspect(reason)}")
+        Logger.warning("Data fetch failed for pipeline #{pipeline.pipeline_id}: #{inspect(reason)}")
 
         retry_count = pipeline.retry_count + 1
 
@@ -459,7 +459,7 @@ defmodule AshReports.LiveView.DataPipeline do
         Enum.map(data, mapper_fn)
 
       _ ->
-        Logger.warn("Unknown transformation: #{inspect(transformation)}")
+        Logger.warning("Unknown transformation: #{inspect(transformation)}")
         data
     end
   end

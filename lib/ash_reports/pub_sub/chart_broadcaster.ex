@@ -334,7 +334,7 @@ defmodule AshReports.PubSub.ChartBroadcaster do
           process_dashboard_batch(dashboard_id, batch_items, state)
 
         _ ->
-          Logger.warn("Unknown batch key: #{inspect(batch_key)}")
+          Logger.warning("Unknown batch key: #{inspect(batch_key)}")
           state
       end
     else
@@ -420,7 +420,7 @@ defmodule AshReports.PubSub.ChartBroadcaster do
   defp process_filtered_stream_update(stream_id, state) do
     case Map.get(state.filtered_streams, stream_id) do
       nil ->
-        Logger.warn("Filtered stream not found: #{stream_id}")
+        Logger.warning("Filtered stream not found: #{stream_id}")
         state
 
       stream_process ->

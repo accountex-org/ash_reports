@@ -79,6 +79,17 @@ defmodule AshReportsDemo.CustomerAddress do
     end
   end
 
+  code_interface do
+    define :create, action: :create
+    define :read, action: :read  
+    define :update, action: :update
+    define :destroy, action: :destroy
+    define :create!
+    define :read!
+    define :update!
+    define :destroy!
+  end
+
   actions do
     defaults [:create, :read, :update, :destroy]
 
@@ -101,12 +112,14 @@ defmodule AshReportsDemo.CustomerAddress do
 
     update :set_primary do
       description "Set this address as primary"
+      require_atomic? false
       change set_attribute(:primary, true)
       # Note: In a real system, we'd also unset other primary addresses
     end
 
     update :deactivate do
       description "Deactivate this address"
+      require_atomic? false
       change set_attribute(:active, false)
     end
   end

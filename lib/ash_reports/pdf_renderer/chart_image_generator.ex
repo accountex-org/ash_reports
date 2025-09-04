@@ -188,9 +188,9 @@ defmodule AshReports.PdfRenderer.ChartImageGenerator do
     """
   end
 
-  defp render_html_to_image(html_content, image_options) do
+  defp render_html_to_image(_html_content, image_options) do
     # Use ChromicPDF for HTML to image conversion
-    chromic_options = [
+    _chromic_options = [
       format: image_options.format,
       capture_screenshot: %{
         format: to_string(image_options.format),
@@ -208,18 +208,19 @@ defmodule AshReports.PdfRenderer.ChartImageGenerator do
       }
     ]
 
-    case ChromicPDF.Template.source_and_options(
-           content: html_content,
-           chromic_options: chromic_options
-         ) do
-      {:ok, {_source, options}} ->
-        case ChromicPDF.print_to_binary({:html, html_content}, options) do
-          {:ok, image_binary} -> {:ok, image_binary}
-          {:error, reason} -> {:error, "Chrome rendering failed: #{inspect(reason)}"}
+    # For now, return a placeholder as ChromicPDF is not available in all environments
+    case Application.ensure_loaded(ChromicPDF) do
+      {:ok, _} ->
+        try do
+          # ChromicPDF.print_to_binary({:html, html_content}, [])
+          # Placeholder for when ChromicPDF is properly configured
+          {:error, "ChromicPDF not configured"}
+        rescue
+          _ -> {:error, "ChromicPDF rendering failed"}
         end
-
-      {:error, reason} ->
-        {:error, "Template preparation failed: #{inspect(reason)}"}
+      
+      _ ->
+        {:error, "ChromicPDF not available"}
     end
   rescue
     error -> {:error, "Image rendering failed: #{Exception.message(error)}"}
@@ -273,7 +274,7 @@ defmodule AshReports.PdfRenderer.ChartImageGenerator do
       :ets.new(@image_cache_name, [:set, :public, :named_table])
     rescue
       # Table already exists
-      :badarg -> :ok
+      ArgumentError -> :ok
     end
 
     expires_at = DateTime.add(DateTime.utc_now(), @cache_ttl, :millisecond)

@@ -91,6 +91,17 @@ defmodule AshReportsDemo.Invoice do
     end
   end
 
+  code_interface do
+    define :create, action: :create
+    define :read, action: :read  
+    define :update, action: :update
+    define :destroy, action: :destroy
+    define :create!
+    define :read!
+    define :update!
+    define :destroy!
+  end
+
   actions do
     defaults [:create, :read, :update, :destroy]
 
@@ -114,18 +125,21 @@ defmodule AshReportsDemo.Invoice do
 
     update :mark_paid do
       description "Mark invoice as paid"
+      require_atomic? false
       change set_attribute(:status, :paid)
       change set_attribute(:updated_at, &DateTime.utc_now/0)
     end
 
     update :mark_overdue do
       description "Mark invoice as overdue"
+      require_atomic? false
       change set_attribute(:status, :overdue)
       change set_attribute(:updated_at, &DateTime.utc_now/0)
     end
 
     update :calculate_totals do
       description "Recalculate invoice totals from line items"
+      require_atomic? false
 
       change fn changeset, context ->
         # This would calculate totals from line items
@@ -281,6 +295,7 @@ defmodule AshReportsDemo.Invoice do
   identities do
     identity :unique_invoice_number, [:invoice_number] do
       message "invoice number must be unique"
+      pre_check_with AshReportsDemo.Domain
     end
   end
 

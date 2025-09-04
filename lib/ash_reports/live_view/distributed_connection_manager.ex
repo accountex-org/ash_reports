@@ -107,7 +107,7 @@ defmodule AshReports.LiveView.DistributedConnectionManager do
   # GenServer implementation
 
   @impl true
-  def init(opts) do
+  def init(_opts) do
     node_id = Node.self()
 
     # Initialize distributed state
@@ -174,7 +174,7 @@ defmodule AshReports.LiveView.DistributedConnectionManager do
   @impl true
   def handle_cast({:node_failure, failed_node}, state) do
     updated_state = handle_node_failure_internal(failed_node, state)
-    Logger.warn("Handled node failure: #{failed_node}")
+    Logger.warning("Handled node failure: #{failed_node}")
     {:noreply, updated_state}
   end
 
@@ -204,7 +204,7 @@ defmodule AshReports.LiveView.DistributedConnectionManager do
   def handle_info({:nodedown, node}, state) do
     # Handle node leaving cluster
     updated_state = handle_node_leave(node, state)
-    Logger.warn("Node left cluster: #{node}")
+    Logger.warning("Node left cluster: #{node}")
     {:noreply, updated_state}
   end
 
@@ -221,7 +221,7 @@ defmodule AshReports.LiveView.DistributedConnectionManager do
     Enum.each(cluster_nodes, fn node ->
       case Node.connect(node) do
         true -> Logger.info("Connected to cluster node: #{node}")
-        false -> Logger.warn("Failed to connect to cluster node: #{node}")
+        false -> Logger.warning("Failed to connect to cluster node: #{node}")
       end
     end)
 

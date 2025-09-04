@@ -115,7 +115,7 @@ defmodule AshReports.LiveView.DashboardPresence do
         :ok
 
       _ ->
-        Logger.warn(
+        Logger.warning(
           "Cannot update presence - user #{user_id} not found in dashboard #{dashboard_id}"
         )
 

@@ -46,6 +46,17 @@ defmodule AshReportsDemo.ProductCategory do
     end
   end
 
+  code_interface do
+    define :create, action: :create
+    define :read, action: :read  
+    define :update, action: :update
+    define :destroy, action: :destroy
+    define :create!
+    define :read!
+    define :update!
+    define :destroy!
+  end
+
   actions do
     defaults [:create, :read, :update, :destroy]
 
@@ -87,6 +98,7 @@ defmodule AshReportsDemo.ProductCategory do
   identities do
     identity :unique_name, [:name] do
       message "category name must be unique"
+      pre_check_with AshReportsDemo.Domain
     end
   end
 

@@ -42,9 +42,8 @@ defmodule AshReports.HtmlRenderer.JavaScriptGenerator do
 
   """
 
-  alias AshReports.ChartEngine.{ChartConfig, ChartData}
-  alias AshReports.HtmlRenderer.AssetManager
-  alias AshReports.{RenderContext, Translation}
+  alias AshReports.ChartEngine.ChartConfig
+  alias AshReports.RenderContext
 
   @type js_config :: %{
           chart_id: String.t(),
@@ -197,7 +196,7 @@ defmodule AshReports.HtmlRenderer.JavaScriptGenerator do
   Generate comprehensive asset loading JavaScript.
   """
   @spec generate_asset_loading_javascript([String.t()], RenderContext.t()) :: String.t()
-  def generate_asset_loading_javascript(required_assets, %RenderContext{} = context) do
+  def generate_asset_loading_javascript(required_assets, %RenderContext{} = _context) do
     """
     // Asset loading for AshReports charts
     (function() {
@@ -369,9 +368,11 @@ defmodule AshReports.HtmlRenderer.JavaScriptGenerator do
 
     """
     // Error handling for #{js_config.chart_id}
+    const errorMessage = '#{error_message}';
     window.addEventListener('error', function(event) {
       if (event.target && event.target.closest && event.target.closest('##{js_config.chart_id}_container')) {
         console.error('Chart error detected:', event);
+        console.error(errorMessage);
         #{generate_fallback_activation_js(js_config.chart_id)}
       }
     });
@@ -684,26 +685,4 @@ defmodule AshReports.HtmlRenderer.JavaScriptGenerator do
     """
   end
 
-  defp generate_initialization_handler(%ChartConfig{} = config, %RenderContext{} = _context) do
-    """
-    // Initialize chart registry
-    if (!window.AshReports.charts['#{config.title || "chart"}']) {
-      window.AshReports.charts['#{config.title || "chart"}'] = {
-        config: #{Jason.encode!(config)},
-        initialized: false
-      };
-    }
-    """
-  end
-
-  defp generate_cleanup_handler(%ChartConfig{} = config, %RenderContext{} = _context) do
-    """
-    // Cleanup chart resources
-    const chartRef = window.AshReports.charts['#{config.title || "chart"}'];
-    if (chartRef && chartRef.chart) {
-      chartRef.chart.destroy();
-      delete window.AshReports.charts['#{config.title || "chart"}'];
-    }
-    """
-  end
 end

@@ -64,6 +64,17 @@ defmodule AshReportsDemo.Customer do
     end
   end
 
+  code_interface do
+    define :create, action: :create
+    define :read, action: :read
+    define :update, action: :update
+    define :destroy, action: :destroy
+    define :create!
+    define :read!
+    define :update!
+    define :destroy!
+  end
+
   actions do
     defaults [:create, :read, :update, :destroy]
 
@@ -112,12 +123,14 @@ defmodule AshReportsDemo.Customer do
 
     update :suspend do
       description "Suspend a customer"
+      require_atomic? false
       change set_attribute(:status, :suspended)
       change set_attribute(:updated_at, &DateTime.utc_now/0)
     end
 
     update :activate do
       description "Activate a suspended customer"
+      require_atomic? false
       change set_attribute(:status, :active)
       change set_attribute(:updated_at, &DateTime.utc_now/0)
     end
@@ -125,6 +138,7 @@ defmodule AshReportsDemo.Customer do
     # Phase 7.4: Advanced custom actions
     update :adjust_credit_limit do
       description "Adjust customer credit limit with business logic"
+      require_atomic? false
       argument :new_limit, :decimal, allow_nil?: false
       argument :reason, :string, allow_nil?: false
       
@@ -144,6 +158,7 @@ defmodule AshReportsDemo.Customer do
 
     update :record_interaction do
       description "Record customer interaction for engagement tracking"
+      require_atomic? false
       argument :interaction_type, :string, allow_nil?: false
       argument :notes, :string, default: ""
       
@@ -390,12 +405,7 @@ defmodule AshReportsDemo.Customer do
     end
   end
 
-  # Phase 7.4: Authorization policies
-  policies do
-    bypass always() do
-      description "Allow all operations for demo purposes"
-    end
-  end
+  # Phase 7.4: Authorization policies would go here if using ash_policy_authorizer extension
 
   validations do
     validate match(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/), message: "must be a valid email address"
@@ -437,6 +447,7 @@ defmodule AshReportsDemo.Customer do
   identities do
     identity :unique_email, [:email] do
       message "email must be unique"
+      pre_check_with AshReportsDemo.Domain
     end
   end
 

@@ -31,10 +31,10 @@ defmodule AshReportsDemo.Domain do
       description "Comprehensive customer analysis with geographic and tier grouping"
       driving_resource AshReportsDemo.Customer
 
-      parameter :region, :string, description: "Filter by state/region"
-      parameter :tier, :string, description: "Filter by customer tier", constraints: [one_of: ["Bronze", "Silver", "Gold", "Platinum"]]
-      parameter :min_health_score, :integer, default: 0, description: "Minimum health score threshold", constraints: [min: 0, max: 100]
-      parameter :include_inactive, :boolean, default: false, description: "Include inactive customers"
+      parameter :region, :string
+      parameter :tier, :string, constraints: [one_of: ["Bronze", "Silver", "Gold", "Platinum"]]
+      parameter :min_health_score, :integer, default: 0, constraints: [min: 0, max: 100]
+      parameter :include_inactive, :boolean, default: false
 
       variable :customer_count do
         type :count
@@ -55,37 +55,34 @@ defmodule AshReportsDemo.Domain do
 
       band :title do
         type :title
-        elements do
-          label :report_title do
-            text "Customer Summary Report"
-          end
+        
+        label :report_title do
+          text "Customer Summary Report"
         end
       end
 
       band :customer_detail do
         type :detail
-        elements do
-          field :customer_name do
-            source :name
-          end
-          field :health_score do
-            source :customer_health_score
-          end
-          field :tier do
-            source :customer_tier
-          end
+        
+        field :customer_name do
+          source :name
+        end
+        field :health_score do
+          source :customer_health_score
+        end
+        field :tier do
+          source :customer_tier
         end
       end
 
       band :summary do
         type :summary
-        elements do
-          expression :total_customers do
-            expression expr("Total Customers: #{@customer_count}")
-          end
-          expression :total_value do
-            expression expr("Total Lifetime Value: $#{:erlang.float_to_binary(@total_lifetime_value, [{:decimals, 2}])}")
-          end
+        
+        label :total_customers do
+          text "Total Customers: [customer_count]"
+        end
+        label :total_value do
+          text "Total Lifetime Value: [total_lifetime_value]"
         end
       end
     end
@@ -96,8 +93,8 @@ defmodule AshReportsDemo.Domain do
       description "Inventory analysis with profitability metrics"
       driving_resource AshReportsDemo.Product
 
-      parameter :category_id, :uuid, description: "Filter by product category"
-      parameter :include_inactive, :boolean, default: false, description: "Include inactive products"
+      parameter :category_id, :uuid
+      parameter :include_inactive, :boolean, default: false
 
       variable :total_products do
         type :count
@@ -113,40 +110,37 @@ defmodule AshReportsDemo.Domain do
 
       band :title do
         type :title
-        elements do
-          label :report_title do
-            text "Product Inventory Report"
-          end
+        
+        label :report_title do
+          text "Product Inventory Report"
         end
       end
 
       band :product_detail do
         type :detail
-        elements do
-          field :product_name do
-            source :name
-          end
-          field :sku do
-            source :sku
-          end
-          field :price do
-            source :price
-          end
-          field :margin do
-            source :margin_percentage
-          end
+        
+        field :product_name do
+          source :name
+        end
+        field :sku do
+          source :sku
+        end
+        field :price do
+          source :price
+        end
+        field :margin do
+          source :margin_percentage
         end
       end
 
       band :inventory_summary do
         type :summary
-        elements do
-          expression :total_products_summary do
-            expression expr("Total Products: #{@total_products}")
-          end
-          expression :inventory_value_summary do
-            expression expr("Total Inventory Value: $#{:erlang.float_to_binary(@total_inventory_value, [{:decimals, 2}])}")
-          end
+        
+        label :total_products_summary do
+          text "Total Products: [total_products]"
+        end
+        label :inventory_value_summary do
+          text "Total Inventory Value: [total_inventory_value]"
         end
       end
     end
@@ -157,9 +151,9 @@ defmodule AshReportsDemo.Domain do
       description "Comprehensive invoice analysis with payment performance"
       driving_resource AshReportsDemo.Invoice
 
-      parameter :status, :atom, description: "Filter by invoice status", constraints: [one_of: [:draft, :sent, :paid, :overdue, :cancelled]]
-      parameter :customer_id, :uuid, description: "Filter by specific customer"
-      parameter :include_paid, :boolean, default: true, description: "Include paid invoices"
+      parameter :status, :atom, constraints: [one_of: [:draft, :sent, :paid, :overdue, :cancelled]]
+      parameter :customer_id, :uuid
+      parameter :include_paid, :boolean, default: true
 
       variable :total_invoices do
         type :count
@@ -175,37 +169,34 @@ defmodule AshReportsDemo.Domain do
 
       band :title do
         type :title
-        elements do
-          label :report_title do
-            text "Invoice Details Report"
-          end
+        
+        label :report_title do
+          text "Invoice Details Report"
         end
       end
 
       band :invoice_detail do
         type :detail
-        elements do
-          field :invoice_number do
-            source :invoice_number
-          end
-          field :date do
-            source :date
-          end
-          field :status do
-            source :status
-          end
-          field :total do
-            source :total
-          end
+        
+        field :invoice_number do
+          source :invoice_number
+        end
+        field :date do
+          source :date
+        end
+        field :status do
+          source :status
+        end
+        field :total do
+          source :total
         end
       end
 
       band :financial_summary do
         type :summary
-        elements do
-          expression :invoice_metrics do
-            expression expr("Total Invoices: #{@total_invoices} | Total Amount: $#{:erlang.float_to_binary(@total_invoice_amount, [{:decimals, 2}])}")
-          end
+        
+        label :invoice_metrics do
+          text "Total Invoices: [total_invoices] | Total Amount: [total_invoice_amount]"
         end
       end
     end
@@ -216,8 +207,8 @@ defmodule AshReportsDemo.Domain do
       description "Comprehensive financial dashboard with business intelligence"
       driving_resource AshReportsDemo.Invoice
 
-      parameter :period_type, :string, default: "monthly", description: "Reporting period type", constraints: [one_of: ["monthly", "quarterly", "yearly"]]
-      parameter :fiscal_year, :integer, default: Date.utc_today().year, description: "Fiscal year for reporting"
+      parameter :period_type, :string, default: "monthly", constraints: [one_of: ["monthly", "quarterly", "yearly"]]
+      parameter :fiscal_year, :integer, default: 2024
 
       variable :total_revenue do
         type :sum
@@ -233,19 +224,31 @@ defmodule AshReportsDemo.Domain do
 
       band :executive_title do
         type :title
-        elements do
-          label :report_title do
-            text "Executive Financial Summary"
-          end
+        
+        label :report_title do
+          text "Executive Financial Summary"
+        end
+      end
+
+      band :invoice_details do
+        type :detail
+        
+        field :invoice_number do
+          source :invoice_number
+        end
+        field :date do
+          source :date
+        end
+        field :total do
+          source :total
         end
       end
 
       band :executive_summary do
         type :summary
-        elements do
-          expression :revenue_summary do
-            expression expr("Total Revenue: $#{:erlang.float_to_binary(@total_revenue, [{:decimals, 2}])} across #{@invoice_count} transactions")
-          end
+        
+        label :revenue_summary do
+          text "Total Revenue: [total_revenue] across [invoice_count] transactions"
         end
       end
     end

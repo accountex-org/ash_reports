@@ -70,6 +70,17 @@ defmodule AshReportsDemo.Inventory do
     end
   end
 
+  code_interface do
+    define :create, action: :create
+    define :read, action: :read  
+    define :update, action: :update
+    define :destroy, action: :destroy
+    define :create!
+    define :read!
+    define :update!
+    define :destroy!
+  end
+
   actions do
     defaults [:create, :read, :update, :destroy]
 
@@ -91,12 +102,14 @@ defmodule AshReportsDemo.Inventory do
 
     update :adjust_stock do
       description "Adjust stock levels"
+      require_atomic? false
       accept [:current_stock, :reserved_stock]
       change set_attribute(:updated_at, &DateTime.utc_now/0)
     end
 
     update :receive_stock do
       description "Receive new inventory"
+      require_atomic? false
       argument :quantity, :integer, allow_nil?: false
       argument :received_date, :date, default: Date.utc_today()
 

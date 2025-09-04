@@ -467,7 +467,7 @@ defmodule AshReports.PdfRenderer do
           {:ok, chart_images}
 
         {:error, reason} ->
-          Logger.warn("Chart image generation failed: #{reason}")
+          Logger.warning("Chart image generation failed: #{reason}")
           # Continue without charts
           {:ok, %{}}
       end
