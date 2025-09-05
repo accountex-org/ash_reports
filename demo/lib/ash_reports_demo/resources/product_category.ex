@@ -54,7 +54,11 @@ defmodule AshReportsDemo.ProductCategory do
   end
 
   actions do
-    defaults [:create, :read, :update, :destroy]
+    defaults [:read, :update, :destroy]
+    
+    create :create do
+      accept [:name, :description, :active, :sort_order]
+    end
 
     read :active do
       description "Get active categories only"

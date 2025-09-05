@@ -191,32 +191,35 @@ defmodule AshReportsDemo.DataGenerator do
 
   defp create_customer_types do
     customer_type_specs = [
-      %{name: "Bronze", description: "Basic customer tier", credit_limit_multiplier: Decimal.new("1.0"), 
+      %{name: "Bronze", description: "Basic customer tier", 
         discount_percentage: Decimal.new("0"), active: true, priority_level: 1},
-      %{name: "Silver", description: "Standard customer tier", credit_limit_multiplier: Decimal.new("1.5"), 
+      %{name: "Silver", description: "Standard customer tier", 
         discount_percentage: Decimal.new("5"), active: true, priority_level: 2},
-      %{name: "Gold", description: "Premium customer tier", credit_limit_multiplier: Decimal.new("2.0"), 
+      %{name: "Gold", description: "Premium customer tier", 
         discount_percentage: Decimal.new("10"), active: true, priority_level: 3},
-      %{name: "Platinum", description: "Elite customer tier", credit_limit_multiplier: Decimal.new("3.0"), 
+      %{name: "Platinum", description: "Elite customer tier", 
         discount_percentage: Decimal.new("15"), active: true, priority_level: 4}
     ]
 
     results = for type_spec <- customer_type_specs do
       # Check if customer type already exists
-      case CustomerType.read(domain: AshReportsDemo.Domain, filter: [name: type_spec.name]) do
-        {:ok, [existing]} ->
-          Logger.debug("Customer type '#{type_spec.name}' already exists")
-          existing
+      case CustomerType.read() do
+        {:ok, types} ->
+          existing = Enum.find(types, &(&1.name == type_spec.name))
           
-        {:ok, []} ->
-          # Create new customer type
-          case CustomerType.create(type_spec, domain: AshReportsDemo.Domain) do
-            {:ok, customer_type} ->
-              Logger.debug("Created customer type: #{customer_type.name}")
-              customer_type
-            {:error, error} ->
-              Logger.error("Failed to create customer type #{type_spec.name}: #{inspect(error)}")
-              nil
+          if existing do
+            Logger.debug("Customer type '#{type_spec.name}' already exists")
+            existing
+          else
+            # Create new customer type
+            case CustomerType.create(type_spec) do
+              {:ok, customer_type} ->
+                Logger.debug("Created customer type: #{customer_type.name}")
+                customer_type
+              {:error, error} ->
+                Logger.error("Failed to create customer type #{type_spec.name}: #{inspect(error)}")
+                nil
+            end
           end
           
         {:error, error} ->
@@ -245,20 +248,23 @@ defmodule AshReportsDemo.DataGenerator do
 
     results = for category_spec <- category_specs do
       # Check if category already exists
-      case ProductCategory.read(domain: AshReportsDemo.Domain, filter: [name: category_spec.name]) do
-        {:ok, [existing]} ->
-          Logger.debug("Product category '#{category_spec.name}' already exists")
-          existing
+      case ProductCategory.read() do
+        {:ok, categories} ->
+          existing = Enum.find(categories, &(&1.name == category_spec.name))
           
-        {:ok, []} ->
-          # Create new product category
-          case ProductCategory.create(category_spec, domain: AshReportsDemo.Domain) do
-            {:ok, category} ->
-              Logger.debug("Created product category: #{category.name}")
-              category
-            {:error, error} ->
-              Logger.error("Failed to create category #{category_spec.name}: #{inspect(error)}")
-              nil
+          if existing do
+            Logger.debug("Product category '#{category_spec.name}' already exists")
+            existing
+          else
+            # Create new product category
+            case ProductCategory.create(category_spec) do
+              {:ok, category} ->
+                Logger.debug("Created product category: #{category.name}")
+                category
+              {:error, error} ->
+                Logger.error("Failed to create category #{category_spec.name}: #{inspect(error)}")
+                nil
+            end
           end
           
         {:error, error} ->
@@ -306,7 +312,7 @@ defmodule AshReportsDemo.DataGenerator do
   end
 
   defp get_available_customer_types do
-    case CustomerType.read(domain: AshReportsDemo.Domain) do
+    case CustomerType.read() do
       {:ok, []} -> {:error, "No customer types available - run foundation data first"}
       {:ok, customer_types} -> {:ok, customer_types}
       {:error, error} -> {:error, "Failed to load customer types: #{inspect(error)}"}
@@ -314,7 +320,7 @@ defmodule AshReportsDemo.DataGenerator do
   end
 
   defp get_available_product_categories do
-    case ProductCategory.read(domain: AshReportsDemo.Domain) do
+    case ProductCategory.read() do
       {:ok, []} -> {:error, "No product categories available - run foundation data first"}
       {:ok, categories} -> {:ok, categories}
       {:error, error} -> {:error, "Failed to load product categories: #{inspect(error)}"}
@@ -341,7 +347,7 @@ defmodule AshReportsDemo.DataGenerator do
         active: Enum.random([true, true, true, false])  # 75% active
       }
 
-      case Product.create(product_attrs, domain: AshReportsDemo.Domain) do
+      case Product.create(product_attrs) do
         {:ok, product} -> product
         {:error, error} ->
           Logger.error("Failed to create product #{i}: #{inspect(error)}")
@@ -371,7 +377,7 @@ defmodule AshReportsDemo.DataGenerator do
         last_received_quantity: 25 + :rand.uniform(200)
       }
 
-      case Inventory.create(inventory_attrs, domain: AshReportsDemo.Domain) do
+      case Inventory.create(inventory_attrs) do
         {:ok, inventory} -> inventory
         {:error, error} ->
           Logger.error("Failed to create inventory for product #{product.id}: #{inspect(error)}")
@@ -388,8 +394,8 @@ defmodule AshReportsDemo.DataGenerator do
     Logger.info("Generating #{invoice_count} invoices with line items")
 
     # Get available customers and products
-    customers = Customer.read!(domain: AshReportsDemo.Domain)
-    products = AshReportsDemo.Product.read!(domain: AshReportsDemo.Domain)
+    customers = Customer.read!()
+    products = Product.read!()
 
     if Enum.empty?(customers) or Enum.empty?(products) do
       {:error, "Cannot generate invoices without customers and products"}
@@ -412,7 +418,7 @@ defmodule AshReportsDemo.DataGenerator do
           notes: if(:rand.uniform(3) == 1, do: Faker.Lorem.sentence(), else: "")
         }
 
-        invoice = AshReportsDemo.Invoice.create!(invoice_attrs, domain: AshReportsDemo.Domain)
+        invoice = Invoice.create!(invoice_attrs)
 
         # Generate 1-10 line items per invoice
         line_item_count = 1 + :rand.uniform(9)
@@ -443,7 +449,7 @@ defmodule AshReportsDemo.DataGenerator do
             description: if(:rand.uniform(3) == 1, do: Faker.Lorem.sentence(5), else: "")
           }
 
-          AshReportsDemo.InvoiceLineItem.create!(line_item_attrs, domain: AshReportsDemo.Domain)
+          InvoiceLineItem.create!(line_item_attrs)
         end
 
         # Update invoice totals
@@ -454,7 +460,7 @@ defmodule AshReportsDemo.DataGenerator do
           subtotal: subtotal,
           tax_amount: tax_amount,
           total: total
-        }, domain: AshReportsDemo.Domain)
+        })
       end
 
       Logger.info("Generated #{invoice_count} invoices with line items")
@@ -490,7 +496,7 @@ defmodule AshReportsDemo.DataGenerator do
         customer_type_id: customer_type.id
       }
 
-      case Customer.create(customer_attrs, domain: AshReportsDemo.Domain) do
+      case Customer.create(customer_attrs) do
         {:ok, customer} ->
           customer
         {:error, error} ->
@@ -524,7 +530,7 @@ defmodule AshReportsDemo.DataGenerator do
           primary: i == 1
         }
 
-        case CustomerAddress.create(address_attrs, domain: AshReportsDemo.Domain) do
+        case CustomerAddress.create(address_attrs) do
           {:ok, address} -> address
           {:error, error} ->
             Logger.error("Failed to create address for customer #{customer.id}: #{inspect(error)}")
@@ -554,7 +560,8 @@ defmodule AshReportsDemo.DataGenerator do
 
   defp generate_realistic_credit_limit(customer_type) do
     base_amount = Decimal.new("5000")
-    multiplier = customer_type.credit_limit_multiplier || Decimal.new("1.0")
+    # Use priority_level to determine multiplier (higher priority = higher credit limit)
+    multiplier = Decimal.new("#{customer_type.priority_level}")
     variation = Decimal.new("#{:rand.uniform(50) * 100}")  # $0-$5000 variation
     
     base_amount

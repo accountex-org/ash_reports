@@ -61,7 +61,11 @@ defmodule AshReportsDemo.CustomerType do
   end
 
   actions do
-    defaults [:create, :read, :update, :destroy]
+    defaults [:read, :update, :destroy]
+    
+    create :create do
+      accept [:name, :description, :discount_percentage, :priority_level, :active]
+    end
 
     read :active do
       description "Get active customer types only"
