@@ -26,6 +26,9 @@ config :ash_reports_demo, AshReportsDemoWeb.Endpoint,
   pubsub_server: AshReportsDemo.PubSub,
   live_view: [signing_salt: "ash_reports_demo_lv_salt"]
 
+# Configure PhoenixTest
+config :phoenix_test, :endpoint, AshReportsDemoWeb.Endpoint
+
 # Configure esbuild for asset compilation
 config :esbuild,
   version: "0.21.5",
