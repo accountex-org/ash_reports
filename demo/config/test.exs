@@ -11,6 +11,12 @@ config :ash_reports_demo, AshReportsDemo.DataGenerator,
   auto_start: false,
   default_volume: :small
 
+# Configure the endpoint for tests
+config :ash_reports_demo, AshReportsDemoWeb.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4002],
+  secret_key_base: "ash_reports_demo_test_secret_key_base_for_tests_only_do_not_use_in_production",
+  server: true
+
 # Configure logger for tests
 config :logger, level: :warning
 
