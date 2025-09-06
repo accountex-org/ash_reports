@@ -246,7 +246,7 @@ defp deps do
     {:jason, "~> 1.4"},                     # JSON encoding/decoding
     
     # Enhanced Testing
-    {:wallaby, "~> 0.30", only: :test},     # Browser-based testing for interactive features
+     {:phoenix_test, "~> 0.7", only: :test},     # Phoenix Test utilities for testing
     {:floki, "~> 0.36", only: :test},       # HTML parsing for testing
   ]
 end

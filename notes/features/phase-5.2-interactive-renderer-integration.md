@@ -272,7 +272,7 @@ defp deps do
     {:phoenix_live_dashboard, "~> 0.8"},    # Live monitoring dashboard
     
     # Browser Testing for Interactive Features
-    {:wallaby, "~> 0.30", only: :test},     # Browser automation for testing
+     {:phoenix_test, "~> 0.7", only: :test},     # Phoenix Test utilities for testing
     {:floki, "~> 0.36", only: :test},       # HTML parsing for testing
     {:mock, "~> 0.3", only: :test},         # Mocking for WebSocket tests
     

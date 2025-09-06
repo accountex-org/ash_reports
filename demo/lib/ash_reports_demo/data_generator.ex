@@ -76,6 +76,38 @@ defmodule AshReportsDemo.DataGenerator do
     GenServer.call(__MODULE__, :stats)
   end
 
+  @doc """
+  Generate foundation data (customer types and product categories).
+  """
+  @spec generate_foundation_data() :: :ok | {:error, String.t()}
+  def generate_foundation_data do
+    GenServer.call(__MODULE__, :generate_foundation_data, 10_000)
+  end
+
+  @doc """
+  Generate customer data.
+  """
+  @spec generate_customer_data() :: :ok | {:error, String.t()}
+  def generate_customer_data do
+    GenServer.call(__MODULE__, :generate_customer_data, 15_000)
+  end
+
+  @doc """
+  Generate product data.
+  """
+  @spec generate_product_data() :: :ok | {:error, String.t()}
+  def generate_product_data do
+    GenServer.call(__MODULE__, :generate_product_data, 15_000)
+  end
+
+  @doc """
+  Generate invoice data.
+  """
+  @spec generate_invoice_data() :: :ok | {:error, String.t()}
+  def generate_invoice_data do
+    GenServer.call(__MODULE__, :generate_invoice_data, 20_000)
+  end
+
   # GenServer implementation
 
   @impl true
@@ -141,6 +173,75 @@ defmodule AshReportsDemo.DataGenerator do
     }
 
     {:reply, stats, state}
+  end
+
+  @impl true
+  def handle_call(:generate_foundation_data, _from, state) do
+    if state.generation_in_progress do
+      {:reply, {:error, "Data generation already in progress"}, state}
+    else
+      # Use a small volume config just for foundation data
+      volume_config = @data_volumes.small
+      case generate_foundation_data(volume_config) do
+        :ok ->
+          Logger.info("Foundation data generated successfully")
+          {:reply, :ok, state}
+        {:error, reason} ->
+          Logger.error("Foundation data generation failed: #{reason}")
+          {:reply, {:error, reason}, state}
+      end
+    end
+  end
+
+  @impl true
+  def handle_call(:generate_customer_data, _from, state) do
+    if state.generation_in_progress do
+      {:reply, {:error, "Data generation already in progress"}, state}
+    else
+      volume_config = @data_volumes.small
+      case generate_customer_data(volume_config) do
+        :ok ->
+          Logger.info("Customer data generated successfully")
+          {:reply, :ok, state}
+        {:error, reason} ->
+          Logger.error("Customer data generation failed: #{reason}")
+          {:reply, {:error, reason}, state}
+      end
+    end
+  end
+
+  @impl true
+  def handle_call(:generate_product_data, _from, state) do
+    if state.generation_in_progress do
+      {:reply, {:error, "Data generation already in progress"}, state}
+    else
+      volume_config = @data_volumes.small
+      case generate_product_data(volume_config) do
+        :ok ->
+          Logger.info("Product data generated successfully")
+          {:reply, :ok, state}
+        {:error, reason} ->
+          Logger.error("Product data generation failed: #{reason}")
+          {:reply, {:error, reason}, state}
+      end
+    end
+  end
+
+  @impl true
+  def handle_call(:generate_invoice_data, _from, state) do
+    if state.generation_in_progress do
+      {:reply, {:error, "Data generation already in progress"}, state}
+    else
+      volume_config = @data_volumes.small
+      case generate_invoice_data(volume_config) do
+        :ok ->
+          Logger.info("Invoice data generated successfully")
+          {:reply, :ok, state}
+        {:error, reason} ->
+          Logger.error("Invoice data generation failed: #{reason}")
+          {:reply, {:error, reason}, state}
+      end
+    end
   end
 
   # Private implementation
@@ -366,10 +467,14 @@ defmodule AshReportsDemo.DataGenerator do
 
   defp create_inventory_for_products(products) do
     inventory_records = for product <- products do
+      current_stock = :rand.uniform(1000)
+      # Ensure reserved_stock never exceeds current_stock
+      reserved_stock = :rand.uniform(min(50, current_stock))
+      
       inventory_attrs = %{
         product_id: product.id,
-        current_stock: :rand.uniform(1000),
-        reserved_stock: :rand.uniform(50),
+        current_stock: current_stock,
+        reserved_stock: reserved_stock,
         reorder_point: 10 + :rand.uniform(40),  # 10-50
         reorder_quantity: 50 + :rand.uniform(200),  # 50-250
         location: Enum.random(["Main Warehouse", "East Coast", "West Coast", "Central"]),

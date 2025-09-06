@@ -87,7 +87,11 @@ defmodule AshReportsDemo.CustomerAddress do
   end
 
   actions do
-    defaults [:create, :read, :update, :destroy]
+    defaults [:read, :update, :destroy]
+    
+    create :create do
+      accept [:address_type, :street, :street2, :city, :state, :postal_code, :country, :primary, :active, :customer_id]
+    end
 
     read :primary do
       description "Get primary addresses only"
