@@ -68,7 +68,11 @@ defmodule AshReportsDemo.InvoiceLineItem do
   end
 
   actions do
-    defaults [:create, :read, :update, :destroy]
+    defaults [:read, :update, :destroy]
+    
+    create :create do
+      accept [:quantity, :unit_price, :line_total, :discount_percentage, :discount_amount, :description, :invoice_id, :product_id]
+    end
 
     read :by_invoice do
       description "Get line items by invoice"

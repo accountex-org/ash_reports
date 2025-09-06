@@ -31,7 +31,7 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
     test "creates customer types successfully" do
       assert :ok = DataGenerator.generate_foundation_data()
       
-      {:ok, customer_types} = CustomerType.read(domain: Domain)
+      {:ok, customer_types} = CustomerType.read()
       assert length(customer_types) > 0
       
       # Should have expected customer types
@@ -45,7 +45,7 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
     test "creates product categories successfully" do
       assert :ok = DataGenerator.generate_foundation_data()
       
-      {:ok, categories} = ProductCategory.read(domain: Domain)
+      {:ok, categories} = ProductCategory.read()
       assert length(categories) > 0
       
       # Should have expected categories
@@ -70,7 +70,7 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
       DataGenerator.generate_foundation_data()
       assert :ok = DataGenerator.generate_customer_data()
       
-      {:ok, customers} = Customer.read(domain: Domain, load: [:customer_type, :addresses])
+      {:ok, customers} = Customer.read(load: [:customer_type, :addresses])
       assert length(customers) > 0
       
       customer = hd(customers)
@@ -84,9 +84,9 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
       DataGenerator.generate_foundation_data()
       DataGenerator.generate_customer_data()
       
-      {:ok, customers} = Customer.read(domain: Domain)
-      {:ok, customer_types} = CustomerType.read(domain: Domain)
-      {:ok, addresses} = CustomerAddress.read(domain: Domain)
+      {:ok, customers} = Customer.read()
+      {:ok, customer_types} = CustomerType.read()
+      {:ok, addresses} = CustomerAddress.read()
       
       if length(customers) > 0 and length(customer_types) > 0 do
         # Every customer should reference a valid customer type
@@ -111,7 +111,7 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
       DataGenerator.generate_foundation_data()
       assert :ok = DataGenerator.generate_product_data()
       
-      {:ok, products} = Product.read(domain: Domain, load: [:category])
+      {:ok, products} = Product.read(load: [:category])
       assert length(products) > 0
       
       product = hd(products)
@@ -125,8 +125,8 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
       DataGenerator.generate_foundation_data()
       DataGenerator.generate_product_data()
       
-      {:ok, inventory_records} = Inventory.read(domain: Domain)
-      {:ok, products} = Product.read(domain: Domain)
+      {:ok, inventory_records} = Inventory.read()
+      {:ok, products} = Product.read()
       
       if length(products) > 0 do
         # Should have inventory records
@@ -150,7 +150,7 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
       DataGenerator.generate_product_data()
       assert :ok = DataGenerator.generate_invoice_data()
       
-      {:ok, invoices} = Invoice.read(domain: Domain, load: [:customer, :line_items])
+      {:ok, invoices} = Invoice.read(load: [:customer, :line_items])
       
       if length(invoices) > 0 do
         assert length(invoices) > 0
@@ -169,7 +169,7 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
       DataGenerator.generate_product_data()
       DataGenerator.generate_invoice_data()
       
-      {:ok, invoices} = Invoice.read(domain: Domain, load: [:line_items])
+      {:ok, invoices} = Invoice.read(load: [:line_items])
       
       if length(invoices) > 0 do
         invoice = hd(invoices)
@@ -192,11 +192,11 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
       assert :ok = DataGenerator.generate_sample_data(:small)
       
       # Verify all resource types have data
-      {:ok, customers} = Customer.read(domain: Domain)
-      {:ok, products} = Product.read(domain: Domain)
-      {:ok, invoices} = Invoice.read(domain: Domain)
-      {:ok, customer_types} = CustomerType.read(domain: Domain)
-      {:ok, categories} = ProductCategory.read(domain: Domain)
+      {:ok, customers} = Customer.read()
+      {:ok, products} = Product.read()
+      {:ok, invoices} = Invoice.read()
+      {:ok, customer_types} = CustomerType.read()
+      {:ok, categories} = ProductCategory.read()
       
       assert length(customers) > 0
       assert length(products) > 0
@@ -208,11 +208,11 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
     test "respects volume configuration" do
       # Test small vs medium dataset sizes
       assert :ok = DataGenerator.generate_sample_data(:small)
-      {:ok, small_customers} = Customer.read(domain: Domain)
+      {:ok, small_customers} = Customer.read()
       
       DataGenerator.reset_data()
       assert :ok = DataGenerator.generate_sample_data(:medium)  
-      {:ok, medium_customers} = Customer.read(domain: Domain)
+      {:ok, medium_customers} = Customer.read()
       
       # Medium should have more customers than small
       if length(small_customers) > 0 and length(medium_customers) > 0 do
@@ -225,14 +225,14 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
       DataGenerator.generate_sample_data(:small)
       
       # Verify data exists
-      {:ok, customers_before} = Customer.read(domain: Domain)
+      {:ok, customers_before} = Customer.read()
       assert length(customers_before) > 0
       
       # Reset data
       DataGenerator.reset_data()
       
       # Verify data is cleared
-      {:ok, customers_after} = Customer.read(domain: Domain)
+      {:ok, customers_after} = Customer.read()
       assert customers_after == []
     end
   end
@@ -245,7 +245,7 @@ defmodule AshReportsDemo.DataGenerationIntegrationTest do
       # Should handle gracefully (either succeed or fail with clear error)
       case result do
         :ok -> 
-          {:ok, customers} = Customer.read(domain: Domain)
+          {:ok, customers} = Customer.read()
           assert is_list(customers)
           
         {:error, reason} ->

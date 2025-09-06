@@ -78,7 +78,11 @@ defmodule AshReportsDemo.Product do
   end
 
   actions do
-    defaults [:create, :read, :update, :destroy]
+    defaults [:read, :update, :destroy]
+    
+    create :create do
+      accept [:name, :sku, :description, :price, :cost, :weight, :active, :category_id]
+    end
 
     read :active do
       description "Get active products only"

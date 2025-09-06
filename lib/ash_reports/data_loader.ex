@@ -107,6 +107,7 @@ defmodule AshReports.DataLoader do
         ]
 
   @type load_result :: %{
+          report: term(),
           records: [map()],
           variables: %{atom() => term()},
           groups: %{term() => map()},
@@ -424,6 +425,7 @@ defmodule AshReports.DataLoader do
       processing_time = end_time - start_time
 
       result = %{
+        report: report,
         records: records,
         variables: processed_data.variables,
         groups: processed_data.groups,
@@ -444,8 +446,9 @@ defmodule AshReports.DataLoader do
   end
 
   defp execute_query(domain, query) do
-    case Ash.read(query, domain: domain) do
-      {:ok, records} -> {:ok, records}
+    case Ash.read(query) do
+      {:ok, records} when is_list(records) -> {:ok, records}
+      {:ok, record} -> {:ok, [record]}  # Ensure single records are wrapped in a list
       {:error, error} -> {:error, "Query execution failed: #{inspect(error)}"}
     end
   rescue
