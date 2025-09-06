@@ -29,3 +29,6 @@ config :ash,
 config :ex_unit,
   capture_log: true,
   assert_receive_timeout: 1000
+
+# Configure PhoenixTest
+config :phoenix_test, :endpoint, AshReportsDemoWeb.Endpoint

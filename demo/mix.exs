@@ -37,6 +37,7 @@ defmodule AshReportsDemo.MixProject do
       {:phoenix_html, "~> 4.0"},
       {:phoenix_live_view, "~> 0.20"},
       {:phoenix_live_dashboard, "~> 0.8.0"},
+      {:plug_cowboy, "~> 2.5"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
       {:heroicons,
