@@ -72,7 +72,11 @@ defmodule AshReportsDemo.Customer do
   end
 
   actions do
-    defaults [:create, :read, :update, :destroy]
+    defaults [:read, :update, :destroy]
+    
+    create :create do
+      accept [:name, :email, :phone, :status, :credit_limit, :notes, :customer_type_id]
+    end
 
     read :active do
       description "Get active customers only"

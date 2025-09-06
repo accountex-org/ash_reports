@@ -99,7 +99,16 @@ defmodule AshReportsDemo.Invoice do
   end
 
   actions do
-    defaults [:create, :read, :update, :destroy]
+    defaults [:read, :destroy]
+    
+    create :create do
+      accept [:invoice_number, :date, :due_date, :status, :subtotal, :tax_rate, :tax_amount, :total, :payment_terms, :notes, :customer_id]
+    end
+    
+    update :update do
+      require_atomic? false
+      accept [:invoice_number, :date, :due_date, :status, :subtotal, :tax_rate, :tax_amount, :total, :payment_terms, :notes]
+    end
 
     read :by_status do
       description "Get invoices by status"
