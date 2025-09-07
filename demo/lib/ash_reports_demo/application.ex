@@ -18,7 +18,10 @@ defmodule AshReportsDemo.Application do
       {AshReportsDemo.DataGenerator, []},
 
       # PubSub for real-time features if needed
-      {Phoenix.PubSub, name: AshReportsDemo.PubSub}
+      {Phoenix.PubSub, name: AshReportsDemo.PubSub},
+
+      # Start the Phoenix endpoint
+      AshReportsDemoWeb.Endpoint
     ]
 
     opts = [strategy: :one_for_one, name: AshReportsDemo.Supervisor]

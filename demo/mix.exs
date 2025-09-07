@@ -36,6 +36,21 @@ defmodule AshReportsDemo.MixProject do
       {:phoenix, "~> 1.7"},
       {:phoenix_html, "~> 4.0"},
       {:phoenix_live_view, "~> 0.20"},
+      {:phoenix_live_dashboard, "~> 0.8.0"},
+      {:plug_cowboy, "~> 2.5"},
+      {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
+      {:heroicons,
+       github: "tailwindlabs/heroicons",
+       tag: "v2.1.1",
+       sparse: "optimized",
+       app: false,
+       compile: false,
+       depth: 1},
+      {:phoenix_live_reload, "~> 1.2", only: :dev},
+      {:gettext, "~> 0.20"},
+      {:telemetry_metrics, "~> 1.0"},
+      {:telemetry_poller, "~> 1.0"},
 
       # Data generation and testing
       {:faker, "~> 0.18"},
@@ -51,7 +66,7 @@ defmodule AshReportsDemo.MixProject do
       # Test helpers
       {:mox, "~> 1.1", only: :test},
       {:stream_data, "~> 1.0"},
-
+      {:phoenix_test, "~> 0.7.1", only: :test, runtime: false},
       # Main AshReports library (path dependency to parent project)
       {:ash_reports, path: "../"}
     ]
