@@ -275,7 +275,7 @@ defmodule AshReports.InteractiveEngine.PivotProcessor do
     }
   end
 
-  defp add_grand_total(pivot_data, config, %RenderContext{} = context) do
+  defp add_grand_total(pivot_data, _config, %RenderContext{} = _context) do
     # Calculate grand total across all cells
     grand_total_values =
       pivot_data

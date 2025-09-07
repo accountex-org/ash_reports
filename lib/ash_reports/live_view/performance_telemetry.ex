@@ -435,7 +435,7 @@ defmodule AshReports.LiveView.PerformanceTelemetry do
     120.0
   end
 
-  defp analyze_performance_and_recommend(current_metrics, historical_metrics) do
+  defp analyze_performance_and_recommend(current_metrics, _historical_metrics) do
     recommendations = []
 
     # Analyze current performance

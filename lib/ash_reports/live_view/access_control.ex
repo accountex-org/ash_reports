@@ -60,9 +60,6 @@ defmodule AshReports.LiveView.AccessControl do
 
   require Logger
 
-  @registry_name AshReports.AccessControlRegistry
-  # 2 hours
-  @default_session_timeout 7200
 
   # Predefined roles with permissions
   @roles %{
@@ -382,7 +379,7 @@ defmodule AshReports.LiveView.AccessControl do
     end
   end
 
-  defp create_audit_entry(user_id, resource_id, action, metadata \\ %{}) do
+  defp create_audit_entry(user_id, resource_id, action, metadata) do
     %{
       user_id: user_id,
       resource_id: resource_id,
@@ -425,12 +422,12 @@ defmodule AshReports.LiveView.AccessControl do
     Enum.filter(entries, fn entry -> entry.user_id == user_id end)
   end
 
-  defp get_user_ip(user_id) do
+  defp get_user_ip(_user_id) do
     # Placeholder - would get from session manager
     "127.0.0.1"
   end
 
-  defp get_user_agent(user_id) do
+  defp get_user_agent(_user_id) do
     # Placeholder - would get from session manager
     "AshReports/6.2"
   end

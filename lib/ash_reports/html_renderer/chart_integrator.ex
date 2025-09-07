@@ -51,9 +51,9 @@ defmodule AshReports.HtmlRenderer.ChartIntegrator do
   """
 
   alias AshReports.ChartEngine
-  alias AshReports.ChartEngine.{ChartConfig, ChartData}
-  alias AshReports.HtmlRenderer.{AssetManager, JavaScriptGenerator}
-  alias AshReports.{RenderContext, Translation}
+  alias AshReports.ChartEngine.ChartConfig
+  alias AshReports.HtmlRenderer.AssetManager
+  alias AshReports.RenderContext
 
   @type chart_output :: %{
           html: String.t(),
@@ -335,7 +335,7 @@ defmodule AshReports.HtmlRenderer.ChartIntegrator do
 
   defp build_accessibility_attributes(%ChartConfig{} = config, %RenderContext{} = context) do
     title = config.title || "Chart"
-    description = generate_chart_description(config, context)
+    _description = generate_chart_description(config, context)
 
     %{
       role: "img",
@@ -565,7 +565,7 @@ defmodule AshReports.HtmlRenderer.ChartIntegrator do
     }
   end
 
-  defp wrap_chart_in_band(chart_output, layout_config, %RenderContext{} = context) do
+  defp wrap_chart_in_band(chart_output, layout_config, %RenderContext{} = _context) do
     position_class =
       case layout_config.position do
         :before_detail -> "chart-before-detail"

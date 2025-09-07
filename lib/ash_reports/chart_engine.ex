@@ -85,9 +85,9 @@ defmodule AshReports.ChartEngine do
 
   """
 
-  alias AshReports.ChartEngine.{ChartConfig, ChartData, ChartProvider}
+  alias AshReports.ChartEngine.{ChartConfig, ChartData}
   alias AshReports.ChartEngine.Providers.{ChartJsProvider, D3Provider, PlotlyProvider}
-  alias AshReports.{Cldr, RenderContext}
+  alias AshReports.RenderContext
 
   @type chart_type :: :line | :bar | :pie | :area | :scatter | :histogram | :boxplot | :heatmap
   @type provider :: :chartjs | :d3 | :plotly

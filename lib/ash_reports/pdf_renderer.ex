@@ -87,7 +87,6 @@ defmodule AshReports.PdfRenderer do
   }
 
   # Phase 6.3: Chart Integration
-  alias AshReports.ChartEngine.{ChartConfig, ChartDataProcessor}
 
   @doc """
   Enhanced render callback with full Phase 3.4 PDF generation.
@@ -495,7 +494,7 @@ defmodule AshReports.PdfRenderer do
     context.metadata[:chart_configs] || context.config[:charts] || []
   end
 
-  defp embed_chart_images_in_html(html_content, chart_images, %RenderContext{} = context) do
+  defp embed_chart_images_in_html(html_content, chart_images, %RenderContext{} = _context) do
     # Embed chart images as base64 data URLs in HTML
     chart_html_sections =
       chart_images

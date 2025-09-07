@@ -102,7 +102,7 @@ defmodule AshReports.JsonRenderer.ChartApi do
     with {:ok, chart_config} <- get_chart_config(chart_id),
          {:ok, context} <- build_api_context(conn),
          {:ok, new_data} <- parse_request_body(conn),
-         {:ok, updated_config} <- update_chart_data(chart_config, new_data) do
+         {:ok, _updated_config} <- update_chart_data(chart_config, new_data) do
       # Broadcast update to live components
       :ok = broadcast_chart_update(chart_id, new_data, context)
 

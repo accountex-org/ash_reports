@@ -414,7 +414,7 @@ defmodule AshReports.DataLoader do
     end
   end
 
-  defp do_load_report(domain, report, params, config) do
+  defp do_load_report(domain, report, params, _config) do
     start_time = System.monotonic_time(:millisecond)
 
     with {:ok, query} <- QueryBuilder.build(report, params),
@@ -445,7 +445,7 @@ defmodule AshReports.DataLoader do
     end
   end
 
-  defp execute_query(domain, query) do
+  defp execute_query(_domain, query) do
     case Ash.read(query) do
       {:ok, records} when is_list(records) -> {:ok, records}
       {:ok, record} -> {:ok, [record]}  # Ensure single records are wrapped in a list
@@ -561,39 +561,6 @@ defmodule AshReports.DataLoader do
     end
   end
 
-  defp process_with_components(components, config) do
-    if config[:streaming] do
-      process_streaming(components)
-    else
-      process_in_memory(components)
-    end
-  end
-
-  defp process_in_memory(components) do
-    with {:ok, pipeline_config} <- build_pipeline_config(components),
-         {:ok, result} <- Pipeline.process_all(pipeline_config) do
-      # Format result for DataLoader API
-      formatted_result = %{
-        records: Enum.map(result.records, & &1.record),
-        variables: extract_final_variables(components.variable_state_pid),
-        groups: extract_group_summary(result.records),
-        metadata: Map.merge(result.summary, %{cache_hit?: false})
-      }
-
-      {:ok, formatted_result}
-    else
-      {:error, _reason} = error -> error
-    end
-  end
-
-  defp process_streaming(components) do
-    with {:ok, pipeline_config} <- build_pipeline_config(components),
-         {:ok, stream} <- Pipeline.process_stream(pipeline_config) do
-      {:ok, stream}
-    else
-      {:error, _reason} = error -> error
-    end
-  end
 
   defp build_pipeline_config(components) do
     pipeline_config =
@@ -626,28 +593,6 @@ defmodule AshReports.DataLoader do
     )
   end
 
-  defp extract_final_variables(nil), do: %{}
-
-  defp extract_final_variables(variable_state_pid) do
-    VariableState.get_all_values(variable_state_pid)
-  catch
-    _, _ -> %{}
-  end
-
-  defp extract_group_summary(records) do
-    # Extract group information from processed records
-    # This would be more sophisticated in a real implementation
-    records
-    |> Enum.group_by(fn record -> record.group_values end)
-    |> Enum.into(%{}, fn {group_key, group_records} ->
-      {group_key,
-       %{
-         record_count: length(group_records),
-         first_record: List.first(group_records),
-         last_record: List.last(group_records)
-       }}
-    end)
-  end
 
   defp format_stream_chunk({:ok, pipeline_result}) do
     %{

@@ -44,17 +44,14 @@ defmodule AshReports.LiveView.DashboardLive do
 
   use Phoenix.LiveView
 
-  alias AshReports.{ChartEngine, InteractiveEngine, RenderContext}
+  alias AshReports.RenderContext
   alias AshReports.HeexRenderer.ChartTemplates
-  alias AshReports.LiveView.{ChartLiveComponent, SessionManager, WebSocketOptimizer}
+  alias AshReports.LiveView.ChartLiveComponent
   alias AshReports.PubSub.ChartBroadcaster
 
   require Logger
 
   @default_update_interval 30_000
-  @max_charts_per_dashboard 12
-  # 2 hours
-  @dashboard_session_timeout 7200
 
   # LiveView callbacks
 
@@ -83,7 +80,7 @@ defmodule AshReports.LiveView.DashboardLive do
 
     # Setup collaboration if enabled
     if socket.assigns.collaboration_enabled do
-      {:ok, socket} = setup_collaboration_features(socket)
+      {:ok, _socket} = setup_collaboration_features(socket)
     end
 
     # Initialize dashboard
@@ -383,7 +380,7 @@ defmodule AshReports.LiveView.DashboardLive do
         |> assign(:connected_users, updated_users)
 
       if leaving_user do
-        socket = put_flash(socket, :info, "#{leaving_user.name} left the dashboard")
+        _socket = put_flash(socket, :info, "#{leaving_user.name} left the dashboard")
       end
 
       {:noreply, socket}
@@ -573,7 +570,7 @@ defmodule AshReports.LiveView.DashboardLive do
     :ok
   end
 
-  defp broadcast_data_highlight_to_charts(socket, data_point, opts \\ []) do
+  defp broadcast_data_highlight_to_charts(socket, data_point, opts) do
     exclude_chart = Keyword.get(opts, :exclude)
 
     socket.assigns.charts

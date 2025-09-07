@@ -175,10 +175,14 @@ defmodule AshReports.InteractiveEngine.FilterProcessor do
     end
   end
 
+  # TODO: Advanced Interactive Filtering - Numeric/date comparisons (greater_than, less_than, etc.)
+  # Part of unfinished feature: Complex real-time data filtering
   defp apply_comparison_operation(field_value, {operation, value}, context) do
     compare_values(field_value, value, operation, context)
   end
 
+  # TODO: Advanced Interactive Filtering - Text-based filtering (contains, starts_with, etc.)
+  # Part of unfinished feature: Complex real-time data filtering
   defp apply_text_operation(field_value, {operation, search_value}, context) do
     apply_text_filter(field_value, operation, search_value, context)
   end

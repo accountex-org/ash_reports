@@ -273,6 +273,8 @@ defmodule AshReports.HtmlRenderer do
     ElementBuilder.build_all_elements(context)
   end
 
+  # TODO: Advanced HTML Assembly - Advanced HTML assembly with optimizations
+  # Part of unfinished feature: Sophisticated HTML generation with performance optimizations
   defp assemble_html(%RenderContext{} = context, css_content, html_elements) do
     # Apply RTL layout adaptations if needed
     adapted_context = apply_rtl_layout_adaptations(context)
@@ -281,6 +283,8 @@ defmodule AshReports.HtmlRenderer do
     TemplateEngine.render_complete_html(adapted_context, css_content, adapted_elements)
   end
 
+  # TODO: RTL Language Support - Adapt layouts for RTL languages (Arabic, Hebrew, etc.)
+  # Part of unfinished feature: Comprehensive RTL language support
   defp apply_rtl_layout_adaptations(%RenderContext{} = context) do
     rtl_config = context.config[:rtl_support] || %{}
 
@@ -305,6 +309,8 @@ defmodule AshReports.HtmlRenderer do
     end
   end
 
+  # TODO: RTL Language Support - Apply RTL attributes to HTML elements
+  # Part of unfinished feature: Comprehensive RTL language support
   defp apply_rtl_element_adaptations(html_elements, %RenderContext{} = context) do
     rtl_config = context.config[:rtl_support] || %{}
 
@@ -317,6 +323,8 @@ defmodule AshReports.HtmlRenderer do
     end
   end
 
+  # TODO: RTL Language Support - Add specific RTL styling/attributes
+  # Part of unfinished feature: Comprehensive RTL language support
   defp add_rtl_attributes_to_element(element, rtl_config) when is_map(element) do
     rtl_attributes = %{
       dir: rtl_config[:text_direction],
@@ -329,6 +337,8 @@ defmodule AshReports.HtmlRenderer do
 
   defp add_rtl_attributes_to_element(element, _rtl_config), do: element
 
+  # TODO: Advanced Locale Formatting - Apply locale-specific HTML formatting
+  # Part of unfinished feature: Advanced locale-aware formatting
   defp apply_locale_formatting(%RenderContext{} = context) do
     # Apply locale-aware formatting to data records if enabled
     html_config = context.config[:html] || %{}
@@ -368,6 +378,8 @@ defmodule AshReports.HtmlRenderer do
     end
   end
 
+  # TODO: Smart Field Formatting - Apply advanced record-level formatting
+  # Part of unfinished feature: Automatic intelligent formatting of report fields
   defp apply_record_formatting(record, locale, _context) when is_map(record) do
     # Apply locale-specific formatting to numeric and date fields
     Enum.reduce(record, %{}, fn {key, value}, acc ->
@@ -385,6 +397,8 @@ defmodule AshReports.HtmlRenderer do
 
   defp apply_record_formatting(record, _locale, _context), do: record
 
+  # TODO: Smart Field Formatting - Apply appropriate formatting based on detected type
+  # Part of unfinished feature: Automatic intelligent formatting of report fields
   defp format_field_by_type(value, :number, locale) do
     case Formatter.format_value(value, locale: locale, type: :number) do
       {:ok, formatted} -> formatted
@@ -415,6 +429,8 @@ defmodule AshReports.HtmlRenderer do
 
   defp format_field_by_type(value, _, _locale), do: value
 
+  # TODO: Smart Field Formatting - Auto-detect if field is currency, percentage, date, etc.
+  # Part of unfinished feature: Automatic intelligent formatting of report fields
   defp detect_field_format_type(key, value) do
     cond do
       currency_field?(key, value) -> :currency
@@ -425,18 +441,24 @@ defmodule AshReports.HtmlRenderer do
     end
   end
 
+  # TODO: Smart Field Formatting - Detect currency fields by name/value patterns
+  # Part of unfinished feature: Automatic intelligent formatting of report fields
   defp currency_field?(key, value) do
     key_string = to_string(key)
     currency_keywords = ["amount", "price", "cost", "total", "salary", "wage"]
     String.contains?(key_string, currency_keywords) and is_number(value)
   end
 
+  # TODO: Smart Field Formatting - Detect percentage fields
+  # Part of unfinished feature: Automatic intelligent formatting of report fields
   defp percentage_field?(key, value) do
     key_string = to_string(key)
     percentage_keywords = ["rate", "percent", "ratio", "margin"]
     String.contains?(key_string, percentage_keywords) and is_number(value)
   end
 
+  # TODO: Smart Field Formatting - Detect date/datetime fields
+  # Part of unfinished feature: Automatic intelligent formatting of report fields
   defp date_field?(value) do
     match?(%Date{}, value) or match?(%DateTime{}, value) or match?(%NaiveDateTime{}, value)
   end
@@ -568,6 +590,8 @@ defmodule AshReports.HtmlRenderer do
 
   # Phase 4.3 Translation and RTL Support Functions
 
+  # TODO: Full Internationalization - Apply locale-specific formatting and translations
+  # Part of unfinished feature: Multi-language report support
   defp apply_translation_enhancements(%RenderContext{} = context) do
     locale = RenderContext.get_locale(context)
 
@@ -582,6 +606,8 @@ defmodule AshReports.HtmlRenderer do
     %{context | metadata: updated_metadata}
   end
 
+  # TODO: Full Internationalization - Translate field names based on locale
+  # Part of unfinished feature: Multi-language report support
   defp prepare_field_label_translations(%RenderContext{} = context, locale) do
     # Extract field names from report definition and create translation map
     field_names = extract_field_names_from_report(context.report)
@@ -592,6 +618,8 @@ defmodule AshReports.HtmlRenderer do
     end)
   end
 
+  # TODO: Full Internationalization - Translate report section titles
+  # Part of unfinished feature: Multi-language report support
   defp prepare_band_title_translations(%RenderContext{} = context, locale) do
     # Extract band names from report definition and create translation map
     band_names = extract_band_names_from_report(context.report)
@@ -602,6 +630,8 @@ defmodule AshReports.HtmlRenderer do
     end)
   end
 
+  # TODO: Full Internationalization - Translate UI status messages
+  # Part of unfinished feature: Multi-language report support
   defp prepare_status_message_translations(locale) do
     status_keys = ["status.loading", "status.complete", "status.no_data"]
 
@@ -617,6 +647,8 @@ defmodule AshReports.HtmlRenderer do
     end)
   end
 
+  # TODO: Report Analytics - Extract all field names for analysis
+  # Part of unfinished feature: Report introspection and metadata extraction
   defp extract_field_names_from_report(report) do
     report.bands
     |> Enum.flat_map(fn band ->
@@ -632,6 +664,8 @@ defmodule AshReports.HtmlRenderer do
     |> Enum.uniq()
   end
 
+  # TODO: Report Analytics - Extract report section names
+  # Part of unfinished feature: Report introspection and metadata extraction
   defp extract_band_names_from_report(report) do
     report.bands
     |> Enum.map(fn band -> Map.get(band, :name) end)

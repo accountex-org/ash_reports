@@ -105,8 +105,8 @@ defmodule AshReports.HeexRenderer do
   }
 
   # Phase 6.2: Chart Integration
-  alias AshReports.LiveView.{ChartHooks, ChartLiveComponent}
-  alias AshReports.HtmlRenderer.{AssetManager, ChartIntegrator}
+  alias AshReports.LiveView.ChartHooks
+  alias AshReports.HtmlRenderer.AssetManager
 
   @doc """
   Enhanced render callback with full Phase 3.3 HEEX generation.
@@ -314,6 +314,8 @@ defmodule AshReports.HeexRenderer do
     {:ok, assigns}
   end
 
+  # TODO: HEEX Template Generation - Generate optimized HEEX templates
+  # Part of unfinished feature: Performance optimization system for HEEX templates
   defp generate_heex_template(%RenderContext{} = context, _assigns) do
     template_content = """
     <.report_container
@@ -371,6 +373,8 @@ defmodule AshReports.HeexRenderer do
     {:ok, optimized_template}
   end
 
+  # TODO: HEEX Template Optimization - Main optimization entry point
+  # Part of unfinished feature: Performance optimization system for HEEX templates
   defp optimize_heex_template(template_content, %RenderContext{} = context) do
     case context.config[:heex][:static_optimization] do
       true -> apply_static_optimizations(template_content, context)
@@ -378,6 +382,8 @@ defmodule AshReports.HeexRenderer do
     end
   end
 
+  # TODO: HEEX Template Optimization - Apply performance optimizations
+  # Part of unfinished feature: Performance optimization system for HEEX templates
   defp apply_static_optimizations(template_content, _context) do
     template_content
     |> remove_unnecessary_whitespace()
@@ -385,15 +391,23 @@ defmodule AshReports.HeexRenderer do
     |> optimize_loop_comprehensions()
   end
 
+  # TODO: HEEX Template Optimization - Minify templates
+  # Part of unfinished feature: Performance optimization system for HEEX templates
   defp remove_unnecessary_whitespace(template) do
     template
     |> String.replace(~r/\n\s*\n/, "\n")
     |> String.replace(~r/>\s+</, "><")
   end
 
+  # TODO: HEEX Template Optimization - Optimize conditional rendering
+  # Part of unfinished feature: Performance optimization system for HEEX templates
   defp optimize_conditional_blocks(template), do: template
+  # TODO: HEEX Template Optimization - Optimize loops and iterations
+  # Part of unfinished feature: Performance optimization system for HEEX templates
   defp optimize_loop_comprehensions(template), do: template
 
+  # TODO: Performance Monitoring - Build performance and rendering metadata
+  # Part of unfinished feature: Performance monitoring and optimization system
   defp build_result_metadata(%RenderContext{} = context, start_time) do
     end_time = System.monotonic_time(:microsecond)
     render_time = end_time - start_time
@@ -501,6 +515,8 @@ defmodule AshReports.HeexRenderer do
     %{context | metadata: updated_metadata}
   end
 
+  # TODO: Performance Monitoring - Count template components for optimization
+  # Part of unfinished feature: Performance monitoring and optimization system
   defp count_components(%RenderContext{} = context) do
     # Count unique component types used in the template
     # report_container, header, content, band_group, band, element, footer
@@ -509,6 +525,8 @@ defmodule AshReports.HeexRenderer do
     base_components + custom_components
   end
 
+  # TODO: Performance Monitoring - Estimate memory usage
+  # Part of unfinished feature: Performance monitoring and optimization system
   defp get_estimated_template_size(%RenderContext{} = _context) do
     # This would calculate the estimated template size
     # For now, return a placeholder based on typical HEEX template size
