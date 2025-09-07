@@ -357,4 +357,24 @@ defmodule AshReports.HeexRendererEnhanced do
     # Extract chart configurations from context metadata
     context.metadata[:chart_configs] || context.config[:charts] || []
   end
+
+  @doc """
+  Returns the MIME content type for HEEX Enhanced renderer.
+  """
+  @impl true
+  def content_type, do: "text/html"
+
+  @doc """
+  Returns the file extension for HEEX Enhanced renderer.
+  """
+  @impl true
+  def file_extension, do: "heex"
+
+  @doc """
+  Returns whether this renderer supports streaming.
+  
+  HEEX Enhanced renderer supports streaming through LiveView components.
+  """
+  @impl true
+  def supports_streaming?, do: true
 end

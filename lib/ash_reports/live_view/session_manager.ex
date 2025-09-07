@@ -193,7 +193,13 @@ defmodule AshReports.LiveView.SessionManager do
     }
 
     # Register session
-    :ok = Registry.register(@registry_name, session_id, session)
+    case Registry.register(@registry_name, session_id, session) do
+      {:ok, _} -> :ok
+      {:error, {:already_registered, _pid}} -> :ok  # Session already exists, continue
+      {:error, reason} -> 
+        Logger.error("Failed to register session #{session_id}: #{inspect(reason)}")
+        :ok  # Continue anyway for robustness
+    end
 
     updated_sessions = Map.put(state.sessions, session_id, session)
 

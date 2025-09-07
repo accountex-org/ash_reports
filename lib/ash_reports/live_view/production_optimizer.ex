@@ -236,7 +236,7 @@ defmodule AshReports.LiveView.ProductionOptimizer do
   # Assessment functions
 
   defp assess_performance_readiness do
-    metrics = WebSocketOptimizer.get_performance_metrics() |> handle_metrics_error()
+    metrics = AshReports.LiveView.WebSocketOptimizer.get_performance_metrics() |> handle_metrics_error()
 
     %{
       websocket_performance: assess_websocket_performance(metrics),

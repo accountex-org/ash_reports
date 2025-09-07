@@ -461,7 +461,7 @@ defmodule AshReports.LiveView.AccessControl do
   def validate_session(user_id, session_token) do
     # Placeholder for session validation
     # Would integrate with authentication system
-    case SessionManager.get_session_info(session_token) do
+    case AshReports.LiveView.SessionManager.get_session_info(session_token) do
       {:ok, session_info} ->
         if session_info.user_id == user_id do
           :valid

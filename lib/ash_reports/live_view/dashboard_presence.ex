@@ -74,7 +74,7 @@ defmodule AshReports.LiveView.DashboardPresence do
         dashboard_id: dashboard_id
       })
 
-    case track(topic, user_id, presence_metadata) do
+    case __MODULE__.track(self(), topic, user_id, presence_metadata) do
       {:ok, ref} ->
         Logger.debug("User #{user_id} joined dashboard #{dashboard_id}")
 
@@ -109,7 +109,7 @@ defmodule AshReports.LiveView.DashboardPresence do
             })
           )
 
-        update(topic, user_id, updated_meta)
+        __MODULE__.update(self(), topic, user_id, updated_meta)
 
         Logger.debug("Updated presence for user #{user_id} in dashboard #{dashboard_id}")
         :ok
@@ -156,7 +156,7 @@ defmodule AshReports.LiveView.DashboardPresence do
   def get_active_users(dashboard_id) do
     topic = build_presence_topic(dashboard_id)
 
-    list(topic)
+    __MODULE__.list(topic)
     |> Enum.map(fn {user_id, %{metas: [meta | _]}} ->
       Map.merge(meta, %{user_id: user_id})
     end)
