@@ -19,6 +19,7 @@ defmodule AshReportsDemoWeb.ConnCase do
 
   using do
     quote do
+      @endpoint AshReportsWeb.Endpoint  # Must be first
       # The default endpoint for testing
       @endpoint AshReportsDemoWeb.Endpoint
 
@@ -27,6 +28,7 @@ defmodule AshReportsDemoWeb.ConnCase do
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
+      import PhoenixTest
       import AshReportsDemoWeb.ConnCase
     end
   end

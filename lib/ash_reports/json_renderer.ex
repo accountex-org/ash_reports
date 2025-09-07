@@ -571,7 +571,7 @@ defmodule AshReports.JsonRenderer do
           base_json
         end
 
-      enhanced_json
+      {:ok, enhanced_json}
     else
       {:error, reason} -> {:error, reason}
     end

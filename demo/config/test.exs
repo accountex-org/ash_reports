@@ -32,3 +32,7 @@ config :ex_unit,
 
 # Configure PhoenixTest
 config :phoenix_test, :endpoint, AshReportsDemoWeb.Endpoint
+config :ash_reports_demo, AshReportsDemoWeb.Endpoint,
+  http: [ip: {127, 0, 0, 1}, port: 4002],
+  secret_key_base: "test_secret_key_base",
+  server: false

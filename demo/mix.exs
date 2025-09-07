@@ -66,8 +66,7 @@ defmodule AshReportsDemo.MixProject do
       # Test helpers
       {:mox, "~> 1.1", only: :test},
       {:stream_data, "~> 1.0"},
-      {:phoenix_test, "~> 0.7", only: :test},
-
+      {:phoenix_test, "~> 0.7.1", only: :test, runtime: false},
       # Main AshReports library (path dependency to parent project)
       {:ash_reports, path: "../"}
     ]

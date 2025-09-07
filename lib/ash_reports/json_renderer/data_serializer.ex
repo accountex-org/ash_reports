@@ -257,6 +257,9 @@ defmodule AshReports.JsonRenderer.DataSerializer do
       is_atom(value) ->
         to_string(value)
 
+      decimal_type?(value) ->
+        serialize_decimal_value(value, opts)
+
       datetime_type?(value) ->
         serialize_datetime_value(value, opts)
 
@@ -284,6 +287,9 @@ defmodule AshReports.JsonRenderer.DataSerializer do
   defp datetime_type?(%Time{}), do: true
   defp datetime_type?(_), do: false
 
+  defp decimal_type?(%Decimal{}), do: true
+  defp decimal_type?(_), do: false
+
   defp collection_type?(value) when is_list(value), do: true
   defp collection_type?(value) when is_map(value), do: true
   defp collection_type?(value) when is_tuple(value), do: true
@@ -296,6 +302,15 @@ defmodule AshReports.JsonRenderer.DataSerializer do
 
   defp serialize_datetime_value(%Date{} = date, opts), do: format_date(date, opts)
   defp serialize_datetime_value(%Time{} = time, opts), do: format_time(time, opts)
+
+  defp serialize_decimal_value(%Decimal{} = decimal, opts) do
+    case Keyword.get(opts, :decimal_format, :string) do
+      :string -> Decimal.to_string(decimal)
+      :float -> Decimal.to_float(decimal)
+      :integer -> Decimal.to_integer(decimal)
+      _ -> Decimal.to_string(decimal)
+    end
+  end
 
   defp serialize_collection_value(value, opts) when is_list(value),
     do: serialize_list(value, opts)
@@ -315,18 +330,35 @@ defmodule AshReports.JsonRenderer.DataSerializer do
     |> Enum.reject(&(&1 == :skip_field))
   end
 
-  defp serialize_map(map, opts) do
-    map
-    |> Enum.into(%{}, fn {key, value} ->
-      serialized_value = serialize_value(value, opts)
+  defp serialize_map(map, opts) when is_map(map) do
+    try do
+      map
+      |> Enum.into(%{}, fn {key, value} ->
+        serialized_value = serialize_value(value, opts)
 
-      if serialized_value == :skip_field do
-        :skip_field
-      else
-        {serialize_key(key, opts), serialized_value}
-      end
-    end)
-    |> Map.reject(fn {_, value} -> value == :skip_field end)
+        if serialized_value == :skip_field do
+          :skip_field
+        else
+          {serialize_key(key, opts), serialized_value}
+        end
+      end)
+      |> Map.reject(fn {_, value} -> value == :skip_field end)
+    rescue
+      Protocol.UndefinedError -> 
+        # Fallback: handle maps with non-enumerable values
+        map
+        |> Map.keys()
+        |> Enum.reduce(%{}, fn key, acc ->
+          value = Map.get(map, key)
+          serialized_value = serialize_value(value, opts)
+          
+          if serialized_value == :skip_field do
+            acc
+          else
+            Map.put(acc, serialize_key(key, opts), serialized_value)
+          end
+        end)
+    end
   end
 
   defp serialize_tuple(tuple, opts) do
