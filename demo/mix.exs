@@ -57,6 +57,9 @@ defmodule AshReportsDemo.MixProject do
       {:decimal, "~> 2.0"},
       {:jason, "~> 1.4"},
 
+      # PDF generation
+      {:chromic_pdf, "~> 1.17"},
+
       # Development and testing
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

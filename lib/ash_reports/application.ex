@@ -98,14 +98,7 @@ defmodule AshReports.Application do
 
   defp chromic_pdf_supervisor do
     chromic_config = chromic_pdf_config()
-
-    %{
-      id: ChromicPDF,
-      start: {ChromicPDF, :start_link, [chromic_config]},
-      type: :supervisor,
-      restart: :permanent,
-      shutdown: 10_000
-    }
+    {ChromicPDF, chromic_config}
   end
 
   defp cleanup_config do
