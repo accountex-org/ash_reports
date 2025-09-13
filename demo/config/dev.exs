@@ -7,6 +7,10 @@ config :ash_reports_demo,
   auto_generate_data: true,
   dev_routes: true
 
+# Disable PDF generation for development to avoid Chrome dependency issues
+config :ash_reports,
+  enable_pdf: false
+
 # Configure data generator for development
 config :ash_reports_demo, AshReportsDemo.DataGenerator,
   auto_start: true,

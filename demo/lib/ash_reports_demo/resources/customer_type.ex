@@ -64,6 +64,7 @@ defmodule AshReportsDemo.CustomerType do
     defaults [:read, :update, :destroy]
     
     create :create do
+      primary? true
       accept [:name, :description, :discount_percentage, :priority_level, :active]
     end
 

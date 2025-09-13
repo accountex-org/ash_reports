@@ -90,6 +90,7 @@ defmodule AshReportsDemo.CustomerAddress do
     defaults [:read, :update, :destroy]
     
     create :create do
+      primary? true
       accept [:address_type, :street, :street2, :city, :state, :postal_code, :country, :primary, :active, :customer_id]
     end
 
