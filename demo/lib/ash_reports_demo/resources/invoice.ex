@@ -107,6 +107,7 @@ defmodule AshReportsDemo.Invoice do
     end
     
     update :update do
+      primary? true
       require_atomic? false
       accept [:invoice_number, :date, :due_date, :status, :subtotal, :tax_rate, :tax_amount, :total, :payment_terms, :notes]
     end

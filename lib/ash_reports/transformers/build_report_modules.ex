@@ -152,10 +152,22 @@ defmodule AshReports.Transformers.BuildReportModules do
         end
 
         @impl true
+        def render_with_context(context, opts) do
+          {:ok, %{
+            content: "Rendering not yet implemented for #{unquote(format)}",
+            metadata: %{format: unquote(format)},
+            context: context
+          }}
+        end
+
+        @impl true
         def supports_streaming?, do: unquote(format) != :json
 
         @impl true
         def file_extension, do: unquote(get_file_extension(format))
+
+        @impl true
+        def content_type, do: unquote(get_content_type(format))
       end
     end
   end
@@ -165,6 +177,12 @@ defmodule AshReports.Transformers.BuildReportModules do
   defp get_file_extension(:heex), do: ".heex"
   defp get_file_extension(:json), do: ".json"
   defp get_file_extension(_), do: ".txt"
+
+  defp get_content_type(:html), do: "text/html"
+  defp get_content_type(:pdf), do: "application/pdf"
+  defp get_content_type(:heex), do: "text/html"
+  defp get_content_type(:json), do: "application/json"
+  defp get_content_type(_), do: "text/plain"
 
   @impl true
   def after?(AshReports.Verifiers.ValidateReports), do: true

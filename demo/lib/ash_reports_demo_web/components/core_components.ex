@@ -17,7 +17,7 @@ defmodule AshReportsDemoWeb.CoreComponents do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
-  import AshReportsDemoWeb.Gettext
+  use Gettext, backend: AshReportsDemoWeb.Gettext
 
   @doc """
   Renders a simple button.
@@ -144,7 +144,8 @@ defmodule AshReportsDemoWeb.CoreComponents do
     """
   end
 
-  defp hide(js \\ %JS{}, selector) do
+  defp hide(selector), do: hide(%JS{}, selector)
+  defp hide(js, selector) do
     JS.hide(js,
       to: selector,
       time: 200,
