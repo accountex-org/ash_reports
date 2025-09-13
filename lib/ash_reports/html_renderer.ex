@@ -779,6 +779,17 @@ defmodule AshReports.HtmlRenderer do
          charts_html,
          javascript_code
        ) do
+    # Extract HTML content from element maps
+    elements_html =
+      html_elements
+      |> Enum.map(fn element ->
+        case element do
+          %{html_content: content} when is_binary(content) -> content
+          _ -> ""
+        end
+      end)
+      |> Enum.join("\n")
+
     # Enhanced HTML assembly with Phase 5.2 chart integration
     enhanced_html = """
     <!DOCTYPE html>
@@ -787,22 +798,22 @@ defmodule AshReports.HtmlRenderer do
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>#{get_page_title(context)}</title>
-      
+
       <!-- Phase 5.2: Chart Assets -->
       #{AssetManager.generate_css_links(context)}
-      
+
       <style>
       #{css_content}
       </style>
     </head>
     <body class="ash-reports #{if context.text_direction == "rtl", do: "rtl", else: "ltr"}">
       <main class="ash-report-content">
-        #{html_elements}
-        
+        #{elements_html}
+
         <!-- Phase 5.2: Charts Section -->
         #{if String.length(charts_html) > 0, do: "<section class=\"ash-charts-section\">#{charts_html}</section>", else: ""}
       </main>
-      
+
       <!-- Phase 5.2: Chart JavaScript -->
       #{javascript_code}
     </body>

@@ -498,8 +498,8 @@ defmodule AshReports.LiveView.DashboardLive do
 
     # Join Phoenix Presence
     {:ok, _ref} =
-      Phoenix.Presence.track(
-        AshReports.Presence,
+      AshReports.Presence.track(
+        socket,
         "dashboard:#{dashboard_id}",
         user_info.user_id,
         %{
