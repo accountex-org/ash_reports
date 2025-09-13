@@ -204,11 +204,29 @@ defmodule AshReports.VariableState do
         value = get_in(record, path)
         {:ok, value}
 
-      # Ash.Expr expressions or other complex expressions
+      # Ash.Expr expressions - evaluate using the record data
+      %{__struct__: Ash.Expr} = ash_expr ->
+        # For Phase 8.1, handle common Ash expressions
+        evaluate_ash_expression(ash_expr, record)
+
+      # Other complex expressions with struct
       %{__struct__: struct_module} when struct_module != nil ->
-        # Complex expression evaluation would go here
-        # For now, return 1 for count operations, 0 for others
+        # For other complex expressions, try to extract a simple value
+        # This is a fallback for unknown expression types
         {:ok, 1}
+
+      # Function expressions (for relationships like expr(addresses.state))
+      expr when is_function(expr, 1) ->
+        try do
+          result = expr.(record)
+          {:ok, result}
+        rescue
+          _error -> {:ok, nil}
+        end
+
+      # Simple numeric value (like expr(1) for counts)
+      value when is_number(value) ->
+        {:ok, value}
 
       # Simple value
       value ->
@@ -216,6 +234,53 @@ defmodule AshReports.VariableState do
     end
   rescue
     _error -> {:error, "Expression evaluation failed"}
+  end
+
+  # Helper function to evaluate Ash expressions against record data
+  defp evaluate_ash_expression(ash_expr, record) do
+    # Extract the actual field reference from the Ash expression
+    # This is a simplified approach for Phase 8.1 - full Ash.Expr evaluation
+    # would require access to the resource schema and query context
+    
+    case extract_field_from_ash_expr(ash_expr) do
+      {:ok, field} when is_atom(field) ->
+        value = Map.get(record, field)
+        {:ok, value}
+        
+      {:ok, path} when is_list(path) ->
+        value = get_in(record, path) 
+        {:ok, value}
+        
+      :error ->
+        # Fallback - for count expressions, return 1
+        {:ok, 1}
+    end
+  end
+
+  # Extract field reference from Ash expression
+  # This is a simplified parser for common patterns
+  defp extract_field_from_ash_expr(ash_expr) do
+    # Try to access the expression data to find field references
+    # This is implementation-specific to Ash.Expr structure
+    try do
+      # Check if it's a simple field reference
+      case ash_expr do
+        %{expression: {:ref, [], field}} when is_atom(field) ->
+          {:ok, field}
+          
+        %{expression: field} when is_atom(field) ->
+          {:ok, field}
+          
+        # Handle relationship traversal like addresses.state
+        %{expression: {:get_path, _, [%{expression: {:ref, [], rel}}, field]}} ->
+          {:ok, [rel, field]}
+          
+        _ ->
+          :error
+      end
+    rescue
+      _error -> :error
+    end
   end
 
   # GenServer Callbacks

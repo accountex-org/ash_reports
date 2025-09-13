@@ -335,6 +335,10 @@ defmodule AshReports.GroupProcessor do
       field when is_atom(field) ->
         Map.get(record, field)
 
+      # Ash.Expr expressions - evaluate using the record data
+      %{__struct__: Ash.Expr} = ash_expr ->
+        evaluate_ash_expression_for_group(ash_expr, record)
+
       # Nested field reference
       {:field, relationship, field} ->
         evaluate_nested_field(record, [relationship, field])
@@ -345,7 +349,11 @@ defmodule AshReports.GroupProcessor do
 
       # Function-based expression
       expr when is_function(expr, 1) ->
-        expr.(record)
+        try do
+          expr.(record)
+        rescue
+          _error -> nil
+        end
 
       # Complex expression (would need CalculationEngine for full evaluation)
       complex_expr ->
@@ -366,6 +374,42 @@ defmodule AshReports.GroupProcessor do
     case CalculationEngine.evaluate(expression, record) do
       {:ok, value} -> value
       {:error, _reason} -> nil
+    end
+  end
+
+  # Handle Ash expressions for grouping (similar to VariableState but for groups)
+  defp evaluate_ash_expression_for_group(ash_expr, record) do
+    case extract_field_from_ash_expr_for_group(ash_expr) do
+      {:ok, field} when is_atom(field) ->
+        Map.get(record, field)
+        
+      {:ok, path} when is_list(path) ->
+        evaluate_nested_field(record, path)
+        
+      :error ->
+        nil
+    end
+  end
+
+  # Extract field reference from Ash expression (simplified for groups)
+  defp extract_field_from_ash_expr_for_group(ash_expr) do
+    try do
+      case ash_expr do
+        %{expression: {:ref, [], field}} when is_atom(field) ->
+          {:ok, field}
+          
+        %{expression: field} when is_atom(field) ->
+          {:ok, field}
+          
+        # Handle relationship traversal like addresses.state
+        %{expression: {:get_path, _, [%{expression: {:ref, [], rel}}, field]}} ->
+          {:ok, [rel, field]}
+          
+        _ ->
+          :error
+      end
+    rescue
+      _error -> :error
     end
   end
 

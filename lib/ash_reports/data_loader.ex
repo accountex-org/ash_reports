@@ -445,8 +445,8 @@ defmodule AshReports.DataLoader do
     end
   end
 
-  defp execute_query(_domain, query) do
-    case Ash.read(query) do
+  defp execute_query(domain, query) do
+    case Ash.read(query, domain: domain) do
       {:ok, records} when is_list(records) -> {:ok, records}
       {:ok, record} -> {:ok, [record]}  # Ensure single records are wrapped in a list
       {:error, error} -> {:error, "Query execution failed: #{inspect(error)}"}

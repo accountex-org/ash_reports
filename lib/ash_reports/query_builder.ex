@@ -82,12 +82,19 @@ defmodule AshReports.QueryBuilder do
   end
 
   @doc """
-  Extracts required relationships from report bands and elements.
+  Extracts required relationships from report bands, elements, and groups.
   """
   @spec extract_relationships(Report.t()) :: [atom()]
-  def extract_relationships(%Report{bands: bands}) do
-    bands
-    |> Enum.flat_map(&extract_band_relationships/1)
+  def extract_relationships(%Report{bands: bands, groups: groups}) do
+    band_relationships = 
+      bands
+      |> Enum.flat_map(&extract_band_relationships/1)
+    
+    group_relationships = 
+      (groups || [])
+      |> Enum.flat_map(&extract_group_relationships/1)
+    
+    (band_relationships ++ group_relationships)
     |> Enum.uniq()
   end
 
@@ -312,6 +319,59 @@ defmodule AshReports.QueryBuilder do
         _ -> []
       end
     end)
+  end
+
+  defp extract_group_relationships(groups) when is_list(groups) do
+    Enum.flat_map(groups, &extract_group_relationships/1)
+  end
+
+  defp extract_group_relationships(%{expression: expression}) do
+    extract_relationships_from_expression(expression)
+  end
+
+  defp extract_group_relationships(_), do: []
+
+  # Extract relationships from expressions (like expr(addresses.state))
+  defp extract_relationships_from_expression(expression) do
+    case expression do
+      # Ash expression with relationship traversal
+      %{__struct__: Ash.Expr} = ash_expr ->
+        extract_relationships_from_ash_expr(ash_expr)
+      
+      # Simple field - no relationships
+      field when is_atom(field) ->
+        []
+      
+      # Nested field reference
+      {:field, relationship, _field} when is_atom(relationship) ->
+        [relationship]
+      
+      # Function expression
+      expr when is_function(expr, 1) ->
+        # Can't easily extract from function expressions, 
+        # but they're often relationship traversals
+        []
+      
+      _ ->
+        []
+    end
+  end
+
+  # Extract relationships from Ash expressions
+  defp extract_relationships_from_ash_expr(ash_expr) do
+    try do
+      case ash_expr do
+        # Handle relationship traversal like expr(addresses.state)
+        %{expression: {:get_path, _, [%{expression: {:ref, [], rel}}, _field]}} ->
+          [rel]
+        
+        # Other patterns can be added as needed
+        _ ->
+          []
+      end
+    rescue
+      _error -> []
+    end
   end
 
   defp extract_aggregates(%Report{bands: bands}) do
