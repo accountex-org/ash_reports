@@ -78,7 +78,14 @@ defmodule AshReportsDemo do
 
     case AshReports.Runner.run_report(Domain, report_name, parameters, format: format) do
       {:ok, result} -> {:ok, result}
-      {:error, reason} -> {:error, "Report execution failed: #{reason}"}
+      {:error, reason} ->
+        error_message = case reason do
+          %{stage: stage, reason: inner_reason} ->
+            "Report execution failed at #{stage}: #{inspect(inner_reason)}"
+          _ ->
+            "Report execution failed: #{inspect(reason)}"
+        end
+        {:error, error_message}
     end
   end
 
