@@ -57,6 +57,7 @@ defmodule AshReportsDemo.ProductCategory do
     defaults [:read, :update, :destroy]
     
     create :create do
+      primary? true
       accept [:name, :description, :active, :sort_order]
     end
 

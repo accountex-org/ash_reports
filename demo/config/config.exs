@@ -5,6 +5,10 @@ config :ash_reports_demo,
   ets_data_layer: true,
   auto_generate_data: false
 
+# Disable PDF generation to avoid ChromicPDF dependency issues
+config :ash_reports,
+  enable_pdf: false
+
 # Configure Ash Framework for demo
 config :ash,
   default_page_type: :keyset,
@@ -13,7 +17,8 @@ config :ash,
 # Configure data generator
 config :ash_reports_demo, AshReportsDemo.DataGenerator,
   auto_start: true,
-  default_volume: :medium
+  default_volume: :medium,
+  domains: [AshReportsDemo.Domain]
 
 # Configure the endpoint
 config :ash_reports_demo, AshReportsDemoWeb.Endpoint,

@@ -102,6 +102,7 @@ defmodule AshReportsDemo.Invoice do
     defaults [:read, :destroy]
     
     create :create do
+      primary? true
       accept [:invoice_number, :date, :due_date, :status, :subtotal, :tax_rate, :tax_amount, :total, :payment_terms, :notes, :customer_id]
     end
     
