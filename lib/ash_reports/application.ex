@@ -74,17 +74,36 @@ defmodule AshReports.Application do
   Checks if ChromicPDF is available and properly configured.
   """
   def chromic_pdf_available? do
-    case Code.ensure_loaded(ChromicPDF) do
-      {:module, ChromicPDF} ->
-        # Check if ChromicPDF can start properly
-        case Application.ensure_all_started(:chromic_pdf) do
-          {:ok, _} -> true
+    # Check if PDF generation is explicitly disabled
+    case Application.get_env(:ash_reports, :enable_pdf, true) do
+      false -> false
+      _ ->
+        with {:module, ChromicPDF} <- Code.ensure_loaded(ChromicPDF),
+             true <- chrome_executable_available?() do
+          true
+        else
           _ -> false
         end
-
-      _ ->
-        false
     end
+  end
+
+  @doc """
+  Checks if a Chrome executable is available on the system.
+  """
+  def chrome_executable_available? do
+    chrome_paths = [
+      "chromium-browser", "chromium", "google-chrome", "chrome", "chrome.exe",
+      "/usr/bin/chromium-browser", "/usr/bin/chromium", "/usr/bin/google-chrome",
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "/Applications/Chromium.app/Contents/MacOS/Chromium"
+    ]
+    
+    Enum.any?(chrome_paths, fn path ->
+      case System.find_executable(path) do
+        nil -> false
+        _ -> true
+      end
+    end)
   end
 
   @doc """

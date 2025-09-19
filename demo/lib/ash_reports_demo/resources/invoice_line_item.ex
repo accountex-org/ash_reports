@@ -71,6 +71,7 @@ defmodule AshReportsDemo.InvoiceLineItem do
     defaults [:read, :update, :destroy]
     
     create :create do
+      primary? true
       accept [:quantity, :unit_price, :line_total, :discount_percentage, :discount_amount, :description, :invoice_id, :product_id]
     end
 

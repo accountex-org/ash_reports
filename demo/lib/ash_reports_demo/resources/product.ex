@@ -81,6 +81,7 @@ defmodule AshReportsDemo.Product do
     defaults [:read, :update, :destroy]
     
     create :create do
+      primary? true
       accept [:name, :sku, :description, :price, :cost, :weight, :active, :category_id]
     end
 

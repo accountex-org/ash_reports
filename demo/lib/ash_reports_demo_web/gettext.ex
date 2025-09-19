@@ -20,5 +20,5 @@ defmodule AshReportsDemoWeb.Gettext do
 
   See the [Gettext Docs](https://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext, otp_app: :ash_reports_demo
+  use Gettext.Backend, otp_app: :ash_reports_demo
 end

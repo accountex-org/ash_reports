@@ -133,7 +133,7 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
     html_elements =
       context.report.bands
       |> Enum.flat_map(fn band ->
-        band_elements = Map.get(band, :elements, [])
+        band_elements = band.elements || []
 
         band_elements
         |> Enum.map(&build_single_element(&1, context, options, band.name))
@@ -593,7 +593,10 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
   end
 
   defp build_position_style(element, %RenderContext{} = context) do
-    position = Map.get(element, :position, %{})
+    position = case Map.get(element, :position, %{}) do
+      pos when is_map(pos) -> pos
+      _ -> %{}  # Handle case where position is not a map (like empty list [])
+    end
 
     # Try to get position from layout state if not in element
     layout_position = get_element_layout_position(element, context)
@@ -835,7 +838,7 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
       end
 
     aria_attrs =
-      if element[:type] == :image and not Map.has_key?(element, :alt) do
+      if Map.get(element, :type) == :image and not Map.has_key?(element, :alt) do
         Map.put(aria_attrs, "role", "img")
       else
         aria_attrs

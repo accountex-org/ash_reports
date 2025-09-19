@@ -97,9 +97,7 @@ defmodule AshReportsDemoWeb.ReportLive.Simple do
 
   defp load_customers do
     try do
-      Customer
-      |> Ash.Query.limit(50)
-      |> Domain.read!()
+      Ash.read!(Customer, domain: Domain, query: Ash.Query.limit(50))
     rescue
       _ -> []
     end
