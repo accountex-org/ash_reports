@@ -1,27 +1,36 @@
-# Systematic Test Development
+# /add-tests
 
-**IMPORTANT**: Use the **test-developer** agent to create comprehensive test
-coverage using proven methodology and expert consultation.
+Orchestrate test development by delegating specific test creation tasks to the
+test-developer agent.
 
-## Command Overview
+## Orchestration Process
 
-This command delegates to the **test-developer** agent, which provides
-systematic test development methodology while consulting language-specific
-experts and ensuring consistency with existing patterns.
+As the orchestrator, you will:
 
-## How to Use
+1. **Analyze testing needs**:
 
-The **test-developer** agent will:
+   - Identify what code needs test coverage
+   - Determine test scope (unit, integration, e2e)
+   - Assess existing test patterns
 
-1. **Analyze Your Project**: Determine language/framework and existing test
-   patterns
-2. **Consult Language Experts**: Get specific guidance from **elixir-expert**,
-   **research-agent**, etc.
-3. **Check Existing Patterns**: Use **consistency-reviewer** for codebase
-   alignment
-4. **Apply Systematic Methodology**: Guide incremental test development for 100%
-   success rates
-5. **Ensure Quality**: Coordinate with **qa-reviewer** for coverage assessment
+2. **Plan test strategy**:
+
+   - Decide what tests to create
+   - Identify testing priorities
+   - Determine coverage requirements
+
+3. **Delegate to test-developer**:
+
+   - Give specific test creation tasks
+   - Specify what functionality to test
+   - Define coverage expectations
+   - Provide pattern references
+
+4. **Coordinate test development**:
+   - The test-developer will execute your instructions
+   - It will proactively consult experts for patterns
+   - It will return summaries of tests created
+   - You decide if more tests are needed
 
 ## What the Agent Provides
 
@@ -86,15 +95,46 @@ The **test-developer** agent ensures:
   conventions
 - ✅ **Expert-Validated Approach**: Guidance from relevant language specialists
 
-## Example Usage
+## Example Orchestration
 
-Simply invoke the **test-developer** agent and it will:
+```markdown
+# As orchestrator, you would:
 
-1. Identify your project's language and testing framework
-2. Consult the appropriate experts (**elixir-expert** for Elixir,
-   **research-agent** for others)
-3. Guide you through systematic test development
-4. Ensure quality through expert review and pattern consistency
+1. Analyze code needing tests (e.g., new User model)
+2. Determine test requirements (CRUD, validations, edge cases)
 
-The agent handles the complexity of language-specific details while providing
-universal testing methodology principles.
+3. Delegate to test-developer: "Create unit tests for the User model in
+   test/users/user_test.exs. Test all CRUD operations, field validations, and
+   error cases. Follow existing test patterns in the test/ directory."
+
+4. Test-developer returns: "✅ Complete - Created 15 tests covering CRUD,
+   validations, and error handling. All tests passing."
+
+5. You assess coverage and decide next steps: "Now add integration tests for
+   user registration flow..."
+```
+
+## Usage Examples
+
+```bash
+/add-tests
+# Orchestrator analyzes code and delegates test creation to test-developer
+
+# For specific functionality
+"Add tests for the authentication module"
+# Orchestrator breaks down auth testing needs and coordinates execution
+
+# For comprehensive coverage
+"Add missing tests to achieve 80% coverage"
+# Orchestrator identifies gaps and systematically delegates test creation
+```
+
+## Key Benefits
+
+- **Clear separation**: Orchestrator strategizes, test-developer executes
+- **Expert consultation**: Test-developer proactively uses language experts
+- **Quality control**: You verify coverage before moving on
+- **Flexible coordination**: You adapt based on test results
+
+You maintain control of the testing strategy while the test-developer handles
+the technical execution with expert support.

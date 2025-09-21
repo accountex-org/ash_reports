@@ -1,10 +1,13 @@
-You are conducting a pull request review comparing the current branch against
-main. You should take into account the current planning document and compare the
-implementation with the planning document to see if the plan was correctly
-implemented or if the implementation differs from the planning doc.
+# 🚀 PARALLEL REVIEW EXECUTION
 
-**IMPORTANT**: Use the specialized review agents to perform comprehensive
-analysis. Run these agents in parallel for thorough multi-perspective review:
+You are conducting a comprehensive code review. Your role is to orchestrate ALL
+review agents to run IN PARALLEL for maximum efficiency and thorough analysis.
+
+## CRITICAL: Parallel Execution Strategy
+
+**RUN ALL REVIEW AGENTS SIMULTANEOUSLY** - Do not run them sequentially!
+
+### Core Review Agents (Run ALL in parallel):
 
 - **factual-reviewer**: Implementation vs planning verification
 - **qa-reviewer**: Testing coverage and quality assurance
@@ -13,15 +16,19 @@ analysis. Run these agents in parallel for thorough multi-perspective review:
 - **consistency-reviewer**: Codebase pattern consistency
 - **redundancy-reviewer**: Code duplication and refactoring opportunities
 
-**LANGUAGE-SPECIFIC REVIEWERS**: Additionally, run language-specific review
-agents based on the technologies involved:
+### Language-Specific Reviewers (Add to parallel execution):
 
-- **elixir-reviewer**: For Elixir, Phoenix, Ash, or Ecto code changes (runs mix
-  format, credo, dialyzer, sobelow, deps.audit, and comprehensive testing)
+- **elixir-reviewer**: For Elixir, Phoenix, Ash, or Ecto code changes
 - Add other language-specific reviewers as they become available
 
-After gathering results from all review agents, synthesize their findings into a
-comprehensive review report.
+**⚡ EXECUTION APPROACH:**
+
+1. Launch ALL reviewers at once using parallel Task invocations
+2. Each reviewer analyzes the SAME code simultaneously
+3. Gather all results when they complete
+4. Synthesize findings into comprehensive review report
+
+This parallel approach delivers results 10x faster than sequential review!
 
 ## Code Quality & Standards
 

@@ -1,10 +1,71 @@
-# Agent-First Development Workflow
+# Agent Orchestration System
 
-## Specialized Agents - Use Them Heavily!
+## You Are an Implementation Lead with Agent Guidance
 
-**CRITICAL**: This system includes specialized agents that you should use
-extensively. Do not attempt to work without consulting the appropriate
-specialized agents first.
+**CRITICAL PARADIGM SHIFT**: You are a hands-on implementer who makes heavy use
+of specialized agents for guidance and information. Your role is to do the
+actual work while consulting agents for their expertise, patterns, and
+domain-specific knowledge to ensure high-quality implementation.
+
+### Your Core Responsibilities as Implementation Lead
+
+1. **Task Analysis**: Understand what needs to be done
+2. **Agent Consultation**: Identify which specialized agents to consult for guidance
+3. **Direct Implementation**: Perform the actual coding, writing, and technical work
+4. **Expert Guidance Integration**: Apply agent recommendations and patterns
+5. **Quality Assurance**: Ensure work meets standards through agent consultation
+6. **Progress Management**: Track progress and iterate based on agent feedback
+
+### Orchestration Rules
+
+**ALWAYS consult appropriate agents for:**
+
+- Elixir/Phoenix work: elixir-expert for patterns and best practices
+- Architecture decisions: architecture-agent for structural guidance
+- Complex research needs: research-agent for documentation and analysis
+- Code review: Use all review agents in parallel after implementation
+- Domain-specific expertise: Relevant experts for specialized knowledge
+
+**DO directly:**
+
+- Write code after consulting experts for patterns and guidance
+- Make implementation decisions based on agent recommendations
+- Create documentation while consulting documentation-expert for standards
+- Perform technical work while integrating agent expertise
+- Manage the complete implementation workflow
+
+### Missing Agent Protocol
+
+**If you identify a gap in agent coverage:**
+
+When you encounter a task that doesn't have an appropriate specialized agent, or
+when existing agents lack the specific expertise needed:
+
+1. **Stop and Alert**: Don't attempt to do the work yourself
+2. **Identify the Gap**: Clearly describe what type of agent is missing
+3. **Suggest Agent Specification**: Propose the agent's purpose, tools, and
+   expertise
+4. **Request Creation**: Ask the user to create the missing agent
+
+**Example Alert Format:**
+
+```
+⚠️ Missing Agent Detected
+
+I need to [specific task] but there's no specialized agent for this.
+
+Suggested new agent:
+- Name: [proposed-agent-name]
+- Purpose: [what it would do]
+- Expertise: [specific knowledge area]
+- Tools needed: [likely tool requirements]
+
+Would you like me to help create this agent definition?
+```
+
+## Specialized Agents - Your Implementation Team
+
+**These are your sub-agents that perform ALL actual work:**
 
 ### Available Specialized Agents
 
@@ -122,6 +183,49 @@ specialized agents first.
   work
 - **Output**: Task planning documents in notes/tasks/
 
+### Four-Phase Workflow Commands
+
+The four-phase workflow is now implemented through commands rather than agents.
+The main orchestrator performs the coordination work directly:
+
+#### **research command** - Codebase Impact Analysis & Third-Party Integration Detection
+
+- **When to use**: For complex features requiring codebase impact analysis and
+  third-party service integration
+- **Purpose**: You coordinate codebase impact mapping, existing pattern discovery,
+  third-party integration detection, and targeted documentation gathering
+- **Orchestrates**: Project-first analysis, file-level impact mapping, service
+  detection, and targeted documentation links
+- **Output**: Codebase impact analysis documents in notes/[topic-name]/research.md
+
+#### **plan command** - Strategic Implementation Planning
+
+- **When to use**: To transform codebase impact analysis into detailed
+  feature specifications and implementation strategies
+- **Purpose**: You create detailed feature specifications using discovered patterns,
+  third-party integration plans, and architectural guidance
+- **Coordinates**: architecture-agent, domain experts, senior-engineer-reviewer
+  for plan validation using existing project patterns
+- **Output**: Detailed implementation plans in notes/[topic-name]/plan.md
+
+#### **breakdown command** - Task Decomposition
+
+- **When to use**: To break strategic plans into numbered checklist task structures
+  with granular implementation steps
+- **Purpose**: You create numbered checklists with detailed substeps (e.g., Ash resource
+  creation), file references, documentation links, and commit instructions
+- **Coordinates**: test-developer, architecture-agent, domain experts for task
+  optimization and detailed implementation guidance
+- **Output**: Numbered checklist breakdowns in notes/[topic-name]/breakdown.md
+
+#### **execute command** - Implementation Execution
+
+- **When to use**: To implement the detailed task breakdown systematically
+- **Purpose**: You work through the breakdown checklist while consulting agents
+  for guidance and expertise
+- **Approach**: Sequential task execution with agent consultation for guidance
+- **Output**: Working implementation following the breakdown specifications
+
 ### Architecture & Implementation Specialists
 
 #### **architecture-agent** - Project Structure & Integration
@@ -160,34 +264,144 @@ specialized agents first.
 - **Consults**: elixir-expert, research-agent, consistency-reviewer, qa-reviewer
 - **Focus**: Root cause analysis, systematic resolution, regression prevention
 
-### Agent Usage Principles
+### Orchestration Patterns
 
-1. **Agent-First Approach**: Always identify which specialized agent(s) to use
-   before starting work
-2. **Use Right-Sized Planning**: feature-planner → fix-planner → task-planner
-   based on complexity
-3. **Leverage Methodology Agents**: Use test-developer and test-fixer for
-   systematic testing approaches
-4. **Multiple Agent Consultation**: Complex tasks require multiple agents (e.g.,
-   research-agent + elixir-expert)
-5. **Trust Agent Expertise**: Follow agent recommendations rather than making
-   assumptions
-6. **Complete Elixir Workflow**: elixir-expert (before & during) → implement →
-   elixir-reviewer (after)
+#### **Four-Phase Workflow Orchestration**
+
+For complex topics requiring comprehensive research and strategic
+implementation:
+
+```
+FOUR-PHASE WORKFLOW - Complete topic development:
+1. research command → Codebase impact analysis with third-party detection
+2. plan command → Feature specifications using discovered patterns
+3. breakdown command → Numbered checklists with granular implementation steps
+4. execute command → Sequential implementation following breakdown checklist
+
+📁 Output: notes/[topic-name]/ folder with complete documentation
+   ├── research.md     (Phase 1)
+   ├── plan.md         (Phase 2)
+   ├── breakdown.md    (Phase 3)
+   └── [implementation artifacts] (Phase 4)
+
+🚀 CRITICAL: Each phase builds on the previous, execution includes ALL REVIEW AGENTS
+```
+
+**When to use Four-Phase Workflow:**
+
+- Complex topics requiring multi-dimensional research
+- Large features needing strategic planning and parallel execution
+- Unfamiliar technology integration requiring comprehensive investigation
+- Projects benefiting from systematic breakdown and coordination
+
+#### **Sequential Orchestration**
+
+When agent outputs depend on each other:
+
+```
+STANDARD WORKFLOW - Always include review phase:
+1. research-agent → Gather information about technology
+2. architecture-agent → Determine integration approach
+3. feature-planner → Create detailed plan
+4. implementation-agent → Execute the plan
+5. 🚀 ALL REVIEW AGENTS IN PARALLEL → Comprehensive validation
+
+⚠️ CRITICAL: Steps 1-4 build the feature, Step 5 validates it
+   Never skip the review phase!
+```
+
+#### **Parallel Orchestration - CRITICAL FOR REVIEWS**
+
+**ALWAYS run review agents in parallel for maximum efficiency:**
+
+```
+🚀 PARALLEL EXECUTION - All reviewers work simultaneously:
+├── qa-reviewer → Test coverage analysis
+├── security-reviewer → Security assessment
+├── consistency-reviewer → Pattern compliance
+├── factual-reviewer → Implementation verification
+├── redundancy-reviewer → Duplication detection
+└── senior-engineer-reviewer → Strategic review
+
+⚡ All reviewers analyze the SAME code at the SAME time
+```
+
+**Why parallel reviews are essential:**
+
+- **10x faster**: All reviews complete in the time of the slowest one
+- **Comprehensive coverage**: Each reviewer focuses on their specialty
+- **No dependencies**: Reviewers don't need each other's output
+- **Immediate insights**: Get all perspectives at once
+
+#### **Hierarchical Orchestration**
+
+When agents need to coordinate sub-agents:
+
+```
+You (Orchestrator)
+├── feature-planner
+│   ├── research-agent (for unknown tech)
+│   ├── architecture-agent (for structure)
+│   └── elixir-expert (for patterns)
+└── implementation-agent
+    ├── test-developer (for tests)
+    ├── architecture-agent (for placement)
+    └── elixir-reviewer (for validation)
+```
+
+### Agent Selection Matrix
+
+| Task Type      | Primary Flow                                                                                        | Supporting Agents                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **Four-Phase** | **research** → **plan** → **breakdown** → **execute** (orchestrator performs coordination directly) | research-agent, architecture-agent, domain experts, **ALL REVIEWERS** |
+| New Feature    | feature-planner → implementation-agent → **ALL REVIEWERS IN PARALLEL** 🚀                           | research-agent, architecture-agent, test-developer                    |
+| Bug Fix        | fix-planner → implementation-agent → **ALL REVIEWERS IN PARALLEL** 🚀                               | elixir-expert, test-fixer, qa-reviewer                                |
+| Research       | research-agent                                                                                      | documentation-expert (for docs)                                       |
+| Code Review    | **ALL REVIEWERS IN PARALLEL** 🚀                                                                    | **Run simultaneously for fast comprehensive analysis**                |
+| Documentation  | documentation-expert                                                                                | research-agent, documentation-reviewer                                |
+| Testing        | test-developer or test-fixer                                                                        | qa-reviewer, elixir-expert                                            |
+
+### Implementation Principles
+
+1. **Expert Consultation**: Always consult relevant agents for guidance before implementation
+2. **Mandatory Review Phase**: ALWAYS run all reviewers after implementation
+3. **Right-Sized Planning**: Match planner complexity to task complexity
+4. **Parallel When Possible**: Run independent agents simultaneously (especially
+   reviews!)
+5. **Trust Agent Expertise**: Agents are specialists - follow their guidance
+6. **Comprehensive Coverage**: Consult all relevant agents for thorough results
+7. **Integration Focus**: Apply agent recommendations directly in your implementation
+
+**🚨 CRITICAL RULE**: No feature or fix is complete without parallel review by
+ALL review agents!
 
 # Development Workflow
 
 ## Command-Agent Integration
 
-Commands now delegate to specialized agents rather than containing detailed
-procedures:
+Commands now consult specialized agents for guidance while performing the work
+directly:
+
+### Four-Phase Workflow Commands
+
+- **research.md** → You perform codebase impact analysis while consulting
+  research-agent and domain experts
+- **plan.md** → You create strategic implementation plans while consulting
+  architecture-agent and domain experts
+- **breakdown.md** → You create detailed task breakdowns while consulting
+  architecture-agent and test-developer
+- **execute.md** → You implement tasks sequentially while consulting relevant
+  agents for guidance
+
+### Traditional Workflow Commands
 
 - **feature.md** → Uses **feature-planner** for comprehensive planning
 - **fix.md** → Uses **fix-planner** for focused problem resolution
 - **task.md** → Uses **task-planner** for lightweight planning
 - **add-tests.md** → Uses **test-developer** for systematic test development
 - **fix-tests.md** → Uses **test-fixer** for test failure resolution
-- **review.md** → Uses all review agents for comprehensive analysis
+- **review.md** → **RUNS ALL REVIEW AGENTS IN PARALLEL** for instant
+  comprehensive analysis
 
 ## Planning Document Creation
 

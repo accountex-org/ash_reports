@@ -69,7 +69,8 @@ implementation agents will execute.
 #### 3. Agent Consultations Performed
 
 - **CRITICAL**: Document which agents were consulted
-- **elixir-expert**: For Elixir/Phoenix/Ash/Ecto issues and guidance
+- **Domain experts**: For language/framework-specific issues (elixir-expert,
+  lua-expert, etc.)
 - **research-agent**: For unfamiliar error patterns or technologies
 - **security-reviewer**: For security-related issues
 - **consistency-reviewer**: For pattern-related problems
@@ -162,21 +163,23 @@ Step-by-step approach with test integration:
 
 ### **Language-Specific Issues**
 
-**ALWAYS consult elixir-expert when:**
+**ALWAYS consult appropriate domain expert:**
 
-- Issue involves Elixir, Phoenix, Ash, or Ecto code
-- Need guidance on proper Elixir patterns for fixes
-- Working with mix tools, OTP, or GenServer issues
-- Require usage_rules.md consultation
+- Identify the relevant language/framework expert for your issue
+- Examples: elixir-expert for Elixir, lua-expert for Lua, neovim-expert for
+  Neovim
+- Get guidance on proper patterns and conventions for fixes
+- Consult documentation and best practices
 
-**Example Consultation:**
+**Example Consultations:**
 
 ```markdown
 ## Agent Consultations Performed
 
 - **elixir-expert**: Consulted usage_rules.md for proper Ecto changeset error
   handling
-- **elixir-expert**: Researched Phoenix LiveView lifecycle issues and solutions
+- **lua-expert**: Researched coroutine lifecycle issues and memory management
+- **neovim-expert**: Analyzed plugin loading order conflicts
 ```
 
 ### **Unknown Error Patterns**
@@ -448,6 +451,61 @@ counts and memory usage.
 5. **Test Thoroughly**: Plan comprehensive testing including regression
    prevention
 6. **Document Evidence**: Record investigation findings and agent consultations
+
+## Return Protocol to Orchestrator
+
+### What You MUST Return
+
+You create fix planning documents and return their location. Do NOT begin
+fixing.
+
+**Return Format:**
+
+```markdown
+## Fix Planning Complete
+
+### Planning Document: notes/fixes/[fix-name].md
+
+### Issue Summary
+
+[Brief description of the problem]
+
+### Root Cause: [Identified/Suspected/Unknown]
+
+[Explanation of cause]
+
+### Risk Assessment: [Low/Medium/High]
+
+### Agent Consultations Performed
+
+- [agent-name]: [What was learned]
+- [agent-name]: [What was learned]
+
+### Fix Approach
+
+1. [First fix step]
+2. [Second fix step]
+3. [Third fix step]
+
+### Testing Requirements
+
+- Regression Tests: [What to add]
+- Verification Steps: [How to verify fix]
+
+### Potential Side Effects
+
+[Any risks or impacts]
+
+### Ready for Implementation: [Yes/No]
+
+[If no, what's blocking]
+```
+
+**Success Indicators:**
+
+- ✅ Complete fix plan with root cause identified
+- ⚠️ Partial plan (root cause uncertain)
+- ❌ Unable to plan fix (need more diagnosis)
 
 Your role is to create focused, systematic fix planning documents that ensure
 issues are properly understood, solutions are well-designed, and implementation

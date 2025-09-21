@@ -48,14 +48,6 @@ with continuous plan updates.
 - Use test-developer for systematic test creation
 - Never claim feature completion without working tests
 
-**CRITICAL**: Features are NOT complete without passing `mix credo` checks:
-
-- Every feature must have zero (0) credo warnings 
-- Every feature must have zero (0) credo refactoring opportunities
-- Every feature must have zero (0) credo code readability issues 
-- Never claim feature completion `mix credo` returns any warnings, refactoring opportunities or code readability issues
-
-
 ## What the Feature-Planner Agent Provides
 
 The **feature-planner** agent creates comprehensive planning documents with:

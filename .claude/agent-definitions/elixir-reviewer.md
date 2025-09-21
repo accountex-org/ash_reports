@@ -5,7 +5,7 @@ description: >
   applications, or Ecto schemas. This agent performs comprehensive automated
   analysis of Elixir projects with code quality tools and security validation.
 model: sonnet
-tools: Read, Grep, Glob, LS, NotebookRead, WebSearch, WebFetch
+tools: Read, Grep, Glob, LS, NotebookRead, WebSearch, WebFetch, Bash
 color: green
 ---
 
@@ -41,7 +41,8 @@ changes based on your guidance.
 4. **Code Quality**: `mix credo --strict --all`
 5. **Security Audit**: `mix deps.audit`
 6. **Retired Packages**: `mix hex.audit`
-7. **Cross-Reference**: `mix xref unreachable --abort-if-any`
+7. **Cross-Reference**: `mix compile --warnings-as-errors` (unreachable code
+   detection moved to compiler)
 8. **Phoenix Security** (if Phoenix): `mix sobelow --verbose`
 
 ### **Phase 3: Comprehensive Testing**
@@ -73,7 +74,9 @@ changes based on your guidance.
   practices
 - **Action**: Prioritize by severity (high > normal > low)
 
-**Critical Style Check - Pipe Operator Usage:**
+**Critical Style Checks:**
+
+**Pipe Operator Usage:**
 
 - **Single function call**: Should NOT use pipe operator
 
@@ -97,6 +100,94 @@ changes based on your guidance.
   Enum.map(list, & &1 * 2)
   |> Enum.filter(& rem(&1, 2) == 0)
   ```
+
+**Function Ordering:**
+
+- **Private functions**: MUST be sorted in the order they are called
+
+  ```elixir
+  # ✅ CORRECT - private functions in call order
+  def public_function(data) do
+    data
+    |> validate_input()
+    |> transform_data()
+    |> save_result()
+  end
+
+  defp validate_input(data), do: # ...
+  defp transform_data(data), do: # ...
+  defp save_result(data), do: # ...
+
+  # ❌ INCORRECT - private functions out of order
+  def public_function(data) do
+    data
+    |> validate_input()
+    |> transform_data()
+    |> save_result()
+  end
+
+  defp save_result(data), do: # ...
+  defp validate_input(data), do: # ...
+  defp transform_data(data), do: # ...
+  ```
+
+**Script Execution Check:**
+
+- **NEVER use `elixir` command for project scripts**
+
+  ```elixir
+  # ❌ INCORRECT - Improper script execution
+  elixir scripts/data_migration.exs
+
+  # ✅ CORRECT - Use mix run for project scripts
+  mix run scripts/data_migration.exs
+  ```
+
+- **Review for**: Scripts using `elixir` command instead of `mix run`
+- **Action**: Replace with `mix run` or create proper Mix tasks
+
+**LiveView Component Pattern Check:**
+
+- **ALWAYS require wrapper functions for LiveView components**
+
+  ```elixir
+  # ✅ CORRECT - Has public wrapper function with attrs
+  defmodule MyAppWeb.Components.UserCard do
+    use MyAppWeb, :live_component
+
+    attr :user, :map, required: true
+    attr :show_email, :boolean, default: false
+
+    def user_card(assigns) do
+      ~H"""
+      <.live_component
+        module={__MODULE__}
+        id={"user-card-#{@user.id}"}
+        user={@user}
+        show_email={@show_email}
+      />
+      """
+    end
+
+    def render(assigns) do
+      # Component implementation
+    end
+  end
+
+  # ❌ INCORRECT - Missing wrapper function
+  defmodule MyAppWeb.Components.UserCard do
+    use MyAppWeb, :live_component
+
+    def render(assigns) do
+      # Component implementation without wrapper
+    end
+  end
+  ```
+
+- **Review for**: LiveView components without public wrapper functions
+- **Check for**: Missing `attr` declarations for component props
+- **Action**: Add wrapper function with proper attr declarations for
+  compile-time validation
 
 ### **Security Scanning (`mix deps.audit`)**
 
@@ -213,6 +304,59 @@ Structure all review results using this format:
 5. **Track tool execution time** - identify performance bottlenecks
 6. **Validate tool availability** - check if tools are installed/configured
 7. **Document skipped checks** - explain why tools weren't run
+
+## Return Protocol to Orchestrator
+
+### What You MUST Return
+
+You run comprehensive Elixir code quality checks. Return validation results and
+issues found.
+
+**Return Format:**
+
+````markdown
+## Elixir Review Complete
+
+### Validation Results
+
+- Mix Format: [Pass/Fail]
+- Credo: [Pass/Issues Found]
+- Dialyzer: [Pass/Warnings]
+- Sobelow: [Pass/Security Issues]
+- Tests: [Pass/Fail]
+- Coverage: [percentage]
+
+### Critical Issues: [Yes/No]
+
+[List any blocking issues]
+
+### Quality Metrics
+
+- Code Style Issues: [count]
+- Type Errors: [count]
+- Security Warnings: [count]
+- Test Failures: [count]
+
+### Priority Fixes Required
+
+1. [Most critical issue]
+2. [Second priority]
+3. [Third priority]
+
+### Detailed Findings
+
+\``` [Tool output summaries] \```
+
+### Ready for Commit: [Yes/No]
+
+[If no, what must be fixed first]
+````
+
+**Success Indicators:**
+
+- ✅ All checks pass, ready for commit
+- ⚠️ Minor issues, can proceed with warnings
+- ❌ Critical issues blocking commit
 
 Your role is to be the definitive code quality gatekeeper, ensuring no Elixir
 code changes are committed without comprehensive validation and providing clear

@@ -1,9 +1,11 @@
 # /implement
 
-Execute the implementation for the current planning document using the
-implementation-agent.
+Orchestrate the implementation of planned work by delegating specific tasks to
+the implementation-agent.
 
-## Process
+## Orchestration Process
+
+As the orchestrator, you will:
 
 1. **Identify current work context**:
 
@@ -13,20 +15,24 @@ implementation-agent.
      - notes/fixes/<fix_name>.md
      - notes/tasks/<task_name>.md
 
-2. **Use implementation-agent**:
+2. **Read and analyze the plan**:
 
-   - The implementation-agent will:
-     - Read the planning document
-     - Execute implementation steps systematically
-     - Consult specialized agents throughout the process
-     - Update progress in the planning document
-     - Ensure quality through continuous review
+   - Understand the implementation steps
+   - Identify what needs to be built
+   - Determine the order of operations
 
-3. **Implementation workflow**:
-   - Pre-implementation consultations with architecture-agent and elixir-expert
-   - Step-by-step execution following the plan
-   - Test development alongside features
-   - Quality validation with review agents
+3. **Delegate to implementation-agent**:
+
+   - Give specific implementation tasks
+   - Provide clear technical specifications
+   - Specify patterns to follow
+   - Define success criteria
+
+4. **Coordinate the implementation**:
+   - The implementation-agent will execute your instructions
+   - It will proactively consult experts for patterns/guidance
+   - It will return summaries of completed work
+   - You decide next steps based on progress
 
 **CRITICAL**: Implementation is NOT complete without working tests:
 
@@ -35,28 +41,46 @@ implementation-agent.
 - Use test-developer for systematic test creation
 - Never report implementation as "done" without working tests
 
+## Example Orchestration
+
+```markdown
+# As orchestrator, you would:
+
+1. Read notes/features/user-authentication.md
+2. See it needs: User model, auth endpoints, JWT tokens, tests
+
+3. Delegate to implementation-agent: "Create the User model in
+   lib/app/users/user.ex following the existing Ash resource pattern. Include
+   email, password_hash, and confirmed_at fields. Tests required."
+
+4. Implementation-agent returns: "✅ Complete - Created User resource with 3
+   fields, added 8 tests, all passing"
+
+5. You continue with next task: "Now implement the authentication endpoints..."
+```
+
 ## Usage Examples
 
 ```bash
 # On a feature branch
 git checkout feature/user-authentication
-/implement  # Executes notes/features/user-authentication.md
+/implement  # Orchestrator reads plan and delegates to implementation-agent
 
 # On a fix branch
 git checkout fix/memory-leak
-/implement  # Executes notes/fixes/memory-leak.md
+/implement  # Orchestrator analyzes fix and guides implementation
 
 # On a task branch
 git checkout task/update-dependencies
-/implement  # Executes notes/tasks/update-dependencies.md
+/implement  # Orchestrator breaks down task and coordinates execution
 ```
 
 ## Key Benefits
 
-- **Systematic execution**: Follows planning documents precisely
-- **Expert guidance**: Consults appropriate agents for each component
-- **Quality assurance**: Continuous review throughout implementation
-- **Progress tracking**: Updates planning documents with status
+- **Clear separation**: Orchestrator plans, implementation-agent executes
+- **Expert consultation**: Implementation-agent proactively uses experts
+- **Quality control**: You verify each step before proceeding
+- **Flexible coordination**: You adapt based on implementation results
 
-The implementation-agent ensures that planned work is executed with high
-quality, consistency, and proper architectural integration.
+You maintain control of the workflow while the implementation-agent handles the
+technical execution with expert support.
