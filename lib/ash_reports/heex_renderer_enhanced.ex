@@ -51,15 +51,13 @@ defmodule AshReports.HeexRendererEnhanced do
   @behaviour AshReports.Renderer
 
   alias AshReports.{
-    ChartEngine,
     # Existing HEEX renderer
     HeexRenderer,
-    InteractiveEngine,
     RenderContext
   }
 
-  alias AshReports.HtmlRenderer.{AssetManager, ChartIntegrator}
-  alias AshReports.LiveView.{ChartHooks, ChartLiveComponent}
+  alias AshReports.HtmlRenderer.AssetManager
+  alias AshReports.LiveView.ChartHooks
 
   @doc """
   Enhanced HEEX rendering with LiveView chart component integration.
@@ -372,7 +370,7 @@ defmodule AshReports.HeexRendererEnhanced do
 
   @doc """
   Returns whether this renderer supports streaming.
-  
+
   HEEX Enhanced renderer supports streaming through LiveView components.
   """
   @impl true

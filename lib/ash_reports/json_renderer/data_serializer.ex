@@ -248,26 +248,31 @@ defmodule AshReports.JsonRenderer.DataSerializer do
 
   defp serialize_value(value, opts) do
     cond do
-      is_nil(value) ->
-        serialize_nil_value(opts)
+      is_nil(value) -> serialize_nil_value(opts)
+      primitive_type?(value) -> serialize_primitive_value(value, opts)
+      is_atom(value) -> serialize_atom_value(value)
+      special_type?(value) -> serialize_special_type(value, opts)
+      true -> serialize_custom_type(value, opts)
+    end
+  end
 
-      is_binary(value) or is_number(value) or is_boolean(value) ->
-        serialize_primitive_value(value, opts)
+  defp primitive_type?(value) do
+    is_binary(value) or is_number(value) or is_boolean(value)
+  end
 
-      is_atom(value) ->
-        to_string(value)
+  defp special_type?(value) do
+    decimal_type?(value) or datetime_type?(value) or collection_type?(value)
+  end
 
-      decimal_type?(value) ->
-        serialize_decimal_value(value, opts)
+  defp serialize_atom_value(value) do
+    to_string(value)
+  end
 
-      datetime_type?(value) ->
-        serialize_datetime_value(value, opts)
-
-      collection_type?(value) ->
-        serialize_collection_value(value, opts)
-
-      true ->
-        serialize_custom_type(value, opts)
+  defp serialize_special_type(value, opts) do
+    cond do
+      decimal_type?(value) -> serialize_decimal_value(value, opts)
+      datetime_type?(value) -> serialize_datetime_value(value, opts)
+      collection_type?(value) -> serialize_collection_value(value, opts)
     end
   end
 
@@ -344,14 +349,14 @@ defmodule AshReports.JsonRenderer.DataSerializer do
       end)
       |> Map.reject(fn {_, value} -> value == :skip_field end)
     rescue
-      Protocol.UndefinedError -> 
+      Protocol.UndefinedError ->
         # Fallback: handle maps with non-enumerable values
         map
         |> Map.keys()
         |> Enum.reduce(%{}, fn key, acc ->
           value = Map.get(map, key)
           serialized_value = serialize_value(value, opts)
-          
+
           if serialized_value == :skip_field do
             acc
           else

@@ -158,7 +158,7 @@ defmodule AshReports.HeexRenderer.ChartTemplates do
       filters: config[:filters] || [],
       filter_controls: generate_filter_controls(config[:filters] || [], context),
       sidebar_class: determine_sidebar_class(config[:sidebar_position]),
-      rtl_class: (if context.text_direction == "rtl", do: "rtl", else: "ltr")
+      rtl_class: if(context.text_direction == "rtl", do: "rtl", else: "ltr")
     }
   end
 

@@ -86,14 +86,14 @@ defmodule AshReports.QueryBuilder do
   """
   @spec extract_relationships(Report.t()) :: [atom()]
   def extract_relationships(%Report{bands: bands, groups: groups}) do
-    band_relationships = 
+    band_relationships =
       bands
       |> Enum.flat_map(&extract_band_relationships/1)
-    
-    group_relationships = 
+
+    group_relationships =
       (groups || [])
       |> Enum.flat_map(&extract_group_relationships/1)
-    
+
     (band_relationships ++ group_relationships)
     |> Enum.uniq()
   end
@@ -337,21 +337,21 @@ defmodule AshReports.QueryBuilder do
       # Ash expression with relationship traversal
       %{__struct__: Ash.Expr} = ash_expr ->
         extract_relationships_from_ash_expr(ash_expr)
-      
+
       # Simple field - no relationships
       field when is_atom(field) ->
         []
-      
+
       # Nested field reference
       {:field, relationship, _field} when is_atom(relationship) ->
         [relationship]
-      
+
       # Function expression
       expr when is_function(expr, 1) ->
-        # Can't easily extract from function expressions, 
+        # Can't easily extract from function expressions,
         # but they're often relationship traversals
         []
-      
+
       _ ->
         []
     end
@@ -364,7 +364,7 @@ defmodule AshReports.QueryBuilder do
         # Handle relationship traversal like expr(addresses.state)
         %{expression: {:get_path, _, [%{expression: {:ref, [], rel}}, _field]}} ->
           [rel]
-        
+
         # Other patterns can be added as needed
         _ ->
           []

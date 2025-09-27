@@ -448,8 +448,8 @@ defmodule AshReports.JsonRenderer.ChartApi do
           {:error, reason} -> {chart_id, {:error, reason}}
         end
 
-      {:error, reason} ->
-        {chart_id, {:error, reason}}
+        # {:error, reason} ->
+        #   {chart_id, {:error, reason}}
     end
   end
 

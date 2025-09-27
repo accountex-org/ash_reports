@@ -47,15 +47,15 @@ defmodule AshReports.LiveView.DashboardPresence do
     otp_app: :ash_reports,
     pubsub_server: AshReports.PubSub
 
-  alias AshReports.LiveView.SessionManager
+  # alias AshReports.LiveView.SessionManager  # For future use
 
   require Logger
 
   @presence_topic_prefix "dashboard_presence:"
   @activity_topic_prefix "dashboard_activity:"
-  @max_tracked_activities 50
+  # @max_tracked_activities 50  # For future use
   # 5 minutes
-  @presence_timeout 300_000
+  # @presence_timeout 300_000  # For future use
 
   # Client API
 
@@ -262,7 +262,7 @@ defmodule AshReports.LiveView.DashboardPresence do
     {:ok, conflict_resolution}
   end
 
-  defp resolve_concurrent_filter_conflict(dashboard_id, conflict_info) do
+  defp resolve_concurrent_filter_conflict(_dashboard_id, conflict_info) do
     # Handle concurrent filter applications
     # Strategy: merge filters intelligently
 
@@ -326,13 +326,13 @@ defmodule AshReports.LiveView.DashboardPresence do
     end
   end
 
-  defp get_recent_activities(dashboard_id, limit) do
+  defp get_recent_activities(_dashboard_id, _limit) do
     # Placeholder - would track recent activities
     # In production, would maintain activity history
     []
   end
 
-  defp get_conflict_count(dashboard_id) do
+  defp get_conflict_count(_dashboard_id) do
     # Placeholder - would track conflicts
     # In production, would maintain conflict statistics
     0

@@ -60,9 +60,8 @@ defmodule AshReports.LiveView.ChartLiveComponent do
 
   use Phoenix.LiveComponent
 
-  alias AshReports.ChartEngine
-  alias AshReports.ChartEngine.{ChartConfig, ChartData}
-  alias AshReports.HtmlRenderer.{AssetManager, ChartIntegrator, JavaScriptGenerator}
+  alias AshReports.ChartEngine.ChartConfig
+  alias AshReports.HtmlRenderer.ChartIntegrator
   alias AshReports.{InteractiveEngine, RenderContext}
 
   @impl true
@@ -91,7 +90,7 @@ defmodule AshReports.LiveView.ChartLiveComponent do
       |> validate_assigns()
 
     if socket.assigns.real_time and not socket.assigns.real_time_enabled do
-      socket = setup_real_time_updates(socket)
+      ^socket = setup_real_time_updates(socket)
     end
 
     # Generate or update chart
@@ -180,7 +179,7 @@ defmodule AshReports.LiveView.ChartLiveComponent do
   @impl true
   def handle_event(
         "chart_click",
-        %{"dataIndex" => data_index, "datasetIndex" => dataset_index} = params,
+        %{"dataIndex" => data_index, "datasetIndex" => dataset_index} = _params,
         socket
       ) do
     # Handle chart click events from client-side
@@ -205,9 +204,9 @@ defmodule AshReports.LiveView.ChartLiveComponent do
         send(self(), {:chart_info, socket.assigns.id, info_data})
         {:noreply, socket}
 
-      {:error, reason} ->
-        socket = assign(socket, :error, "Chart interaction failed: #{reason}")
-        {:noreply, socket}
+        # {:error, reason} ->
+        #   socket = assign(socket, :error, "Chart interaction failed: #{reason}")
+        #   {:noreply, socket}
     end
   end
 
@@ -291,7 +290,6 @@ defmodule AshReports.LiveView.ChartLiveComponent do
     end
   end
 
-  @impl true
   def handle_info({:real_time_update, new_data}, socket) do
     # Handle real-time data updates from PubSub
     if socket.assigns.real_time_enabled do
@@ -309,7 +307,6 @@ defmodule AshReports.LiveView.ChartLiveComponent do
     end
   end
 
-  @impl true
   def handle_info({:chart_config_update, new_config}, socket) do
     # Handle chart configuration updates
     socket =
@@ -332,7 +329,6 @@ defmodule AshReports.LiveView.ChartLiveComponent do
     end
   end
 
-  @impl true
   def terminate(_reason, socket) do
     # Cleanup real-time subscriptions and timers
     if socket.assigns.update_timer do
@@ -627,7 +623,7 @@ defmodule AshReports.LiveView.ChartLiveComponent do
 
   # View helper functions
 
-  defp chart_container_classes(chart_config, component_id) do
+  defp chart_container_classes(chart_config, _component_id) do
     base_classes = ["ash-live-chart", "ash-chart-#{chart_config.type}"]
     interactive_classes = if chart_config.interactive, do: ["interactive"], else: []
     provider_classes = ["provider-#{chart_config.provider}"]

@@ -448,7 +448,8 @@ defmodule AshReports.DataLoader do
   defp execute_query(domain, query) do
     case Ash.read(query, domain: domain) do
       {:ok, records} when is_list(records) -> {:ok, records}
-      {:ok, record} -> {:ok, [record]}  # Ensure single records are wrapped in a list
+      # Ensure single records are wrapped in a list
+      {:ok, record} -> {:ok, [record]}
       {:error, error} -> {:error, "Query execution failed: #{inspect(error)}"}
     end
   rescue
@@ -561,7 +562,6 @@ defmodule AshReports.DataLoader do
     end
   end
 
-
   defp build_pipeline_config(components) do
     pipeline_config =
       Pipeline.new(
@@ -592,7 +592,6 @@ defmodule AshReports.DataLoader do
       timeout: config[:timeout]
     )
   end
-
 
   defp format_stream_chunk({:ok, pipeline_result}) do
     %{

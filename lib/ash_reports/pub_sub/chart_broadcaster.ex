@@ -49,8 +49,7 @@ defmodule AshReports.PubSub.ChartBroadcaster do
 
   use GenServer
 
-  alias AshReports.{InteractiveEngine, RenderContext}
-  alias AshReports.LiveView.WebSocketManager
+  # alias AshReports.RenderContext  # Will be used in future versions
 
   require Logger
 
@@ -212,8 +211,8 @@ defmodule AshReports.PubSub.ChartBroadcaster do
       {:ok, stream_id, updated_state} ->
         {:reply, {:ok, stream_id}, updated_state}
 
-      {:error, reason} ->
-        {:reply, {:error, reason}, state}
+        # {:error, reason} ->
+        #   {:reply, {:error, reason}, state}
     end
   end
 
@@ -538,7 +537,7 @@ defmodule AshReports.PubSub.ChartBroadcaster do
         %{min_value: min_val} ->
           Enum.filter(base_data, fn point -> point.y >= min_val end)
 
-        %{region: region} ->
+        %{region: _region} ->
           # Simulate region-based filtering
           Enum.take(base_data, 5)
 
@@ -553,7 +552,7 @@ defmodule AshReports.PubSub.ChartBroadcaster do
     }
   end
 
-  defp data_changed?(new_data, nil), do: true
+  defp data_changed?(_new_data, nil), do: true
 
   defp data_changed?(new_data, old_data) do
     # Simple data change detection

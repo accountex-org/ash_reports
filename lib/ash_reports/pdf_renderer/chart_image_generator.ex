@@ -210,15 +210,6 @@ defmodule AshReports.PdfRenderer.ChartImageGenerator do
 
     # For now, return a placeholder as ChromicPDF is not available in all environments
     case Application.ensure_loaded(ChromicPDF) do
-      {:ok, _} ->
-        try do
-          # ChromicPDF.print_to_binary({:html, html_content}, [])
-          # Placeholder for when ChromicPDF is properly configured
-          {:error, "ChromicPDF not configured"}
-        rescue
-          _ -> {:error, "ChromicPDF rendering failed"}
-        end
-
       _ ->
         {:error, "ChromicPDF not available"}
     end

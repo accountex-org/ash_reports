@@ -241,16 +241,16 @@ defmodule AshReports.VariableState do
     # Extract the actual field reference from the Ash expression
     # This is a simplified approach for Phase 8.1 - full Ash.Expr evaluation
     # would require access to the resource schema and query context
-    
+
     case extract_field_from_ash_expr(ash_expr) do
       {:ok, field} when is_atom(field) ->
         value = Map.get(record, field)
         {:ok, value}
-        
+
       {:ok, path} when is_list(path) ->
-        value = get_in(record, path) 
+        value = get_in(record, path)
         {:ok, value}
-        
+
       :error ->
         # Fallback - for count expressions, return 1
         {:ok, 1}
@@ -267,14 +267,14 @@ defmodule AshReports.VariableState do
       case ash_expr do
         %{expression: {:ref, [], field}} when is_atom(field) ->
           {:ok, field}
-          
+
         %{expression: field} when is_atom(field) ->
           {:ok, field}
-          
+
         # Handle relationship traversal like addresses.state
         %{expression: {:get_path, _, [%{expression: {:ref, [], rel}}, field]}} ->
           {:ok, [rel, field]}
-          
+
         _ ->
           :error
       end

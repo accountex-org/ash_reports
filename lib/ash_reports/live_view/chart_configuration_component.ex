@@ -43,7 +43,7 @@ defmodule AshReports.LiveView.ChartConfigurationComponent do
   use Phoenix.LiveComponent
 
   alias AshReports.ChartEngine
-  alias AshReports.ChartEngine.{ChartConfig, ChartData}
+  alias AshReports.ChartEngine.ChartConfig
   alias AshReports.RenderContext
 
   @chart_types [

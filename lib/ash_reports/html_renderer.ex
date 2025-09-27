@@ -94,7 +94,6 @@ defmodule AshReports.HtmlRenderer do
 
   alias AshReports.{
     Cldr,
-    Formatter,
     HtmlRenderer.AssetManager,
     HtmlRenderer.ChartIntegrator,
     HtmlRenderer.CssGenerator,
@@ -103,8 +102,7 @@ defmodule AshReports.HtmlRenderer do
     HtmlRenderer.ResponsiveLayout,
     HtmlRenderer.TemplateEngine,
     RenderContext,
-    RtlLayoutEngine,
-    Translation
+    RtlLayoutEngine
   }
 
   @doc """
@@ -275,193 +273,184 @@ defmodule AshReports.HtmlRenderer do
 
   # TODO: Advanced HTML Assembly - Advanced HTML assembly with optimizations
   # Part of unfinished feature: Sophisticated HTML generation with performance optimizations
-  defp assemble_html(%RenderContext{} = context, css_content, html_elements) do
-    # Apply RTL layout adaptations if needed
-    adapted_context = apply_rtl_layout_adaptations(context)
-    adapted_elements = apply_rtl_element_adaptations(html_elements, adapted_context)
-
-    TemplateEngine.render_complete_html(adapted_context, css_content, adapted_elements)
-  end
+  # Function removed - was unused
 
   # TODO: RTL Language Support - Adapt layouts for RTL languages (Arabic, Hebrew, etc.)
   # Part of unfinished feature: Comprehensive RTL language support
-  defp apply_rtl_layout_adaptations(%RenderContext{} = context) do
-    rtl_config = context.config[:rtl_support] || %{}
-
-    if rtl_config[:rtl_layout_adaptations] do
-      # Adapt layout data for RTL if present
-      case Map.get(context, :layout_state) do
-        nil ->
-          context
-
-        layout_state ->
-          {:ok, adapted_layout} =
-            RtlLayoutEngine.adapt_container_layout(
-              layout_state,
-              text_direction: rtl_config[:text_direction],
-              locale: rtl_config[:locale]
-            )
-
-          %{context | layout_state: adapted_layout}
-      end
-    else
-      context
-    end
-  end
+  # Function removed - was unused
+  # defp apply_rtl_layout_adaptations(%RenderContext{} = context) do
+  #   rtl_config = context.config[:rtl_support] || %{}
+  #
+  #   if rtl_config[:rtl_layout_adaptations] do
+  #     # Adapt layout data for RTL if present
+  #     case Map.get(context, :layout_state) do
+  #       nil ->
+  #         context
+  #
+  #       layout_state ->
+  #         {:ok, adapted_layout} =
+  #           RtlLayoutEngine.adapt_container_layout(
+  #             layout_state,
+  #             text_direction: rtl_config[:text_direction],
+  #             locale: rtl_config[:locale]
+  #           )
+  #
+  #         %{context | layout_state: adapted_layout}
+  #     end
+  #   else
+  #     context
+  #   end
+  # end
 
   # TODO: RTL Language Support - Apply RTL attributes to HTML elements
   # Part of unfinished feature: Comprehensive RTL language support
-  defp apply_rtl_element_adaptations(html_elements, %RenderContext{} = context) do
-    rtl_config = context.config[:rtl_support] || %{}
-
-    if rtl_config[:rtl_enabled] do
-      Enum.map(html_elements, fn element ->
-        add_rtl_attributes_to_element(element, rtl_config)
-      end)
-    else
-      html_elements
-    end
-  end
+  # defp apply_rtl_element_adaptations(html_elements, %RenderContext{} = context) do
+  #   rtl_config = context.config[:rtl_support] || %{}
+  #
+  #   if rtl_config[:rtl_enabled] do
+  #     Enum.map(html_elements, fn element ->
+  #       add_rtl_attributes_to_element(element, rtl_config)
+  #     end)
+  #   else
+  #     html_elements
+  #   end
+  # end
 
   # TODO: RTL Language Support - Add specific RTL styling/attributes
   # Part of unfinished feature: Comprehensive RTL language support
-  defp add_rtl_attributes_to_element(element, rtl_config) when is_map(element) do
-    rtl_attributes = %{
-      dir: rtl_config[:text_direction],
-      lang: rtl_config[:locale],
-      class: "#{Map.get(element, :class, "")} rtl-element"
-    }
-
-    Map.merge(element, rtl_attributes)
-  end
-
-  defp add_rtl_attributes_to_element(element, _rtl_config), do: element
+  # defp add_rtl_attributes_to_element(element, rtl_config) when is_map(element) do
+  #   rtl_attributes = %{
+  #     dir: rtl_config[:text_direction],
+  #     lang: rtl_config[:locale],
+  #     class: "#{Map.get(element, :class, "")} rtl-element"
+  #   }
+  #
+  #   Map.merge(element, rtl_attributes)
+  # end
+  #
+  # defp add_rtl_attributes_to_element(element, _rtl_config), do: element
 
   # TODO: Advanced Locale Formatting - Apply locale-specific HTML formatting
   # Part of unfinished feature: Advanced locale-aware formatting
-  defp apply_locale_formatting(%RenderContext{} = context) do
-    # Apply locale-aware formatting to data records if enabled
-    html_config = context.config[:html] || %{}
-
-    if html_config[:locale_formatting] do
-      locale = RenderContext.get_locale(context)
-
-      # Format the records with locale-aware formatting
-      formatted_records =
-        context.records
-        |> Enum.map(fn record ->
-          apply_record_formatting(record, locale, context)
-        end)
-
-      # Update context with formatted records
-      updated_context = %{context | records: formatted_records}
-
-      # Apply translation enhancements
-      translated_context = apply_translation_enhancements(updated_context)
-
-      # Add formatted metadata
-      locale_metadata = RenderContext.get_locale_metadata(context)
-
-      updated_metadata =
-        Map.put(translated_context.metadata, :locale_formatting, %{
-          applied: true,
-          locale: locale,
-          text_direction: RenderContext.get_text_direction(context),
-          formatting_metadata: locale_metadata,
-          translations_applied: true
-        })
-
-      final_context = %{translated_context | metadata: updated_metadata}
-      {:ok, final_context}
-    else
-      {:ok, context}
-    end
-  end
+  # defp apply_locale_formatting(%RenderContext{} = context) do
+  #   # Apply locale-aware formatting to data records if enabled
+  #   html_config = context.config[:html] || %{}
+  #
+  #   if html_config[:locale_formatting] do
+  #     locale = RenderContext.get_locale(context)
+  #
+  #     # Format the records with locale-aware formatting
+  #     formatted_records =
+  #       context.records
+  #       |> Enum.map(fn record ->
+  #         apply_record_formatting(record, locale, context)
+  #       end)
+  #
+  #     # Update context with formatted records
+  #     updated_context = %{context | records: formatted_records}
+  #
+  #     # Apply translation enhancements
+  #     translated_context = apply_translation_enhancements(updated_context)
+  #
+  #     # Add formatted metadata
+  #     locale_metadata = RenderContext.get_locale_metadata(context)
+  #
+  #     updated_metadata =
+  #       Map.put(translated_context.metadata, :locale_formatting, %{
+  #         applied: true,
+  #         locale: locale,
+  #         text_direction: RenderContext.get_text_direction(context),
+  #         formatting_metadata: locale_metadata,
+  #         translations_applied: true
+  #       })
+  #
+  #     final_context = %{translated_context | metadata: updated_metadata}
+  #     {:ok, final_context}
+  #   else
+  #     {:ok, context}
+  #   end
+  # end
 
   # TODO: Smart Field Formatting - Apply advanced record-level formatting
   # Part of unfinished feature: Automatic intelligent formatting of report fields
-  defp apply_record_formatting(record, locale, _context) when is_map(record) do
-    # Apply locale-specific formatting to numeric and date fields
-    Enum.reduce(record, %{}, fn {key, value}, acc ->
-      format_type = detect_field_format_type(key, value)
-      formatted_value = format_field_by_type(value, format_type, locale)
-
-      # Store both original and formatted values
-      acc
-      # Keep original for calculations
-      |> Map.put(key, value)
-      # Add formatted for display
-      |> Map.put(String.to_atom("#{key}_formatted"), formatted_value)
-    end)
-  end
-
-  defp apply_record_formatting(record, _locale, _context), do: record
+  # defp apply_record_formatting(record, _locale, _context) when is_map(record) do
+  #   # Apply locale-specific formatting to numeric and date fields
+  #   Enum.reduce(record, %{}, fn {key, value}, acc ->
+  #     _format_type = :auto  # detect_field_format_type(key, value)
+  #     formatted_value = value  # format_field_by_type(value, format_type, locale)
+  #
+  #     # Store both original and formatted values
+  #     acc
+  #     # Keep original for calculations
+  #     |> Map.put(key, value)
+  #     # Add formatted for display
+  #     |> Map.put(String.to_atom("#{key}_formatted"), formatted_value)
+  #   end)
+  # end
+  #
+  # defp apply_record_formatting(record, _locale, _context), do: record
 
   # TODO: Smart Field Formatting - Apply appropriate formatting based on detected type
   # Part of unfinished feature: Automatic intelligent formatting of report fields
-  defp format_field_by_type(value, :number, locale) do
-    case Formatter.format_value(value, locale: locale, type: :number) do
-      {:ok, formatted} -> formatted
-      {:error, _} -> value
-    end
-  end
-
-  defp format_field_by_type(value, :currency, locale) do
-    case Formatter.format_value(value, locale: locale, type: :currency, currency: :USD) do
-      {:ok, formatted} -> formatted
-      {:error, _} -> value
-    end
-  end
-
-  defp format_field_by_type(value, :date, locale) do
-    case Formatter.format_value(value, locale: locale, type: :date) do
-      {:ok, formatted} -> formatted
-      {:error, _} -> value
-    end
-  end
-
-  defp format_field_by_type(value, :percentage, locale) do
-    case Formatter.format_value(value, locale: locale, type: :percentage) do
-      {:ok, formatted} -> formatted
-      {:error, _} -> value
-    end
-  end
-
-  defp format_field_by_type(value, _, _locale), do: value
+  # defp format_field_by_type(value, :number, locale) do
+  #   case Formatter.format_value(value, locale: locale, type: :number) do
+  #     {:ok, formatted} -> formatted
+  #     {:error, _} -> value
+  #   end
+  # end
+  #
+  # defp format_field_by_type(value, :currency, locale) do
+  #   case Formatter.format_value(value, locale: locale, type: :currency, currency: :USD) do
+  #     {:ok, formatted} -> formatted
+  #     {:error, _} -> value
+  #   end
+  # end
+  #
+  # defp format_field_by_type(value, :date, locale) do
+  #   case Formatter.format_value(value, locale: locale, type: :date) do
+  #     {:ok, formatted} -> formatted
+  #     {:error, _} -> value
+  #   end
+  # end
+  #
+  # defp format_field_by_type(value, :percentage, locale) do
+  #   case Formatter.format_value(value, locale: locale, type: :percentage) do
+  #     {:ok, formatted} -> formatted
+  #     {:error, _} -> value
+  #   end
+  # end
+  #
+  # defp format_field_by_type(value, _, _locale), do: value
 
   # TODO: Smart Field Formatting - Auto-detect if field is currency, percentage, date, etc.
   # Part of unfinished feature: Automatic intelligent formatting of report fields
-  defp detect_field_format_type(key, value) do
-    cond do
-      currency_field?(key, value) -> :currency
-      percentage_field?(key, value) -> :percentage
-      date_field?(value) -> :date
-      is_number(value) -> :number
-      true -> :string
-    end
-  end
+  # defp detect_field_format_type(key, value) do
+  #   cond do
+  #     currency_field?(key, value) -> :currency
+  #     percentage_field?(key, value) -> :percentage
+  #     date_field?(value) -> :date
+  #     is_number(value) -> :number
+  #     true -> :string
+  #   end
+  # end
 
   # TODO: Smart Field Formatting - Detect currency fields by name/value patterns
   # Part of unfinished feature: Automatic intelligent formatting of report fields
-  defp currency_field?(key, value) do
-    key_string = to_string(key)
-    currency_keywords = ["amount", "price", "cost", "total", "salary", "wage"]
-    String.contains?(key_string, currency_keywords) and is_number(value)
-  end
+  # Function removed - was unused
 
   # TODO: Smart Field Formatting - Detect percentage fields
   # Part of unfinished feature: Automatic intelligent formatting of report fields
-  defp percentage_field?(key, value) do
-    key_string = to_string(key)
-    percentage_keywords = ["rate", "percent", "ratio", "margin"]
-    String.contains?(key_string, percentage_keywords) and is_number(value)
-  end
+  # defp percentage_field?(key, value) do
+  #   key_string = to_string(key)
+  #   percentage_keywords = ["rate", "percent", "ratio", "margin"]
+  #   String.contains?(key_string, percentage_keywords) and is_number(value)
+  # end
 
   # TODO: Smart Field Formatting - Detect date/datetime fields
   # Part of unfinished feature: Automatic intelligent formatting of report fields
-  defp date_field?(value) do
-    match?(%Date{}, value) or match?(%DateTime{}, value) or match?(%NaiveDateTime{}, value)
-  end
+  # defp date_field?(value) do
+  #   match?(%Date{}, value) or match?(%DateTime{}, value) or match?(%NaiveDateTime{}, value)
+  # end
 
   defp build_result_metadata(%RenderContext{} = context, start_time) do
     end_time = System.monotonic_time(:microsecond)
@@ -592,85 +581,85 @@ defmodule AshReports.HtmlRenderer do
 
   # TODO: Full Internationalization - Apply locale-specific formatting and translations
   # Part of unfinished feature: Multi-language report support
-  defp apply_translation_enhancements(%RenderContext{} = context) do
-    locale = RenderContext.get_locale(context)
-
-    # Add translated UI elements to context metadata
-    ui_translations = %{
-      field_labels: prepare_field_label_translations(context, locale),
-      band_titles: prepare_band_title_translations(context, locale),
-      status_messages: prepare_status_message_translations(locale)
-    }
-
-    updated_metadata = Map.put(context.metadata, :translations, ui_translations)
-    %{context | metadata: updated_metadata}
-  end
+  # defp apply_translation_enhancements(%RenderContext{} = context) do
+  #   _locale = RenderContext.get_locale(context)
+  #
+  #   # Add translated UI elements to context metadata
+  #   ui_translations = %{
+  #     field_labels: %{},  # prepare_field_label_translations(context, locale),
+  #     band_titles: %{},   # prepare_band_title_translations(context, locale),
+  #     status_messages: %{} # prepare_status_message_translations(locale)
+  #   }
+  #
+  #   updated_metadata = Map.put(context.metadata, :translations, ui_translations)
+  #   %{context | metadata: updated_metadata}
+  # end
 
   # TODO: Full Internationalization - Translate field names based on locale
   # Part of unfinished feature: Multi-language report support
-  defp prepare_field_label_translations(%RenderContext{} = context, locale) do
-    # Extract field names from report definition and create translation map
-    field_names = extract_field_names_from_report(context.report)
-
-    Enum.reduce(field_names, %{}, fn field_name, acc ->
-      translated_label = Translation.translate_field_label(field_name, locale)
-      Map.put(acc, field_name, translated_label)
-    end)
-  end
+  # defp prepare_field_label_translations(%RenderContext{} = context, locale) do
+  #   # Extract field names from report definition and create translation map
+  #   field_names = extract_field_names_from_report(context.report)
+  #
+  #   Enum.reduce(field_names, %{}, fn field_name, acc ->
+  #     translated_label = Translation.translate_field_label(field_name, locale)
+  #     Map.put(acc, field_name, translated_label)
+  #   end)
+  # end
 
   # TODO: Full Internationalization - Translate report section titles
   # Part of unfinished feature: Multi-language report support
-  defp prepare_band_title_translations(%RenderContext{} = context, locale) do
-    # Extract band names from report definition and create translation map
-    band_names = extract_band_names_from_report(context.report)
-
-    Enum.reduce(band_names, %{}, fn band_name, acc ->
-      translated_title = Translation.translate_band_title(band_name, locale)
-      Map.put(acc, band_name, translated_title)
-    end)
-  end
+  # defp prepare_band_title_translations(%RenderContext{} = context, locale) do
+  #   # Extract band names from report definition and create translation map
+  #   band_names = extract_band_names_from_report(context.report)
+  #
+  #   Enum.reduce(band_names, %{}, fn band_name, acc ->
+  #     translated_title = Translation.translate_band_title(band_name, locale)
+  #     Map.put(acc, band_name, translated_title)
+  #   end)
+  # end
 
   # TODO: Full Internationalization - Translate UI status messages
   # Part of unfinished feature: Multi-language report support
-  defp prepare_status_message_translations(locale) do
-    status_keys = ["status.loading", "status.complete", "status.no_data"]
-
-    Enum.reduce(status_keys, %{}, fn key, acc ->
-      case Translation.translate_ui(key, [], locale) do
-        {:ok, translated} ->
-          status_name = key |> String.split(".") |> List.last()
-          Map.put(acc, status_name, translated)
-
-        {:error, _} ->
-          acc
-      end
-    end)
-  end
+  # defp prepare_status_message_translations(locale) do
+  #   status_keys = ["status.loading", "status.complete", "status.no_data"]
+  #
+  #   Enum.reduce(status_keys, %{}, fn key, acc ->
+  #     case Translation.translate_ui(key, [], locale) do
+  #       {:ok, translated} ->
+  #         status_name = key |> String.split(".") |> List.last()
+  #         Map.put(acc, status_name, translated)
+  #
+  #       {:error, _} ->
+  #         acc
+  #     end
+  #   end)
+  # end
 
   # TODO: Report Analytics - Extract all field names for analysis
   # Part of unfinished feature: Report introspection and metadata extraction
-  defp extract_field_names_from_report(report) do
-    report.bands
-    |> Enum.flat_map(fn band ->
-      Map.get(band, :elements, [])
-      |> Enum.filter(fn element ->
-        Map.get(element, :type) == :field
-      end)
-      |> Enum.map(fn element ->
-        Map.get(element, :source) || Map.get(element, :name)
-      end)
-    end)
-    |> Enum.filter(&(&1 != nil))
-    |> Enum.uniq()
-  end
+  # defp extract_field_names_from_report(report) do
+  #   report.bands
+  #   |> Enum.flat_map(fn band ->
+  #     Map.get(band, :elements, [])
+  #     |> Enum.filter(fn element ->
+  #       Map.get(element, :type) == :field
+  #     end)
+  #     |> Enum.map(fn element ->
+  #       Map.get(element, :source) || Map.get(element, :name)
+  #     end)
+  #   end)
+  #   |> Enum.filter(&(&1 != nil))
+  #   |> Enum.uniq()
+  # end
 
   # TODO: Report Analytics - Extract report section names
   # Part of unfinished feature: Report introspection and metadata extraction
-  defp extract_band_names_from_report(report) do
-    report.bands
-    |> Enum.map(fn band -> Map.get(band, :name) end)
-    |> Enum.filter(&(&1 != nil))
-  end
+  # defp extract_band_names_from_report(report) do
+  #   report.bands
+  #   |> Enum.map(fn band -> Map.get(band, :name) end)
+  #   |> Enum.filter(&(&1 != nil))
+  # end
 
   # Phase 5.2: Chart Integration Functions
 
@@ -755,7 +744,7 @@ defmodule AshReports.HtmlRenderer do
     |> Enum.join("\n\n")
   end
 
-  defp build_chart_js_config(chart_config, %RenderContext{} = context) do
+  defp build_chart_js_config(chart_config, %RenderContext{} = _context) do
     %{
       chart_id: generate_chart_id(chart_config),
       provider: chart_config.provider,

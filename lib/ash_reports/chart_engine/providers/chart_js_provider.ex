@@ -8,11 +8,11 @@ defmodule AshReports.ChartEngine.Providers.ChartJsProvider do
 
   @behaviour AshReports.ChartEngine.ChartProvider
 
-  alias AshReports.ChartEngine.{ChartConfig, ChartData}
+  alias AshReports.ChartEngine.ChartData
   alias AshReports.RenderContext
 
   @supported_chart_types [:line, :bar, :pie, :area, :scatter, :histogram]
-  @chartjs_version "4.4.0"
+  # @chartjs_version "4.4.0"
 
   @doc """
   Generate a Chart.js chart from configuration and data.

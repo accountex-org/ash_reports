@@ -46,8 +46,8 @@ defmodule AshReports.LiveView.WebSocketManager do
 
   use GenServer
 
-  alias AshReports.{InteractiveEngine, RenderContext}
-  
+  # alias AshReports.{InteractiveEngine, RenderContext}
+
   require Logger
 
   @registry_name AshReports.WebSocketRegistry
@@ -234,12 +234,19 @@ defmodule AshReports.LiveView.WebSocketManager do
     case start_stream_process(stream_config) do
       {:ok, pid} ->
         stream_id = generate_stream_id(stream_config.chart_id, stream_config.user_id)
+
         case register_stream(stream_id, pid, stream_config) do
-          {:ok, _} -> :ok
-          {:error, {:already_registered, _pid}} -> :ok  # Stream already exists, continue
-          {:error, reason} -> 
+          {:ok, _} ->
+            :ok
+
+          # Stream already exists, continue
+          {:error, {:already_registered, _pid}} ->
+            :ok
+
+          {:error, reason} ->
             Logger.error("Failed to register stream #{stream_id}: #{inspect(reason)}")
-            :ok  # Continue anyway for robustness
+            # Continue anyway for robustness
+            :ok
         end
 
         updated_connections =
@@ -370,7 +377,7 @@ defmodule AshReports.LiveView.WebSocketManager do
     :ok
   end
 
-  defp record_broadcast_metric(chart_id, status) do
+  defp record_broadcast_metric(_chart_id, status) do
     metrics = :persistent_term.get(:ash_reports_websocket_metrics, %{})
 
     updated_metrics =

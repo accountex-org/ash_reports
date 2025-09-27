@@ -60,7 +60,6 @@ defmodule AshReports.LiveView.AccessControl do
 
   require Logger
 
-
   # Predefined roles with permissions
   @roles %{
     :viewer => [

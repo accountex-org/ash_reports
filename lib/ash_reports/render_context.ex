@@ -425,7 +425,8 @@ defmodule AshReports.RenderContext do
   defp get_current_record_impl(%__MODULE__{current_record: record}, field, default) do
     case record do
       nil -> default
-      [] -> default  # Handle case where current_record is set to empty list
+      # Handle case where current_record is set to empty list
+      [] -> default
       record when is_map(record) -> Map.get(record, field, default)
       _ -> default
     end

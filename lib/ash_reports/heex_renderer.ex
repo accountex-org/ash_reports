@@ -316,132 +316,132 @@ defmodule AshReports.HeexRenderer do
 
   # TODO: HEEX Template Generation - Generate optimized HEEX templates
   # Part of unfinished feature: Performance optimization system for HEEX templates
-  defp generate_heex_template(%RenderContext{} = context, _assigns) do
-    template_content = """
-    <.report_container
-      report={@report}
-      config={@config}
-      class="ash-report"
-      data-report={@report.name}
-    >
-      <%= if @heex_config.include_header do %>
-        <.report_header
-          title={@report.title || @report.name}
-          metadata={@metadata}
-          class="ash-report-header"
-        />
-      <% end %>
-
-      <.report_content class="ash-report-content">
-        <.band_group
-          :for={band <- @report.bands}
-          band={band}
-          records={@records}
-          variables={@variables}
-          layout_state={@layout_state}
-          class="ash-band-group"
-        >
-          <.band
-            band={band}
-            current_record={@current_record}
-            class="ash-band"
-            data-band={band.name}
-          >
-            <.element
-              :for={element <- band.elements}
-              element={element}
-              record={@current_record}
-              variables={@variables}
-              class="ash-element"
-              data-element={element.name}
-            />
-          </.band>
-        </.band_group>
-      </.report_content>
-
-      <%= if @heex_config.include_footer do %>
-        <.report_footer
-          timestamp={DateTime.utc_now()}
-          metadata={@metadata}
-          class="ash-report-footer"
-        />
-      <% end %>
-    </.report_container>
-    """
-
-    optimized_template = optimize_heex_template(template_content, context)
-    {:ok, optimized_template}
-  end
+  # defp generate_heex_template(%RenderContext{} = context, _assigns) do
+  #   template_content = """
+  #   <.report_container
+  #     report={@report}
+  #     config={@config}
+  #     class="ash-report"
+  #     data-report={@report.name}
+  #   >
+  #     <%= if @heex_config.include_header do %>
+  #       <.report_header
+  #         title={@report.title || @report.name}
+  #         metadata={@metadata}
+  #         class="ash-report-header"
+  #       />
+  #     <% end %>
+  #
+  #     <.report_content class="ash-report-content">
+  #       <.band_group
+  #         :for={band <- @report.bands}
+  #         band={band}
+  #         records={@records}
+  #         variables={@variables}
+  #         layout_state={@layout_state}
+  #         class="ash-band-group"
+  #       >
+  #         <.band
+  #           band={band}
+  #           current_record={@current_record}
+  #           class="ash-band"
+  #           data-band={band.name}
+  #         >
+  #           <.element
+  #             :for={element <- band.elements}
+  #             element={element}
+  #             record={@current_record}
+  #             variables={@variables}
+  #             class="ash-element"
+  #             data-element={element.name}
+  #           />
+  #         </.band>
+  #       </.band_group>
+  #     </.report_content>
+  #
+  #     <%= if @heex_config.include_footer do %>
+  #       <.report_footer
+  #         timestamp={DateTime.utc_now()}
+  #         metadata={@metadata}
+  #         class="ash-report-footer"
+  #       />
+  #     <% end %>
+  #   </.report_container>
+  #   """
+  #
+  #   optimized_template = optimize_heex_template(template_content, context)
+  #   {:ok, optimized_template}
+  # end
 
   # TODO: HEEX Template Optimization - Main optimization entry point
   # Part of unfinished feature: Performance optimization system for HEEX templates
-  defp optimize_heex_template(template_content, %RenderContext{} = context) do
-    case context.config[:heex][:static_optimization] do
-      true -> apply_static_optimizations(template_content, context)
-      _ -> template_content
-    end
-  end
+  # defp optimize_heex_template(template_content, %RenderContext{} = context) do
+  #   case context.config[:heex][:static_optimization] do
+  #     true -> apply_static_optimizations(template_content, context)
+  #     _ -> template_content
+  #   end
+  # end
 
   # TODO: HEEX Template Optimization - Apply performance optimizations
   # Part of unfinished feature: Performance optimization system for HEEX templates
-  defp apply_static_optimizations(template_content, _context) do
-    template_content
-    |> remove_unnecessary_whitespace()
-    |> optimize_conditional_blocks()
-    |> optimize_loop_comprehensions()
-  end
+  # defp apply_static_optimizations(template_content, _context) do
+  #   template_content
+  #   |> remove_unnecessary_whitespace()
+  #   |> optimize_conditional_blocks()
+  #   |> optimize_loop_comprehensions()
+  # end
 
   # TODO: HEEX Template Optimization - Minify templates
   # Part of unfinished feature: Performance optimization system for HEEX templates
-  defp remove_unnecessary_whitespace(template) do
-    template
-    |> String.replace(~r/\n\s*\n/, "\n")
-    |> String.replace(~r/>\s+</, "><")
-  end
+  # defp remove_unnecessary_whitespace(template) do
+  #   template
+  #   |> String.replace(~r/\n\s*\n/, "\n")
+  #   |> String.replace(~r/>\s+</, "><")
+  # end
 
   # TODO: HEEX Template Optimization - Optimize conditional rendering
   # Part of unfinished feature: Performance optimization system for HEEX templates
-  defp optimize_conditional_blocks(template), do: template
+  # defp optimize_conditional_blocks(template), do: template
   # TODO: HEEX Template Optimization - Optimize loops and iterations
   # Part of unfinished feature: Performance optimization system for HEEX templates
-  defp optimize_loop_comprehensions(template), do: template
+  # defp optimize_loop_comprehensions(template), do: template
 
   # TODO: Performance Monitoring - Build performance and rendering metadata
   # Part of unfinished feature: Performance monitoring and optimization system
-  defp build_result_metadata(%RenderContext{} = context, start_time) do
-    end_time = System.monotonic_time(:microsecond)
-    render_time = end_time - start_time
-
-    metadata = %{
-      format: :heex,
-      render_time_us: render_time,
-      template_engine: :heex,
-      component_library: true,
-      liveview_compatible: true,
-      interactive: context.config[:heex][:interactive],
-      element_count: length(context.rendered_elements),
-      component_count: count_components(context),
-      template_size_bytes: get_estimated_template_size(context),
-      phase: "3.3.0",
-      components_used: [
-        :report_container,
-        :report_header,
-        :report_content,
-        :band_group,
-        :band,
-        :element,
-        :report_footer
-      ],
-      features: %{
-        real_time_updates: context.config[:heex][:real_time_updates],
-        filtering: context.config[:heex][:enable_filters],
-        accessibility: context.config[:heex][:accessibility],
-        static_optimization: context.config[:heex][:static_optimization]
-      }
-    }
-
-    {:ok, metadata}
-  end
+  # defp build_result_metadata(%RenderContext{} = context, start_time) do
+  #   end_time = System.monotonic_time(:microsecond)
+  #   render_time = end_time - start_time
+  #
+  #   metadata = %{
+  #     format: :heex,
+  #     render_time_us: render_time,
+  #     template_engine: :heex,
+  #     component_library: true,
+  #     liveview_compatible: true,
+  #     interactive: context.config[:heex][:interactive],
+  #     element_count: length(context.rendered_elements),
+  #     component_count: count_components(context),
+  #     template_size_bytes: get_estimated_template_size(context),
+  #     phase: "3.3.0",
+  #     components_used: [
+  #       :report_container,
+  #       :report_header,
+  #       :report_content,
+  #       :band_group,
+  #       :band,
+  #       :element,
+  #       :report_footer
+  #     ],
+  #     features: %{
+  #       real_time_updates: context.config[:heex][:real_time_updates],
+  #       filtering: context.config[:heex][:enable_filters],
+  #       accessibility: context.config[:heex][:accessibility],
+  #       static_optimization: context.config[:heex][:static_optimization]
+  #     }
+  #   }
+  #
+  #   {:ok, metadata}
+  # end
 
   defp validate_heex_requirements(%RenderContext{report: nil}) do
     {:error, :missing_report}
@@ -517,21 +517,21 @@ defmodule AshReports.HeexRenderer do
 
   # TODO: Performance Monitoring - Count template components for optimization
   # Part of unfinished feature: Performance monitoring and optimization system
-  defp count_components(%RenderContext{} = context) do
-    # Count unique component types used in the template
-    # report_container, header, content, band_group, band, element, footer
-    base_components = 7
-    custom_components = map_size(context.config[:heex][:custom_components] || %{})
-    base_components + custom_components
-  end
+  # defp count_components(%RenderContext{} = context) do
+  #   # Count unique component types used in the template
+  #   # report_container, header, content, band_group, band, element, footer
+  #   base_components = 7
+  #   custom_components = map_size(context.config[:heex][:custom_components] || %{})
+  #   base_components + custom_components
+  # end
 
   # TODO: Performance Monitoring - Estimate memory usage
   # Part of unfinished feature: Performance monitoring and optimization system
-  defp get_estimated_template_size(%RenderContext{} = _context) do
-    # This would calculate the estimated template size
-    # For now, return a placeholder based on typical HEEX template size
-    2048
-  end
+  # defp get_estimated_template_size(%RenderContext{} = _context) do
+  #   # This would calculate the estimated template size
+  #   # For now, return a placeholder based on typical HEEX template size
+  #   2048
+  # end
 
   # Phase 6.2: Chart Integration Functions
 
@@ -634,7 +634,7 @@ defmodule AshReports.HeexRenderer do
     }
   end
 
-  defp generate_base_report_template(%RenderContext{} = context, component_assigns) do
+  defp generate_base_report_template(%RenderContext{} = _context, component_assigns) do
     # Generate base HEEX template for report
     """
     <div class="ash-report #{if component_assigns.text_direction == "rtl", do: "rtl", else: "ltr"}" 

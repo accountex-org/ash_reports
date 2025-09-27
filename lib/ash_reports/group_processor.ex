@@ -382,10 +382,10 @@ defmodule AshReports.GroupProcessor do
     case extract_field_from_ash_expr_for_group(ash_expr) do
       {:ok, field} when is_atom(field) ->
         Map.get(record, field)
-        
+
       {:ok, path} when is_list(path) ->
         evaluate_nested_field(record, path)
-        
+
       :error ->
         nil
     end
@@ -397,14 +397,14 @@ defmodule AshReports.GroupProcessor do
       case ash_expr do
         %{expression: {:ref, [], field}} when is_atom(field) ->
           {:ok, field}
-          
+
         %{expression: field} when is_atom(field) ->
           {:ok, field}
-          
+
         # Handle relationship traversal like addresses.state
         %{expression: {:get_path, _, [%{expression: {:ref, [], rel}}, field]}} ->
           {:ok, [rel, field]}
-          
+
         _ ->
           :error
       end

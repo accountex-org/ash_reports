@@ -31,15 +31,15 @@ defmodule AshReports.LiveView.DistributedConnectionManager do
 
   use GenServer
 
-  alias AshReports.LiveView.{SessionManager, WebSocketOptimizer}
+  alias AshReports.LiveView.WebSocketOptimizer
 
   require Logger
 
   @cluster_name :ash_reports_cluster
   # 30 seconds
   @heartbeat_interval 30_000
-  # 10 seconds
-  @failover_timeout 10_000
+  # 10 seconds - failover timeout for future use
+  # @failover_timeout 10_000
   @max_connections_per_node 2000
 
   defstruct node_id: nil,
@@ -366,7 +366,7 @@ defmodule AshReports.LiveView.DistributedConnectionManager do
 
   defp perform_heartbeat(state) do
     # Send heartbeat and collect cluster health info
-    cluster_health = collect_cluster_health_info(state)
+    _cluster_health = collect_cluster_health_info(state)
 
     # Update performance metrics based on cluster state
     updated_metrics = %{

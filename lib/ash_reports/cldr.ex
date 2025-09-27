@@ -119,7 +119,7 @@ defmodule AshReports.Cldr do
   # Simplified CLDR implementation for development/testing
   @supported_locales [
     "en",
-    "en-GB", 
+    "en-GB",
     "es",
     "fr",
     "de",
@@ -133,7 +133,7 @@ defmodule AshReports.Cldr do
     "ar",
     "hi"
   ]
-  
+
   @default_locale "en"
 
   @doc """
@@ -166,17 +166,25 @@ defmodule AshReports.Cldr do
     format = Keyword.get(options, :format, :decimal)
 
     try do
-      formatted = 
+      formatted =
         case format do
-          :decimal -> format_decimal(number)
-          :currency -> 
+          :decimal ->
+            format_decimal(number)
+
+          :currency ->
             currency = Keyword.get(options, :currency, :USD)
             format_currency_simple(number, currency)
-          :percent -> "#{Float.round(number * 100, 2)}%"
-          :scientific -> :erlang.float_to_binary(number / 1.0, scientific: 2)
-          _ -> {:error, "Unsupported format: #{format}"}
+
+          :percent ->
+            "#{Float.round(number * 100, 2)}%"
+
+          :scientific ->
+            :erlang.float_to_binary(number / 1.0, scientific: 2)
+
+          _ ->
+            {:error, "Unsupported format: #{format}"}
         end
-      
+
       case formatted do
         {:error, _} = error -> error
         result -> {:ok, result}
@@ -416,7 +424,7 @@ defmodule AshReports.Cldr do
       locale -> locale
     end
   end
-  
+
   @spec default_locale() :: String.t()
   def default_locale, do: @default_locale
 
@@ -567,7 +575,8 @@ defmodule AshReports.Cldr do
       "es" -> ","
       "pt" -> ","
       "ru" -> ","
-      _ -> "."  # Default for English and others
+      # Default for English and others
+      _ -> "."
     end
   end
 
@@ -579,7 +588,8 @@ defmodule AshReports.Cldr do
       "es" -> "."
       "pt" -> "."
       "ru" -> " "
-      _ -> ","  # Default for English and others
+      # Default for English and others
+      _ -> ","
     end
   end
 
@@ -604,7 +614,8 @@ defmodule AshReports.Cldr do
       :EUR -> "€"
       :GBP -> "£"
       :JPY -> "¥"
-      _ -> "$"  # Default
+      # Default
+      _ -> "$"
     end
   end
 end

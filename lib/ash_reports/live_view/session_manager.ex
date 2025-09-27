@@ -44,7 +44,7 @@ defmodule AshReports.LiveView.SessionManager do
 
   use GenServer
 
-  alias AshReports.PubSub.ChartBroadcaster
+  # alias AshReports.PubSub.ChartBroadcaster  # Unused alias
   alias Phoenix.PubSub
 
   require Logger
@@ -194,11 +194,17 @@ defmodule AshReports.LiveView.SessionManager do
 
     # Register session
     case Registry.register(@registry_name, session_id, session) do
-      {:ok, _} -> :ok
-      {:error, {:already_registered, _pid}} -> :ok  # Session already exists, continue
-      {:error, reason} -> 
+      {:ok, _} ->
+        :ok
+
+      # Session already exists, continue
+      {:error, {:already_registered, _pid}} ->
+        :ok
+
+      {:error, reason} ->
         Logger.error("Failed to register session #{session_id}: #{inspect(reason)}")
-        :ok  # Continue anyway for robustness
+        # Continue anyway for robustness
+        :ok
     end
 
     updated_sessions = Map.put(state.sessions, session_id, session)

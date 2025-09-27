@@ -64,8 +64,8 @@ defmodule AshReports.LiveView.DataPipeline do
   @registry_name AshReports.DataPipelineRegistry
   @default_poll_interval 30_000
   @max_retry_attempts 3
-  # 5 minutes
-  @cache_ttl 300_000
+  # 5 minutes - cache TTL for future use
+  # @cache_ttl 300_000
 
   defstruct pipeline_id: nil,
             chart_id: nil,

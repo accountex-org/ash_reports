@@ -153,11 +153,12 @@ defmodule AshReports.Transformers.BuildReportModules do
 
         @impl true
         def render_with_context(context, opts) do
-          {:ok, %{
-            content: "Rendering not yet implemented for #{unquote(format)}",
-            metadata: %{format: unquote(format)},
-            context: context
-          }}
+          {:ok,
+           %{
+             content: "Rendering not yet implemented for #{unquote(format)}",
+             metadata: %{format: unquote(format)},
+             context: context
+           }}
         end
 
         @impl true

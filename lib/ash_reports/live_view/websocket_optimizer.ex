@@ -36,7 +36,7 @@ defmodule AshReports.LiveView.WebSocketOptimizer do
 
   use GenServer
 
-  alias AshReports.LiveView.{SessionManager, WebSocketManager}
+  alias AshReports.LiveView.SessionManager
   alias AshReports.PubSub.ChartBroadcaster
 
   require Logger

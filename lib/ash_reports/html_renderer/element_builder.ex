@@ -593,10 +593,12 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
   end
 
   defp build_position_style(element, %RenderContext{} = context) do
-    position = case Map.get(element, :position, %{}) do
-      pos when is_map(pos) -> pos
-      _ -> %{}  # Handle case where position is not a map (like empty list [])
-    end
+    position =
+      case Map.get(element, :position, %{}) do
+        pos when is_map(pos) -> pos
+        # Handle case where position is not a map (like empty list [])
+        _ -> %{}
+      end
 
     # Try to get position from layout state if not in element
     layout_position = get_element_layout_position(element, context)

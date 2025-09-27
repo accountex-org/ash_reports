@@ -120,7 +120,6 @@ defmodule AshReports.JsonRenderer do
 
   alias AshReports.{
     Formatter,
-    JsonRenderer.ChartApi,
     JsonRenderer.DataSerializer,
     JsonRenderer.SchemaManager,
     JsonRenderer.StreamingEngine,
@@ -129,7 +128,7 @@ defmodule AshReports.JsonRenderer do
   }
 
   # Phase 6.3: Chart Integration
-  alias AshReports.ChartEngine.{ChartConfig, ChartDataProcessor}
+  alias AshReports.ChartEngine.ChartDataProcessor
 
   @doc """
   Enhanced render callback with full Phase 3.5 JSON generation.
@@ -316,12 +315,13 @@ defmodule AshReports.JsonRenderer do
 
       # Format the records with locale-aware formatting for JSON output
       # Ensure records is always a list
-      records_list = 
+      records_list =
         case context.records do
           records when is_list(records) -> records
-          record -> [record]  # Wrap single record in a list
+          # Wrap single record in a list
+          record -> [record]
         end
-        
+
       formatted_records =
         records_list
         |> Enum.map(fn record ->
@@ -351,15 +351,17 @@ defmodule AshReports.JsonRenderer do
 
   defp format_record_for_json(record, locale, dual_format) when is_map(record) do
     # Convert struct to map if needed to make it enumerable
-    enumerable_record = 
+    enumerable_record =
       case record do
-        %{__struct__: _} -> 
+        %{__struct__: _} ->
           record
           |> Map.from_struct()
           |> clean_ash_not_loaded_values()
-        map -> map
+
+        map ->
+          map
       end
-    
+
     Enum.reduce(enumerable_record, %{}, fn {key, value}, acc ->
       if dual_format do
         format_record_dual_format(acc, key, value, locale)
@@ -374,12 +376,12 @@ defmodule AshReports.JsonRenderer do
   # Helper function to clean problematic values from maps
   defp clean_ash_not_loaded_values(map) when is_map(map) do
     Map.reject(map, fn {key, value} ->
-      is_problematic_value?(key, value)
+      problematic_value?(key, value)
     end)
   end
 
   # Check if a value should be excluded from JSON serialization
-  defp is_problematic_value?(key, value) do
+  defp problematic_value?(key, value) do
     case {key, value} do
       # Remove Ash.NotLoaded placeholders
       {_, %{__struct__: Ash.NotLoaded}} -> true

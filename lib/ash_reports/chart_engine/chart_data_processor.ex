@@ -83,8 +83,8 @@ defmodule AshReports.ChartEngine.ChartDataProcessor do
           {:ok, processed_data} ->
             {renderer_type, {:ok, processed_data}}
 
-          {:error, reason} ->
-            {renderer_type, {:error, reason}}
+            # {:error, reason} ->
+            #   {renderer_type, {:error, reason}}
         end
       end)
       |> Map.new()
@@ -172,9 +172,9 @@ defmodule AshReports.ChartEngine.ChartDataProcessor do
     {:ok, base_data}
   end
 
-  defp apply_renderer_optimizations({:error, reason}, _renderer_type, _context) do
-    {:error, reason}
-  end
+  # defp apply_renderer_optimizations({:error, reason}, _renderer_type, _context) do
+  #   {:error, reason}
+  # end
 
   defp validate_output_compatibility({:ok, processed_data}, renderer_type) do
     case renderer_type do
@@ -197,9 +197,9 @@ defmodule AshReports.ChartEngine.ChartDataProcessor do
     end
   end
 
-  defp validate_output_compatibility({:error, reason}, _renderer_type) do
-    {:error, reason}
-  end
+  # defp validate_output_compatibility({:error, reason}, _renderer_type) do
+  #   {:error, reason}
+  # end
 
   defp normalize_chart_data(data) when is_list(data) do
     # Normalize list data to standard format
