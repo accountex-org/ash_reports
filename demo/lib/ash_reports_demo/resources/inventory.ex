@@ -79,10 +79,20 @@ defmodule AshReportsDemo.Inventory do
 
   actions do
     defaults [:read, :update, :destroy]
-    
+
     create :create do
       primary? true
-      accept [:current_stock, :reserved_stock, :reorder_point, :reorder_quantity, :location, :last_received_date, :last_received_quantity, :product_id]
+
+      accept [
+        :current_stock,
+        :reserved_stock,
+        :reorder_point,
+        :reorder_quantity,
+        :location,
+        :last_received_date,
+        :last_received_quantity,
+        :product_id
+      ]
     end
 
     read :low_stock do

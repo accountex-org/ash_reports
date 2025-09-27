@@ -43,7 +43,7 @@ defmodule AshReportsDemo.Customer do
     attribute :credit_limit, :decimal do
       description "Customer credit limit"
       default Decimal.new("5000.00")
-      constraints [max: Decimal.new("100000.00"), min: Decimal.new("0.00")]
+      constraints max: Decimal.new("100000.00"), min: Decimal.new("0.00")
     end
 
     attribute :created_at, :utc_datetime_usec do
@@ -73,7 +73,7 @@ defmodule AshReportsDemo.Customer do
 
   actions do
     defaults [:read, :update, :destroy]
-    
+
     create :create do
       primary? true
       accept [:name, :email, :phone, :status, :credit_limit, :notes, :customer_type_id]
@@ -142,14 +142,14 @@ defmodule AshReportsDemo.Customer do
       require_atomic? false
       argument :new_limit, :decimal, allow_nil?: false
       argument :reason, :string, allow_nil?: false
-      
+
       change fn changeset, _context ->
         new_limit = Ash.Changeset.get_argument(changeset, :new_limit)
         reason = Ash.Changeset.get_argument(changeset, :reason)
-        
+
         # Business logic for credit limit adjustment
         notes = "Credit limit adjusted to $#{Decimal.to_string(new_limit)}. Reason: #{reason}"
-        
+
         changeset
         |> Ash.Changeset.change_attribute(:credit_limit, new_limit)
         |> Ash.Changeset.change_attribute(:notes, notes)
@@ -162,21 +162,22 @@ defmodule AshReportsDemo.Customer do
       require_atomic? false
       argument :interaction_type, :string, allow_nil?: false
       argument :notes, :string, default: ""
-      
+
       change fn changeset, _context ->
         interaction_type = Ash.Changeset.get_argument(changeset, :interaction_type)
         interaction_notes = Ash.Changeset.get_argument(changeset, :notes)
-        
+
         # Add interaction to customer notes
         current_notes = Ash.Changeset.get_attribute(changeset, :notes) || ""
         timestamp = DateTime.utc_now() |> DateTime.to_date() |> Date.to_string()
-        
-        new_notes = if String.length(current_notes) > 0 do
-          "#{current_notes}\n[#{timestamp}] #{interaction_type}: #{interaction_notes}"
-        else
-          "[#{timestamp}] #{interaction_type}: #{interaction_notes}"
-        end
-        
+
+        new_notes =
+          if String.length(current_notes) > 0 do
+            "#{current_notes}\n[#{timestamp}] #{interaction_type}: #{interaction_notes}"
+          else
+            "[#{timestamp}] #{interaction_type}: #{interaction_notes}"
+          end
+
         changeset
         |> Ash.Changeset.change_attribute(:notes, new_notes)
         |> Ash.Changeset.change_attribute(:updated_at, DateTime.utc_now())
@@ -266,23 +267,27 @@ defmodule AshReportsDemo.Customer do
     # Phase 7.4: Advanced customer analytics
     calculate :customer_health_score, :integer do
       description "Customer health score based on payment history and engagement (0-100)"
-      
+
       calculation fn records, _context ->
         records
         |> Enum.map(fn customer ->
           # Advanced health scoring algorithm
-          payment_score = case customer.status do
-            :active -> 70 + :rand.uniform(30)    # 70-100
-            :inactive -> 30 + :rand.uniform(40)  # 30-70
-            :suspended -> :rand.uniform(30)      # 0-30
-          end
-          
+          payment_score =
+            case customer.status do
+              # 70-100
+              :active -> 70 + :rand.uniform(30)
+              # 30-70
+              :inactive -> 30 + :rand.uniform(40)
+              # 0-30
+              :suspended -> :rand.uniform(30)
+            end
+
           # Adjust based on credit limit (higher limit = better customer)
           credit_bonus = min(20, Decimal.to_integer(customer.credit_limit) / 2500)
-          
+
           # Simulate engagement score based on recent activity
           engagement_score = :rand.uniform(20)
-          
+
           final_score = min(100, payment_score + credit_bonus + engagement_score)
           {customer.id, final_score}
         end)
@@ -292,28 +297,30 @@ defmodule AshReportsDemo.Customer do
 
     calculate :risk_category, :string do
       description "Customer risk category based on multiple factors"
-      
+
       calculation fn records, _context ->
         records
         |> Enum.map(fn customer ->
           # Risk assessment based on status and payment patterns
-          base_risk = case customer.status do
-            :active -> "Low"
-            :inactive -> "Medium"  
-            :suspended -> "High"
-          end
-          
-          # Adjust based on credit limit
-          risk_adjustment = if Decimal.gt?(customer.credit_limit, Decimal.new("25000")) do
-            case base_risk do
-              "Medium" -> "Low-Medium"
-              "High" -> "Medium-High"
-              other -> other
+          base_risk =
+            case customer.status do
+              :active -> "Low"
+              :inactive -> "Medium"
+              :suspended -> "High"
             end
-          else
-            base_risk
-          end
-          
+
+          # Adjust based on credit limit
+          risk_adjustment =
+            if Decimal.gt?(customer.credit_limit, Decimal.new("25000")) do
+              case base_risk do
+                "Medium" -> "Low-Medium"
+                "High" -> "Medium-High"
+                other -> other
+              end
+            else
+              base_risk
+            end
+
           {customer.id, risk_adjustment}
         end)
         |> Map.new()
@@ -322,18 +329,19 @@ defmodule AshReportsDemo.Customer do
 
     calculate :customer_tier, :string do
       description "Customer tier classification based on lifetime value and engagement"
-      
+
       calculation fn records, _context ->
         records
         |> Enum.map(fn customer ->
           # Simulate tier calculation based on multiple factors
-          credit_tier = cond do
-            Decimal.gte?(customer.credit_limit, Decimal.new("50000")) -> "Platinum"
-            Decimal.gte?(customer.credit_limit, Decimal.new("25000")) -> "Gold" 
-            Decimal.gte?(customer.credit_limit, Decimal.new("10000")) -> "Silver"
-            true -> "Bronze"
-          end
-          
+          credit_tier =
+            cond do
+              Decimal.gte?(customer.credit_limit, Decimal.new("50000")) -> "Platinum"
+              Decimal.gte?(customer.credit_limit, Decimal.new("25000")) -> "Gold"
+              Decimal.gte?(customer.credit_limit, Decimal.new("10000")) -> "Silver"
+              true -> "Bronze"
+            end
+
           {customer.id, credit_tier}
         end)
         |> Map.new()
@@ -342,19 +350,23 @@ defmodule AshReportsDemo.Customer do
 
     calculate :next_review_date, :date do
       description "Recommended next review date based on customer risk and activity"
-      
+
       calculation fn records, _context ->
         today = Date.utc_today()
-        
+
         records
         |> Enum.map(fn customer ->
           # Calculate review frequency based on status
-          days_until_review = case customer.status do
-            :active -> 90    # Quarterly review
-            :inactive -> 30  # Monthly review
-            :suspended -> 7  # Weekly review
-          end
-          
+          days_until_review =
+            case customer.status do
+              # Quarterly review
+              :active -> 90
+              # Monthly review
+              :inactive -> 30
+              # Weekly review
+              :suspended -> 7
+            end
+
           review_date = Date.add(today, days_until_review)
           {customer.id, review_date}
         end)
@@ -391,7 +403,7 @@ defmodule AshReportsDemo.Customer do
     end
 
     count :overdue_invoice_count, :invoices do
-      description "Number of overdue invoices for risk assessment" 
+      description "Number of overdue invoices for risk assessment"
       filter expr(status == :overdue)
     end
 
@@ -412,17 +424,17 @@ defmodule AshReportsDemo.Customer do
     validate match(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/), message: "must be a valid email address"
     validate compare(:credit_limit, greater_than_or_equal_to: 0), message: "must be non-negative"
     validate attribute_does_not_equal(:name, ""), message: "name cannot be blank"
-    
+
     # Phase 7.4: Advanced business validations
     validate fn changeset, _context ->
       # Advanced validation: Credit limit cannot exceed 5x the customer type maximum
       customer_type_id = Ash.Changeset.get_attribute(changeset, :customer_type_id)
       credit_limit = Ash.Changeset.get_attribute(changeset, :credit_limit)
-      
+
       if customer_type_id && credit_limit do
         # For demo: basic validation logic
         max_allowed = Decimal.new("100000.00")
-        
+
         if Decimal.gt?(credit_limit, max_allowed) do
           {:error, field: :credit_limit, message: "credit limit exceeds maximum allowed"}
         else

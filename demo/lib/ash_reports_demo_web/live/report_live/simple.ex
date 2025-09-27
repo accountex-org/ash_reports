@@ -6,7 +6,7 @@ defmodule AshReportsDemoWeb.ReportLive.Simple do
 
   def mount(_params, _session, socket) do
     customers = load_customers()
-    
+
     {:ok,
      socket
      |> assign(:page_title, "Simple Report")
@@ -16,7 +16,7 @@ defmodule AshReportsDemoWeb.ReportLive.Simple do
 
   def handle_event("refresh", _params, socket) do
     customers = load_customers()
-    
+
     {:noreply,
      socket
      |> put_flash(:info, "Report refreshed!")
@@ -97,7 +97,7 @@ defmodule AshReportsDemoWeb.ReportLive.Simple do
 
   defp load_customers do
     try do
-      Ash.read!(Customer, domain: Domain, query: Ash.Query.limit(50))
+      Ash.read!(Customer, domain: Domain, query: Ash.Query.limit(Customer, 50))
     rescue
       _ -> []
     end

@@ -72,25 +72,25 @@ defmodule AshReportsDemoWeb.ReportsIntegrationTest do
       conn
       |> visit("/")
       |> assert_has("h1", text: "Welcome to AshReports Demo")
-      
+
       # Navigate to reports
       |> click_link("Reports Demo")
       |> assert_path("/reports")
       |> assert_has("h1", text: "Available Reports")
-      
+
       # Generate sample data
       |> click_button("Regenerate Sample Data")
       |> assert_has("text", text: "Sample data regenerated successfully!")
-      
+
       # View simple report
       |> click_link("View Report", at: 0)
       |> assert_path("/reports/simple")
       |> assert_has("h1", text: "Simple Customer Report")
-      
+
       # Refresh the report
       |> click_button("Refresh Report")
       |> assert_has("text", text: "Report refreshed!")
-      
+
       # Navigate back
       |> click_link("← Back to Reports")
       |> assert_path("/reports")

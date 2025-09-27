@@ -8,7 +8,7 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
 
   use ExUnit.Case, async: true
 
-  alias AshReportsDemo.{Customer, Product, Invoice, InvoiceLineItem, DataGenerator}
+  alias AshReportsDemo.{Customer, DataGenerator, Invoice, InvoiceLineItem, Product}
 
   @reports [
     :customer_summary,
@@ -29,12 +29,13 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
   describe "customer summary report" do
     test "generates successfully in all formats" do
       for format <- @formats do
-        {:ok, result} = AshReports.Runner.run_report(
-          AshReportsDemo.Domain,
-          :customer_summary,
-          %{},
-          format: format
-        )
+        {:ok, result} =
+          AshReports.Runner.run_report(
+            AshReportsDemo.Domain,
+            :customer_summary,
+            %{},
+            format: format
+          )
 
         assert result.content
         assert result.metadata
@@ -63,19 +64,21 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
 
     test "applies parameter filters correctly" do
       # Test region filtering
-      {:ok, all_result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :customer_summary,
-        %{},
-        format: :json
-      )
+      {:ok, all_result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :customer_summary,
+          %{},
+          format: :json
+        )
 
-      {:ok, filtered_result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :customer_summary,
-        %{region: "North"},
-        format: :json
-      )
+      {:ok, filtered_result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :customer_summary,
+          %{region: "North"},
+          format: :json
+        )
 
       all_data = Jason.decode!(all_result.content)
       filtered_data = Jason.decode!(filtered_result.content)
@@ -84,12 +87,13 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
       assert length(filtered_data["data"]) <= length(all_data["data"])
 
       # Test health score filtering
-      {:ok, health_filtered} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :customer_summary,
-        %{min_health_score: 80},
-        format: :json
-      )
+      {:ok, health_filtered} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :customer_summary,
+          %{min_health_score: 80},
+          format: :json
+        )
 
       health_data = Jason.decode!(health_filtered.content)
 
@@ -100,15 +104,16 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
     end
 
     test "validates multi-level grouping variables" do
-      {:ok, result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :customer_summary,
-        %{},
-        format: :json
-      )
+      {:ok, result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :customer_summary,
+          %{},
+          format: :json
+        )
 
       data = Jason.decode!(result.content)
-      
+
       # Verify grouping structure exists
       assert Map.has_key?(data, "groups")
       assert Map.has_key?(data, "variables")
@@ -129,12 +134,13 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
 
   describe "product inventory report" do
     test "generates with profitability analytics" do
-      {:ok, result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :product_inventory,
-        %{},
-        format: :json
-      )
+      {:ok, result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :product_inventory,
+          %{},
+          format: :json
+        )
 
       data = Jason.decode!(result.content)
       assert length(data["data"]) > 0
@@ -148,12 +154,13 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
     end
 
     test "filters by profitability grade" do
-      {:ok, result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :product_inventory,
-        %{profitability_grade: "A"},
-        format: :json
-      )
+      {:ok, result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :product_inventory,
+          %{profitability_grade: "A"},
+          format: :json
+        )
 
       # Get records from the data result instead of JSON content
       records = result.data.records
@@ -161,21 +168,24 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
       # All products should have grade A
       for product <- records do
         # Access the profitability grade from the struct/calculation
-        grade = case product do
-          %{profitability_grade: grade} -> grade
-          _ -> nil
-        end
+        grade =
+          case product do
+            %{profitability_grade: grade} -> grade
+            _ -> nil
+          end
+
         assert grade == "A"
       end
     end
 
     test "validates inventory metrics" do
-      {:ok, result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :product_inventory,
-        %{},
-        format: :json
-      )
+      {:ok, result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :product_inventory,
+          %{},
+          format: :json
+        )
 
       data = Jason.decode!(result.content)
       variables = data["variables"]
@@ -196,12 +206,13 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
 
   describe "invoice details report" do
     test "generates master-detail structure" do
-      {:ok, result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :invoice_details,
-        %{},
-        format: :json
-      )
+      {:ok, result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :invoice_details,
+          %{},
+          format: :json
+        )
 
       data = Jason.decode!(result.content)
       assert length(data["data"]) > 0
@@ -217,12 +228,13 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
     end
 
     test "calculates payment performance metrics" do
-      {:ok, result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :invoice_details,
-        %{},
-        format: :json
-      )
+      {:ok, result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :invoice_details,
+          %{},
+          format: :json
+        )
 
       data = Jason.decode!(result.content)
       variables = data["variables"]
@@ -245,12 +257,13 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
     end
 
     test "filters by invoice status" do
-      {:ok, overdue_result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :invoice_details,
-        %{status: :overdue},
-        format: :json
-      )
+      {:ok, overdue_result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :invoice_details,
+          %{status: :overdue},
+          format: :json
+        )
 
       overdue_data = Jason.decode!(overdue_result.content)
 
@@ -259,12 +272,13 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
         assert invoice["status"] == "overdue"
       end
 
-      {:ok, paid_result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :invoice_details,
-        %{status: :paid},
-        format: :json
-      )
+      {:ok, paid_result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :invoice_details,
+          %{status: :paid},
+          format: :json
+        )
 
       paid_data = Jason.decode!(paid_result.content)
 
@@ -277,12 +291,13 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
 
   describe "financial summary report" do
     test "generates executive-level metrics" do
-      {:ok, result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :financial_summary,
-        %{},
-        format: :json
-      )
+      {:ok, result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :financial_summary,
+          %{},
+          format: :json
+        )
 
       data = Jason.decode!(result.content)
       variables = data["variables"]
@@ -304,12 +319,13 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
     end
 
     test "validates customer tier revenue distribution" do
-      {:ok, result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :financial_summary,
-        %{customer_tier_analysis: true},
-        format: :json
-      )
+      {:ok, result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :financial_summary,
+          %{customer_tier_analysis: true},
+          format: :json
+        )
 
       data = Jason.decode!(result.content)
       variables = data["variables"]
@@ -323,19 +339,21 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
       end
 
       # Total tier revenue should not exceed total revenue
-      tier_total = variables["platinum_revenue"] + variables["gold_revenue"] + 
-                  variables["silver_revenue"] + variables["bronze_revenue"]
-      
+      tier_total =
+        variables["platinum_revenue"] + variables["gold_revenue"] +
+          variables["silver_revenue"] + variables["bronze_revenue"]
+
       assert tier_total <= variables["total_revenue"]
     end
 
     test "validates risk-based analysis" do
-      {:ok, result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :financial_summary,
-        %{risk_analysis: true},
-        format: :json
-      )
+      {:ok, result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :financial_summary,
+          %{risk_analysis: true},
+          format: :json
+        )
 
       data = Jason.decode!(result.content)
       variables = data["variables"]
@@ -358,26 +376,31 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
     test "all formats produce consistent record counts" do
       for report <- @reports do
         # Generate reports in all formats
-        results = Enum.map(@formats, fn format ->
-          {:ok, result} = AshReports.Runner.run_report(
-            AshReportsDemo.Domain,
-            report,
-            sample_params_for(report),
-            format: format
-          )
-          {format, result}
-        end)
+        results =
+          Enum.map(@formats, fn format ->
+            {:ok, result} =
+              AshReports.Runner.run_report(
+                AshReportsDemo.Domain,
+                report,
+                sample_params_for(report),
+                format: format
+              )
+
+            {format, result}
+          end)
 
         # Extract record counts across formats
-        record_counts = Enum.map(results, fn {format, result} ->
-          case format do
-            :json ->
-              data = Jason.decode!(result.content)
-              length(data["data"])
-            _ ->
-              result.metadata.record_count
-          end
-        end)
+        record_counts =
+          Enum.map(results, fn {format, result} ->
+            case format do
+              :json ->
+                data = Jason.decode!(result.content)
+                length(data["data"])
+
+              _ ->
+                result.metadata.record_count
+            end
+          end)
 
         # All formats should have the same record count
         assert Enum.uniq(record_counts) |> length() == 1,
@@ -389,24 +412,26 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
       report = :customer_summary
 
       # Get JSON result for comparison
-      {:ok, json_result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        report,
-        %{},
-        format: :json
-      )
+      {:ok, json_result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          report,
+          %{},
+          format: :json
+        )
 
       json_data = Jason.decode!(json_result.content)
       json_variables = json_data["variables"]
 
       # Compare with other formats
       for format <- [:html, :heex] do
-        {:ok, result} = AshReports.Runner.run_report(
-          AshReportsDemo.Domain,
-          report,
-          %{},
-          format: format
-        )
+        {:ok, result} =
+          AshReports.Runner.run_report(
+            AshReportsDemo.Domain,
+            report,
+            %{},
+            format: format
+          )
 
         # Variable values should be accessible through metadata
         assert result.metadata.record_count == json_variables["customer_count"]
@@ -418,20 +443,21 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
     @tag :benchmark
     test "all reports meet performance targets" do
       data_volumes = [:small, :medium, :large]
-      
+
       for volume <- data_volumes do
         DataGenerator.reset_data()
         DataGenerator.generate_sample_data(volume)
 
         for report <- @reports do
-          {time_us, {:ok, _result}} = :timer.tc(fn ->
-            AshReports.Runner.run_report(
-              AshReportsDemo.Domain,
-              report,
-              sample_params_for(report),
-              format: :html
-            )
-          end)
+          {time_us, {:ok, _result}} =
+            :timer.tc(fn ->
+              AshReports.Runner.run_report(
+                AshReportsDemo.Domain,
+                report,
+                sample_params_for(report),
+                format: :html
+              )
+            end)
 
           time_ms = div(time_us, 1000)
           max_time = max_time_for_volume(volume)
@@ -446,7 +472,7 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
   describe "business logic validation" do
     test "customer health scores reflect accurate calculations" do
       # Create customers with known patterns
-      {:ok, high_health_customer} = 
+      {:ok, high_health_customer} =
         Customer.create(AshReportsDemo.Domain, %{
           name: "High Health Customer",
           email: "high@test.com",
@@ -456,18 +482,19 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
 
       {:ok, low_health_customer} =
         Customer.create(AshReportsDemo.Domain, %{
-          name: "Low Health Customer", 
+          name: "Low Health Customer",
           email: "low@test.com",
           status: :suspended,
           credit_limit: Decimal.new("1000.00")
         })
 
-      {:ok, result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :customer_summary,
-        %{},
-        format: :json
-      )
+      {:ok, result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :customer_summary,
+          %{},
+          format: :json
+        )
 
       data = Jason.decode!(result.content)
       customer_data = data["data"]
@@ -478,17 +505,20 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
 
       # Validate health score calculations
       assert high_record["customer_health_score"] > low_record["customer_health_score"]
-      assert high_record["customer_health_score"] >= 70  # Active status bonus
-      assert low_record["customer_health_score"] <= 50   # Suspended penalty
+      # Active status bonus
+      assert high_record["customer_health_score"] >= 70
+      # Suspended penalty
+      assert low_record["customer_health_score"] <= 50
     end
 
     test "product profitability grades calculated correctly" do
-      {:ok, result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :product_inventory,
-        %{},
-        format: :json
-      )
+      {:ok, result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :product_inventory,
+          %{},
+          format: :json
+        )
 
       data = Jason.decode!(result.content)
 
@@ -499,7 +529,7 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
         # Verify grade assignments match margin ranges
         cond do
           margin >= 50.0 -> assert grade == "A"
-          margin >= 30.0 -> assert grade == "B"  
+          margin >= 30.0 -> assert grade == "B"
           margin >= 15.0 -> assert grade == "C"
           margin >= 5.0 -> assert grade == "D"
           true -> assert grade == "F"
@@ -508,12 +538,13 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
     end
 
     test "invoice aging calculations are accurate" do
-      {:ok, result} = AshReports.Runner.run_report(
-        AshReportsDemo.Domain,
-        :invoice_details,
-        %{},
-        format: :json
-      )
+      {:ok, result} =
+        AshReports.Runner.run_report(
+          AshReportsDemo.Domain,
+          :invoice_details,
+          %{},
+          format: :json
+        )
 
       # Get records from the data result instead of JSON content
       records = result.data.records
@@ -522,25 +553,29 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
       for invoice <- records do
         # Calculate expected age
         calculated_age = Date.diff(today, invoice.date)
-        
+
         # Get age_in_days from calculation (might be a loaded calculation)
-        actual_age = case invoice do
-          %{age_in_days: age} when not is_nil(age) -> age
-          _ -> Date.diff(today, invoice.date) # fallback calculation
-        end
-        
+        actual_age =
+          case invoice do
+            %{age_in_days: age} when not is_nil(age) -> age
+            # fallback calculation
+            _ -> Date.diff(today, invoice.date)
+          end
+
         assert actual_age == calculated_age
 
         # Verify overdue calculations
         if invoice.due_date do
           calculated_overdue = Date.diff(today, invoice.due_date)
-          
+
           # Get days_overdue from calculation (might be a loaded calculation)
-          actual_overdue = case invoice do
-            %{days_overdue: days} when not is_nil(days) -> days
-            _ -> max(0, Date.diff(today, invoice.due_date)) # fallback calculation
-          end
-          
+          actual_overdue =
+            case invoice do
+              %{days_overdue: days} when not is_nil(days) -> days
+              # fallback calculation
+              _ -> max(0, Date.diff(today, invoice.due_date))
+            end
+
           assert actual_overdue == calculated_overdue
         end
       end
@@ -549,15 +584,17 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
 
   describe "error handling and edge cases" do
     test "handles empty datasets gracefully" do
-      DataGenerator.reset_data()  # No data generation
+      # No data generation
+      DataGenerator.reset_data()
 
       for report <- @reports do
-        {:ok, result} = AshReports.Runner.run_report(
-          AshReportsDemo.Domain,
-          report,
-          sample_params_for(report),
-          format: :json
-        )
+        {:ok, result} =
+          AshReports.Runner.run_report(
+            AshReportsDemo.Domain,
+            report,
+            sample_params_for(report),
+            format: :json
+          )
 
         data = Jason.decode!(result.content)
         assert data["data"] == []
@@ -571,7 +608,8 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
         AshReports.Runner.run_report(
           AshReportsDemo.Domain,
           :customer_summary,
-          %{min_health_score: 150},  # Invalid: > 100
+          # Invalid: > 100
+          %{min_health_score: 150},
           format: :json
         )
       end
@@ -581,30 +619,32 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
         AshReports.Runner.run_report(
           AshReportsDemo.Domain,
           :product_inventory,
-          %{profitability_grade: "Z"},  # Invalid grade
+          # Invalid grade
+          %{profitability_grade: "Z"},
           format: :json
         )
       end
     end
 
     test "handles concurrent report generation" do
-      tasks = Enum.map(1..10, fn _i ->
-        Task.async(fn ->
-          AshReports.Runner.run_report(
-            AshReportsDemo.Domain,
-            :customer_summary,
-            %{},
-            format: :json
-          )
+      tasks =
+        Enum.map(1..10, fn _i ->
+          Task.async(fn ->
+            AshReports.Runner.run_report(
+              AshReportsDemo.Domain,
+              :customer_summary,
+              %{},
+              format: :json
+            )
+          end)
         end)
-      end)
 
       results = Task.await_many(tasks, 30_000)
 
       # All tasks should complete successfully
       assert Enum.all?(results, fn result ->
-        match?({:ok, _}, result)
-      end)
+               match?({:ok, _}, result)
+             end)
     end
   end
 
@@ -614,7 +654,10 @@ defmodule AshReportsDemo.Reports.Phase75ComprehensiveReportsTest do
   defp sample_params_for(:invoice_details), do: %{}
   defp sample_params_for(:financial_summary), do: %{}
 
-  defp max_time_for_volume(:small), do: 500    # 500ms
-  defp max_time_for_volume(:medium), do: 2000  # 2s
-  defp max_time_for_volume(:large), do: 10000  # 10s
+  # 500ms
+  defp max_time_for_volume(:small), do: 500
+  # 2s
+  defp max_time_for_volume(:medium), do: 2000
+  # 10s
+  defp max_time_for_volume(:large), do: 10000
 end

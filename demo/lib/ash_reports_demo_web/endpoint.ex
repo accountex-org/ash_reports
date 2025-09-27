@@ -1,7 +1,7 @@
 defmodule AshReportsDemoWeb.Endpoint do
   @moduledoc """
   Phoenix endpoint for AshReports demo application.
-  
+
   Provides web interface to showcase AshReports functionality with
   LiveView integration, chart demonstrations, and interactive reports.
   """

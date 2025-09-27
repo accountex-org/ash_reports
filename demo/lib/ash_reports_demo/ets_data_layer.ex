@@ -43,13 +43,22 @@ defmodule AshReportsDemo.EtsDataLayer do
   end
 
   defp map_resource_to_table("Elixir.AshReportsDemo.Customer"), do: :demo_customers
-  defp map_resource_to_table("Elixir.AshReportsDemo.CustomerAddress"), do: :demo_customer_addresses
+
+  defp map_resource_to_table("Elixir.AshReportsDemo.CustomerAddress"),
+    do: :demo_customer_addresses
+
   defp map_resource_to_table("Elixir.AshReportsDemo.CustomerType"), do: :demo_customer_types
   defp map_resource_to_table("Elixir.AshReportsDemo.Product"), do: :demo_products
-  defp map_resource_to_table("Elixir.AshReportsDemo.ProductCategory"), do: :demo_product_categories
+
+  defp map_resource_to_table("Elixir.AshReportsDemo.ProductCategory"),
+    do: :demo_product_categories
+
   defp map_resource_to_table("Elixir.AshReportsDemo.Inventory"), do: :demo_inventory
   defp map_resource_to_table("Elixir.AshReportsDemo.Invoice"), do: :demo_invoices
-  defp map_resource_to_table("Elixir.AshReportsDemo.InvoiceLineItem"), do: :demo_invoice_line_items
+
+  defp map_resource_to_table("Elixir.AshReportsDemo.InvoiceLineItem"),
+    do: :demo_invoice_line_items
+
   defp map_resource_to_table(_), do: :demo_unknown
 
   @doc """

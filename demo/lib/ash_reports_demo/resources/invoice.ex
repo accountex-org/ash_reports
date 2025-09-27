@@ -50,7 +50,7 @@ defmodule AshReportsDemo.Invoice do
     attribute :tax_rate, :decimal do
       description "Tax rate applied"
       default Decimal.new("8.25")
-      constraints [min: Decimal.new("0.00"), max: Decimal.new("50.00")]
+      constraints min: Decimal.new("0.00"), max: Decimal.new("50.00")
     end
 
     attribute :tax_amount, :decimal do
@@ -100,16 +100,41 @@ defmodule AshReportsDemo.Invoice do
 
   actions do
     defaults [:read, :destroy]
-    
+
     create :create do
       primary? true
-      accept [:invoice_number, :date, :due_date, :status, :subtotal, :tax_rate, :tax_amount, :total, :payment_terms, :notes, :customer_id]
+
+      accept [
+        :invoice_number,
+        :date,
+        :due_date,
+        :status,
+        :subtotal,
+        :tax_rate,
+        :tax_amount,
+        :total,
+        :payment_terms,
+        :notes,
+        :customer_id
+      ]
     end
-    
+
     update :update do
       primary? true
       require_atomic? false
-      accept [:invoice_number, :date, :due_date, :status, :subtotal, :tax_rate, :tax_amount, :total, :payment_terms, :notes]
+
+      accept [
+        :invoice_number,
+        :date,
+        :due_date,
+        :status,
+        :subtotal,
+        :tax_rate,
+        :tax_amount,
+        :total,
+        :payment_terms,
+        :notes
+      ]
     end
 
     read :by_status do
@@ -336,7 +361,7 @@ defmodule AshReportsDemo.Invoice do
       if changeset.action_type == :update do
         current_status = Ash.Changeset.get_attribute(changeset, :status)
         due_date = Ash.Changeset.get_attribute(changeset, :due_date)
-        
+
         if current_status == :sent && due_date && Date.compare(Date.utc_today(), due_date) == :gt do
           Ash.Changeset.change_attribute(changeset, :status, :overdue)
         else

@@ -3,7 +3,8 @@ import Config
 # Configure AshReportsDemo application
 config :ash_reports_demo,
   ets_data_layer: true,
-  auto_generate_data: false
+  auto_generate_data: false,
+  ash_domains: [AshReportsDemo.Domain]
 
 # Disable PDF generation to avoid ChromicPDF dependency issues
 config :ash_reports,
@@ -38,7 +39,8 @@ config :phoenix_test, :endpoint, AshReportsDemoWeb.Endpoint
 config :esbuild,
   version: "0.21.5",
   ash_reports_demo: [
-    args: ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+    args:
+      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]

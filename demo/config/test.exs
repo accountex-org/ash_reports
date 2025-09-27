@@ -14,7 +14,8 @@ config :ash_reports_demo, AshReportsDemo.DataGenerator,
 # Configure the endpoint for tests
 config :ash_reports_demo, AshReportsDemoWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
-  secret_key_base: "ash_reports_demo_test_secret_key_base_for_tests_only_do_not_use_in_production",
+  secret_key_base:
+    "ash_reports_demo_test_secret_key_base_for_tests_only_do_not_use_in_production",
   server: true
 
 # Configure logger for tests
@@ -32,6 +33,7 @@ config :ex_unit,
 
 # Configure PhoenixTest
 config :phoenix_test, :endpoint, AshReportsDemoWeb.Endpoint
+
 config :ash_reports_demo, AshReportsDemoWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "test_secret_key_base",

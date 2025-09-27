@@ -18,18 +18,18 @@ defmodule AshReportsDemoWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
-    
+
     # Report demonstrations
     live "/reports", ReportLive.Index, :index
     live "/reports/simple", ReportLive.Simple, :show
     live "/reports/complex", ReportLive.Complex, :show
     live "/reports/interactive", ReportLive.Interactive, :show
-    
+
     # Dashboard demonstrations
     live "/dashboard", DashboardLive.Index, :index
     live "/dashboard/sales", DashboardLive.Sales, :show
     live "/dashboard/analytics", DashboardLive.Analytics, :show
-    
+
     # Chart demonstrations
     live "/charts", ChartLive.Index, :index
     live "/charts/line", ChartLive.Line, :show

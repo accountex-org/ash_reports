@@ -39,7 +39,7 @@ defmodule AshReportsDemo.InvoiceLineItem do
     attribute :discount_percentage, :decimal do
       description "Discount percentage applied to this line"
       default Decimal.new("0.00")
-      constraints [min: Decimal.new("0.00"), max: Decimal.new("100.00")]
+      constraints min: Decimal.new("0.00"), max: Decimal.new("100.00")
     end
 
     attribute :discount_amount, :decimal do
@@ -69,10 +69,20 @@ defmodule AshReportsDemo.InvoiceLineItem do
 
   actions do
     defaults [:read, :update, :destroy]
-    
+
     create :create do
       primary? true
-      accept [:quantity, :unit_price, :line_total, :discount_percentage, :discount_amount, :description, :invoice_id, :product_id]
+
+      accept [
+        :quantity,
+        :unit_price,
+        :line_total,
+        :discount_percentage,
+        :discount_amount,
+        :description,
+        :invoice_id,
+        :product_id
+      ]
     end
 
     read :by_invoice do

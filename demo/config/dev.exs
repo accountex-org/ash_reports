@@ -23,7 +23,8 @@ config :ash_reports_demo, AshReportsDemoWeb.Endpoint,
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
-  secret_key_base: "ash_reports_demo_dev_secret_key_base_for_development_only_change_in_production",
+  secret_key_base:
+    "ash_reports_demo_dev_secret_key_base_for_development_only_change_in_production",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:ash_reports_demo, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:ash_reports_demo, ~w(--watch)]}

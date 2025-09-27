@@ -19,7 +19,6 @@ defmodule AshReportsDemoWeb.ConnCase do
 
   using do
     quote do
-      @endpoint AshReportsWeb.Endpoint  # Must be first
       # The default endpoint for testing
       @endpoint AshReportsDemoWeb.Endpoint
 
@@ -36,10 +35,10 @@ defmodule AshReportsDemoWeb.ConnCase do
   setup _tags do
     # Ensure we have fresh test data for each test
     AshReportsDemo.DataGenerator.reset_data()
-    
+
     # Generate some basic data for tests
     AshReportsDemo.DataGenerator.generate_sample_data(:small)
-    
+
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

@@ -31,7 +31,7 @@ defmodule AshReportsDemo.CustomerType do
     attribute :discount_percentage, :decimal do
       description "Default discount percentage for this customer type"
       default Decimal.new("0.00")
-      constraints [max: Decimal.new("50.00"), min: Decimal.new("0.00")]
+      constraints max: Decimal.new("50.00"), min: Decimal.new("0.00")
     end
 
     attribute :priority_level, :integer do
@@ -62,7 +62,7 @@ defmodule AshReportsDemo.CustomerType do
 
   actions do
     defaults [:read, :update, :destroy]
-    
+
     create :create do
       primary? true
       accept [:name, :description, :discount_percentage, :priority_level, :active]

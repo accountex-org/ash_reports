@@ -10,12 +10,23 @@ defmodule AshReportsDemo.DataGenerator do
 
   require Logger
 
-  alias AshReportsDemo.{Customer, CustomerAddress, CustomerType, Product, ProductCategory, Inventory, Invoice, InvoiceLineItem, Domain, EtsDataLayer}
+  alias AshReportsDemo.{
+    Customer,
+    CustomerAddress,
+    CustomerType,
+    Domain,
+    EtsDataLayer,
+    Inventory,
+    Invoice,
+    InvoiceLineItem,
+    Product,
+    ProductCategory
+  }
 
   @data_volumes %{
     small: %{
       customer_types: 4,
-      product_categories: 5, 
+      product_categories: 5,
       customers: 25,
       products: 100,
       invoices: 75,
@@ -190,10 +201,12 @@ defmodule AshReportsDemo.DataGenerator do
     else
       # Use a small volume config just for foundation data
       volume_config = @data_volumes.small
+
       case generate_foundation_data(volume_config) do
         :ok ->
           Logger.info("Foundation data generated successfully")
           {:reply, :ok, state}
+
         {:error, reason} ->
           Logger.error("Foundation data generation failed: #{reason}")
           {:reply, {:error, reason}, state}
@@ -207,10 +220,12 @@ defmodule AshReportsDemo.DataGenerator do
       {:reply, {:error, "Data generation already in progress"}, state}
     else
       volume_config = @data_volumes.small
+
       case generate_customer_data(volume_config) do
         :ok ->
           Logger.info("Customer data generated successfully")
           {:reply, :ok, state}
+
         {:error, reason} ->
           Logger.error("Customer data generation failed: #{reason}")
           {:reply, {:error, reason}, state}
@@ -224,10 +239,12 @@ defmodule AshReportsDemo.DataGenerator do
       {:reply, {:error, "Data generation already in progress"}, state}
     else
       volume_config = @data_volumes.small
+
       case generate_product_data(volume_config) do
         :ok ->
           Logger.info("Product data generated successfully")
           {:reply, :ok, state}
+
         {:error, reason} ->
           Logger.error("Product data generation failed: #{reason}")
           {:reply, {:error, reason}, state}
@@ -241,10 +258,12 @@ defmodule AshReportsDemo.DataGenerator do
       {:reply, {:error, "Data generation already in progress"}, state}
     else
       volume_config = @data_volumes.small
+
       case generate_invoice_data(volume_config) do
         :ok ->
           Logger.info("Invoice data generated successfully")
           {:reply, :ok, state}
+
         {:error, reason} ->
           Logger.error("Invoice data generation failed: #{reason}")
           {:reply, {:error, reason}, state}
@@ -258,6 +277,7 @@ defmodule AshReportsDemo.DataGenerator do
       {:ok, stats} ->
         Logger.info("Data integrity validation successful")
         {:reply, {:ok, stats}, state}
+
       {:error, reason} ->
         Logger.error("Data integrity validation failed: #{reason}")
         {:reply, {:error, reason}, state}
@@ -270,33 +290,40 @@ defmodule AshReportsDemo.DataGenerator do
     volume_config = Map.get(@data_volumes, volume)
 
     if volume_config do
-      Logger.info("Starting transactional data generation for #{volume} volume: #{inspect(volume_config)}")
+      Logger.info(
+        "Starting transactional data generation for #{volume} volume: #{inspect(volume_config)}"
+      )
 
       # Start transaction: clear existing data and track checkpoint
       :ok = EtsDataLayer.clear_all_data()
       generation_start = System.monotonic_time(:millisecond)
 
-      result = with :ok <- log_transaction_step("Foundation data generation"),
-                    :ok <- generate_foundation_data(volume_config),
-                    :ok <- log_transaction_step("Customer data generation"),
-                    :ok <- generate_customer_data(volume_config),
-                    :ok <- log_transaction_step("Product data generation"),
-                    :ok <- generate_product_data(volume_config),
-                    :ok <- log_transaction_step("Invoice data generation"),
-                    :ok <- generate_invoice_data(volume_config),
-                    :ok <- log_transaction_step("Referential integrity validation"),
-                    {:ok, integrity_stats} <- validate_referential_integrity() do
-        generation_time = System.monotonic_time(:millisecond) - generation_start
-        Logger.info("Successfully completed transactional data generation for #{volume} dataset")
-        Logger.info("Generation time: #{generation_time}ms")
-        Logger.info("Data counts: #{inspect(integrity_stats)}")
-        :ok
-      else
-        {:error, reason} ->
-          Logger.error("Transaction failed during data generation: #{reason}")
-          rollback_transaction()
-          {:error, reason}
-      end
+      result =
+        with :ok <- log_transaction_step("Foundation data generation"),
+             :ok <- generate_foundation_data(volume_config),
+             :ok <- log_transaction_step("Customer data generation"),
+             :ok <- generate_customer_data(volume_config),
+             :ok <- log_transaction_step("Product data generation"),
+             :ok <- generate_product_data(volume_config),
+             :ok <- log_transaction_step("Invoice data generation"),
+             :ok <- generate_invoice_data(volume_config),
+             :ok <- log_transaction_step("Referential integrity validation"),
+             {:ok, integrity_stats} <- validate_referential_integrity() do
+          generation_time = System.monotonic_time(:millisecond) - generation_start
+
+          Logger.info(
+            "Successfully completed transactional data generation for #{volume} dataset"
+          )
+
+          Logger.info("Generation time: #{generation_time}ms")
+          Logger.info("Data counts: #{inspect(integrity_stats)}")
+          :ok
+        else
+          {:error, reason} ->
+            Logger.error("Transaction failed during data generation: #{reason}")
+            rollback_transaction()
+            {:error, reason}
+        end
 
       result
     else
@@ -327,7 +354,10 @@ defmodule AshReportsDemo.DataGenerator do
 
     with {:ok, customer_types} <- create_customer_types(),
          {:ok, product_categories} <- create_product_categories() do
-      Logger.info("Generated foundation data: #{length(customer_types)} customer types, #{length(product_categories)} product categories")
+      Logger.info(
+        "Generated foundation data: #{length(customer_types)} customer types, #{length(product_categories)} product categories"
+      )
+
       :ok
     else
       {:error, reason} -> {:error, "Foundation data generation failed: #{reason}"}
@@ -336,45 +366,43 @@ defmodule AshReportsDemo.DataGenerator do
 
   defp create_customer_types do
     customer_type_specs = [
-      %{name: "Bronze", description: "Basic customer tier", 
-        discount_percentage: Decimal.new("0"), active: true, priority_level: 1},
-      %{name: "Silver", description: "Standard customer tier", 
-        discount_percentage: Decimal.new("5"), active: true, priority_level: 2},
-      %{name: "Gold", description: "Premium customer tier", 
-        discount_percentage: Decimal.new("10"), active: true, priority_level: 3},
-      %{name: "Platinum", description: "Elite customer tier", 
-        discount_percentage: Decimal.new("15"), active: true, priority_level: 4}
+      %{
+        name: "Bronze",
+        description: "Basic customer tier",
+        discount_percentage: Decimal.new("0"),
+        active: true,
+        priority_level: 1
+      },
+      %{
+        name: "Silver",
+        description: "Standard customer tier",
+        discount_percentage: Decimal.new("5"),
+        active: true,
+        priority_level: 2
+      },
+      %{
+        name: "Gold",
+        description: "Premium customer tier",
+        discount_percentage: Decimal.new("10"),
+        active: true,
+        priority_level: 3
+      },
+      %{
+        name: "Platinum",
+        description: "Elite customer tier",
+        discount_percentage: Decimal.new("15"),
+        active: true,
+        priority_level: 4
+      }
     ]
 
-    results = for type_spec <- customer_type_specs do
-      # Check if customer type already exists
-      case Ash.read(CustomerType, domain: Domain) do
-        {:ok, types} ->
-          existing = Enum.find(types, &(&1.name == type_spec.name))
-          
-          if existing do
-            Logger.debug("Customer type '#{type_spec.name}' already exists")
-            existing
-          else
-            # Create new customer type
-            case Ash.create(CustomerType, type_spec, domain: Domain) do
-              {:ok, customer_type} ->
-                Logger.debug("Created customer type: #{customer_type.name}")
-                customer_type
-              {:error, error} ->
-                Logger.error("Failed to create customer type #{type_spec.name}: #{inspect(error)}")
-                nil
-            end
-          end
-          
-        {:error, error} ->
-          Logger.error("Failed to query customer types: #{inspect(error)}")
-          nil
+    results =
+      for type_spec <- customer_type_specs do
+        create_or_find_customer_type(type_spec)
       end
-    end
 
     valid_types = Enum.reject(results, &is_nil/1)
-    
+
     if length(valid_types) >= 4 do
       {:ok, valid_types}
     else
@@ -384,42 +412,35 @@ defmodule AshReportsDemo.DataGenerator do
 
   defp create_product_categories do
     category_specs = [
-      %{name: "Electronics", description: "Electronic devices and accessories", sort_order: 1, active: true},
+      %{
+        name: "Electronics",
+        description: "Electronic devices and accessories",
+        sort_order: 1,
+        active: true
+      },
       %{name: "Clothing", description: "Apparel and accessories", sort_order: 2, active: true},
-      %{name: "Home & Garden", description: "Home improvement and gardening", sort_order: 3, active: true},
-      %{name: "Books", description: "Books and educational materials", sort_order: 4, active: true},
+      %{
+        name: "Home & Garden",
+        description: "Home improvement and gardening",
+        sort_order: 3,
+        active: true
+      },
+      %{
+        name: "Books",
+        description: "Books and educational materials",
+        sort_order: 4,
+        active: true
+      },
       %{name: "Sports", description: "Sports and outdoor equipment", sort_order: 5, active: true}
     ]
 
-    results = for category_spec <- category_specs do
-      # Check if category already exists
-      case Ash.read(ProductCategory, domain: Domain) do
-        {:ok, categories} ->
-          existing = Enum.find(categories, &(&1.name == category_spec.name))
-          
-          if existing do
-            Logger.debug("Product category '#{category_spec.name}' already exists")
-            existing
-          else
-            # Create new product category
-            case Ash.create(ProductCategory, category_spec, domain: Domain) do
-              {:ok, category} ->
-                Logger.debug("Created product category: #{category.name}")
-                category
-              {:error, error} ->
-                Logger.error("Failed to create category #{category_spec.name}: #{inspect(error)}")
-                nil
-            end
-          end
-          
-        {:error, error} ->
-          Logger.error("Failed to query product categories: #{inspect(error)}")
-          nil
+    results =
+      for category_spec <- category_specs do
+        create_or_find_product_category(category_spec)
       end
-    end
 
     valid_categories = Enum.reject(results, &is_nil/1)
-    
+
     if length(valid_categories) >= 5 do
       {:ok, valid_categories}
     else
@@ -473,35 +494,42 @@ defmodule AshReportsDemo.DataGenerator do
   end
 
   defp create_products_batch(categories, product_count) do
-    products = for i <- 1..product_count do
-      category = Enum.random(categories)
-      
-      # Generate realistic pricing with proper margins
-      cost = Decimal.new("#{:rand.uniform(500) + 10}")  # $10-$510
-      margin_multiplier = 1.2 + (:rand.uniform(100) / 100)  # 1.2x to 2.2x markup
-      price = Decimal.mult(cost, Decimal.new("#{margin_multiplier}"))
+    products =
+      for i <- 1..product_count do
+        category = Enum.random(categories)
 
-      product_attrs = %{
-        name: Faker.Commerce.product_name(),
-        sku: generate_unique_sku(i),
-        description: Faker.Lorem.sentence(10),
-        price: price,
-        cost: cost,
-        weight: Decimal.new("#{:rand.uniform(100) / 10}"),  # 0.1 to 10.0 lbs
-        category_id: category.id,
-        active: Enum.random([true, true, true, false])  # 75% active
-      }
+        # Generate realistic pricing with proper margins
+        # $10-$510
+        cost = Decimal.new("#{:rand.uniform(500) + 10}")
+        # 1.2x to 2.2x markup
+        margin_multiplier = 1.2 + :rand.uniform(100) / 100
+        price = Decimal.mult(cost, Decimal.new("#{margin_multiplier}"))
 
-      case Ash.create(Product, product_attrs, domain: Domain) do
-        {:ok, product} -> product
-        {:error, error} ->
-          Logger.error("Failed to create product #{i}: #{inspect(error)}")
-          nil
+        product_attrs = %{
+          name: Faker.Commerce.product_name(),
+          sku: generate_unique_sku(i),
+          description: Faker.Lorem.sentence(10),
+          price: price,
+          cost: cost,
+          # 0.1 to 10.0 lbs
+          weight: Decimal.new("#{:rand.uniform(100) / 10}"),
+          category_id: category.id,
+          # 75% active
+          active: Enum.random([true, true, true, false])
+        }
+
+        case Ash.create(Product, product_attrs, domain: Domain) do
+          {:ok, product} ->
+            product
+
+          {:error, error} ->
+            Logger.error("Failed to create product #{i}: #{inspect(error)}")
+            nil
+        end
       end
-    end
 
     valid_products = Enum.reject(products, &is_nil/1)
-    
+
     if length(valid_products) > 0 do
       {:ok, valid_products}
     else
@@ -510,29 +538,38 @@ defmodule AshReportsDemo.DataGenerator do
   end
 
   defp create_inventory_for_products(products) do
-    inventory_records = for product <- products do
-      current_stock = :rand.uniform(1000)
-      # Ensure reserved_stock never exceeds current_stock
-      reserved_stock = :rand.uniform(min(50, current_stock))
-      
-      inventory_attrs = %{
-        product_id: product.id,
-        current_stock: current_stock,
-        reserved_stock: reserved_stock,
-        reorder_point: 10 + :rand.uniform(40),  # 10-50
-        reorder_quantity: 50 + :rand.uniform(200),  # 50-250
-        location: Enum.random(["Main Warehouse", "East Coast", "West Coast", "Central"]),
-        last_received_date: Faker.Date.backward(:rand.uniform(90)),  # Within last 90 days
-        last_received_quantity: 25 + :rand.uniform(200)
-      }
+    inventory_records =
+      for product <- products do
+        current_stock = :rand.uniform(1000)
+        # Ensure reserved_stock never exceeds current_stock
+        reserved_stock = :rand.uniform(min(50, current_stock))
 
-      case Ash.create(Inventory, inventory_attrs, domain: Domain) do
-        {:ok, inventory} -> inventory
-        {:error, error} ->
-          Logger.error("Failed to create inventory for product #{product.id}: #{inspect(error)}")
-          nil
+        inventory_attrs = %{
+          product_id: product.id,
+          current_stock: current_stock,
+          reserved_stock: reserved_stock,
+          # 10-50
+          reorder_point: 10 + :rand.uniform(40),
+          # 50-250
+          reorder_quantity: 50 + :rand.uniform(200),
+          location: Enum.random(["Main Warehouse", "East Coast", "West Coast", "Central"]),
+          # Within last 90 days
+          last_received_date: Faker.Date.backward(:rand.uniform(90)),
+          last_received_quantity: 25 + :rand.uniform(200)
+        }
+
+        case Ash.create(Inventory, inventory_attrs, domain: Domain) do
+          {:ok, inventory} ->
+            inventory
+
+          {:error, error} ->
+            Logger.error(
+              "Failed to create inventory for product #{product.id}: #{inspect(error)}"
+            )
+
+            nil
+        end
       end
-    end
 
     valid_inventory = Enum.reject(inventory_records, &is_nil/1)
     {:ok, valid_inventory}
@@ -543,66 +580,9 @@ defmodule AshReportsDemo.DataGenerator do
     Logger.info("Generating #{invoice_count} invoices with line items")
 
     with {:ok, customers} <- Ash.read(Customer, domain: Domain),
-         {:ok, products} <- Ash.read(Product, domain: Domain) do
-      
-      if Enum.empty?(customers) or Enum.empty?(products) do
-        {:error, "Cannot generate invoices without customers and products"}
-      else
-        # Generate invoices with proper error handling
-        results = for i <- 1..invoice_count do
-          customer = Enum.random(customers)
-          
-          invoice_date = Faker.Date.backward(:rand.uniform(365))  # Within last year
-          due_date = Date.add(invoice_date, 30)  # 30 days payment terms
-
-          invoice_attrs = %{
-            customer_id: customer.id,
-            invoice_number: "INV-#{Date.to_string(invoice_date) |> String.replace("-", "")}-#{String.pad_leading(Integer.to_string(i), 4, "0")}",
-            date: invoice_date,
-            due_date: due_date,
-            status: Enum.random([:draft, :sent, :sent, :paid, :overdue]),  # Mixed statuses
-            tax_rate: Decimal.new("8.25"),
-            payment_terms: Enum.random(["Net 30", "Net 15", "Due on Receipt", "Net 45"]),
-            notes: if(:rand.uniform(3) == 1, do: Faker.Lorem.sentence(), else: "")
-          }
-
-          case Ash.create(Invoice, invoice_attrs, domain: Domain) do
-            {:ok, invoice} ->
-              case create_line_items_for_invoice(invoice, products, volume_config) do
-                {:ok, subtotal} ->
-                  # Update invoice totals
-                  tax_amount = Decimal.mult(subtotal, Decimal.div(invoice.tax_rate, 100))
-                  total = Decimal.add(subtotal, tax_amount)
-
-                  case Ash.update(invoice, %{
-                    subtotal: subtotal,
-                    tax_amount: tax_amount,
-                    total: total
-                  }, domain: Domain) do
-                    {:ok, _updated_invoice} -> :ok
-                    {:error, error} -> 
-                      Logger.error("Failed to update invoice #{invoice.id} totals: #{inspect(error)}")
-                      :error
-                  end
-                {:error, reason} ->
-                  Logger.error("Failed to create line items for invoice #{invoice.id}: #{reason}")
-                  :error
-              end
-            {:error, error} ->
-              Logger.error("Failed to create invoice #{i}: #{inspect(error)}")
-              :error
-          end
-        end
-
-        # Check if most invoices were created successfully
-        error_count = Enum.count(results, &(&1 == :error))
-        if error_count < invoice_count / 2 do
-          Logger.info("Generated #{invoice_count - error_count} invoices with line items (#{error_count} failed)")
-          :ok
-        else
-          {:error, "Too many invoice creation failures: #{error_count}/#{invoice_count}"}
-        end
-      end
+         {:ok, products} <- Ash.read(Product, domain: Domain),
+         :ok <- validate_invoice_prerequisites(customers, products) do
+      create_invoices_batch(customers, products, volume_config)
     else
       {:error, reason} -> {:error, "Failed to load customers/products: #{inspect(reason)}"}
     end
@@ -614,41 +594,46 @@ defmodule AshReportsDemo.DataGenerator do
   defp create_line_items_for_invoice(invoice, products, volume_config) do
     line_item_range = volume_config.line_items_per_invoice
     line_item_count = Enum.random(line_item_range)
-    
-    results = for _j <- 1..line_item_count do
-      product = Enum.random(products)
-      quantity = Decimal.new("#{1 + :rand.uniform(20)}")  # 1-20 units
-      
-      # Use product price with potential discount
-      unit_price = if :rand.uniform(4) == 1 do
-        # 25% chance of discount
-        discount = Decimal.mult(product.price, Decimal.new("#{:rand.uniform(20) / 100}"))
-        Decimal.sub(product.price, discount)
-      else
-        product.price
+
+    results =
+      for _j <- 1..line_item_count do
+        product = Enum.random(products)
+        # 1-20 units
+        quantity = Decimal.new("#{1 + :rand.uniform(20)}")
+
+        # Use product price with potential discount
+        unit_price =
+          if :rand.uniform(4) == 1 do
+            # 25% chance of discount
+            discount = Decimal.mult(product.price, Decimal.new("#{:rand.uniform(20) / 100}"))
+            Decimal.sub(product.price, discount)
+          else
+            product.price
+          end
+
+        line_total = Decimal.mult(quantity, unit_price)
+
+        line_item_attrs = %{
+          invoice_id: invoice.id,
+          product_id: product.id,
+          quantity: quantity,
+          unit_price: unit_price,
+          line_total: line_total,
+          description: if(:rand.uniform(3) == 1, do: Faker.Lorem.sentence(5), else: "")
+        }
+
+        case Ash.create(InvoiceLineItem, line_item_attrs, domain: Domain) do
+          {:ok, _line_item} ->
+            {:ok, line_total}
+
+          {:error, error} ->
+            Logger.error("Failed to create line item: #{inspect(error)}")
+            {:error, line_total}
+        end
       end
-
-      line_total = Decimal.mult(quantity, unit_price)
-
-      line_item_attrs = %{
-        invoice_id: invoice.id,
-        product_id: product.id,
-        quantity: quantity,
-        unit_price: unit_price,
-        line_total: line_total,
-        description: if(:rand.uniform(3) == 1, do: Faker.Lorem.sentence(5), else: "")
-      }
-
-      case Ash.create(InvoiceLineItem, line_item_attrs, domain: Domain) do
-        {:ok, _line_item} -> {:ok, line_total}
-        {:error, error} ->
-          Logger.error("Failed to create line item: #{inspect(error)}")
-          {:error, line_total}
-      end
-    end
 
     # Calculate subtotal from successful line items
-    subtotal = 
+    subtotal =
       results
       |> Enum.filter(fn {status, _} -> status == :ok end)
       |> Enum.reduce(Decimal.new("0.00"), fn {:ok, line_total}, acc ->
@@ -656,7 +641,7 @@ defmodule AshReportsDemo.DataGenerator do
       end)
 
     error_count = Enum.count(results, fn {status, _} -> status == :error end)
-    
+
     if error_count == 0 do
       {:ok, subtotal}
     else
@@ -685,16 +670,18 @@ defmodule AshReportsDemo.DataGenerator do
          {:ok, invoices} <- validate_invoices_have_valid_customers(),
          {:ok, line_items} <- validate_line_items_have_valid_references() do
       Logger.info("Referential integrity validation passed")
-      {:ok, %{
-        customer_types: length(customer_types),
-        product_categories: length(product_categories),
-        customers: length(customers),
-        products: length(products),
-        addresses: length(addresses),
-        inventory: length(inventory),
-        invoices: length(invoices),
-        line_items: length(line_items)
-      }}
+
+      {:ok,
+       %{
+         customer_types: length(customer_types),
+         product_categories: length(product_categories),
+         customers: length(customers),
+         products: length(products),
+         addresses: length(addresses),
+         inventory: length(inventory),
+         invoices: length(invoices),
+         line_items: length(line_items)
+       }}
     else
       {:error, reason} -> {:error, "Referential integrity validation failed: #{reason}"}
     end
@@ -702,117 +689,134 @@ defmodule AshReportsDemo.DataGenerator do
 
   defp validate_customer_types_exist do
     case Ash.read(CustomerType, domain: Domain) do
-      {:ok, types} when length(types) >= 4 -> {:ok, types}
-      {:ok, types} -> {:error, "Insufficient customer types: #{length(types)}, expected at least 4"}
-      {:error, error} -> {:error, "Could not read customer types: #{inspect(error)}"}
+      {:ok, types} when length(types) >= 4 ->
+        {:ok, types}
+
+      {:ok, types} ->
+        {:error, "Insufficient customer types: #{length(types)}, expected at least 4"}
+
+      {:error, error} ->
+        {:error, "Could not read customer types: #{inspect(error)}"}
     end
   end
 
   defp validate_product_categories_exist do
     case Ash.read(ProductCategory, domain: Domain) do
-      {:ok, categories} when length(categories) >= 5 -> {:ok, categories}
-      {:ok, categories} -> {:error, "Insufficient product categories: #{length(categories)}, expected at least 5"}
-      {:error, error} -> {:error, "Could not read product categories: #{inspect(error)}"}
+      {:ok, categories} when length(categories) >= 5 ->
+        {:ok, categories}
+
+      {:ok, categories} ->
+        {:error, "Insufficient product categories: #{length(categories)}, expected at least 5"}
+
+      {:error, error} ->
+        {:error, "Could not read product categories: #{inspect(error)}"}
     end
   end
 
   defp validate_customers_have_valid_types do
     with {:ok, customers} <- Ash.read(Customer, domain: Domain),
          {:ok, customer_types} <- Ash.read(CustomerType, domain: Domain) do
-      
       customer_type_ids = MapSet.new(customer_types, & &1.id)
-      
-      invalid_customers = Enum.filter(customers, fn customer ->
-        not MapSet.member?(customer_type_ids, customer.customer_type_id)
-      end)
-      
+
+      invalid_customers =
+        Enum.filter(customers, fn customer ->
+          not MapSet.member?(customer_type_ids, customer.customer_type_id)
+        end)
+
       if Enum.empty?(invalid_customers) do
         {:ok, customers}
       else
-        {:error, "#{length(invalid_customers)} customers have invalid customer_type_id references"}
+        {:error,
+         "#{length(invalid_customers)} customers have invalid customer_type_id references"}
       end
     else
-      {:error, error} -> {:error, "Could not validate customer-type relationships: #{inspect(error)}"}
+      {:error, error} ->
+        {:error, "Could not validate customer-type relationships: #{inspect(error)}"}
     end
   end
 
   defp validate_products_have_valid_categories do
     with {:ok, products} <- Ash.read(Product, domain: Domain),
          {:ok, categories} <- Ash.read(ProductCategory, domain: Domain) do
-      
       category_ids = MapSet.new(categories, & &1.id)
-      
-      invalid_products = Enum.filter(products, fn product ->
-        not MapSet.member?(category_ids, product.category_id)
-      end)
-      
+
+      invalid_products =
+        Enum.filter(products, fn product ->
+          not MapSet.member?(category_ids, product.category_id)
+        end)
+
       if Enum.empty?(invalid_products) do
         {:ok, products}
       else
         {:error, "#{length(invalid_products)} products have invalid category_id references"}
       end
     else
-      {:error, error} -> {:error, "Could not validate product-category relationships: #{inspect(error)}"}
+      {:error, error} ->
+        {:error, "Could not validate product-category relationships: #{inspect(error)}"}
     end
   end
 
   defp validate_addresses_have_valid_customers do
     with {:ok, addresses} <- Ash.read(CustomerAddress, domain: Domain),
          {:ok, customers} <- Ash.read(Customer, domain: Domain) do
-      
       customer_ids = MapSet.new(customers, & &1.id)
-      
-      invalid_addresses = Enum.filter(addresses, fn address ->
-        not MapSet.member?(customer_ids, address.customer_id)
-      end)
-      
+
+      invalid_addresses =
+        Enum.filter(addresses, fn address ->
+          not MapSet.member?(customer_ids, address.customer_id)
+        end)
+
       if Enum.empty?(invalid_addresses) do
         {:ok, addresses}
       else
         {:error, "#{length(invalid_addresses)} addresses have invalid customer_id references"}
       end
     else
-      {:error, error} -> {:error, "Could not validate address-customer relationships: #{inspect(error)}"}
+      {:error, error} ->
+        {:error, "Could not validate address-customer relationships: #{inspect(error)}"}
     end
   end
 
   defp validate_inventory_has_valid_products do
     with {:ok, inventory} <- Ash.read(Inventory, domain: Domain),
          {:ok, products} <- Ash.read(Product, domain: Domain) do
-      
       product_ids = MapSet.new(products, & &1.id)
-      
-      invalid_inventory = Enum.filter(inventory, fn inv ->
-        not MapSet.member?(product_ids, inv.product_id)
-      end)
-      
+
+      invalid_inventory =
+        Enum.filter(inventory, fn inv ->
+          not MapSet.member?(product_ids, inv.product_id)
+        end)
+
       if Enum.empty?(invalid_inventory) do
         {:ok, inventory}
       else
-        {:error, "#{length(invalid_inventory)} inventory records have invalid product_id references"}
+        {:error,
+         "#{length(invalid_inventory)} inventory records have invalid product_id references"}
       end
     else
-      {:error, error} -> {:error, "Could not validate inventory-product relationships: #{inspect(error)}"}
+      {:error, error} ->
+        {:error, "Could not validate inventory-product relationships: #{inspect(error)}"}
     end
   end
 
   defp validate_invoices_have_valid_customers do
     with {:ok, invoices} <- Ash.read(Invoice, domain: Domain),
          {:ok, customers} <- Ash.read(Customer, domain: Domain) do
-      
       customer_ids = MapSet.new(customers, & &1.id)
-      
-      invalid_invoices = Enum.filter(invoices, fn invoice ->
-        not MapSet.member?(customer_ids, invoice.customer_id)
-      end)
-      
+
+      invalid_invoices =
+        Enum.filter(invoices, fn invoice ->
+          not MapSet.member?(customer_ids, invoice.customer_id)
+        end)
+
       if Enum.empty?(invalid_invoices) do
         {:ok, invoices}
       else
         {:error, "#{length(invalid_invoices)} invoices have invalid customer_id references"}
       end
     else
-      {:error, error} -> {:error, "Could not validate invoice-customer relationships: #{inspect(error)}"}
+      {:error, error} ->
+        {:error, "Could not validate invoice-customer relationships: #{inspect(error)}"}
     end
   end
 
@@ -820,19 +824,20 @@ defmodule AshReportsDemo.DataGenerator do
     with {:ok, line_items} <- Ash.read(InvoiceLineItem, domain: Domain),
          {:ok, invoices} <- Ash.read(Invoice, domain: Domain),
          {:ok, products} <- Ash.read(Product, domain: Domain) do
-      
       invoice_ids = MapSet.new(invoices, & &1.id)
       product_ids = MapSet.new(products, & &1.id)
-      
-      invalid_line_items = Enum.filter(line_items, fn line_item ->
-        not MapSet.member?(invoice_ids, line_item.invoice_id) or
-        not MapSet.member?(product_ids, line_item.product_id)
-      end)
-      
+
+      invalid_line_items =
+        Enum.filter(line_items, fn line_item ->
+          not MapSet.member?(invoice_ids, line_item.invoice_id) or
+            not MapSet.member?(product_ids, line_item.product_id)
+        end)
+
       if Enum.empty?(invalid_line_items) do
         {:ok, line_items}
       else
-        {:error, "#{length(invalid_line_items)} line items have invalid invoice_id or product_id references"}
+        {:error,
+         "#{length(invalid_line_items)} line items have invalid invoice_id or product_id references"}
       end
     else
       {:error, error} -> {:error, "Could not validate line item relationships: #{inspect(error)}"}
@@ -842,30 +847,32 @@ defmodule AshReportsDemo.DataGenerator do
   # Helper functions for enhanced data generation
 
   defp create_customers_batch(customer_types, customer_count) do
-    customers = for i <- 1..customer_count do
-      customer_type = Enum.random(customer_types)
-      
-      customer_attrs = %{
-        name: Faker.Person.name(),
-        email: generate_unique_email(i),
-        phone: Faker.Phone.EnUs.phone(),
-        status: weighted_random_status(),
-        credit_limit: generate_realistic_credit_limit(customer_type),
-        notes: if(:rand.uniform(3) == 1, do: Faker.Lorem.sentence(), else: ""),
-        customer_type_id: customer_type.id
-      }
+    customers =
+      for i <- 1..customer_count do
+        customer_type = Enum.random(customer_types)
 
-      case Ash.create(Customer, customer_attrs, domain: Domain) do
-        {:ok, customer} ->
-          customer
-        {:error, error} ->
-          Logger.error("Failed to create customer #{i}: #{inspect(error)}")
-          nil
+        customer_attrs = %{
+          name: Faker.Person.name(),
+          email: generate_unique_email(i),
+          phone: Faker.Phone.EnUs.phone(),
+          status: weighted_random_status(),
+          credit_limit: generate_realistic_credit_limit(customer_type),
+          notes: if(:rand.uniform(3) == 1, do: Faker.Lorem.sentence(), else: ""),
+          customer_type_id: customer_type.id
+        }
+
+        case Ash.create(Customer, customer_attrs, domain: Domain) do
+          {:ok, customer} ->
+            customer
+
+          {:error, error} ->
+            Logger.error("Failed to create customer #{i}: #{inspect(error)}")
+            nil
+        end
       end
-    end
 
     valid_customers = Enum.reject(customers, &is_nil/1)
-    
+
     if length(valid_customers) > 0 do
       {:ok, valid_customers}
     else
@@ -874,29 +881,35 @@ defmodule AshReportsDemo.DataGenerator do
   end
 
   defp create_addresses_for_customers(customers, address_range) do
-    all_addresses = for customer <- customers do
-      address_count = Enum.random(address_range)
-      
-      for i <- 1..address_count do
-        address_attrs = %{
-          customer_id: customer.id,
-          address_type: determine_address_type(i),
-          street: Faker.Address.street_address(),
-          city: Faker.Address.city(),
-          state: Faker.Address.state(),
-          postal_code: Faker.Address.zip_code(),
-          country: "United States",
-          primary: i == 1
-        }
+    all_addresses =
+      for customer <- customers do
+        address_count = Enum.random(address_range)
 
-        case Ash.create(CustomerAddress, address_attrs, domain: Domain) do
-          {:ok, address} -> address
-          {:error, error} ->
-            Logger.error("Failed to create address for customer #{customer.id}: #{inspect(error)}")
-            nil
+        for i <- 1..address_count do
+          address_attrs = %{
+            customer_id: customer.id,
+            address_type: determine_address_type(i),
+            street: Faker.Address.street_address(),
+            city: Faker.Address.city(),
+            state: Faker.Address.state(),
+            postal_code: Faker.Address.zip_code(),
+            country: "United States",
+            primary: i == 1
+          }
+
+          case Ash.create(CustomerAddress, address_attrs, domain: Domain) do
+            {:ok, address} ->
+              address
+
+            {:error, error} ->
+              Logger.error(
+                "Failed to create address for customer #{customer.id}: #{inspect(error)}"
+              )
+
+              nil
+          end
         end
       end
-    end
 
     valid_addresses = all_addresses |> List.flatten() |> Enum.reject(&is_nil/1)
     {:ok, valid_addresses}
@@ -921,8 +934,9 @@ defmodule AshReportsDemo.DataGenerator do
     base_amount = Decimal.new("5000")
     # Use priority_level to determine multiplier (higher priority = higher credit limit)
     multiplier = Decimal.new("#{customer_type.priority_level}")
-    variation = Decimal.new("#{:rand.uniform(50) * 100}")  # $0-$5000 variation
-    
+    # $0-$5000 variation
+    variation = Decimal.new("#{:rand.uniform(50) * 100}")
+
     base_amount
     |> Decimal.mult(multiplier)
     |> Decimal.add(variation)
@@ -933,5 +947,175 @@ defmodule AshReportsDemo.DataGenerator do
 
   defp generate_unique_sku(index) do
     "SKU-#{String.pad_leading(Integer.to_string(index), 6, "0")}-#{:rand.uniform(999)}"
+  end
+
+  defp finalize_invoice_with_line_items(invoice, products, volume_config) do
+    case create_line_items_for_invoice(invoice, products, volume_config) do
+      {:ok, subtotal} ->
+        update_invoice_totals(invoice, subtotal)
+
+      {:error, reason} ->
+        Logger.error("Failed to create line items for invoice #{invoice.id}: #{reason}")
+        :error
+    end
+  end
+
+  defp update_invoice_totals(invoice, subtotal) do
+    tax_amount = Decimal.mult(subtotal, Decimal.div(invoice.tax_rate, 100))
+    total = Decimal.add(subtotal, tax_amount)
+
+    case Ash.update(
+           invoice,
+           %{
+             subtotal: subtotal,
+             tax_amount: tax_amount,
+             total: total
+           },
+           domain: Domain
+         ) do
+      {:ok, _updated_invoice} ->
+        :ok
+
+      {:error, error} ->
+        Logger.error("Failed to update invoice #{invoice.id} totals: #{inspect(error)}")
+        :error
+    end
+  end
+
+  defp validate_invoice_prerequisites(customers, products) do
+    if Enum.empty?(customers) or Enum.empty?(products) do
+      {:error, "Cannot generate invoices without customers and products"}
+    else
+      :ok
+    end
+  end
+
+  defp create_invoices_batch(customers, products, volume_config) do
+    invoice_count = volume_config.invoices
+
+    results =
+      for i <- 1..invoice_count do
+        create_single_invoice(customers, products, volume_config, i)
+      end
+
+    evaluate_invoice_creation_results(results, invoice_count)
+  end
+
+  defp create_single_invoice(customers, products, volume_config, index) do
+    customer = Enum.random(customers)
+    invoice_attrs = build_invoice_attributes(customer, index)
+
+    case Ash.create(Invoice, invoice_attrs, domain: Domain) do
+      {:ok, invoice} ->
+        finalize_invoice_with_line_items(invoice, products, volume_config)
+
+      {:error, error} ->
+        Logger.error("Failed to create invoice #{index}: #{inspect(error)}")
+        :error
+    end
+  end
+
+  defp build_invoice_attributes(customer, index) do
+    invoice_date = Faker.Date.backward(:rand.uniform(365))
+    due_date = Date.add(invoice_date, 30)
+
+    %{
+      customer_id: customer.id,
+      invoice_number: generate_invoice_number(invoice_date, index),
+      date: invoice_date,
+      due_date: due_date,
+      status: Enum.random([:draft, :sent, :sent, :paid, :overdue]),
+      tax_rate: Decimal.new("8.25"),
+      payment_terms: Enum.random(["Net 30", "Net 15", "Due on Receipt", "Net 45"]),
+      notes: if(:rand.uniform(3) == 1, do: Faker.Lorem.sentence(), else: "")
+    }
+  end
+
+  defp generate_invoice_number(invoice_date, index) do
+    date_string = Date.to_string(invoice_date) |> String.replace("-", "")
+    index_string = String.pad_leading(Integer.to_string(index), 4, "0")
+    "INV-#{date_string}-#{index_string}"
+  end
+
+  defp evaluate_invoice_creation_results(results, invoice_count) do
+    error_count = Enum.count(results, &(&1 == :error))
+
+    if error_count < invoice_count / 2 do
+      Logger.info(
+        "Generated #{invoice_count - error_count} invoices with line items (#{error_count} failed)"
+      )
+
+      :ok
+    else
+      {:error, "Too many invoice creation failures: #{error_count}/#{invoice_count}"}
+    end
+  end
+
+  defp create_or_find_product_category(category_spec) do
+    case Ash.read(ProductCategory, domain: Domain) do
+      {:ok, categories} ->
+        handle_product_category_lookup(categories, category_spec)
+
+      {:error, error} ->
+        Logger.error("Failed to query product categories: #{inspect(error)}")
+        nil
+    end
+  end
+
+  defp handle_product_category_lookup(categories, category_spec) do
+    existing = Enum.find(categories, &(&1.name == category_spec.name))
+
+    if existing do
+      Logger.debug("Product category '#{category_spec.name}' already exists")
+      existing
+    else
+      create_new_product_category(category_spec)
+    end
+  end
+
+  defp create_new_product_category(category_spec) do
+    case Ash.create(ProductCategory, category_spec, domain: Domain) do
+      {:ok, category} ->
+        Logger.debug("Created product category: #{category.name}")
+        category
+
+      {:error, error} ->
+        Logger.error("Failed to create category #{category_spec.name}: #{inspect(error)}")
+        nil
+    end
+  end
+
+  defp create_or_find_customer_type(type_spec) do
+    case Ash.read(CustomerType, domain: Domain) do
+      {:ok, types} ->
+        handle_customer_type_lookup(types, type_spec)
+
+      {:error, error} ->
+        Logger.error("Failed to query customer types: #{inspect(error)}")
+        nil
+    end
+  end
+
+  defp handle_customer_type_lookup(types, type_spec) do
+    existing = Enum.find(types, &(&1.name == type_spec.name))
+
+    if existing do
+      Logger.debug("Customer type '#{type_spec.name}' already exists")
+      existing
+    else
+      create_new_customer_type(type_spec)
+    end
+  end
+
+  defp create_new_customer_type(type_spec) do
+    case Ash.create(CustomerType, type_spec, domain: Domain) do
+      {:ok, customer_type} ->
+        Logger.debug("Created customer type: #{customer_type.name}")
+        customer_type
+
+      {:error, error} ->
+        Logger.error("Failed to create customer type #{type_spec.name}: #{inspect(error)}")
+        nil
+    end
   end
 end

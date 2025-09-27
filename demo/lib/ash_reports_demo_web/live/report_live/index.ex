@@ -10,7 +10,7 @@ defmodule AshReportsDemoWeb.ReportLive.Index do
 
   def handle_event("regenerate_data", _params, socket) do
     AshReportsDemo.DataGenerator.generate_sample_data(:small)
-    
+
     {:noreply,
      socket
      |> put_flash(:info, "Sample data regenerated successfully!")
@@ -64,7 +64,7 @@ defmodule AshReportsDemoWeb.ReportLive.Index do
         path: "/reports/simple"
       },
       %{
-        title: "Complex Report", 
+        title: "Complex Report",
         description: "Advanced report with grouping, calculations, and multiple data sources.",
         path: "/reports/complex"
       },
