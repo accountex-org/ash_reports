@@ -44,7 +44,7 @@ defmodule AshReports.Typst.DSLGenerator do
 
   require Logger
 
-  alias AshReports.{Report, Band}
+  alias AshReports.{Band, Report}
 
   @doc """
   Generates a Typst template from an AshReports report definition.
@@ -71,10 +71,10 @@ defmodule AshReports.Typst.DSLGenerator do
   """
   @spec generate_template(Report.t(), Keyword.t()) :: {:ok, String.t()} | {:error, term()}
   def generate_template(%Report{} = report, options \\ []) do
-    try do
-      context = build_generation_context(report, options)
+    context = build_generation_context(report, options)
 
-      template = """
+    template =
+      """
       // Generated Typst template for report: #{report.name}
       // Generated at: #{DateTime.utc_now() |> DateTime.to_iso8601()}
       #{if context.debug, do: generate_debug_info(report), else: ""}
@@ -87,12 +87,11 @@ defmodule AshReports.Typst.DSLGenerator do
       """
       |> String.trim()
 
-      {:ok, template}
-    rescue
-      error ->
-        Logger.error("Template generation failed for report #{report.name}: #{inspect(error)}")
-        {:error, {:generation_failed, error}}
-    end
+    {:ok, template}
+  rescue
+    error ->
+      Logger.error("Template generation failed for report #{report.name}: #{inspect(error)}")
+      {:error, {:generation_failed, error}}
   end
 
   @doc """
@@ -122,13 +121,27 @@ defmodule AshReports.Typst.DSLGenerator do
     element_type = element.__struct__ |> Module.split() |> List.last()
 
     case element_type do
-      "Field" -> generate_field_element(element, context)
-      "Label" -> generate_label_element(element, context)
-      "Expression" -> generate_expression_element(element, context)
-      "Aggregate" -> generate_aggregate_element(element, context)
-      "Line" -> generate_line_element(element, context)
-      "Box" -> generate_box_element(element, context)
-      "Image" -> generate_image_element(element, context)
+      "Field" ->
+        generate_field_element(element, context)
+
+      "Label" ->
+        generate_label_element(element, context)
+
+      "Expression" ->
+        generate_expression_element(element, context)
+
+      "Aggregate" ->
+        generate_aggregate_element(element, context)
+
+      "Line" ->
+        generate_line_element(element, context)
+
+      "Box" ->
+        generate_box_element(element, context)
+
+      "Image" ->
+        generate_image_element(element, context)
+
       _ ->
         Logger.warning("Unknown element type: #{element_type}")
         "// Unknown element: #{element_type}"
@@ -186,17 +199,19 @@ defmodule AshReports.Typst.DSLGenerator do
     page_header = find_band_by_type(report.bands, :page_header)
     page_footer = find_band_by_type(report.bands, :page_footer)
 
-    header_content = if page_header do
-      "header: [#{generate_band_content(page_header, context)}],"
-    else
-      ""
-    end
+    header_content =
+      if page_header do
+        "header: [#{generate_band_content(page_header, context)}],"
+      else
+        ""
+      end
 
-    footer_content = if page_footer do
-      "footer: [#{generate_band_content(page_footer, context)}]"
-    else
-      "footer: [Page #counter(page).display() of #counter(page).final().at(0)]"
-    end
+    footer_content =
+      if page_footer do
+        "footer: [#{generate_band_content(page_footer, context)}]"
+      else
+        "footer: [Page #counter(page).display() of #counter(page).final().at(0)]"
+      end
 
     "#{header_content}\n    #{footer_content}"
   end
@@ -214,25 +229,28 @@ defmodule AshReports.Typst.DSLGenerator do
     content_parts = []
 
     # Title bands (once per report)
-    content_parts = if length(title_bands) > 0 do
-      content_parts ++ [generate_title_section(title_bands, context)]
-    else
-      content_parts
-    end
+    content_parts =
+      if length(title_bands) > 0 do
+        content_parts ++ [generate_title_section(title_bands, context)]
+      else
+        content_parts
+      end
 
     # Main data processing section
-    content_parts = if has_data_bands?(bands) do
-      content_parts ++ [generate_data_processing_section(report, context)]
-    else
-      content_parts
-    end
+    content_parts =
+      if has_data_bands?(bands) do
+        content_parts ++ [generate_data_processing_section(report, context)]
+      else
+        content_parts
+      end
 
     # Summary bands (once per report)
-    content_parts = if length(summary_bands) > 0 do
-      content_parts ++ [generate_summary_section(summary_bands, context)]
-    else
-      content_parts
-    end
+    content_parts =
+      if length(summary_bands) > 0 do
+        content_parts ++ [generate_summary_section(summary_bands, context)]
+      else
+        content_parts
+      end
 
     Enum.join(content_parts, "\n\n")
   end
@@ -242,9 +260,7 @@ defmodule AshReports.Typst.DSLGenerator do
   defp generate_title_section(title_bands, context) do
     """
     // Title Section
-    #{Enum.map(title_bands, fn band ->
-      generate_band_content(band, context)
-    end) |> Enum.join("\n")}
+    #{Enum.map(title_bands, fn band -> generate_band_content(band, context) end) |> Enum.join("\n")}
     """
   end
 
@@ -268,8 +284,8 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   defp generate_nested_grouping(_groups, report, context) do
-    # TODO: Implement nested grouping logic
-    # For now, fall back to simple detail processing
+    # NOTE: Nested grouping implementation deferred to future iteration
+    # Current implementation provides flat detail processing for all group scenarios
     generate_simple_detail_processing(report, context)
   end
 
@@ -278,9 +294,7 @@ defmodule AshReports.Typst.DSLGenerator do
 
     if length(detail_bands) > 0 do
       """
-      #{Enum.map(detail_bands, fn band ->
-        generate_band_content(band, context)
-      end) |> Enum.join("\n")}
+      #{Enum.map(detail_bands, fn band -> generate_band_content(band, context) end) |> Enum.join("\n")}
       """
     else
       "// No detail bands defined"
@@ -290,9 +304,7 @@ defmodule AshReports.Typst.DSLGenerator do
   defp generate_summary_section(summary_bands, context) do
     """
     // Summary Section
-    #{Enum.map(summary_bands, fn band ->
-      generate_band_content(band, context)
-    end) |> Enum.join("\n")}
+    #{Enum.map(summary_bands, fn band -> generate_band_content(band, context) end) |> Enum.join("\n")}
     """
   end
 
@@ -303,7 +315,8 @@ defmodule AshReports.Typst.DSLGenerator do
       # Generate elements within the band
       Enum.map(elements, fn element ->
         "  #{generate_element(element, context)}"
-      end) |> Enum.join("\n")
+      end)
+      |> Enum.join("\n")
     else
       # Empty band with default content based on type
       generate_default_band_content(band, context)
@@ -370,17 +383,19 @@ defmodule AshReports.Typst.DSLGenerator do
 
   defp generate_box_element(%{} = box, _context) do
     # Extract box properties with safe defaults
-    border = case Map.get(box, :border) do
-      nil -> %{}
-      border when is_map(border) -> border
-      _ -> %{}
-    end
+    border =
+      case Map.get(box, :border) do
+        nil -> %{}
+        border when is_map(border) -> border
+        _ -> %{}
+      end
 
-    fill = case Map.get(box, :fill) do
-      nil -> %{}
-      fill when is_map(fill) -> fill
-      _ -> %{}
-    end
+    fill =
+      case Map.get(box, :fill) do
+        nil -> %{}
+        fill when is_map(fill) -> fill
+        _ -> %{}
+      end
 
     # Build Typst rect parameters
     params = ["width: 100%", "height: 1em"]
@@ -391,10 +406,11 @@ defmodule AshReports.Typst.DSLGenerator do
     params = params ++ ["stroke: #{stroke_width}pt + #{stroke_color}"]
 
     # Add fill color if specified
-    params = case Map.get(fill, :color) do
-      nil -> params
-      color -> params ++ ["fill: #{color}"]
-    end
+    params =
+      case Map.get(fill, :color) do
+        nil -> params
+        color -> params ++ ["fill: #{color}"]
+      end
 
     param_string = Enum.join(params, ", ")
     "[#rect(#{param_string})]"
@@ -404,13 +420,14 @@ defmodule AshReports.Typst.DSLGenerator do
     scale_mode = Map.get(image, :scale_mode, :fit)
 
     # Convert scale mode to Typst fit parameter
-    fit_param = case scale_mode do
-      :fit -> "fit: \"contain\""
-      :fill -> "fit: \"cover\""
-      :stretch -> "fit: \"stretch\""
-      :none -> "fit: \"contain\""
-      _ -> "fit: \"contain\""
-    end
+    fit_param =
+      case scale_mode do
+        :fit -> "fit: \"contain\""
+        :fill -> "fit: \"cover\""
+        :stretch -> "fit: \"stretch\""
+        :none -> "fit: \"contain\""
+        _ -> "fit: \"contain\""
+      end
 
     "[#image(\"#{source}\", width: 5cm, #{fit_param})]"
   end

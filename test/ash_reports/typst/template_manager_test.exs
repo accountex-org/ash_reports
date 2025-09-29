@@ -9,6 +9,7 @@ defmodule AshReports.Typst.TemplateManagerTest do
       nil ->
         {:ok, pid} = TemplateManager.start_link()
         on_exit(fn -> GenServer.stop(pid) end)
+
       _pid ->
         # Clear cache before each test
         TemplateManager.clear_cache()
@@ -27,7 +28,7 @@ defmodule AshReports.Typst.TemplateManagerTest do
 
     test "returns error for non-existent template" do
       assert {:error, {:template_not_found, "non_existent"}} =
-        TemplateManager.load_template("non_existent")
+               TemplateManager.load_template("non_existent")
     end
 
     test "uses cache on second load" do
@@ -35,17 +36,19 @@ defmodule AshReports.Typst.TemplateManagerTest do
       assert {:ok, content1} = TemplateManager.load_template("examples/basic_report")
 
       # Second load - should be from cache (faster)
-      {time1, {:ok, _}} = :timer.tc(fn ->
-        TemplateManager.load_template("examples/basic_report")
-      end)
+      {time1, {:ok, _}} =
+        :timer.tc(fn ->
+          TemplateManager.load_template("examples/basic_report")
+        end)
 
       # Clear cache
       TemplateManager.clear_cache()
 
       # Third load - from disk again (slower)
-      {time2, {:ok, _}} = :timer.tc(fn ->
-        TemplateManager.load_template("examples/basic_report")
-      end)
+      {time2, {:ok, _}} =
+        :timer.tc(fn ->
+          TemplateManager.load_template("examples/basic_report")
+        end)
 
       # Cache hit should be faster than disk read
       # This might not always be true in CI, so we just check both succeed
@@ -58,7 +61,9 @@ defmodule AshReports.Typst.TemplateManagerTest do
       assert {:ok, _content} = TemplateManager.load_template("examples/basic_report")
 
       # Force reload should still work
-      assert {:ok, content} = TemplateManager.load_template("examples/basic_report", force_reload: true)
+      assert {:ok, content} =
+               TemplateManager.load_template("examples/basic_report", force_reload: true)
+
       assert String.contains?(content, "report(title:")
     end
   end
@@ -86,7 +91,8 @@ defmodule AshReports.Typst.TemplateManagerTest do
   end
 
   describe "compile_template/3" do
-    @tag :skip  # Skip for now as it requires full template rendering
+    # Skip for now as it requires full template rendering
+    @tag :skip
     test "compiles template with data" do
       data = %{
         title: "Test Report",

@@ -1,9 +1,9 @@
 defmodule AshReports.Typst.DSLGeneratorTest do
   use ExUnit.Case, async: true
 
-  alias AshReports.{Report, Band}
-  alias AshReports.Typst.DSLGenerator
+  alias AshReports.{Band, Report}
   alias AshReports.Element.{Field, Label}
+  alias AshReports.Typst.DSLGenerator
 
   describe "generate_template/2" do
     test "generates a basic template for a simple report" do

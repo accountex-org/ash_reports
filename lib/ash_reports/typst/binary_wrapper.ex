@@ -96,9 +96,11 @@ defmodule AshReports.Typst.BinaryWrapper do
   # Private functions
 
   defp validate_template(""), do: {:error, :empty_template}
+
   defp validate_template(template) when byte_size(template) > 10_000_000 do
     {:error, :template_too_large}
   end
+
   defp validate_template(_), do: :ok
 
   defp validate_format(format) when format in [:pdf, :png, :svg], do: :ok
@@ -115,19 +117,20 @@ defmodule AshReports.Typst.BinaryWrapper do
   end
 
   defp compile_with_timeout(template, format, timeout) do
-    task = Task.async(fn ->
-      try do
-        # Use the actual Typst NIF
-        case apply_typst_compile(template, format) do
-          {:ok, result} -> {:ok, result}
-          {:error, reason} -> {:error, parse_typst_error(reason)}
+    task =
+      Task.async(fn ->
+        try do
+          # Use the actual Typst NIF
+          case apply_typst_compile(template, format) do
+            {:ok, result} -> {:ok, result}
+            {:error, reason} -> {:error, parse_typst_error(reason)}
+          end
+        rescue
+          error ->
+            Logger.error("Typst NIF crashed: #{inspect(error)}")
+            {:error, {:nif_crash, error}}
         end
-      rescue
-        error ->
-          Logger.error("Typst NIF crashed: #{inspect(error)}")
-          {:error, {:nif_crash, error}}
-      end
-    end)
+      end)
 
     case Task.yield(task, timeout) || Task.shutdown(task) do
       {:ok, result} ->
