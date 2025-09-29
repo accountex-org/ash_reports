@@ -72,6 +72,10 @@ defmodule AshReports.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
 
+      # Typst integration dependencies
+      {:typst, "~> 0.1.7"},
+      {:file_system, "~> 1.0", only: [:dev, :test]},
+
       # Phase 5.1 - Interactive Data Visualization dependencies
       {:jason, "~> 1.4"},
 

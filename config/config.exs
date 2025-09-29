@@ -53,6 +53,13 @@ config :ash_reports,
   worker_pool_size: 5,
   max_concurrent_reports: 10
 
+# Typst configuration
+config :ash_reports, :typst,
+  template_dir: "priv/typst_templates",
+  cache_enabled: true,
+  max_cache_size: 100,
+  timeout: :timer.seconds(30)
+
 # ChromicPDF configuration for PDF generation
 if Code.ensure_loaded?(ChromicPDF) do
   config :chromic_pdf,

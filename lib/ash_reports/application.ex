@@ -35,6 +35,7 @@ defmodule AshReports.Application do
   use Application
 
   alias AshReports.PdfRenderer.{PdfSessionManager, TempFileCleanup}
+  alias AshReports.Typst.TemplateManager
 
   @doc """
   Starts the AshReports application supervisor.
@@ -56,6 +57,9 @@ defmodule AshReports.Application do
   """
   def build_supervision_tree do
     base_children = [
+      # Typst Template Manager for managing Typst templates and caching
+      {TemplateManager, []},
+
       # PDF Session Manager for tracking active PDF generation sessions
       {PdfSessionManager, []},
 
