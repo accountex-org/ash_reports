@@ -76,6 +76,59 @@ defmodule AshReports.Typst.TemplateManager do
     GenServer.call(__MODULE__, :list_templates)
   end
 
+  @doc """
+  Generates a Typst template from an AshReports DSL definition and compiles it with data.
+
+  This function creates a dynamic template from the report's DSL structure,
+  bypassing the file-based template system entirely.
+
+  ## Parameters
+
+    * `report` - AshReports.Report struct containing the DSL definition
+    * `data` - Data to pass to the generated template
+    * `opts` - Generation and compilation options:
+      * `:format` - Output format (:pdf, :png, :svg)
+      * `:theme` - Theme name for styling
+      * `:debug` - Include debug comments in template
+
+  ## Returns
+
+    * `{:ok, compiled_document}` - Compiled document as binary
+    * `{:error, reason}` - Generation or compilation failure
+
+  ## Example
+
+      report = AshReports.Info.report(MyDomain, :sales_report)
+      data = %{records: [%{customer: "Acme Corp", amount: 1500}]}
+      {:ok, pdf} = TemplateManager.compile_dsl_template(report, data)
+  """
+  @spec compile_dsl_template(AshReports.Report.t(), map(), Keyword.t()) :: {:ok, binary()} | {:error, term()}
+  def compile_dsl_template(report, data, opts \\ []) do
+    GenServer.call(__MODULE__, {:compile_dsl_template, report, data, opts}, :timer.seconds(60))
+  end
+
+  @doc """
+  Generates a Typst template from an AshReports DSL definition without compiling.
+
+  Useful for debugging, template inspection, or custom compilation workflows.
+
+  ## Parameters
+
+    * `report` - AshReports.Report struct containing the DSL definition
+    * `opts` - Generation options:
+      * `:theme` - Theme name for styling
+      * `:debug` - Include debug comments in template
+
+  ## Returns
+
+    * `{:ok, template_string}` - Generated Typst template as string
+    * `{:error, reason}` - Generation failure
+  """
+  @spec generate_dsl_template(AshReports.Report.t(), Keyword.t()) :: {:ok, String.t()} | {:error, term()}
+  def generate_dsl_template(report, opts \\ []) do
+    GenServer.call(__MODULE__, {:generate_dsl_template, report, opts})
+  end
+
   # Server Callbacks
 
   @impl true
@@ -136,6 +189,24 @@ defmodule AshReports.Typst.TemplateManager do
   def handle_call(:list_templates, _from, state) do
     templates = list_template_files(state.template_dir)
     {:reply, {:ok, templates}, state}
+  end
+
+  @impl true
+  def handle_call({:compile_dsl_template, report, data, opts}, _from, state) do
+    with {:ok, template} <- AshReports.Typst.DSLGenerator.generate_template(report, opts),
+         {:ok, rendered} <- render_template_with_data(template, data),
+         {:ok, compiled} <- AshReports.Typst.BinaryWrapper.compile(rendered, opts) do
+      {:reply, {:ok, compiled}, state}
+    else
+      error ->
+        {:reply, error, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:generate_dsl_template, report, opts}, _from, state) do
+    result = AshReports.Typst.DSLGenerator.generate_template(report, opts)
+    {:reply, result, state}
   end
 
   @impl true
