@@ -4,9 +4,11 @@
 
 This plan implements a complete architectural refactor of AshReports to replace the current rendering system with a modern Typst-based engine. The refactor leverages Typst's **18x faster compilation speed**, native multi-format output support, and seamless integration with Elixir's concurrent processing capabilities.
 
-**Current Status**: AshReports has a complete DSL framework and rendering system, but needs modernization for better performance and developer experience.
+**Current Status**: AshReports has a complete Spark DSL framework with band-based report definitions, but needs modern Typst integration for performance.
 
-**Target Architecture**: Modern Typst-based rendering engine with D3.js visualizations, Phoenix LiveView integration, and production-ready deployment.
+**Target Architecture**: DSL-driven Typst template generation → 18x faster compilation → Modern multi-format output (PDF, PNG, SVG)
+
+**Key Architectural Insight**: Generate Typst templates dynamically from AshReports DSL definitions rather than managing static template files.
 
 ---
 
@@ -25,51 +27,57 @@ This plan implements a complete architectural refactor of AshReports to replace 
 - [x] Create Typst binary wrapper module - **COMPLETED**
 - [x] Add error handling for Typst compilation failures - **COMPLETED**
 
-### 1.1.2 Template Engine Foundation
-- [x] Create `AshReports.Typst.TemplateManager` module - **COMPLETED**
-- [x] Implement file-based template system in `priv/typst_templates/` - **COMPLETED**
-- [x] Add template caching with ETS - **COMPLETED**
-- [x] Create hot-reloading for development environment - **COMPLETED**
-- [x] Implement template validation and compilation checking - **COMPLETED**
+### 1.1.2 ~~Template Engine Foundation~~ → **ARCHITECTURAL PIVOT**
+- [x] ~~Create `AshReports.Typst.TemplateManager` module~~ - **REPLACED with DSL-driven approach**
+- [x] ~~Implement file-based template system~~ - **PIVOTED to DSL-to-Typst generation**
+- [x] Add template caching with ETS - **REUSED in new architecture**
+- [x] Create hot-reloading for development environment - **REUSED for generated templates**
+- [x] Implement template validation and compilation checking - **REUSED with BinaryWrapper**
 
-### 1.1.3 Band Architecture Migration
-- [ ] Create `AshReports.Typst.BandEngine` module
-- [ ] Map existing band types to Typst template structures
-- [ ] Implement Crystal Reports-style band rendering
-- [ ] Add support for nested bands and hierarchical grouping
-- [ ] Create conditional section rendering system
+**🔄 ARCHITECTURAL DECISION**: Pivot from manual template files to DSL-driven template generation.
+AshReports should generate Typst templates dynamically from Spark DSL report definitions, not load static `.typ` files.
 
-## 1.2 Data Pipeline Transformation
+## 1.2 DSL-to-Typst Template Generation **← NEW PRIORITY**
 
-### 1.2.1 Ash Resource Mapper
-- [ ] Create `AshReports.Typst.AshMapper` module
-- [ ] Implement resource-to-Typst data transformation
-- [ ] Handle complex relationship mapping (has_many, belongs_to)
-- [ ] Add support for calculated fields and aggregates
-- [ ] Implement data type conversion for Typst compatibility
+### 1.2.1 DSL Template Generator
+- [ ] Create `AshReports.Typst.DSLGenerator` module
+- [ ] Implement AshReports DSL → Typst template conversion
+- [ ] Map band types (title, header, detail, footer) to Typst structures
+- [ ] Generate conditional sections and grouping logic
+- [ ] Support element types (field, label, expression, aggregate, line, box, image)
 
-### 1.2.2 Streaming Data Processing
-- [ ] Create `AshReports.Typst.StreamEngine` module using GenStage
-- [ ] Implement chunk-based processing for large datasets
-- [ ] Add memory optimization for massive reports
-- [ ] Create progress tracking for long-running reports
-- [ ] Implement backpressure handling
+### 1.2.2 Band Architecture Implementation
+- [ ] Implement Crystal Reports-style band rendering in Typst
+- [ ] Create hierarchical band processing (nested groups)
+- [ ] Add support for band positioning and layout
+- [ ] Implement page break and section flow control
+- [ ] Create band-specific styling and theming
 
-## 1.3 Basic Template System
+### 1.2.3 Element Rendering System
+- [ ] Map AshReports elements to Typst components:
+  - `field` → Data field display with formatting
+  - `label` → Static text with positioning
+  - `expression` → Calculated expressions
+  - `aggregate` → Sum, count, avg functions
+  - `line` → Graphical separators
+  - `box` → Container elements
+  - `image` → Image embedding
 
-### 1.3.1 Template Structure Definition
-- [ ] Create base Typst template library structure
-- [ ] Implement theme system with configurable styling
-- [ ] Add support for custom fonts and branding
-- [ ] Create responsive layout templates
-- [ ] Implement table and list rendering helpers
+## 1.3 Ash Resource Data Integration
 
-### 1.3.2 Migration from Current Renderers
-- [ ] Analyze existing HTML/PDF/HEEX/JSON renderers
-- [ ] Create compatibility layer for existing reports
-- [ ] Map current band definitions to Typst templates
-- [ ] Preserve output format compatibility
-- [ ] Add fallback mechanisms for unsupported features
+### 1.3.1 Query to Data Pipeline
+- [ ] Create `AshReports.Typst.DataLoader` module
+- [ ] Implement driving_resource query execution
+- [ ] Handle resource relationships and preloading
+- [ ] Transform Ash structs to Typst-compatible data
+- [ ] Support calculated fields and aggregations
+
+### 1.3.2 Data Formatting and Processing
+- [ ] Implement data type conversion (DateTime, Decimal, Money)
+- [ ] Create grouping and sorting based on DSL definitions
+- [ ] Add support for complex relationship traversal
+- [ ] Implement variable scopes (detail, group, page, report)
+- [ ] Handle large dataset streaming with GenStage
 
 ## 1.4 Integration Testing Infrastructure
 
@@ -312,13 +320,43 @@ Based on the research document `ash_reports_typst_research.md`, the current AshR
 - Phoenix LiveView integration
 
 ### Target State Benefits
-The Typst-based refactor will provide:
+The DSL-driven Typst refactor will provide:
 - **18x faster compilation** compared to current PDF generation
-- **Modern template system** with hot-reloading and version control
+- **DSL-driven template generation** from AshReports band definitions
 - **Enhanced visualizations** with D3.js server-side rendering
-- **Better developer experience** with functional templates
+- **Better developer experience** with declarative report definitions
 - **Improved scalability** with streaming and concurrent processing
 - **Production-ready deployment** with monitoring and observability
+
+### New Workflow Architecture
+```
+AshReports DSL Definition
+    ↓
+reports do
+  report :sales_report do
+    bands do
+      band :title do
+        elements do
+          label :title_label do
+            text "Sales Report"
+          end
+        end
+      end
+    end
+  end
+end
+    ↓
+DSLGenerator.generate_typst_template(report_definition)
+    ↓
+Generated Typst Template:
+#set page(paper: "a4")
+= Sales Report
+...
+    ↓
+BinaryWrapper.compile(template, data)
+    ↓
+PDF Output (18x faster)
+```
 
 ### Migration Strategy
 1. **Parallel Development**: Build Typst system alongside existing renderers
@@ -328,12 +366,12 @@ The Typst-based refactor will provide:
 5. **Performance Benchmarking**: Validate performance improvements
 
 ### Technical Dependencies
-- **Typst 0.12+**: Core document compilation engine
-- **Elixir Typst Bindings 0.1.7**: Rust integration via Rustler
-- **Node.js + D3.js**: Server-side chart generation
-- **GenStage/Flow**: Stream processing for large datasets
-- **ChromicPDF**: Fallback PDF generation if needed
-- **Phoenix LiveView**: Enhanced web interface
+- **Typst 0.1.7** (Elixir package): Rust NIF bindings for Typst compilation ✅ **IMPLEMENTED**
+- **AshReports DSL System**: Existing Spark DSL extensions for report definitions ✅ **AVAILABLE**
+- **Ash Framework 3.0+**: Resource querying and data transformation ✅ **AVAILABLE**
+- **Node.js + D3.js**: Server-side chart generation (Stage 2)
+- **GenStage/Flow**: Stream processing for large datasets (Stage 1.3)
+- **Phoenix LiveView**: Enhanced web interface (Stage 3)
 
 ### Risk Mitigation
 - **Incremental Implementation**: Stage-based approach reduces risk
@@ -349,8 +387,10 @@ The Typst-based refactor will provide:
 **Infrastructure Requirements**: Kubernetes cluster, monitoring stack, CI/CD pipeline
 
 **Next Steps**:
-1. Review and approve this implementation plan
-2. Set up development environment with Typst integration
-3. Begin Stage 1 implementation with infrastructure foundation
-4. Establish CI/CD pipeline for testing and validation
-5. Create project timeline with milestones and deliverables
+1. **✅ Stage 1.1 COMPLETED**: Typst Runtime Integration with BinaryWrapper
+2. **🎯 CURRENT PRIORITY**: Stage 1.2 - DSL-to-Typst Template Generation
+3. Implement `AshReports.Typst.DSLGenerator` to convert AshReports DSL → Typst templates
+4. Create band-to-Typst mapping for all element types (field, label, expression, etc.)
+5. Integrate with Ash resource queries for data loading and transformation
+
+**Architectural Pivot Complete**: From static template files → Dynamic DSL-driven template generation
