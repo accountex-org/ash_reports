@@ -9,6 +9,8 @@ defmodule AshReports.Typst.TemplateManager do
   use GenServer
   require Logger
 
+  alias AshReports.Typst.{BinaryWrapper, DSLGenerator}
+
   @table_name :typst_template_cache
   @default_cache_ttl :timer.minutes(15)
 
@@ -76,6 +78,61 @@ defmodule AshReports.Typst.TemplateManager do
     GenServer.call(__MODULE__, :list_templates)
   end
 
+  @doc """
+  Generates a Typst template from an AshReports DSL definition and compiles it with data.
+
+  This function creates a dynamic template from the report's DSL structure,
+  bypassing the file-based template system entirely.
+
+  ## Parameters
+
+    * `report` - AshReports.Report struct containing the DSL definition
+    * `data` - Data to pass to the generated template
+    * `opts` - Generation and compilation options:
+      * `:format` - Output format (:pdf, :png, :svg)
+      * `:theme` - Theme name for styling
+      * `:debug` - Include debug comments in template
+
+  ## Returns
+
+    * `{:ok, compiled_document}` - Compiled document as binary
+    * `{:error, reason}` - Generation or compilation failure
+
+  ## Example
+
+      report = AshReports.Info.report(MyDomain, :sales_report)
+      data = %{records: [%{customer: "Acme Corp", amount: 1500}]}
+      {:ok, pdf} = TemplateManager.compile_dsl_template(report, data)
+  """
+  @spec compile_dsl_template(AshReports.Report.t(), map(), Keyword.t()) ::
+          {:ok, binary()} | {:error, term()}
+  def compile_dsl_template(report, data, opts \\ []) do
+    GenServer.call(__MODULE__, {:compile_dsl_template, report, data, opts}, :timer.seconds(60))
+  end
+
+  @doc """
+  Generates a Typst template from an AshReports DSL definition without compiling.
+
+  Useful for debugging, template inspection, or custom compilation workflows.
+
+  ## Parameters
+
+    * `report` - AshReports.Report struct containing the DSL definition
+    * `opts` - Generation options:
+      * `:theme` - Theme name for styling
+      * `:debug` - Include debug comments in template
+
+  ## Returns
+
+    * `{:ok, template_string}` - Generated Typst template as string
+    * `{:error, reason}` - Generation failure
+  """
+  @spec generate_dsl_template(AshReports.Report.t(), Keyword.t()) ::
+          {:ok, String.t()} | {:error, term()}
+  def generate_dsl_template(report, opts \\ []) do
+    GenServer.call(__MODULE__, {:generate_dsl_template, report, opts})
+  end
+
   # Server Callbacks
 
   @impl true
@@ -104,11 +161,12 @@ defmodule AshReports.Typst.TemplateManager do
   def handle_call({:load_template, template_name, opts}, _from, state) do
     force_reload = Keyword.get(opts, :force_reload, false)
 
-    result = if force_reload do
-      load_template_from_disk(template_name, state)
-    else
-      load_template_with_cache(template_name, state)
-    end
+    result =
+      if force_reload do
+        load_template_from_disk(template_name, state)
+      else
+        load_template_with_cache(template_name, state)
+      end
 
     {:reply, result, state}
   end
@@ -117,7 +175,7 @@ defmodule AshReports.Typst.TemplateManager do
   def handle_call({:compile_template, template_name, data, opts}, _from, state) do
     with {:ok, template} <- load_template_with_cache(template_name, state),
          {:ok, rendered} <- render_template_with_data(template, data),
-         {:ok, compiled} <- AshReports.Typst.BinaryWrapper.compile(rendered, opts) do
+         {:ok, compiled} <- BinaryWrapper.compile(rendered, opts) do
       {:reply, {:ok, compiled}, state}
     else
       error ->
@@ -139,10 +197,29 @@ defmodule AshReports.Typst.TemplateManager do
   end
 
   @impl true
+  def handle_call({:compile_dsl_template, report, data, opts}, _from, state) do
+    with {:ok, template} <- DSLGenerator.generate_template(report, opts),
+         {:ok, rendered} <- render_template_with_data(template, data),
+         {:ok, compiled} <- BinaryWrapper.compile(rendered, opts) do
+      {:reply, {:ok, compiled}, state}
+    else
+      error ->
+        {:reply, error, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:generate_dsl_template, report, opts}, _from, state) do
+    result = DSLGenerator.generate_template(report, opts)
+    {:reply, result, state}
+  end
+
+  @impl true
   def handle_info({:file_event, _watcher, {path, events}}, state) do
     if :modified in events or :created in events do
       handle_template_change(path, state)
     end
+
     {:noreply, state}
   end
 
@@ -219,9 +296,11 @@ defmodule AshReports.Typst.TemplateManager do
 
   defp build_template_path(template_name, template_dir) do
     # Support nested templates
-    safe_name = template_name
-                |> String.replace("..", "")  # Prevent directory traversal
-                |> String.trim_leading("/")
+    safe_name =
+      template_name
+      # Prevent directory traversal
+      |> String.replace("..", "")
+      |> String.trim_leading("/")
 
     Path.join(template_dir, "#{safe_name}.typ")
   end
@@ -244,8 +323,9 @@ defmodule AshReports.Typst.TemplateManager do
   defp render_template_with_data(template, data) do
     # For now, simple string replacement
     # In the future, this could use a more sophisticated templating engine
-    rendered = template
-               |> String.replace("{{data}}", inspect(data))
+    rendered =
+      template
+      |> String.replace("{{data}}", inspect(data))
 
     {:ok, rendered}
   end

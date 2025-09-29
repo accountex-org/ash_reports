@@ -24,7 +24,9 @@ defmodule AshReports.Typst.BinaryWrapperTest do
 
     test "validates format parameter" do
       template = "Test content"
-      assert {:error, {:invalid_format, :invalid}} = BinaryWrapper.compile(template, format: :invalid)
+
+      assert {:error, {:invalid_format, :invalid}} =
+               BinaryWrapper.compile(template, format: :invalid)
     end
 
     test "compiles with basic Typst formatting" do
@@ -42,7 +44,8 @@ defmodule AshReports.Typst.BinaryWrapperTest do
       """
 
       assert {:ok, pdf} = BinaryWrapper.compile(template)
-      assert byte_size(pdf) > 1000  # Should produce a reasonable PDF
+      # Should produce a reasonable PDF
+      assert byte_size(pdf) > 1000
     end
 
     @tag :skip
@@ -83,7 +86,8 @@ defmodule AshReports.Typst.BinaryWrapperTest do
     end
 
     test "handles non-existent file" do
-      assert {:error, {:file_error, :enoent}} = BinaryWrapper.compile_file("/non/existent/file.typ")
+      assert {:error, {:file_error, :enoent}} =
+               BinaryWrapper.compile_file("/non/existent/file.typ")
     end
   end
 
