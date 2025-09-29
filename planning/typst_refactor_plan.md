@@ -10,7 +10,7 @@ This plan implements a complete architectural refactor of AshReports to replace 
 
 ---
 
-# Phase 1: Infrastructure Foundation and Typst Integration
+# Stage 1: Infrastructure Foundation and Typst Integration
 
 **Duration**: 2-3 weeks
 **Status**: 📋 Planned
@@ -82,7 +82,7 @@ This plan implements a complete architectural refactor of AshReports to replace 
 
 ---
 
-# Phase 2: D3.js Visualization System Integration
+# Stage 2: D3.js Visualization System Integration
 
 **Duration**: 2-3 weeks
 **Status**: 📋 Planned
@@ -138,7 +138,7 @@ This plan implements a complete architectural refactor of AshReports to replace 
 
 ---
 
-# Phase 3: Phoenix LiveView Integration and Real-time Features
+# Stage 3: Phoenix LiveView Integration and Real-time Features
 
 **Duration**: 2-3 weeks
 **Status**: 📋 Planned
@@ -187,7 +187,7 @@ This plan implements a complete architectural refactor of AshReports to replace 
 
 ---
 
-# Phase 4: Production Deployment and Scalability
+# Stage 4: Production Deployment and Scalability
 
 **Duration**: 2-3 weeks
 **Status**: 📋 Planned
@@ -236,7 +236,7 @@ This plan implements a complete architectural refactor of AshReports to replace 
 
 ---
 
-# Phase 5: Migration Tools and Backward Compatibility
+# Stage 5: Migration Tools and Backward Compatibility
 
 **Duration**: 1-2 weeks
 **Status**: 📋 Planned
@@ -336,7 +336,7 @@ The Typst-based refactor will provide:
 - **Phoenix LiveView**: Enhanced web interface
 
 ### Risk Mitigation
-- **Incremental Implementation**: Phase-based approach reduces risk
+- **Incremental Implementation**: Stage-based approach reduces risk
 - **Fallback Mechanisms**: Maintain existing renderers during transition
 - **Comprehensive Testing**: Unit, integration, and performance testing
 - **Monitoring**: Full observability for production deployment
@@ -351,6 +351,6 @@ The Typst-based refactor will provide:
 **Next Steps**:
 1. Review and approve this implementation plan
 2. Set up development environment with Typst integration
-3. Begin Phase 1 implementation with infrastructure foundation
+3. Begin Stage 1 implementation with infrastructure foundation
 4. Establish CI/CD pipeline for testing and validation
 5. Create project timeline with milestones and deliverables
