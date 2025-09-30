@@ -47,7 +47,7 @@ defmodule AshReports.Typst.StreamingPipeline.RelationshipLoaderTest do
 
       load_spec = RelationshipLoader.build_load_spec(relationships, max_depth)
 
-      assert Enum.sort(load_spec) == Enum.sort([tags: [], author: [profile: []], comments: []])
+      assert Enum.sort(load_spec) == Enum.sort(tags: [], author: [profile: []], comments: [])
     end
   end
 
@@ -228,6 +228,11 @@ defmodule TestPost do
     private? true
   end
 
+  actions do
+    default_accept :*
+    defaults [:read, :destroy, create: :*, update: :*]
+  end
+
   attributes do
     uuid_primary_key :id
     attribute :title, :string
@@ -237,16 +242,12 @@ defmodule TestPost do
   relationships do
     belongs_to :author, TestAuthor
     has_many :comments, TestComment
+
     many_to_many :tags, TestTag do
       through TestPostTag
       source_attribute_on_join_resource :post_id
       destination_attribute_on_join_resource :tag_id
     end
-  end
-
-  actions do
-    default_accept :*
-    defaults [:read, :destroy, create: :*, update: :*]
   end
 end
 

@@ -134,8 +134,7 @@ defmodule AshReports.Typst.StreamingPipeline.RelationshipLoader do
         {:ok, load_spec}
 
       {:error, actual_depth} ->
-        {:error,
-         "Relationship depth #{actual_depth} exceeds maximum allowed depth #{max_depth}"}
+        {:error, "Relationship depth #{actual_depth} exceeds maximum allowed depth #{max_depth}"}
     end
   end
 

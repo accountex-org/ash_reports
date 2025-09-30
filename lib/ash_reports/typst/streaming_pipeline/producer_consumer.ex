@@ -291,11 +291,16 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
         |> Enum.reject(&is_nil/1)
 
       # Step 3: Update global aggregations
-      new_aggregation_state = update_aggregations(transformed, state.aggregation_state, state.aggregations)
+      new_aggregation_state =
+        update_aggregations(transformed, state.aggregation_state, state.aggregations)
 
       # Step 4: Update grouped aggregations
       new_grouped_aggregation_state =
-        update_grouped_aggregations(transformed, state.grouped_aggregation_state, state.grouped_aggregations)
+        update_grouped_aggregations(
+          transformed,
+          state.grouped_aggregation_state,
+          state.grouped_aggregations
+        )
 
       {:ok, transformed, new_aggregation_state, new_grouped_aggregation_state}
     rescue
