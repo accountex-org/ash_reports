@@ -72,6 +72,7 @@ defmodule AshReports.Typst.DSLGenerator do
   @spec generate_template(Report.t() | nil, Keyword.t()) :: {:ok, String.t()} | {:error, term()}
   def generate_template(report, options \\ [])
   def generate_template(nil, _options), do: {:error, {:generation_failed, :invalid_report}}
+
   def generate_template(%Report{} = report, options) do
     context = build_generation_context(report, options)
 
@@ -166,12 +167,16 @@ defmodule AshReports.Typst.DSLGenerator do
   defp generate_debug_info(report) do
     driving_resource_name =
       case report.driving_resource do
-        nil -> "None"
+        nil ->
+          "None"
+
         module when is_atom(module) ->
           module
           |> Module.split()
           |> List.last()
-        other -> inspect(other)
+
+        other ->
+          inspect(other)
       end
 
     """

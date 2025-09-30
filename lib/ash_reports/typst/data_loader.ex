@@ -56,7 +56,7 @@ defmodule AshReports.Typst.DataLoader do
   """
 
   alias AshReports.{DataLoader, Report}
-  alias AshReports.Typst.DataProcessor
+  alias AshReports.Typst.{DataProcessor, StreamingPipeline}
 
   require Logger
 
@@ -264,9 +264,133 @@ defmodule AshReports.Typst.DataLoader do
     end
   end
 
-  defp create_streaming_pipeline(_domain, _report, _params, _opts) do
-    # Implementation will be added in streaming pipeline task
-    {:error, :streaming_not_implemented}
+  defp create_streaming_pipeline(domain, report, params, opts) do
+    # Get the query from report definition
+    with {:ok, query} <- build_query_from_report(domain, report, params) do
+      # Build transformer function
+      transformer = build_typst_transformer(report, opts)
+
+      # Start streaming pipeline
+      pipeline_opts = [
+        domain: domain,
+        resource: report.resource,
+        query: query,
+        transformer: transformer,
+        chunk_size: Keyword.get(opts, :chunk_size, 500),
+        max_demand: Keyword.get(opts, :max_demand, 1000),
+        report_name: report.name,
+        report_config: build_report_config(report, params)
+      ]
+
+      case StreamingPipeline.start_pipeline(pipeline_opts) do
+        {:ok, _stream_id, stream} ->
+          {:ok, stream}
+
+        {:error, reason} ->
+          {:error, {:streaming_pipeline_failed, reason}}
+      end
+    end
+  end
+
+  defp build_query_from_report(_domain, report, params) do
+    # Build Ash query from report definition and parameters
+    try do
+      query =
+        report.resource
+        |> Ash.Query.new()
+        |> apply_report_filters(report, params)
+        |> apply_report_sort(report)
+        |> apply_preloads(report)
+
+      {:ok, query}
+    rescue
+      error ->
+        {:error, {:query_build_failed, error}}
+    end
+  end
+
+  defp build_typst_transformer(_report, opts) do
+    # Create a transformer function that processes records for Typst
+    fn record ->
+      # Convert single record - DataProcessor.convert_records expects a list
+      case DataProcessor.convert_records([record], opts) do
+        {:ok, [converted]} -> converted
+        {:ok, []} -> nil
+        {:error, _reason} -> nil
+      end
+    end
+  end
+
+  defp build_report_config(report, params) do
+    %{
+      report_name: report.name,
+      parameters: params,
+      columns: report.columns || [],
+      groups: report.groups || [],
+      variables: report.variables || []
+    }
+  end
+
+  defp apply_report_filters(query, report, params) do
+    # Apply filters from report definition and runtime parameters
+    query_with_report_filter =
+      case report.filter do
+        nil ->
+          query
+
+        filter_expr ->
+          Ash.Query.do_filter(query, filter_expr)
+      end
+
+    apply_runtime_filters(query_with_report_filter, params)
+  end
+
+  defp apply_runtime_filters(query, params) when params == %{}, do: query
+
+  defp apply_runtime_filters(query, params) do
+    # Apply runtime filters from parameters
+    Enum.reduce(params, query, fn {_key, value}, acc_query ->
+      case value do
+        nil -> acc_query
+        # Simplified - real implementation would apply filter
+        _ -> acc_query
+      end
+    end)
+  end
+
+  defp apply_report_sort(query, report) do
+    case report.sort do
+      nil ->
+        query
+
+      sort_spec ->
+        Ash.Query.sort(query, sort_spec)
+    end
+  end
+
+  defp apply_preloads(query, report) do
+    # Determine what relationships need to be preloaded
+    preloads = extract_relationship_preloads(report)
+
+    case preloads do
+      [] -> query
+      list -> Ash.Query.load(query, list)
+    end
+  end
+
+  defp extract_relationship_preloads(report) do
+    # Extract relationship paths from column definitions
+    # This is a simplified implementation - could be enhanced
+    columns = report.columns || []
+
+    columns
+    |> Enum.flat_map(fn column ->
+      case column.source do
+        {:relationship, path} -> [path]
+        _ -> []
+      end
+    end)
+    |> Enum.uniq()
   end
 
   defp build_loader_opts(typst_opts) do

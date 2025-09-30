@@ -76,6 +76,10 @@ defmodule AshReports.MixProject do
       {:typst, "~> 0.1.7"},
       {:file_system, "~> 1.0", only: [:dev, :test]},
 
+      # GenStage streaming dependencies
+      {:gen_stage, "~> 1.2"},
+      {:flow, "~> 1.2"},
+
       # Phase 5.1 - Interactive Data Visualization dependencies
       {:jason, "~> 1.4"},
 
