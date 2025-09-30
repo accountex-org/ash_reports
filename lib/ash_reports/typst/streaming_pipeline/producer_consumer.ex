@@ -315,84 +315,109 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   end
 
   defp update_aggregations(records, aggregation_state, aggregations) do
-    Enum.reduce(aggregations, aggregation_state, fn agg, state ->
-      case agg do
-        :count ->
-          Map.update!(state, :count, &(&1 + length(records)))
+    # Single-pass optimization: update all aggregations in one iteration
+    # Instead of looping through records multiple times (once per aggregation type),
+    # we loop through records once and update all aggregations simultaneously
 
-        :sum ->
-          new_sums = calculate_sums(records, state.sum)
-          Map.put(state, :sum, new_sums)
+    # Fast path: if only count, no need to iterate records
+    if aggregations == [:count] do
+      Map.update!(aggregation_state, :count, &(&1 + length(records)))
+    else
+      # Build set of required aggregations for quick lookup
+      agg_set = MapSet.new(aggregations)
 
-        :avg ->
-          new_count = state.avg.count + length(records)
-          new_sums = calculate_sums(records, state.avg.sum)
-          Map.put(state, :avg, %{sum: new_sums, count: new_count})
-
-        :min ->
-          new_mins = calculate_mins(records, state.min)
-          Map.put(state, :min, new_mins)
-
-        :max ->
-          new_maxs = calculate_maxs(records, state.max)
-          Map.put(state, :max, new_maxs)
-
-        :running_total ->
-          new_totals = calculate_running_totals(records, state.running_total)
-          Map.put(state, :running_total, new_totals)
-
-        _ ->
-          state
-      end
-    end)
+      # Single pass through all records and fields
+      Enum.reduce(records, aggregation_state, fn record, state ->
+        Enum.reduce(record, state, fn {key, value}, acc ->
+          # Only process numeric values
+          if is_number(value) do
+            acc
+            |> update_sum_if_needed(key, value, agg_set)
+            |> update_avg_if_needed(key, value, agg_set)
+            |> update_min_if_needed(key, value, agg_set)
+            |> update_max_if_needed(key, value, agg_set)
+            |> update_running_total_if_needed(key, value, agg_set)
+          else
+            acc
+          end
+        end)
+        |> update_count_if_needed(agg_set)
+        |> update_avg_count_if_needed(agg_set)
+      end)
+    end
   end
 
-  defp calculate_sums(records, current_sums) do
-    Enum.reduce(records, current_sums, fn record, sums ->
-      Enum.reduce(record, sums, fn {key, value}, acc ->
-        if is_number(value) do
-          Map.update(acc, key, value, &(&1 + value))
-        else
-          acc
-        end
+  # Optimized aggregation helpers - O(1) updates per field
+  # These are called once per field during the single-pass iteration
+
+  defp update_sum_if_needed(state, key, value, agg_set) do
+    if MapSet.member?(agg_set, :sum) do
+      Map.update!(state, :sum, fn sums ->
+        Map.update(sums, key, value, &(&1 + value))
       end)
-    end)
+    else
+      state
+    end
   end
 
-  defp calculate_mins(records, current_mins) do
-    Enum.reduce(records, current_mins, fn record, mins ->
-      Enum.reduce(record, mins, fn {key, value}, acc ->
-        if is_number(value) do
-          Map.update(acc, key, value, &min(&1, value))
-        else
-          acc
-        end
+  defp update_avg_if_needed(state, key, value, agg_set) do
+    if MapSet.member?(agg_set, :avg) do
+      Map.update!(state, :avg, fn avg_state ->
+        # Update the sum for this specific field
+        %{avg_state | sum: Map.update(avg_state.sum, key, value, &(&1 + value))}
       end)
-    end)
+    else
+      state
+    end
   end
 
-  defp calculate_maxs(records, current_maxs) do
-    Enum.reduce(records, current_maxs, fn record, maxs ->
-      Enum.reduce(record, maxs, fn {key, value}, acc ->
-        if is_number(value) do
-          Map.update(acc, key, value, &max(&1, value))
-        else
-          acc
-        end
+  defp update_avg_count_if_needed(state, agg_set) do
+    # Increment count for avg aggregation (once per record, not per field)
+    if MapSet.member?(agg_set, :avg) do
+      Map.update!(state, :avg, fn avg_state ->
+        %{avg_state | count: avg_state.count + 1}
       end)
-    end)
+    else
+      state
+    end
   end
 
-  defp calculate_running_totals(records, current_totals) do
-    Enum.reduce(records, current_totals, fn record, totals ->
-      Enum.reduce(record, totals, fn {key, value}, acc ->
-        if is_number(value) do
-          Map.update(acc, key, value, &(&1 + value))
-        else
-          acc
-        end
+  defp update_min_if_needed(state, key, value, agg_set) do
+    if MapSet.member?(agg_set, :min) do
+      Map.update!(state, :min, fn mins ->
+        Map.update(mins, key, value, &min(&1, value))
       end)
-    end)
+    else
+      state
+    end
+  end
+
+  defp update_max_if_needed(state, key, value, agg_set) do
+    if MapSet.member?(agg_set, :max) do
+      Map.update!(state, :max, fn maxs ->
+        Map.update(maxs, key, value, &max(&1, value))
+      end)
+    else
+      state
+    end
+  end
+
+  defp update_running_total_if_needed(state, key, value, agg_set) do
+    if MapSet.member?(agg_set, :running_total) do
+      Map.update!(state, :running_total, fn totals ->
+        Map.update(totals, key, value, &(&1 + value))
+      end)
+    else
+      state
+    end
+  end
+
+  defp update_count_if_needed(state, agg_set) do
+    if MapSet.member?(agg_set, :count) do
+      Map.update!(state, :count, &(&1 + 1))
+    else
+      state
+    end
   end
 
   # Grouped Aggregation Functions
