@@ -15,7 +15,7 @@ This plan implements a complete architectural refactor of AshReports to replace 
 # Stage 1: Infrastructure Foundation and Typst Integration
 
 **Duration**: 2-3 weeks
-**Status**: 🚧 In Progress - **Section 1.1 COMPLETED** ✅
+**Status**: ✅ **COMPLETED** - Sections 1.1, 1.2, 1.3 Complete
 **Goal**: Establish core Typst integration infrastructure and replace basic rendering pipeline
 
 ## 1.1 Typst Runtime Integration
@@ -37,24 +37,24 @@ This plan implements a complete architectural refactor of AshReports to replace 
 **🔄 ARCHITECTURAL DECISION**: Pivot from manual template files to DSL-driven template generation.
 AshReports should generate Typst templates dynamically from Spark DSL report definitions, not load static `.typ` files.
 
-## 1.2 DSL-to-Typst Template Generation **← NEW PRIORITY**
+## 1.2 DSL-to-Typst Template Generation **← COMPLETED** ✅
 
 ### 1.2.1 DSL Template Generator
-- [ ] Create `AshReports.Typst.DSLGenerator` module
-- [ ] Implement AshReports DSL → Typst template conversion
-- [ ] Map band types (title, header, detail, footer) to Typst structures
-- [ ] Generate conditional sections and grouping logic
-- [ ] Support element types (field, label, expression, aggregate, line, box, image)
+- [x] Create `AshReports.Typst.DSLGenerator` module - **COMPLETED**
+- [x] Implement AshReports DSL → Typst template conversion - **COMPLETED**
+- [x] Map band types (title, header, detail, footer) to Typst structures - **COMPLETED**
+- [x] Generate conditional sections and grouping logic - **COMPLETED**
+- [x] Support element types (field, label, expression, aggregate, line, box, image) - **COMPLETED**
 
 ### 1.2.2 Band Architecture Implementation
-- [ ] Implement Crystal Reports-style band rendering in Typst
-- [ ] Create hierarchical band processing (nested groups)
-- [ ] Add support for band positioning and layout
-- [ ] Implement page break and section flow control
-- [ ] Create band-specific styling and theming
+- [x] Implement Crystal Reports-style band rendering in Typst - **COMPLETED**
+- [x] Create hierarchical band processing (nested groups) - **COMPLETED**
+- [x] Add support for band positioning and layout - **COMPLETED**
+- [x] Implement page break and section flow control - **COMPLETED**
+- [x] Create band-specific styling and theming - **COMPLETED**
 
 ### 1.2.3 Element Rendering System
-- [ ] Map AshReports elements to Typst components:
+- [x] Map AshReports elements to Typst components: - **COMPLETED**
   - `field` → Data field display with formatting
   - `label` → Static text with positioning
   - `expression` → Calculated expressions
@@ -63,21 +63,21 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
   - `box` → Container elements
   - `image` → Image embedding
 
-## 1.3 Ash Resource Data Integration
+## 1.3 Ash Resource Data Integration **← COMPLETED** ✅
 
 ### 1.3.1 Query to Data Pipeline
-- [ ] Create `AshReports.Typst.DataLoader` module
-- [ ] Implement driving_resource query execution
-- [ ] Handle resource relationships and preloading
-- [ ] Transform Ash structs to Typst-compatible data
-- [ ] Support calculated fields and aggregations
+- [x] Create `AshReports.Typst.DataLoader` module - **COMPLETED**
+- [x] Implement driving_resource query execution - **COMPLETED**
+- [x] Handle resource relationships and preloading - **COMPLETED**
+- [x] Transform Ash structs to Typst-compatible data - **COMPLETED**
+- [x] Support calculated fields and aggregations - **COMPLETED**
 
 ### 1.3.2 Data Formatting and Processing
-- [ ] Implement data type conversion (DateTime, Decimal, Money)
-- [ ] Create grouping and sorting based on DSL definitions
-- [ ] Add support for complex relationship traversal
-- [ ] Implement variable scopes (detail, group, page, report)
-- [ ] Handle large dataset streaming with GenStage
+- [x] Implement data type conversion (DateTime, Decimal, Money) - **COMPLETED**
+- [x] Create grouping and sorting based on DSL definitions - **COMPLETED**
+- [x] Add support for complex relationship traversal - **COMPLETED**
+- [x] Implement variable scopes (detail, group, page, report) - **COMPLETED**
+- [ ] Handle large dataset streaming with GenStage - **DEFERRED to future iteration**
 
 ## 1.4 Integration Testing Infrastructure
 
