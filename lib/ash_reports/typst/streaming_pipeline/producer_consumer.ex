@@ -65,7 +65,6 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   @default_min_demand 100
   @default_buffer_size 1000
   @default_max_groups_per_config 10_000
-  @default_transformer_timeout 5000
 
   # Client API
 
@@ -77,10 +76,6 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   - `:stream_id` - Unique identifier for this pipeline (required)
   - `:subscribe_to` - List of producers to subscribe to (required)
   - `:transformer` - Function to transform records (default: identity)
-    - Must be arity-1 function accepting a record map
-    - Should be pure and deterministic
-    - See "Transformer Security" section below for important security considerations
-  - `:transformer_timeout` - Maximum milliseconds for transformer execution per record (default: 5000)
   - `:report_config` - Report configuration for DataProcessor (optional)
   - `:transformation_opts` - Options for DataProcessor.convert_records/2 (optional)
   - `:aggregations` - List of global aggregation functions to apply (default: [])
@@ -98,8 +93,6 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
 
   ## Security Considerations
 
-  ### Grouped Aggregations
-
   Grouped aggregations can grow unbounded if grouping by high-cardinality fields
   (e.g., user_id, transaction_id). To prevent memory exhaustion:
 
@@ -107,64 +100,6 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   - Once limit is reached, new groups are rejected and warning is logged
   - Telemetry event `[:ash_reports, :streaming, :producer_consumer, :group_limit_reached]` is emitted
   - Consider the memory impact: 10K groups × ~500 bytes/group ≈ 5MB per grouping config
-
-  ### Transformer Security
-
-  **IMPORTANT**: User-provided transformer functions execute with full system privileges
-  and can pose significant security risks if not properly validated.
-
-  #### Risks
-
-  - **Infinite loops**: Transformer could hang forever, blocking the entire pipeline
-  - **Memory exhaustion**: Unbounded memory allocation can crash the BEAM VM
-  - **System access**: Transformers can read files, make network calls, execute commands
-  - **Data exfiltration**: Malicious code could send data to external systems
-
-  #### Protections
-
-  - **Timeout enforcement**: Each transformer call has a timeout (default: 5 seconds)
-  - **Arity validation**: Function arity is checked at initialization (must be arity-1)
-  - **Error isolation**: Transformer errors are caught and logged, record is skipped
-  - **Supervisor restart**: Severe errors crash the process for clean restart
-
-  #### Safe Transformer Guidelines
-
-  DO:
-  - Keep transformers pure and side-effect free
-  - Use simple data transformations (map updates, calculations)
-  - Return nil to filter out records
-  - Keep execution time under 100ms per record
-
-  DON'T:
-  - Make external API calls or database queries
-  - Read/write files or perform I/O operations
-  - Use Process.sleep/1 or other blocking operations
-  - Store state in Agent/GenServer/ETS
-  - Spawn processes or tasks
-
-  #### Example Safe Transformer
-
-      transformer = fn record ->
-        record
-        |> Map.put(:full_name, "\#{record.first_name} \#{record.last_name}")
-        |> Map.update(:amount, 0, &Decimal.mult(&1, Decimal.new("1.10")))
-      end
-
-  #### Example UNSAFE Transformer
-
-      # DO NOT DO THIS
-      transformer = fn record ->
-        # UNSAFE: External API call
-        {:ok, response} = HTTPoison.get("https://api.example.com/enrich/\#{record.id}")
-
-        # UNSAFE: File I/O
-        File.write!("/tmp/records.log", inspect(record))
-
-        # UNSAFE: Unbounded memory
-        :ets.insert(:cache, {record.id, record})
-
-        record
-      end
 
   ## Examples
 
@@ -197,7 +132,6 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
     stream_id = Keyword.fetch!(opts, :stream_id)
     subscribe_to = Keyword.fetch!(opts, :subscribe_to)
     transformer = Keyword.get(opts, :transformer, &identity/1)
-    transformer_timeout = Keyword.get(opts, :transformer_timeout, @default_transformer_timeout)
     report_config = Keyword.get(opts, :report_config, %{})
     transformation_opts = Keyword.get(opts, :transformation_opts, [])
     aggregations = Keyword.get(opts, :aggregations, [])
@@ -206,9 +140,6 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
     max_demand = Keyword.get(opts, :max_demand, @default_max_demand)
     min_demand = Keyword.get(opts, :min_demand, @default_min_demand)
     enable_telemetry = Keyword.get(opts, :enable_telemetry, true)
-
-    # Validate transformer function arity (security: must be arity-1)
-    validate_transformer_arity!(transformer, stream_id)
 
     # Update Registry with our PID
     Registry.update_producer_consumer(stream_id, self())
@@ -225,7 +156,6 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
     state = %{
       stream_id: stream_id,
       transformer: transformer,
-      transformer_timeout: transformer_timeout,
       report_config: report_config,
       transformation_opts: transformation_opts,
       aggregations: aggregations,
@@ -377,43 +307,17 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   end
 
   defp transform_record(record, state) do
-    # Apply custom transformer with timeout protection (security: prevent infinite loops)
-    task =
-      Task.async(fn ->
-        try do
-          state.transformer.(record)
-        rescue
-          # Only catch specific, expected errors from user-provided transformers
-          # Let system errors (e.g., VM errors) crash the process
-          e in [RuntimeError, ArgumentError, KeyError, FunctionClauseError, ArithmeticError] ->
-            Logger.error(
-              "Failed to transform record: #{Exception.message(e)} - Record will be skipped"
-            )
+    # Apply custom transformer if provided
+    state.transformer.(record)
+  rescue
+    # Only catch specific, expected errors from user-provided transformers
+    # Let system errors (e.g., VM errors) crash the process
+    e in [RuntimeError, ArgumentError, KeyError, FunctionClauseError, ArithmeticError] ->
+      Logger.error(
+        "Failed to transform record: #{Exception.message(e)} - Record will be skipped"
+      )
 
-            nil
-        end
-      end)
-
-    case Task.yield(task, state.transformer_timeout) || Task.shutdown(task) do
-      {:ok, result} ->
-        result
-
-      nil ->
-        # Timeout - transformer took too long
-        Logger.error(
-          "Transformer timeout after #{state.transformer_timeout}ms for stream #{state.stream_id} - Record will be skipped"
-        )
-
-        nil
-
-      {:exit, reason} ->
-        # Task crashed with unexpected error
-        Logger.error(
-          "Transformer crashed for stream #{state.stream_id}: #{inspect(reason)} - Record will be skipped"
-        )
-
-        nil
-    end
+      nil
   end
 
   defp initialize_aggregations(aggregations) do
@@ -653,31 +557,4 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   end
 
   defp identity(x), do: x
-
-  # Transformer Security Validation
-
-  defp validate_transformer_arity!(transformer, stream_id) do
-    if is_function(transformer) do
-      case :erlang.fun_info(transformer, :arity) do
-        {:arity, 1} ->
-          :ok
-
-        {:arity, arity} ->
-          raise ArgumentError, """
-          Invalid transformer function for stream #{stream_id}.
-          Expected arity-1 function (fn record -> ... end), got arity-#{arity}.
-
-          The transformer must accept exactly one argument (the record map).
-
-          Example:
-            transformer = fn record -> Map.put(record, :processed, true) end
-          """
-      end
-    else
-      raise ArgumentError, """
-      Invalid transformer for stream #{stream_id}.
-      Transformer must be a function, got: #{inspect(transformer)}
-      """
-    end
-  end
 end
