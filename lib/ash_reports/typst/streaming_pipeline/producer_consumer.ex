@@ -168,85 +168,67 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   def handle_events(events, _from, state) do
     start_time = System.monotonic_time(:millisecond)
 
-    # Transform events
-    case transform_batch(events, state) do
-      {:ok, transformed_events, new_aggregation_state, new_grouped_aggregation_state} ->
-        end_time = System.monotonic_time(:millisecond)
-        duration = end_time - start_time
+    # Transform events - if this crashes, let the supervisor restart the process
+    {:ok, transformed_events, new_aggregation_state, new_grouped_aggregation_state} =
+      transform_batch(events, state)
 
-        # Emit telemetry
-        if state.enable_telemetry do
-          :telemetry.execute(
-            [:ash_reports, :streaming, :producer_consumer, :batch_transformed],
-            %{
-              records_in: length(events),
-              records_out: length(transformed_events),
-              duration_ms: duration,
-              records_buffered: length(transformed_events)
-            },
-            %{stream_id: state.stream_id}
-          )
+    end_time = System.monotonic_time(:millisecond)
+    duration = end_time - start_time
 
-          # Emit aggregation telemetry if aggregations are enabled
-          if state.aggregations != [] or state.grouped_aggregations != [] do
-            :telemetry.execute(
-              [:ash_reports, :streaming, :producer_consumer, :aggregation_computed],
-              %{records_processed: length(transformed_events)},
-              %{
-                stream_id: state.stream_id,
-                aggregations: new_aggregation_state,
-                grouped_aggregations: new_grouped_aggregation_state
-              }
-            )
-          end
-        end
+    # Emit telemetry
+    if state.enable_telemetry do
+      :telemetry.execute(
+        [:ash_reports, :streaming, :producer_consumer, :batch_transformed],
+        %{
+          records_in: length(events),
+          records_out: length(transformed_events),
+          duration_ms: duration,
+          records_buffered: length(transformed_events)
+        },
+        %{stream_id: state.stream_id}
+      )
 
-        # Check buffer size and emit warning if near capacity
-        buffer_usage = length(transformed_events)
-
-        if buffer_usage > state.buffer_size * 0.8 do
-          Logger.warning(
-            "ProducerConsumer #{state.stream_id} buffer at #{buffer_usage}/#{state.buffer_size} (#{trunc(buffer_usage / state.buffer_size * 100)}%)"
-          )
-
-          if state.enable_telemetry do
-            :telemetry.execute(
-              [:ash_reports, :streaming, :producer_consumer, :buffer_full],
-              %{buffer_size: state.buffer_size, records_buffered: buffer_usage},
-              %{stream_id: state.stream_id}
-            )
-          end
-        end
-
-        new_total = state.total_transformed + length(transformed_events)
-
-        {:noreply, transformed_events,
-         %{
-           state
-           | total_transformed: new_total,
-             records_buffered: buffer_usage,
-             aggregation_state: new_aggregation_state,
-             grouped_aggregation_state: new_grouped_aggregation_state
-         }}
-
-      {:error, reason} ->
-        Logger.error(
-          "ProducerConsumer #{state.stream_id} transformation failed: #{inspect(reason)}"
+      # Emit aggregation telemetry if aggregations are enabled
+      if state.aggregations != [] or state.grouped_aggregations != [] do
+        :telemetry.execute(
+          [:ash_reports, :streaming, :producer_consumer, :aggregation_computed],
+          %{records_processed: length(transformed_events)},
+          %{
+            stream_id: state.stream_id,
+            aggregations: new_aggregation_state,
+            grouped_aggregations: new_grouped_aggregation_state
+          }
         )
-
-        if state.enable_telemetry do
-          :telemetry.execute(
-            [:ash_reports, :streaming, :producer_consumer, :error],
-            %{records: length(events)},
-            %{stream_id: state.stream_id, reason: reason}
-          )
-        end
-
-        Registry.update_status(state.stream_id, :failed)
-
-        # Pass through empty list on error
-        {:noreply, [], %{state | errors: [reason | state.errors]}}
+      end
     end
+
+    # Check buffer size and emit warning if near capacity
+    buffer_usage = length(transformed_events)
+
+    if buffer_usage > state.buffer_size * 0.8 do
+      Logger.warning(
+        "ProducerConsumer #{state.stream_id} buffer at #{buffer_usage}/#{state.buffer_size} (#{trunc(buffer_usage / state.buffer_size * 100)}%)"
+      )
+
+      if state.enable_telemetry do
+        :telemetry.execute(
+          [:ash_reports, :streaming, :producer_consumer, :buffer_full],
+          %{buffer_size: state.buffer_size, records_buffered: buffer_usage},
+          %{stream_id: state.stream_id}
+        )
+      end
+    end
+
+    new_total = state.total_transformed + length(transformed_events)
+
+    {:noreply, transformed_events,
+     %{
+       state
+       | total_transformed: new_total,
+         records_buffered: buffer_usage,
+         aggregation_state: new_aggregation_state,
+         grouped_aggregation_state: new_grouped_aggregation_state
+     }}
   end
 
   @impl true
@@ -261,63 +243,61 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   # Private Functions
 
   defp transform_batch(events, state) do
-    try do
-      # Step 1: Apply DataProcessor conversion if transformation_opts provided
-      converted_events =
-        if state.transformation_opts != [] do
-          case DataProcessor.convert_records(events, state.transformation_opts) do
-            {:ok, converted} ->
-              converted
+    # Step 1: Apply DataProcessor conversion if transformation_opts provided
+    converted_events =
+      if state.transformation_opts != [] do
+        case DataProcessor.convert_records(events, state.transformation_opts) do
+          {:ok, converted} ->
+            converted
 
-            {:error, reason} ->
-              Logger.error(
-                "ProducerConsumer #{state.stream_id} DataProcessor conversion failed: #{inspect(reason)}"
-              )
+          {:error, reason} ->
+            Logger.error(
+              "ProducerConsumer #{state.stream_id} DataProcessor conversion failed: #{inspect(reason)}"
+            )
 
-              # Fall back to raw events
-              events
-          end
-        else
-          events
+            # Fall back to raw events
+            events
         end
+      else
+        events
+      end
 
-      # Step 2: Apply custom transformer function to each event
-      transformed =
-        converted_events
-        |> Enum.map(fn event ->
-          transform_record(event, state)
-        end)
-        # Filter out any nil results
-        |> Enum.reject(&is_nil/1)
+    # Step 2: Apply custom transformer function to each event
+    transformed =
+      converted_events
+      |> Enum.map(fn event ->
+        transform_record(event, state)
+      end)
+      # Filter out any nil results
+      |> Enum.reject(&is_nil/1)
 
-      # Step 3: Update global aggregations
-      new_aggregation_state =
-        update_aggregations(transformed, state.aggregation_state, state.aggregations)
+    # Step 3: Update global aggregations
+    new_aggregation_state =
+      update_aggregations(transformed, state.aggregation_state, state.aggregations)
 
-      # Step 4: Update grouped aggregations
-      new_grouped_aggregation_state =
-        update_grouped_aggregations(
-          transformed,
-          state.grouped_aggregation_state,
-          state.grouped_aggregations
-        )
+    # Step 4: Update grouped aggregations
+    new_grouped_aggregation_state =
+      update_grouped_aggregations(
+        transformed,
+        state.grouped_aggregation_state,
+        state.grouped_aggregations
+      )
 
-      {:ok, transformed, new_aggregation_state, new_grouped_aggregation_state}
-    rescue
-      exception ->
-        {:error, exception}
-    end
+    {:ok, transformed, new_aggregation_state, new_grouped_aggregation_state}
   end
 
   defp transform_record(record, state) do
-    try do
-      # Apply custom transformer if provided
-      state.transformer.(record)
-    rescue
-      exception ->
-        Logger.error("Failed to transform record: #{inspect(exception)}")
-        nil
-    end
+    # Apply custom transformer if provided
+    state.transformer.(record)
+  rescue
+    # Only catch specific, expected errors from user-provided transformers
+    # Let system errors (e.g., VM errors) crash the process
+    e in [RuntimeError, ArgumentError, KeyError, FunctionClauseError, ArithmeticError] ->
+      Logger.error(
+        "Failed to transform record: #{Exception.message(e)} - Record will be skipped"
+      )
+
+      nil
   end
 
   defp initialize_aggregations(aggregations) do

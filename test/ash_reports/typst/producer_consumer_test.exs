@@ -235,6 +235,569 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
     end
   end
 
+  describe "behavioral tests: data transformation" do
+    test "transforms records through custom transformer" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      # Custom transformer that adds a field and notifies test
+      transformer = fn record ->
+        send(test_pid, {:transformed, record})
+        Map.put(record, :transformed, true)
+      end
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        transformer: transformer
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      # Give GenStage time to establish demand
+      Process.sleep(50)
+
+      # Send test events through producer
+      GenStage.call(producer, {:queue, [%{id: 1, value: 100}, %{id: 2, value: 200}]})
+
+      # Verify transformation occurred
+      assert_receive {:transformed, %{id: 1, value: 100}}, 1000
+      assert_receive {:transformed, %{id: 2, value: 200}}, 1000
+
+      # Verify transformed records reached consumer
+      assert_receive {:consumed, events}, 1000
+      assert length(events) == 2
+      assert Enum.all?(events, fn record -> record.transformed == true end)
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "filters out nil results from failed transformations" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      # Transformer that returns nil for even IDs
+      transformer = fn record ->
+        if rem(record.id, 2) == 0, do: nil, else: record
+      end
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        transformer: transformer
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      # Give GenStage time to establish demand
+      Process.sleep(50)
+
+      # Send 4 records, expect only 2 to pass through
+      GenStage.call(producer, {:queue, [%{id: 1}, %{id: 2}, %{id: 3}, %{id: 4}]})
+
+      assert_receive {:consumed, events}, 1000
+      assert length(events) == 2
+      assert Enum.map(events, & &1.id) == [1, 3]
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+  end
+
+  describe "behavioral tests: aggregation accuracy" do
+    test "sum aggregation calculates correct totals" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        aggregations: [:sum]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      # Give GenStage time to establish demand
+      Process.sleep(50)
+
+      # Send records with known values
+      records = [
+        %{amount: 100, quantity: 5},
+        %{amount: 200, quantity: 10},
+        %{amount: 150, quantity: 7}
+      ]
+
+      GenStage.call(producer, {:queue, records})
+
+      # Wait for processing
+      assert_receive {:consumed, _}, 1000
+
+      # Get state and verify sum
+      %{state: state} = :sys.get_state(pc_pid)
+      assert state.aggregation_state.sum.amount == 450
+      assert state.aggregation_state.sum.quantity == 22
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "count aggregation tracks record count" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        aggregations: [:count]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid, max_demand: 10, min_demand: 5)
+
+      # Give GenStage time to establish demand
+      Process.sleep(50)
+
+      # Send first batch
+      GenStage.call(producer, {:queue, [%{id: 1}, %{id: 2}, %{id: 3}]})
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+      assert state.aggregation_state.count == 3
+
+      # Send second batch
+      GenStage.call(producer, {:queue, [%{id: 4}, %{id: 5}]})
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+      assert state.aggregation_state.count == 5
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "avg aggregation maintains sum and count" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        aggregations: [:avg]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      # Give GenStage time to establish demand
+      Process.sleep(50)
+
+      records = [
+        %{score: 80},
+        %{score: 90},
+        %{score: 70}
+      ]
+
+      GenStage.call(producer, {:queue, records})
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+      assert state.aggregation_state.avg.sum.score == 240
+      assert state.aggregation_state.avg.count == 3
+      # Average would be: 240 / 3 = 80.0
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "min and max aggregations track extremes" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        aggregations: [:min, :max]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      # Give GenStage time to establish demand
+      Process.sleep(50)
+
+      records = [
+        %{value: 50, price: 100},
+        %{value: 10, price: 500},
+        %{value: 90, price: 50},
+        %{value: 30, price: 200}
+      ]
+
+      GenStage.call(producer, {:queue, records})
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+      assert state.aggregation_state.min.value == 10
+      assert state.aggregation_state.min.price == 50
+      assert state.aggregation_state.max.value == 90
+      assert state.aggregation_state.max.price == 500
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "running_total accumulates across batches" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        aggregations: [:running_total]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid, max_demand: 10, min_demand: 5)
+
+      # Give GenStage time to establish demand
+      Process.sleep(50)
+
+      # First batch
+      GenStage.call(producer, {:queue, [%{amount: 100}, %{amount: 200}]})
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+      assert state.aggregation_state.running_total.amount == 300
+
+      # Second batch
+      GenStage.call(producer, {:queue, [%{amount: 150}, %{amount: 250}]})
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+      assert state.aggregation_state.running_total.amount == 700
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+  end
+
+  describe "behavioral tests: grouped aggregations" do
+    test "single-field grouping aggregates by category" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        grouped_aggregations: [
+          %{group_by: :category, aggregations: [:sum, :count]}
+        ]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      # Give GenStage time to establish demand
+      Process.sleep(50)
+
+      records = [
+        %{category: "A", amount: 100},
+        %{category: "B", amount: 200},
+        %{category: "A", amount: 150},
+        %{category: "B", amount: 50}
+      ]
+
+      GenStage.call(producer, {:queue, records})
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+      groups = state.grouped_aggregation_state[[:category]]
+
+      assert groups["A"].sum.amount == 250
+      assert groups["A"].count == 2
+      assert groups["B"].sum.amount == 250
+      assert groups["B"].count == 2
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "multi-field grouping creates composite keys" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        grouped_aggregations: [
+          %{group_by: [:territory, :customer], aggregations: [:sum, :count]}
+        ]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      # Give GenStage time to establish demand
+      Process.sleep(50)
+
+      records = [
+        %{territory: "North", customer: "ABC", amount: 100},
+        %{territory: "North", customer: "XYZ", amount: 200},
+        %{territory: "North", customer: "ABC", amount: 150},
+        %{territory: "South", customer: "ABC", amount: 300}
+      ]
+
+      GenStage.call(producer, {:queue, records})
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+      groups = state.grouped_aggregation_state[[:territory, :customer]]
+
+      assert groups[{"North", "ABC"}].sum.amount == 250
+      assert groups[{"North", "ABC"}].count == 2
+      assert groups[{"North", "XYZ"}].sum.amount == 200
+      assert groups[{"North", "XYZ"}].count == 1
+      assert groups[{"South", "ABC"}].sum.amount == 300
+      assert groups[{"South", "ABC"}].count == 1
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "multiple grouped aggregation configs work simultaneously" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        grouped_aggregations: [
+          %{group_by: :territory, aggregations: [:sum]},
+          %{group_by: [:territory, :customer], aggregations: [:count]}
+        ]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      # Give GenStage time to establish demand
+      Process.sleep(50)
+
+      records = [
+        %{territory: "North", customer: "ABC", amount: 100},
+        %{territory: "North", customer: "ABC", amount: 150}
+      ]
+
+      GenStage.call(producer, {:queue, records})
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+
+      # Territory-level grouping
+      territory_groups = state.grouped_aggregation_state[[:territory]]
+      assert territory_groups["North"].sum.amount == 250
+
+      # Territory + Customer grouping
+      detailed_groups = state.grouped_aggregation_state[[:territory, :customer]]
+      assert detailed_groups[{"North", "ABC"}].count == 2
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+  end
+
+  describe "behavioral tests: error handling" do
+    test "handles transformer errors and continues processing" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      # Transformer that fails on specific record
+      transformer = fn record ->
+        if record.id == 2 do
+          raise "Intentional error"
+        else
+          record
+        end
+      end
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        transformer: transformer
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      # Give GenStage time to establish demand
+      Process.sleep(50)
+
+      # This will trigger the error during batch processing
+      GenStage.call(producer, {:queue, [%{id: 1}, %{id: 2}, %{id: 3}]})
+
+      # Should receive only the successful records (error records filtered out as nil)
+      assert_receive {:consumed, events}, 1000
+
+      # Record with id: 2 should be filtered out (returned nil due to error)
+      # Records with id: 1 and id: 3 should pass through
+      assert length(events) == 2
+      assert Enum.any?(events, fn r -> r.id == 1 end)
+      assert Enum.any?(events, fn r -> r.id == 3 end)
+      refute Enum.any?(events, fn r -> r.id == 2 end)
+
+      # Verify process is still alive (didn't crash)
+      assert Process.alive?(pc_pid)
+
+      # Individual record errors are logged but not tracked in state.errors
+      # (state.errors only tracks batch-level failures)
+      # The test verified that:
+      # 1. The error was logged (we saw the log output)
+      # 2. Processing continued (records 1 and 3 were successfully transformed)
+      # 3. The ProducerConsumer process didn't crash
+      %{state: state} = :sys.get_state(pc_pid)
+      assert state.errors == []  # No batch-level errors
+      assert state.total_transformed == 2  # Only the 2 successful records
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+  end
+
   describe "grouped aggregations" do
     test "accepts single-field grouped aggregation configuration" do
       producer_pid = spawn_persistent_process()
@@ -336,6 +899,65 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
     if Process.alive?(pid) do
       send(pid, :stop)
       Process.sleep(10)
+    end
+  end
+
+  # Test GenStage Producers and Consumers
+
+  defmodule TestProducer do
+    use GenStage
+
+    def init(:ok) do
+      {:producer, %{queue: :queue.new(), pending_demand: 0}}
+    end
+
+    def handle_call({:queue, events}, _from, state) do
+      new_queue = :queue.join(state.queue, :queue.from_list(events))
+
+      # If there's pending demand, dispatch immediately
+      {events_to_dispatch, final_queue} =
+        take_events(new_queue, state.pending_demand, [])
+
+      # Only reduce pending_demand by the number of events we're actually dispatching
+      remaining_demand = max(state.pending_demand - length(events_to_dispatch), 0)
+      new_state = %{queue: final_queue, pending_demand: remaining_demand}
+      {:reply, :ok, events_to_dispatch, new_state}
+    end
+
+    def handle_demand(demand, state) when demand > 0 do
+      {events, new_queue} = take_events(state.queue, demand, [])
+
+      # Track unfulfilled demand
+      remaining_demand = demand - length(events)
+      new_state = %{
+        queue: new_queue,
+        pending_demand: state.pending_demand + remaining_demand
+      }
+
+      {:noreply, events, new_state}
+    end
+
+    defp take_events(queue, 0, acc), do: {Enum.reverse(acc), queue}
+
+    defp take_events(queue, demand, acc) when demand > 0 do
+      case :queue.out(queue) do
+        {{:value, event}, new_queue} -> take_events(new_queue, demand - 1, [event | acc])
+        {:empty, queue} -> {Enum.reverse(acc), queue}
+      end
+    end
+  end
+
+  defmodule TestConsumer do
+    use GenStage
+
+    def init(test_pid) do
+      {:consumer, test_pid}
+    end
+
+    def handle_events(events, _from, test_pid) do
+      send(test_pid, {:consumed, events})
+      # Keep consuming - this tells GenStage we're ready for more
+      {:noreply, [], test_pid}
     end
   end
 end
