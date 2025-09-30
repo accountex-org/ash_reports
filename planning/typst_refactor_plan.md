@@ -120,28 +120,44 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 - [ ] Implement cleanup on process termination
 - [ ] Add health monitoring and restart strategies
 
-## 2.2 Producer Implementation
+## 2.2 Producer Implementation ✅
 
-### 2.2.1 Query Execution and Batching
-- [ ] Create `StreamingProducer` for chunked Ash query execution
-- [ ] Implement demand-driven query batching
-- [ ] Handle query pagination with Ash offset/limit
-- [ ] Add configurable chunk sizes (default: 500-1000 records)
-- [ ] Implement query result caching for efficiency
+### 2.2.1 Query Execution and Batching ✅
+- [x] Create `StreamingProducer` for chunked Ash query execution
+- [x] Implement demand-driven query batching
+- [x] Handle query pagination with Ash offset/limit
+- [x] Add configurable chunk sizes (default: 500-1000 records)
+- [x] Implement query result caching for efficiency
+  - Created `QueryCache` module with ETS-based caching
+  - TTL-based expiration and LRU eviction
+  - Query fingerprinting with SHA256
+  - Memory-aware cache management
 
-### 2.2.2 Relationship Handling
-- [ ] Add intelligent preloading for relationships
-- [ ] Implement lazy loading for optional relationships
-- [ ] Handle deep relationship traversal efficiently
-- [ ] Add relationship depth limits to prevent memory issues
-- [ ] Create preload optimization strategies
+### 2.2.2 Relationship Handling ✅
+- [x] Add intelligent preloading for relationships
+- [x] Implement lazy loading for optional relationships
+- [x] Handle deep relationship traversal efficiently
+- [x] Add relationship depth limits to prevent memory issues
+- [x] Create preload optimization strategies
+  - Created `RelationshipLoader` module
+  - Implemented three strategies: :eager, :lazy, :selective
+  - Configurable depth limits to prevent excessive memory usage
+  - Automatic relationship depth validation
 
-### 2.2.3 Resource Management
-- [ ] Implement memory monitoring and circuit breakers
-- [ ] Add automatic backpressure when memory threshold reached
-- [ ] Create graceful degradation strategies
-- [ ] Implement resource cleanup on errors
-- [ ] Add configurable memory limits per stream
+### 2.2.3 Resource Management ✅
+- [x] Implement memory monitoring and circuit breakers
+- [x] Add automatic backpressure when memory threshold reached
+- [x] Create graceful degradation strategies
+  - Automatic chunk size reduction in degraded mode
+  - Exponential backoff retry logic with configurable max retries
+  - Memory usage monitoring with 80% threshold trigger
+- [x] Implement resource cleanup on errors
+  - Cleanup function with forced garbage collection
+  - Proper error handling in fetch loops
+- [x] Add configurable memory limits per stream
+  - Per-stream memory_limit configuration option
+  - Default 500MB per pipeline
+  - Integrated with degraded mode detection
 
 ## 2.3 Consumer/Transformer Implementation
 

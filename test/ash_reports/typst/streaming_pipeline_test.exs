@@ -208,11 +208,62 @@ defmodule AshReports.Typst.StreamingPipelineTest do
       assert Process.whereis(AshReports.Typst.StreamingPipeline.HealthMonitor) != nil
     end
 
+    test "query cache is available" do
+      assert Process.whereis(AshReports.Typst.StreamingPipeline.QueryCache) != nil
+    end
+
     test "pipeline supervisor returns valid PID" do
       case AshReports.Typst.StreamingPipeline.Supervisor.pipeline_supervisor() do
         {:error, _} -> flunk("Pipeline supervisor not found")
         pid when is_pid(pid) -> assert Process.alive?(pid)
       end
+    end
+  end
+
+  describe "Producer enhancements" do
+    test "accepts caching configuration options" do
+      producer_pid = spawn_persistent_process()
+      query = Ash.Query.new(TestProducerResource)
+
+      opts = [
+        domain: TestProducerDomain,
+        resource: TestProducerResource,
+        query: query,
+        stream_id: "test-stream-#{:rand.uniform(10000)}",
+        enable_cache: false,
+        memory_limit: 100_000_000,
+        max_retries: 5
+      ]
+
+      # Should not crash with new options
+      {:ok, _pid} = Producer.start_link(opts)
+
+      cleanup_process(producer_pid)
+    end
+
+    test "accepts relationship loading configuration" do
+      producer_pid = spawn_persistent_process()
+      query = Ash.Query.new(TestProducerResource)
+
+      load_config = %{
+        strategy: :selective,
+        max_depth: 2,
+        required: [],
+        optional: []
+      }
+
+      opts = [
+        domain: TestProducerDomain,
+        resource: TestProducerResource,
+        query: query,
+        stream_id: "test-stream-#{:rand.uniform(10000)}",
+        load_config: load_config
+      ]
+
+      # Should not crash with load_config option
+      {:ok, _pid} = Producer.start_link(opts)
+
+      cleanup_process(producer_pid)
     end
   end
 
@@ -235,5 +286,29 @@ defmodule AshReports.Typst.StreamingPipelineTest do
       # Give it a moment to terminate
       Process.sleep(10)
     end
+  end
+end
+
+# Test fixtures for Producer tests
+defmodule TestProducerResource do
+  @moduledoc false
+  use Ash.Resource, domain: TestProducerDomain, data_layer: Ash.DataLayer.Ets
+
+  ets do
+    private? true
+  end
+
+  attributes do
+    uuid_primary_key :id
+    attribute :name, :string
+  end
+end
+
+defmodule TestProducerDomain do
+  @moduledoc false
+  use Ash.Domain
+
+  resources do
+    resource TestProducerResource
   end
 end
