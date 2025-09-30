@@ -69,8 +69,10 @@ defmodule AshReports.Typst.DSLGenerator do
       {:ok, "#let simple_report(data, config) = {\\n  // Title band\\n  = Simple Report\\n}"}
 
   """
-  @spec generate_template(Report.t(), Keyword.t()) :: {:ok, String.t()} | {:error, term()}
-  def generate_template(%Report{} = report, options \\ []) do
+  @spec generate_template(Report.t() | nil, Keyword.t()) :: {:ok, String.t()} | {:error, term()}
+  def generate_template(report, options \\ [])
+  def generate_template(nil, _options), do: {:error, {:generation_failed, :invalid_report}}
+  def generate_template(%Report{} = report, options) do
     context = build_generation_context(report, options)
 
     template =
@@ -162,11 +164,21 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   defp generate_debug_info(report) do
+    driving_resource_name =
+      case report.driving_resource do
+        nil -> "None"
+        module when is_atom(module) ->
+          module
+          |> Module.split()
+          |> List.last()
+        other -> inspect(other)
+      end
+
     """
     // Report Debug Information
     // Name: #{report.name}
     // Title: #{report.title || "Untitled"}
-    // Driving Resource: #{report.driving_resource}
+    // Driving Resource: #{driving_resource_name}
     // Bands: #{length(report.bands || [])}
     // Parameters: #{length(report.parameters || [])}
     """

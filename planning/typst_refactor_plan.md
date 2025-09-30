@@ -15,7 +15,7 @@ This plan implements a complete architectural refactor of AshReports to replace 
 # Stage 1: Infrastructure Foundation and Typst Integration
 
 **Duration**: 2-3 weeks
-**Status**: 🚧 In Progress - **Section 1.1 COMPLETED** ✅
+**Status**: ✅ **COMPLETED** - Sections 1.1, 1.2, 1.3 Complete
 **Goal**: Establish core Typst integration infrastructure and replace basic rendering pipeline
 
 ## 1.1 Typst Runtime Integration
@@ -37,24 +37,24 @@ This plan implements a complete architectural refactor of AshReports to replace 
 **🔄 ARCHITECTURAL DECISION**: Pivot from manual template files to DSL-driven template generation.
 AshReports should generate Typst templates dynamically from Spark DSL report definitions, not load static `.typ` files.
 
-## 1.2 DSL-to-Typst Template Generation **← NEW PRIORITY**
+## 1.2 DSL-to-Typst Template Generation **← COMPLETED** ✅
 
 ### 1.2.1 DSL Template Generator
-- [ ] Create `AshReports.Typst.DSLGenerator` module
-- [ ] Implement AshReports DSL → Typst template conversion
-- [ ] Map band types (title, header, detail, footer) to Typst structures
-- [ ] Generate conditional sections and grouping logic
-- [ ] Support element types (field, label, expression, aggregate, line, box, image)
+- [x] Create `AshReports.Typst.DSLGenerator` module - **COMPLETED**
+- [x] Implement AshReports DSL → Typst template conversion - **COMPLETED**
+- [x] Map band types (title, header, detail, footer) to Typst structures - **COMPLETED**
+- [x] Generate conditional sections and grouping logic - **COMPLETED**
+- [x] Support element types (field, label, expression, aggregate, line, box, image) - **COMPLETED**
 
 ### 1.2.2 Band Architecture Implementation
-- [ ] Implement Crystal Reports-style band rendering in Typst
-- [ ] Create hierarchical band processing (nested groups)
-- [ ] Add support for band positioning and layout
-- [ ] Implement page break and section flow control
-- [ ] Create band-specific styling and theming
+- [x] Implement Crystal Reports-style band rendering in Typst - **COMPLETED**
+- [x] Create hierarchical band processing (nested groups) - **COMPLETED**
+- [x] Add support for band positioning and layout - **COMPLETED**
+- [x] Implement page break and section flow control - **COMPLETED**
+- [x] Create band-specific styling and theming - **COMPLETED**
 
 ### 1.2.3 Element Rendering System
-- [ ] Map AshReports elements to Typst components:
+- [x] Map AshReports elements to Typst components: - **COMPLETED**
   - `field` → Data field display with formatting
   - `label` → Static text with positioning
   - `expression` → Calculated expressions
@@ -63,21 +63,21 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
   - `box` → Container elements
   - `image` → Image embedding
 
-## 1.3 Ash Resource Data Integration
+## 1.3 Ash Resource Data Integration **← COMPLETED** ✅
 
 ### 1.3.1 Query to Data Pipeline
-- [ ] Create `AshReports.Typst.DataLoader` module
-- [ ] Implement driving_resource query execution
-- [ ] Handle resource relationships and preloading
-- [ ] Transform Ash structs to Typst-compatible data
-- [ ] Support calculated fields and aggregations
+- [x] Create `AshReports.Typst.DataLoader` module - **COMPLETED**
+- [x] Implement driving_resource query execution - **COMPLETED**
+- [x] Handle resource relationships and preloading - **COMPLETED**
+- [x] Transform Ash structs to Typst-compatible data - **COMPLETED**
+- [x] Support calculated fields and aggregations - **COMPLETED**
 
 ### 1.3.2 Data Formatting and Processing
-- [ ] Implement data type conversion (DateTime, Decimal, Money)
-- [ ] Create grouping and sorting based on DSL definitions
-- [ ] Add support for complex relationship traversal
-- [ ] Implement variable scopes (detail, group, page, report)
-- [ ] Handle large dataset streaming with GenStage
+- [x] Implement data type conversion (DateTime, Decimal, Money) - **COMPLETED**
+- [x] Create grouping and sorting based on DSL definitions - **COMPLETED**
+- [x] Add support for complex relationship traversal - **COMPLETED**
+- [x] Implement variable scopes (detail, group, page, report) - **COMPLETED**
+- [ ] Handle large dataset streaming with GenStage - **See Stage 2 for implementation**
 
 ## 1.4 Integration Testing Infrastructure
 
@@ -90,54 +90,202 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 
 ---
 
-# Stage 2: D3.js Visualization System Integration
+# Stage 2: GenStage Streaming Pipeline for Large Datasets
+
+**Duration**: 2-3 weeks
+**Status**: 📋 Planned
+**Goal**: Implement memory-efficient streaming for reports and visualizations with 10K+ records using GenStage/Flow
+
+**Why This Stage**: GenStage streaming provides foundational infrastructure for both full report generation (100K+ records) and D3 chart data aggregation (1M records → 500 datapoints). This must be implemented before D3 visualization work (Stage 3) to enable efficient chart generation from large datasets.
+
+**Use Cases**:
+- Full report generation with 100K+ records
+- D3 chart data aggregation - stream 1M records → aggregate to 500 chart datapoints
+- Real-time report updates with incremental data loading
+- Memory-efficient export for large datasets
+
+## 2.1 GenStage Infrastructure Setup
+
+### 2.1.1 Dependencies and Core Modules
+- [ ] Add gen_stage dependency to mix.exs (~> 1.2)
+- [ ] Add flow dependency to mix.exs (~> 1.2)
+- [ ] Create `AshReports.Typst.StreamingPipeline` module
+- [ ] Design producer-consumer architecture
+- [ ] Document streaming API and usage patterns
+
+### 2.1.2 Supervision Tree
+- [ ] Implement supervision tree for streaming processes
+- [ ] Add dynamic supervisor for concurrent streams
+- [ ] Create stream registry for tracking active pipelines
+- [ ] Implement cleanup on process termination
+- [ ] Add health monitoring and restart strategies
+
+## 2.2 Producer Implementation
+
+### 2.2.1 Query Execution and Batching
+- [ ] Create `StreamingProducer` for chunked Ash query execution
+- [ ] Implement demand-driven query batching
+- [ ] Handle query pagination with Ash offset/limit
+- [ ] Add configurable chunk sizes (default: 500-1000 records)
+- [ ] Implement query result caching for efficiency
+
+### 2.2.2 Relationship Handling
+- [ ] Add intelligent preloading for relationships
+- [ ] Implement lazy loading for optional relationships
+- [ ] Handle deep relationship traversal efficiently
+- [ ] Add relationship depth limits to prevent memory issues
+- [ ] Create preload optimization strategies
+
+### 2.2.3 Resource Management
+- [ ] Implement memory monitoring and circuit breakers
+- [ ] Add automatic backpressure when memory threshold reached
+- [ ] Create graceful degradation strategies
+- [ ] Implement resource cleanup on errors
+- [ ] Add configurable memory limits per stream
+
+## 2.3 Consumer/Transformer Implementation
+
+### 2.3.1 Data Transformation Pipeline
+- [ ] Create `StreamingConsumer` for data transformation
+- [ ] Integrate with DataProcessor for type conversion
+- [ ] Implement backpressure handling
+- [ ] Add configurable buffer management
+- [ ] Create transformation error handling
+
+### 2.3.2 Aggregation Functions
+- [ ] Implement streaming aggregation functions (sum, count, avg, percentiles)
+- [ ] Add support for time-series bucketing and grouping (for D3 charts)
+- [ ] Create window-based aggregations (sliding, tumbling)
+- [ ] Implement running totals and cumulative calculations
+- [ ] Add custom aggregation function support
+
+### 2.3.3 Monitoring and Telemetry
+- [ ] Add progress tracking and telemetry
+- [ ] Implement stream throughput monitoring
+- [ ] Create memory usage tracking per stream
+- [ ] Add telemetry events for all streaming operations
+- [ ] Implement stream health dashboards
+
+## 2.4 DataLoader Integration
+
+### 2.4.1 API Implementation
+- [ ] Implement `create_streaming_pipeline/4` function in DataLoader
+- [ ] Replace error placeholder with actual GenStage pipeline
+- [ ] Add streaming configuration options
+- [ ] Create unified API for batch vs. streaming modes
+- [ ] Document API usage patterns and examples
+
+### 2.4.2 Automatic Mode Selection
+- [ ] Create automatic fallback for small datasets (<10K records)
+- [ ] Implement dataset size detection
+- [ ] Add configuration for streaming threshold
+- [ ] Create performance heuristics for mode selection
+- [ ] Add manual override options
+
+### 2.4.3 Stream Control
+- [ ] Implement stream cancellation support
+- [ ] Add pause/resume functionality
+- [ ] Create stream timeout handling
+- [ ] Implement graceful shutdown
+- [ ] Add stream status queries
+
+## 2.5 Testing and Performance Validation
+
+### 2.5.1 Unit and Integration Tests
+- [ ] Create streaming pipeline unit tests
+- [ ] Test producer demand handling
+- [ ] Test consumer backpressure
+- [ ] Test aggregation functions
+- [ ] Test error handling and recovery
+
+### 2.5.2 Performance Benchmarks
+- [ ] Add memory usage benchmarks (target: <1.5x baseline)
+- [ ] Test with datasets of 10K, 100K, 1M records
+- [ ] Validate throughput (target: 1000+ records/sec)
+- [ ] Test concurrent stream handling
+- [ ] Benchmark aggregation performance
+
+### 2.5.3 Load and Stress Testing
+- [ ] Test cancellation and error recovery
+- [ ] Test memory pressure scenarios
+- [ ] Test network failures and retries
+- [ ] Test concurrent multi-stream scenarios
+- [ ] Create stress testing suite
+
+**Performance Targets**:
+- **Memory Usage**: <1.5x baseline regardless of dataset size
+- **Throughput**: 1000+ records/second on standard hardware
+- **Scalability**: Support datasets from 10K to 1M+ records
+- **Latency**: Streaming should start within 100ms
+- **Reliability**: Automatic fallback to batch loading on errors
+- **Concurrency**: Handle 10+ concurrent streams
+
+**Architecture Overview**:
+```
+Ash Query → StreamingProducer (chunks of 500-1000 records)
+                ↓
+         GenStage backpressure
+                ↓
+      StreamingConsumer (DataProcessor transformation)
+                ↓
+         Enumerable Stream → Typst Compilation / D3 Aggregation
+```
+
+---
+
+# Stage 3: D3.js Visualization System Integration
 
 **Duration**: 2-3 weeks
 **Status**: 📋 Planned
 **Goal**: Implement comprehensive D3.js chart integration with server-side rendering
 
-## 2.1 D3 Rendering Service
+**Dependencies**: Requires Stage 2 (GenStage Streaming) for large dataset chart generation
 
-### 2.1.1 Node.js Service Development
+## 3.1 D3 Rendering Service
+
+### 3.1.1 Node.js Service Development
 - [ ] Create standalone Node.js D3 rendering service
 - [ ] Implement chart type abstraction (bar, line, pie, heatmap)
 - [ ] Add SVG optimization and compression
 - [ ] Create chart configuration schema
 - [ ] Implement error handling and fallback generation
 
-### 2.1.2 Service Integration
+### 3.1.2 Service Integration
 - [ ] Create `AshReports.Typst.D3Client` module
 - [ ] Implement HTTP client for D3 service communication
 - [ ] Add connection pooling and health checking
 - [ ] Create chart caching system
 - [ ] Implement service failover mechanisms
 
-## 2.2 Chart Data Processing
+## 3.2 Chart Data Processing
 
-### 2.2.1 Data Transformation Pipeline
+### 3.2.1 Data Transformation Pipeline
 - [ ] Create chart data extraction from Ash resources
 - [ ] Implement aggregation functions for visualization
 - [ ] Add support for time-series data formatting
 - [ ] Create multi-dimensional data pivoting
 - [ ] Implement statistical calculations for charts
+- [ ] Integrate with GenStage streaming for large dataset aggregation (see Stage 2)
 
-### 2.2.2 Dynamic Chart Generation
+**Note**: For datasets >10K records, use GenStage streaming pipeline (Stage 2) to perform server-side aggregation before sending to D3 rendering service. This is essential for performance - D3.js can render ~5,000 SVG elements or ~50,000 canvas points efficiently, so large datasets must be aggregated server-side first.
+
+### 3.2.2 Dynamic Chart Generation
 - [ ] Add runtime chart configuration from DSL
 - [ ] Implement conditional chart rendering
 - [ ] Create chart theming system
 - [ ] Add interactive chart options
 - [ ] Implement chart export functionality
 
-## 2.3 Typst Chart Integration
+## 3.3 Typst Chart Integration
 
-### 2.3.1 SVG Embedding System
+### 3.3.1 SVG Embedding System
 - [ ] Create SVG-to-Typst conversion helpers
 - [ ] Implement chart positioning and layout
 - [ ] Add caption and legend support
 - [ ] Create multi-chart page layouts
 - [ ] Implement chart scaling and responsiveness
 
-### 2.3.2 Performance Optimization
+### 3.3.2 Performance Optimization
 - [ ] Add parallel chart generation
 - [ ] Implement chart result caching
 - [ ] Create lazy loading for complex visualizations
@@ -146,47 +294,47 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 
 ---
 
-# Stage 3: Phoenix LiveView Integration and Real-time Features
+# Stage 4: Phoenix LiveView Integration and Real-time Features
 
 **Duration**: 2-3 weeks
 **Status**: 📋 Planned
 **Goal**: Create modern web interface with real-time report generation
 
-## 3.1 LiveView Report Builder
+## 4.1 LiveView Report Builder
 
-### 3.1.1 Interactive Report Designer
+### 4.1.1 Interactive Report Designer
 - [ ] Create `AshReportsWeb.ReportBuilderLive` module
 - [ ] Implement template selection interface
 - [ ] Add drag-and-drop data source configuration
 - [ ] Create real-time preview system
 - [ ] Implement collaborative editing features
 
-### 3.1.2 Progress Tracking System
+### 4.1.2 Progress Tracking System
 - [ ] Add real-time generation progress bars
 - [ ] Implement WebSocket-based status updates
 - [ ] Create task management for background jobs
 - [ ] Add cancellation support for long-running reports
 - [ ] Implement notification system for completion
 
-## 3.2 Advanced UI Components
+## 4.2 Advanced UI Components
 
-### 3.2.1 Data Configuration Interface
+### 4.2.1 Data Configuration Interface
 - [ ] Create data source selection components
 - [ ] Implement filter and parameter configuration
 - [ ] Add preview data sampling
 - [ ] Create relationship mapping tools
 - [ ] Implement validation and error display
 
-### 3.2.2 Template Customization
+### 4.2.2 Template Customization
 - [ ] Add theme selection interface
 - [ ] Implement style customization tools
 - [ ] Create logo and branding upload
 - [ ] Add font selection and preview
 - [ ] Implement custom CSS/styling options
 
-## 3.3 Report Gallery and Management
+## 4.3 Report Gallery and Management
 
-### 3.3.1 Report Library System
+### 4.3.1 Report Library System
 - [ ] Create report listing and search
 - [ ] Implement tagging and categorization
 - [ ] Add sharing and permissions management
@@ -195,47 +343,47 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 
 ---
 
-# Stage 4: Production Deployment and Scalability
+# Stage 5: Production Deployment and Scalability
 
 **Duration**: 2-3 weeks
 **Status**: 📋 Planned
 **Goal**: Production-ready deployment with monitoring and scalability
 
-## 4.1 Containerization and Orchestration
+## 5.1 Containerization and Orchestration
 
-### 4.1.1 Docker Configuration
+### 5.1.1 Docker Configuration
 - [ ] Create multi-stage Dockerfile with Typst, Node.js, and Elixir
 - [ ] Implement proper font installation and configuration
 - [ ] Add health checks for all services
 - [ ] Create volume management for templates and cache
 - [ ] Implement security hardening
 
-### 4.1.2 Kubernetes Deployment
+### 5.1.2 Kubernetes Deployment
 - [ ] Create Kubernetes manifests for scalable deployment
 - [ ] Implement horizontal pod autoscaling
 - [ ] Add persistent volume claims for report storage
 - [ ] Create service mesh configuration
 - [ ] Implement rolling updates and rollback strategies
 
-## 4.2 Monitoring and Observability
+## 5.2 Monitoring and Observability
 
-### 4.2.1 Telemetry Implementation
+### 5.2.1 Telemetry Implementation
 - [ ] Add comprehensive Telemetry metrics
 - [ ] Implement Prometheus integration
 - [ ] Create custom dashboards for report performance
 - [ ] Add alerting for service failures
 - [ ] Implement distributed tracing
 
-### 4.2.2 Performance Optimization
+### 5.2.2 Performance Optimization
 - [ ] Create performance benchmarking suite
 - [ ] Implement connection pooling optimization
 - [ ] Add memory usage monitoring and optimization
 - [ ] Create cache warming strategies
 - [ ] Implement query optimization for large datasets
 
-## 4.3 Security and Compliance
+## 5.3 Security and Compliance
 
-### 4.3.1 Security Hardening
+### 5.3.1 Security Hardening
 - [ ] Implement template sandboxing
 - [ ] Add input validation and sanitization
 - [ ] Create audit logging for report generation
@@ -244,38 +392,38 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 
 ---
 
-# Stage 5: Migration Tools and Backward Compatibility
+# Stage 6: Migration Tools and Backward Compatibility
 
 **Duration**: 1-2 weeks
 **Status**: 📋 Planned
 **Goal**: Seamless migration from existing AshReports implementation
 
-## 5.1 Migration Utilities
+## 6.1 Migration Utilities
 
-### 5.1.1 Automated Migration Tools
+### 6.1.1 Automated Migration Tools
 - [ ] Create DSL compatibility analyzer
 - [ ] Implement automatic template conversion
 - [ ] Add migration validation and testing
 - [ ] Create rollback mechanisms
 - [ ] Implement gradual migration support
 
-### 5.1.2 Compatibility Layer
+### 6.1.2 Compatibility Layer
 - [ ] Maintain API compatibility for existing reports
 - [ ] Create adapter pattern for legacy renderers
 - [ ] Implement feature parity checking
 - [ ] Add deprecation warnings and migration guides
 - [ ] Create side-by-side comparison tools
 
-## 5.2 Documentation and Training
+## 6.2 Documentation and Training
 
-### 5.2.1 Comprehensive Documentation
+### 6.2.1 Comprehensive Documentation
 - [ ] Create migration guide from current system
 - [ ] Write Typst template development guide
 - [ ] Add performance tuning documentation
 - [ ] Create troubleshooting guides
 - [ ] Implement interactive tutorials
 
-### 5.2.2 Developer Tools
+### 6.2.2 Developer Tools
 - [ ] Create Typst template debugging tools
 - [ ] Add development environment setup scripts
 - [ ] Implement template validation CLI tools
@@ -369,9 +517,9 @@ PDF Output (18x faster)
 - **Typst 0.1.7** (Elixir package): Rust NIF bindings for Typst compilation ✅ **IMPLEMENTED**
 - **AshReports DSL System**: Existing Spark DSL extensions for report definitions ✅ **AVAILABLE**
 - **Ash Framework 3.0+**: Resource querying and data transformation ✅ **AVAILABLE**
-- **Node.js + D3.js**: Server-side chart generation (Stage 2)
-- **GenStage/Flow**: Stream processing for large datasets (Stage 1.3)
-- **Phoenix LiveView**: Enhanced web interface (Stage 3)
+- **GenStage/Flow**: Stream processing for large datasets (Stage 2)
+- **Node.js + D3.js**: Server-side chart generation (Stage 3)
+- **Phoenix LiveView**: Enhanced web interface (Stage 4)
 
 ### Risk Mitigation
 - **Incremental Implementation**: Stage-based approach reduces risk
@@ -382,15 +530,15 @@ PDF Output (18x faster)
 
 ---
 
-**Total Duration**: 8-11 weeks
+**Total Duration**: 11-16 weeks
 **Team Requirements**: 2-3 developers with Elixir, TypeScript, and DevOps experience
 **Infrastructure Requirements**: Kubernetes cluster, monitoring stack, CI/CD pipeline
 
 **Next Steps**:
-1. **✅ Stage 1.1 COMPLETED**: Typst Runtime Integration with BinaryWrapper
-2. **🎯 CURRENT PRIORITY**: Stage 1.2 - DSL-to-Typst Template Generation
-3. Implement `AshReports.Typst.DSLGenerator` to convert AshReports DSL → Typst templates
-4. Create band-to-Typst mapping for all element types (field, label, expression, etc.)
-5. Integrate with Ash resource queries for data loading and transformation
+1. **✅ Stage 1 COMPLETED**: Infrastructure Foundation and Typst Integration
+2. **🎯 NEXT PRIORITY**: Stage 2 - GenStage Streaming Pipeline
+3. Implement producer-consumer architecture for memory-efficient large dataset processing
+4. Create streaming aggregation functions for D3 chart data preparation
+5. Prepare foundational infrastructure for D3.js visualization work (Stage 3)
 
 **Architectural Pivot Complete**: From static template files → Dynamic DSL-driven template generation
