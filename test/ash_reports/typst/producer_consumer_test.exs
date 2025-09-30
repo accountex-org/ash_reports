@@ -880,6 +880,69 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       cleanup_process(producer_pid)
       cleanup_process(pid)
     end
+
+    test "enforces max_groups limit to prevent memory exhaustion" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      # Set a very low max_groups limit for testing
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        grouped_aggregations: [
+          %{group_by: :id, aggregations: [:count], max_groups: 3}
+        ]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Send 5 records with unique IDs - only first 3 should create groups
+      records = [
+        %{id: 1, value: 100},
+        %{id: 2, value: 200},
+        %{id: 3, value: 300},
+        %{id: 4, value: 400},
+        %{id: 5, value: 500}
+      ]
+
+      GenStage.call(producer, {:queue, records})
+      assert_receive {:consumed, _}, 1000
+
+      # Verify only 3 groups were created
+      %{state: state} = :sys.get_state(pc_pid)
+      groups = state.grouped_aggregation_state[[:id]]
+      assert map_size(groups) == 3
+
+      # Verify group counts are tracked
+      assert state.group_counts[[:id]] == 3
+
+      # Verify the first 3 groups exist
+      assert Map.has_key?(groups, 1)
+      assert Map.has_key?(groups, 2)
+      assert Map.has_key?(groups, 3)
+
+      # Groups 4 and 5 should not exist (rejected)
+      refute Map.has_key?(groups, 4)
+      refute Map.has_key?(groups, 5)
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
   end
 
   # Helper functions
