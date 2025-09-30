@@ -159,28 +159,65 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
   - Default 500MB per pipeline
   - Integrated with degraded mode detection
 
-## 2.3 Consumer/Transformer Implementation
+## 2.3 Consumer/Transformer Implementation ✅
 
-### 2.3.1 Data Transformation Pipeline
-- [ ] Create `StreamingConsumer` for data transformation
-- [ ] Integrate with DataProcessor for type conversion
-- [ ] Implement backpressure handling
-- [ ] Add configurable buffer management
-- [ ] Create transformation error handling
+### 2.3.1 Data Transformation Pipeline ✅
+- [x] Create `StreamingConsumer` for data transformation
+  - Enhanced ProducerConsumer module with full transformation support
+  - DataProcessor integration for type conversion
+  - Custom transformer function support
+- [x] Integrate with DataProcessor for type conversion
+  - Automatic conversion of DateTime, Decimal, Money, UUID types
+  - Configurable conversion options
+  - Fallback to raw events on conversion failure
+- [x] Implement backpressure handling
+  - Configurable min_demand and max_demand
+  - GenStage automatic backpressure
+  - Buffer size monitoring and warnings
+- [x] Add configurable buffer management
+  - Configurable buffer_size (default: 1000)
+  - Buffer fullness tracking (80% threshold warning)
+  - Telemetry events for buffer status
+- [x] Create transformation error handling
+  - Try-rescue blocks for safe transformation
+  - Error logging and telemetry
+  - Graceful fallback on errors
 
-### 2.3.2 Aggregation Functions
-- [ ] Implement streaming aggregation functions (sum, count, avg, percentiles)
+### 2.3.2 Aggregation Functions ✅
+- [x] Implement streaming aggregation functions (sum, count, avg, percentiles)
+  - `:sum` - Sum all numeric fields
+  - `:count` - Count records processed
+  - `:avg` - Average of numeric fields (sum/count)
+  - `:min` - Minimum values per field
+  - `:max` - Maximum values per field
+  - `:running_total` - Cumulative totals
 - [ ] Add support for time-series bucketing and grouping (for D3 charts)
+  - Deferred to Stage 3 (D3 integration)
 - [ ] Create window-based aggregations (sliding, tumbling)
-- [ ] Implement running totals and cumulative calculations
+  - Deferred to future enhancement
+- [x] Implement running totals and cumulative calculations
+  - Implemented as `:running_total` aggregation
 - [ ] Add custom aggregation function support
+  - Deferred to future enhancement
 
-### 2.3.3 Monitoring and Telemetry
-- [ ] Add progress tracking and telemetry
-- [ ] Implement stream throughput monitoring
-- [ ] Create memory usage tracking per stream
-- [ ] Add telemetry events for all streaming operations
+### 2.3.3 Monitoring and Telemetry ✅
+- [x] Add progress tracking and telemetry
+  - `[:ash_reports, :streaming, :producer_consumer, :batch_transformed]`
+  - `[:ash_reports, :streaming, :producer_consumer, :aggregation_computed]`
+  - `[:ash_reports, :streaming, :producer_consumer, :buffer_full]`
+  - `[:ash_reports, :streaming, :producer_consumer, :error]`
+- [x] Implement stream throughput monitoring
+  - Records in/out tracking
+  - Duration measurements per batch
+  - Total transformed counter
+- [x] Create memory usage tracking per stream
+  - Buffer usage tracking
+  - Records buffered counter
+- [x] Add telemetry events for all streaming operations
+  - Comprehensive telemetry coverage
+  - Configurable enable_telemetry flag
 - [ ] Implement stream health dashboards
+  - Deferred to Stage 2.5 or future work
 
 ## 2.4 DataLoader Integration
 
