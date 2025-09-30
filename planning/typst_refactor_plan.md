@@ -44,6 +44,7 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 - [x] Implement AshReports DSL → Typst template conversion - **COMPLETED**
 - [x] Map band types (title, header, detail, footer) to Typst structures - **COMPLETED**
 - [x] Generate conditional sections and grouping logic - **COMPLETED**
+  - **NOTE**: Group header/footer rendering with aggregation statistics (group subtotals) deferred to Stage 2, Section 2.4
 - [x] Support element types (field, label, expression, aggregate, line, box, image) - **COMPLETED**
 
 ### 1.2.2 Band Architecture Implementation
@@ -92,11 +93,13 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 
 # Stage 2: GenStage Streaming Pipeline for Large Datasets
 
-**Duration**: 2-3 weeks
-**Status**: 📋 Planned
-**Goal**: Implement memory-efficient streaming for reports and visualizations with 10K+ records using GenStage/Flow
+**Duration**: 3-4 weeks (Section 2.4 adds ~1 week for DSL integration)
+**Status**: 🔄 **In Progress** - Sections 2.1-2.3 Complete ✅
+**Goal**: Implement memory-efficient streaming for reports and visualizations with 10K+ records using GenStage/Flow, with automatic configuration from Report DSL
 
 **Why This Stage**: GenStage streaming provides foundational infrastructure for both full report generation (100K+ records) and D3 chart data aggregation (1M records → 500 datapoints). This must be implemented before D3 visualization work (Stage 3) to enable efficient chart generation from large datasets.
+
+**New in This Stage**: Section 2.4 implements DSL-driven grouped aggregation configuration, automatically parsing Report groups and variables to configure ProducerConsumer streaming aggregations.
 
 **Use Cases**:
 - Full report generation with 100K+ records
@@ -217,52 +220,128 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
   - Comprehensive telemetry coverage
   - Configurable enable_telemetry flag
 - [ ] Implement stream health dashboards
-  - Deferred to Stage 2.5 or future work
+  - Deferred to Stage 2.6 or future work
 
-## 2.4 DataLoader Integration
+## 2.4 DSL-Driven Grouped Aggregation Configuration
 
-### 2.4.1 API Implementation
+**Goal**: Automatically configure ProducerConsumer grouped aggregations from Report DSL definitions
+
+**Reference**: See `planning/grouped_aggregation_dsl_integration.md` for detailed research and design decisions
+
+### 2.4.1 Expression Parsing and Field Extraction
+- [ ] Implement expression parser for `Ash.Expr.t()` from group definitions
+- [ ] Extract field names from group expressions: `expr(customer.region)` → `:region`
+- [ ] Support nested field access patterns
+- [ ] Handle relationship traversal in expressions: `{:field, :customer, :region}`
+- [ ] Add expression validation and error handling
+- [ ] Create fallback mechanisms for unparseable expressions
+
+### 2.4.2 Variable-to-Aggregation Mapping
+- [ ] Map DSL variable types to ProducerConsumer aggregation types:
+  - `:sum` → `:sum`
+  - `:count` → `:count`
+  - `:average` → `:avg`
+  - `:min` → `:min`
+  - `:max` → `:max`
+- [ ] Filter variables by `reset_on: :group` scope
+- [ ] Match variables to group levels via `reset_group` field
+- [ ] Support report-level variables (`reset_on: :report`) as global aggregations
+- [ ] Handle multi-level hierarchical grouping (Territory → Customer → Order Type)
+
+### 2.4.3 Grouped Aggregation Config Builder
+- [ ] Create `build_grouped_aggregations_from_dsl/1` function
+- [ ] Parse report groups (level 1, 2, 3, ...) from DSL
+- [ ] Generate cumulative grouping configs:
+  - Level 1: `group_by: :territory`
+  - Level 2: `group_by: [:territory, :customer_name]`
+  - Level 3: `group_by: [:territory, :customer_name, :order_type]`
+- [ ] Extract aggregation types from group-level variables
+- [ ] Build `grouped_aggregations` list for ProducerConsumer.start_link/1
+- [ ] Add configuration validation (detect missing fields, invalid expressions)
+- [ ] Create comprehensive error messages for debugging
+
+### 2.4.4 Integration and Testing
+- [ ] Integrate with existing test report in `test/support/test_helpers.ex` (lines 129-221)
+- [ ] Test single-level grouping (by region)
+- [ ] Test multi-level grouping (region → customer)
+- [ ] Test variable filtering by `reset_on` and `reset_group`
+- [ ] Test edge cases:
+  - Reports with no groups
+  - Reports with groups but no variables
+  - Variables with mismatched group levels
+  - Complex expressions requiring fallback parsing
+- [ ] Validate generated config matches expected ProducerConsumer format
+
+**Implementation Location**: `AshReports.Typst.DataLoader` module
+
+**Expected Output Example**:
+```elixir
+# Input: Report DSL with groups and variables
+report.groups = [
+  %{level: 1, expression: expr(territory)},
+  %{level: 2, expression: expr(customer_name)}
+]
+report.variables = [
+  %{type: :sum, reset_on: :group, reset_group: 1}
+]
+
+# Output: ProducerConsumer config
+[
+  %{group_by: :territory, aggregations: [:sum, :count]},
+  %{group_by: [:territory, :customer_name], aggregations: [:sum, :count]}
+]
+```
+
+## 2.5 DataLoader Integration
+
+**Note**: Uses Section 2.4 DSL parsing to auto-configure streaming pipelines with grouped aggregations
+
+### 2.5.1 API Implementation
 - [ ] Implement `create_streaming_pipeline/4` function in DataLoader
 - [ ] Replace error placeholder with actual GenStage pipeline
 - [ ] Add streaming configuration options
+- [ ] Integrate `build_grouped_aggregations_from_dsl/1` (from Section 2.4)
 - [ ] Create unified API for batch vs. streaming modes
 - [ ] Document API usage patterns and examples
 
-### 2.4.2 Automatic Mode Selection
+### 2.5.2 Automatic Mode Selection
 - [ ] Create automatic fallback for small datasets (<10K records)
 - [ ] Implement dataset size detection
 - [ ] Add configuration for streaming threshold
 - [ ] Create performance heuristics for mode selection
 - [ ] Add manual override options
 
-### 2.4.3 Stream Control
+### 2.5.3 Stream Control
 - [ ] Implement stream cancellation support
 - [ ] Add pause/resume functionality
 - [ ] Create stream timeout handling
 - [ ] Implement graceful shutdown
 - [ ] Add stream status queries
 
-## 2.5 Testing and Performance Validation
+## 2.6 Testing and Performance Validation
 
-### 2.5.1 Unit and Integration Tests
+### 2.6.1 Unit and Integration Tests
 - [ ] Create streaming pipeline unit tests
 - [ ] Test producer demand handling
 - [ ] Test consumer backpressure
-- [ ] Test aggregation functions
+- [ ] Test aggregation functions (global and grouped)
+- [ ] Test DSL-driven aggregation config generation (from Section 2.4)
 - [ ] Test error handling and recovery
 
-### 2.5.2 Performance Benchmarks
+### 2.6.2 Performance Benchmarks
 - [ ] Add memory usage benchmarks (target: <1.5x baseline)
 - [ ] Test with datasets of 10K, 100K, 1M records
 - [ ] Validate throughput (target: 1000+ records/sec)
 - [ ] Test concurrent stream handling
-- [ ] Benchmark aggregation performance
+- [ ] Benchmark aggregation performance (global vs grouped)
+- [ ] Benchmark DSL parsing overhead
 
-### 2.5.3 Load and Stress Testing
+### 2.6.3 Load and Stress Testing
 - [ ] Test cancellation and error recovery
 - [ ] Test memory pressure scenarios
 - [ ] Test network failures and retries
 - [ ] Test concurrent multi-stream scenarios
+- [ ] Test grouped aggregations with many unique groups (memory scaling)
 - [ ] Create stress testing suite
 
 **Performance Targets**:
