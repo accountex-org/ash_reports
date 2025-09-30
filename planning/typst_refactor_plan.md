@@ -120,6 +120,9 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 - [ ] Add support for time-series data formatting
 - [ ] Create multi-dimensional data pivoting
 - [ ] Implement statistical calculations for charts
+- [ ] Integrate with GenStage streaming for large dataset aggregation (see Section 2.4)
+
+**Note**: For datasets >10K records, use GenStage streaming pipeline (Section 2.4) to perform server-side aggregation before sending to D3 rendering service. This is essential for performance - D3.js can render ~5,000 SVG elements or ~50,000 canvas points efficiently, so large datasets must be aggregated server-side first.
 
 ### 2.2.2 Dynamic Chart Generation
 - [ ] Add runtime chart configuration from DSL
@@ -148,6 +151,12 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 
 **Goal**: Implement memory-efficient streaming for reports with 10K+ records using GenStage/Flow
 
+**Use Cases**:
+- Full report generation with 100K+ records
+- D3 chart data aggregation (see Section 2.2.1) - stream 1M records → aggregate to 500 chart datapoints
+- Real-time report updates with incremental data loading
+- Memory-efficient export for large datasets
+
 ### 2.4.1 GenStage Infrastructure Setup
 - [ ] Add gen_stage dependency to mix.exs (~> 1.2)
 - [ ] Add flow dependency to mix.exs (~> 1.2)
@@ -165,6 +174,8 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 ### 2.4.3 Consumer/Transformer Implementation
 - [ ] Create `StreamingConsumer` for data transformation
 - [ ] Integrate with DataProcessor for type conversion
+- [ ] Implement streaming aggregation functions (sum, count, avg, percentiles)
+- [ ] Add support for time-series bucketing and grouping (for D3 charts)
 - [ ] Implement backpressure handling
 - [ ] Add progress tracking and telemetry
 - [ ] Create configurable buffer management
