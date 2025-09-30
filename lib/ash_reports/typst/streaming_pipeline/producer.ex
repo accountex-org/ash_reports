@@ -61,7 +61,12 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
   use GenStage
   require Logger
 
-  alias AshReports.Typst.StreamingPipeline.{HealthMonitor, Registry}
+  alias AshReports.Typst.StreamingPipeline.{
+    HealthMonitor,
+    QueryCache,
+    Registry,
+    RelationshipLoader
+  }
 
   @default_chunk_size 1000
   # Check memory every 1 second
@@ -80,6 +85,14 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
   - `:stream_id` - Unique identifier for this pipeline (required)
   - `:chunk_size` - Number of records per chunk (default: 1000)
   - `:metadata` - Additional metadata to track (default: %{})
+  - `:enable_cache` - Enable query result caching (default: true)
+  - `:memory_limit` - Per-stream memory limit in bytes (default: 500MB)
+  - `:max_retries` - Maximum retry attempts for failed queries (default: 3)
+  - `:load_config` - Relationship loading configuration (default: nil)
+    - `:strategy` - `:eager`, `:lazy`, or `:selective` (default: `:selective`)
+    - `:max_depth` - Maximum relationship depth (default: 3)
+    - `:required` - Required relationships to preload (default: [])
+    - `:optional` - Optional relationships (default: [])
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
@@ -99,6 +112,22 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
     # Extract optional configuration
     chunk_size = Keyword.get(opts, :chunk_size, @default_chunk_size)
     metadata = Keyword.get(opts, :metadata, %{})
+    enable_cache = Keyword.get(opts, :enable_cache, true)
+    memory_limit = Keyword.get(opts, :memory_limit, default_memory_limit())
+    max_retries = Keyword.get(opts, :max_retries, 3)
+    load_config = Keyword.get(opts, :load_config, nil)
+
+    # Apply relationship loading strategy if configured
+    enhanced_query =
+      if load_config do
+        Logger.debug(
+          "Producer #{stream_id} applying relationship loading strategy: #{inspect(load_config)}"
+        )
+
+        RelationshipLoader.apply_load_strategy(query, load_config)
+      else
+        query
+      end
 
     # Register this producer with the Registry
     Registry.update_producer_consumer(stream_id, self())
@@ -109,14 +138,20 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
     state = %{
       domain: domain,
       resource: resource,
-      query: query,
+      query: enhanced_query,
       stream_id: stream_id,
       chunk_size: chunk_size,
       metadata: metadata,
       offset: 0,
       total_fetched: 0,
       completed: false,
-      paused: false
+      paused: false,
+      enable_cache: enable_cache,
+      memory_limit: memory_limit,
+      max_retries: max_retries,
+      retry_count: 0,
+      degraded_mode: false,
+      load_config: load_config
     }
 
     Logger.debug("StreamingPipeline.Producer started for stream #{stream_id}")
@@ -221,13 +256,22 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
   end
 
   defp fetch_records(records_needed, state, acc) do
+    # Adjust chunk size if in degraded mode
+    effective_chunk_size =
+      if state.degraded_mode do
+        max(div(state.chunk_size, 2), 100)
+      else
+        state.chunk_size
+      end
+
     # Fetch next chunk
     chunk_result =
       execute_chunked_query(
         state.domain,
         state.query,
         state.offset,
-        state.chunk_size
+        effective_chunk_size,
+        state
       )
 
     case chunk_result do
@@ -238,10 +282,24 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
       {:ok, records} ->
         new_offset = state.offset + length(records)
         new_total = state.total_fetched + length(records)
-        new_state = %{state | offset: new_offset, total_fetched: new_total}
+        new_state = %{state | offset: new_offset, total_fetched: new_total, retry_count: 0}
+
+        # Check memory usage and enable degraded mode if needed
+        memory_usage = get_process_memory()
+
+        new_state =
+          if memory_usage > state.memory_limit * 0.8 do
+            Logger.warning(
+              "Producer #{state.stream_id} entering degraded mode (memory: #{memory_usage})"
+            )
+
+            %{new_state | degraded_mode: true}
+          else
+            %{new_state | degraded_mode: false}
+          end
 
         # If we got fewer records than chunk_size, we've reached the end
-        if length(records) < state.chunk_size do
+        if length(records) < effective_chunk_size do
           {Enum.reverse(records ++ acc), new_state}
         else
           # Continue fetching if we still need more records
@@ -250,23 +308,62 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
         end
 
       {:error, reason} ->
-        Logger.error("Producer #{state.stream_id} failed to fetch chunk: #{inspect(reason)}")
+        # Handle retries
+        if state.retry_count < state.max_retries do
+          Logger.warning(
+            "Producer #{state.stream_id} retrying after error (attempt #{state.retry_count + 1}/#{state.max_retries}): #{inspect(reason)}"
+          )
 
-        :telemetry.execute(
-          [:ash_reports, :streaming, :producer, :error],
-          %{offset: state.offset},
-          %{stream_id: state.stream_id, reason: reason}
-        )
+          # Exponential backoff
+          backoff = :timer.seconds(1) * :math.pow(2, state.retry_count) |> round()
+          Process.sleep(backoff)
 
-        HealthMonitor.emit_exception(state.stream_id, elapsed_time(state), reason)
-        Registry.update_status(state.stream_id, :failed)
+          # Retry with updated retry count
+          new_state = %{state | retry_count: state.retry_count + 1}
+          fetch_records(records_needed, new_state, acc)
+        else
+          Logger.error(
+            "Producer #{state.stream_id} failed after #{state.max_retries} retries: #{inspect(reason)}"
+          )
 
-        # Return what we have so far
-        {Enum.reverse(acc), %{state | completed: true}}
+          :telemetry.execute(
+            [:ash_reports, :streaming, :producer, :error],
+            %{offset: state.offset, retry_count: state.retry_count},
+            %{stream_id: state.stream_id, reason: reason}
+          )
+
+          HealthMonitor.emit_exception(state.stream_id, elapsed_time(state), reason)
+          Registry.update_status(state.stream_id, :failed)
+
+          # Cleanup resources before returning
+          cleanup_resources(state)
+
+          # Return what we have so far
+          {Enum.reverse(acc), %{state | completed: true}}
+        end
     end
   end
 
-  defp execute_chunked_query(domain, query, offset, limit) do
+  defp execute_chunked_query(domain, query, offset, limit, state) do
+    # Generate cache key if caching is enabled
+    if state.enable_cache do
+      cache_key = QueryCache.generate_key(domain, state.resource, query, offset, limit)
+
+      case QueryCache.get(cache_key) do
+        {:ok, cached_results} ->
+          Logger.debug("Producer #{state.stream_id} cache hit for offset #{offset}")
+          {:ok, cached_results}
+
+        :miss ->
+          Logger.debug("Producer #{state.stream_id} cache miss for offset #{offset}")
+          execute_and_cache_query(domain, query, offset, limit, cache_key)
+      end
+    else
+      execute_and_cache_query(domain, query, offset, limit, nil)
+    end
+  end
+
+  defp execute_and_cache_query(domain, query, offset, limit, cache_key) do
     try do
       # Apply limit and offset to query
       chunked_query =
@@ -277,6 +374,11 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
       # Execute the query
       case Ash.read(chunked_query, domain: domain) do
         {:ok, results} ->
+          # Cache the results if cache_key is provided
+          if cache_key do
+            QueryCache.put(cache_key, results)
+          end
+
           {:ok, results}
 
         {:error, error} ->
@@ -316,5 +418,25 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
       _ ->
         0
     end
+  end
+
+  defp default_memory_limit do
+    config = Application.get_env(:ash_reports, :streaming, [])
+    # Default to 500MB per pipeline
+    Keyword.get(config, :max_memory_per_pipeline, 500_000_000)
+  end
+
+  defp cleanup_resources(state) do
+    # Log cleanup operation
+    Logger.debug("Producer #{state.stream_id} cleaning up resources")
+
+    # Clear any cached queries for this stream
+    # Note: QueryCache is global, so we just log this for observability
+    # Actual cache cleanup happens via TTL and LRU eviction
+
+    # Force garbage collection to free memory
+    :erlang.garbage_collect(self())
+
+    :ok
   end
 end
