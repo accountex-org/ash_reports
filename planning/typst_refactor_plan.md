@@ -77,7 +77,7 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 - [x] Create grouping and sorting based on DSL definitions - **COMPLETED**
 - [x] Add support for complex relationship traversal - **COMPLETED**
 - [x] Implement variable scopes (detail, group, page, report) - **COMPLETED**
-- [ ] Handle large dataset streaming with GenStage - **DEFERRED to future iteration**
+- [ ] Handle large dataset streaming with GenStage - **See Section 2.4 for implementation**
 
 ## 1.4 Integration Testing Infrastructure
 
@@ -90,11 +90,11 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 
 ---
 
-# Stage 2: D3.js Visualization System Integration
+# Stage 2: Performance Optimization and Visualization
 
-**Duration**: 2-3 weeks
+**Duration**: 3-4 weeks
 **Status**: 📋 Planned
-**Goal**: Implement comprehensive D3.js chart integration with server-side rendering
+**Goal**: Implement D3.js chart integration, GenStage streaming for large datasets, and comprehensive performance optimization
 
 ## 2.1 D3 Rendering Service
 
@@ -143,6 +143,63 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 - [ ] Create lazy loading for complex visualizations
 - [ ] Add compression for embedded SVG data
 - [ ] Implement memory-efficient chart processing
+
+## 2.4 GenStage Streaming Pipeline for Large Datasets
+
+**Goal**: Implement memory-efficient streaming for reports with 10K+ records using GenStage/Flow
+
+### 2.4.1 GenStage Infrastructure Setup
+- [ ] Add gen_stage dependency to mix.exs (~> 1.2)
+- [ ] Add flow dependency to mix.exs (~> 1.2)
+- [ ] Create `AshReports.Typst.StreamingPipeline` module
+- [ ] Design producer-consumer architecture
+- [ ] Implement supervision tree for streaming processes
+
+### 2.4.2 Producer Implementation
+- [ ] Create `StreamingProducer` for chunked Ash query execution
+- [ ] Implement demand-driven query batching
+- [ ] Add intelligent preloading for relationships
+- [ ] Handle query pagination with Ash offset/limit
+- [ ] Implement memory monitoring and circuit breakers
+
+### 2.4.3 Consumer/Transformer Implementation
+- [ ] Create `StreamingConsumer` for data transformation
+- [ ] Integrate with DataProcessor for type conversion
+- [ ] Implement backpressure handling
+- [ ] Add progress tracking and telemetry
+- [ ] Create configurable buffer management
+
+### 2.4.4 DataLoader Integration
+- [ ] Implement `create_streaming_pipeline/4` function in DataLoader
+- [ ] Replace error placeholder with actual GenStage pipeline
+- [ ] Add streaming configuration options
+- [ ] Implement stream cancellation support
+- [ ] Create automatic fallback for small datasets (<10K records)
+
+### 2.4.5 Testing and Performance Validation
+- [ ] Create streaming pipeline unit tests
+- [ ] Add memory usage benchmarks (target: <1.5x baseline)
+- [ ] Test with datasets of 10K, 100K, 1M records
+- [ ] Validate throughput (target: 1000+ records/sec)
+- [ ] Test cancellation and error recovery
+
+**Performance Targets**:
+- **Memory Usage**: <1.5x baseline regardless of dataset size
+- **Throughput**: 1000+ records/second on standard hardware
+- **Scalability**: Support datasets from 10K to 1M+ records
+- **Latency**: Streaming should start within 100ms
+- **Reliability**: Automatic fallback to batch loading on errors
+
+**Architecture Overview**:
+```
+Ash Query → StreamingProducer (chunks of 500-1000 records)
+                ↓
+         GenStage backpressure
+                ↓
+      StreamingConsumer (DataProcessor transformation)
+                ↓
+         Enumerable Stream → Typst Compilation
+```
 
 ---
 
