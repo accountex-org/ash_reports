@@ -275,16 +275,19 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 - [x] Create comprehensive error messages for debugging
 
 ### 2.4.4 Integration and Testing
-- [ ] Integrate with existing test report in `test/support/test_helpers.ex` (lines 129-221)
-- [ ] Test single-level grouping (by region)
-- [ ] Test multi-level grouping (region → customer)
-- [ ] Test variable filtering by `reset_on` and `reset_group`
-- [ ] Test edge cases:
+- [x] Integrate with existing test report in `test/support/test_helpers.ex` (lines 129-221)
+- [x] Test single-level grouping (by region)
+- [x] Test multi-level grouping (region → customer)
+- [x] Test variable filtering by `reset_on` and `reset_group`
+- [x] Test edge cases:
   - Reports with no groups
   - Reports with groups but no variables
   - Variables with mismatched group levels
   - Complex expressions requiring fallback parsing
-- [ ] Validate generated config matches expected ProducerConsumer format
+- [x] Validate generated config matches expected ProducerConsumer format
+- [x] Create comprehensive integration test suite (17 tests)
+- [x] Test three-level hierarchical grouping
+- [x] Validate ProducerConsumer contract (field types, structure)
 
 **Implementation Location**: `AshReports.Typst.DataLoader` module
 
