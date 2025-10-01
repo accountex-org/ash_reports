@@ -1,7 +1,7 @@
 defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
   use ExUnit.Case, async: false
 
-  alias AshReports.Typst.StreamingPipeline.{Producer, ProducerConsumer, Registry}
+  alias AshReports.Typst.StreamingPipeline.ProducerConsumer
 
   setup do
     # Ensure Registry is running
@@ -600,6 +600,66 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
 
       :telemetry.detach(batch_handler)
       :telemetry.detach(agg_handler)
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "emits throughput telemetry via HealthMonitor" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      # Attach handler for throughput events
+      throughput_handler = "test-throughput-#{:rand.uniform(10000)}"
+
+      :telemetry.attach(
+        throughput_handler,
+        [:ash_reports, :streaming, :throughput],
+        fn _name, measurements, metadata, _config ->
+          send(test_pid, {:telemetry, :throughput, measurements, metadata})
+        end,
+        nil
+      )
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        enable_telemetry: true
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Send records to trigger throughput calculation
+      records = for i <- 1..10, do: %{id: i, value: i * 10}
+      GenStage.call(producer, {:queue, records})
+
+      # Verify throughput telemetry was emitted
+      assert_receive {:telemetry, :throughput, measurements, metadata}, 1000
+
+      # Verify measurements structure
+      assert is_map(measurements)
+      assert is_float(measurements.records_per_second)
+      assert measurements.records_per_second > 0
+
+      # Verify metadata structure
+      assert is_map(metadata)
+      assert metadata.stream_id == stream_id
+
+      :telemetry.detach(throughput_handler)
       cleanup_process(producer)
       cleanup_process(pc_pid)
       cleanup_process(consumer)
@@ -1844,6 +1904,616 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
     end
   end
 
+  describe "grouped aggregations: missing fields" do
+    test "handles records missing single group_by field" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        grouped_aggregations: [
+          %{group_by: :category, aggregations: [:sum, :count]}
+        ]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Send mix of records - some with category, some without
+      records = [
+        %{category: "A", amount: 100},
+        %{amount: 150},  # Missing category field
+        %{category: "B", amount: 200},
+        %{amount: 250},  # Missing category field
+        %{category: "A", amount: 300}
+      ]
+      GenStage.call(producer, {:queue, records})
+
+      assert_receive {:consumed, _}, 1000
+
+      # Verify grouped aggregations handle missing fields gracefully
+      %{state: state} = :sys.get_state(pc_pid)
+      groups = state.grouped_aggregation_state[[:category]]
+
+      # Records with category should be grouped normally
+      assert groups["A"].sum.amount == 400  # 100 + 300
+      assert groups["A"].count == 2
+      assert groups["B"].sum.amount == 200
+      assert groups["B"].count == 1
+
+      # Records without category should be grouped under nil key
+      assert groups[nil].sum.amount == 400  # 150 + 250
+      assert groups[nil].count == 2
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "handles records missing fields in multi-field grouping" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        grouped_aggregations: [
+          %{group_by: [:territory, :category], aggregations: [:count, :sum]}
+        ]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Send records with various missing fields
+      records = [
+        %{territory: "North", category: "A", amount: 100},
+        %{territory: "North", amount: 150},  # Missing category
+        %{category: "A", amount: 200},  # Missing territory
+        %{amount: 250},  # Missing both fields
+        %{territory: "South", category: "B", amount: 300}
+      ]
+      GenStage.call(producer, {:queue, records})
+
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+      groups = state.grouped_aggregation_state[[:territory, :category]]
+
+      # Complete records grouped normally
+      assert groups[{"North", "A"}].count == 1
+      assert groups[{"North", "A"}].sum.amount == 100
+      assert groups[{"South", "B"}].count == 1
+      assert groups[{"South", "B"}].sum.amount == 300
+
+      # Partial records grouped with nil for missing field
+      assert groups[{"North", nil}].count == 1
+      assert groups[{"North", nil}].sum.amount == 150
+      assert groups[{nil, "A"}].count == 1
+      assert groups[{nil, "A"}].sum.amount == 200
+
+      # Completely missing fields grouped under {nil, nil}
+      assert groups[{nil, nil}].count == 1
+      assert groups[{nil, nil}].sum.amount == 250
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "handles all records missing group_by field" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        grouped_aggregations: [
+          %{group_by: :category, aggregations: [:sum, :count]}
+        ]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # All records missing the category field
+      records = [
+        %{amount: 100, name: "Item1"},
+        %{amount: 200, name: "Item2"},
+        %{amount: 300, name: "Item3"}
+      ]
+      GenStage.call(producer, {:queue, records})
+
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+      groups = state.grouped_aggregation_state[[:category]]
+
+      # All records should be grouped under nil
+      assert groups[nil].count == 3
+      assert groups[nil].sum.amount == 600
+      assert map_size(groups) == 1  # Only one group (nil)
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "handles nil vs missing field distinction" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        grouped_aggregations: [
+          %{group_by: :status, aggregations: [:count]}
+        ]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Mix of explicit nil and missing field
+      records = [
+        %{id: 1, status: "active"},
+        %{id: 2, status: nil},  # Explicit nil
+        %{id: 3},  # Missing status field (Map.get returns nil)
+        %{id: 4, status: "inactive"}
+      ]
+      GenStage.call(producer, {:queue, records})
+
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+      groups = state.grouped_aggregation_state[[:status]]
+
+      # Both explicit nil and missing field should group together
+      assert groups["active"].count == 1
+      assert groups["inactive"].count == 1
+      assert groups[nil].count == 2  # Both nil and missing
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "handles deeply nested missing fields" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      # Test with three-field grouping
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        grouped_aggregations: [
+          %{group_by: [:region, :territory, :category], aggregations: [:count]}
+        ]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      records = [
+        %{region: "US", territory: "West", category: "A"},
+        %{region: "US", territory: "West"},  # Missing category
+        %{region: "US"},  # Missing territory and category
+        %{}  # Missing all fields
+      ]
+      GenStage.call(producer, {:queue, records})
+
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state} = :sys.get_state(pc_pid)
+      groups = state.grouped_aggregation_state[[:region, :territory, :category]]
+
+      # Verify all combinations are handled
+      assert groups[{"US", "West", "A"}].count == 1
+      assert groups[{"US", "West", nil}].count == 1
+      assert groups[{"US", nil, nil}].count == 1
+      assert groups[{nil, nil, nil}].count == 1
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+  end
+
+  describe "transformer validation" do
+    test "handles nil transformer gracefully" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        transformer: nil  # Invalid transformer
+      ]
+
+      # Trap exits to handle the crash gracefully in the test
+      Process.flag(:trap_exit, true)
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Send records
+      records = [%{id: 1, value: 100}, %{id: 2, value: 200}]
+      GenStage.call(producer, {:queue, records})
+
+      # With nil transformer, transform_record will crash
+      # Expect EXIT message from the linked process (EXIT format is tuple-based)
+      assert_receive {:EXIT, ^pc_pid, {{:badfun, nil}, _stacktrace}}, 1000
+
+      # Process should have crashed
+      refute Process.alive?(pc_pid)
+
+      cleanup_process(producer)
+      cleanup_process(consumer)
+
+      # Restore normal exit handling
+      Process.flag(:trap_exit, false)
+    end
+
+    test "handles non-function transformer" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        transformer: "not_a_function"  # Invalid type
+      ]
+
+      # Trap exits to handle the crash gracefully in the test
+      Process.flag(:trap_exit, true)
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Send records
+      records = [%{id: 1, value: 100}]
+      GenStage.call(producer, {:queue, records})
+
+      # Process should crash when trying to call string as function
+      # EXIT format: {:badfun, "not_a_function"}
+      assert_receive {:EXIT, ^pc_pid, {{:badfun, "not_a_function"}, _stacktrace}}, 1000
+
+      refute Process.alive?(pc_pid)
+
+      cleanup_process(producer)
+      cleanup_process(consumer)
+
+      # Restore normal exit handling
+      Process.flag(:trap_exit, false)
+    end
+
+    test "handles transformer with wrong arity" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      # Transformer that takes 2 arguments instead of 1
+      transformer = fn _record, _extra -> %{error: "wrong arity"} end
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        transformer: transformer
+      ]
+
+      # Trap exits to handle the crash gracefully in the test
+      Process.flag(:trap_exit, true)
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Send records
+      records = [%{id: 1, value: 100}]
+      GenStage.call(producer, {:queue, records})
+
+      # BadArityError is a VM error (not caught), so process crashes
+      # EXIT format: {:badarity, {fun, args}}
+      assert_receive {:EXIT, ^pc_pid, {{:badarity, {_fun, _args}}, _stacktrace}}, 1000
+
+      refute Process.alive?(pc_pid)
+
+      cleanup_process(producer)
+      cleanup_process(consumer)
+
+      # Restore normal exit handling
+      Process.flag(:trap_exit, false)
+    end
+
+    test "handles transformer returning non-map value" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      # Transformer that returns wrong type
+      transformer = fn _record -> "string instead of map" end
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        transformer: transformer
+      ]
+
+      # Trap exits to handle the crash gracefully in the test
+      Process.flag(:trap_exit, true)
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Send records
+      records = [%{id: 1, value: 100}, %{id: 2, value: 200}]
+      GenStage.call(producer, {:queue, records})
+
+      # Process crashes when aggregation tries to enumerate over string
+      # Protocol.UndefinedError is raised, crashing the process
+      assert_receive {:EXIT, ^pc_pid, {%Protocol.UndefinedError{}, _stacktrace}}, 1000
+
+      refute Process.alive?(pc_pid)
+
+      cleanup_process(producer)
+      cleanup_process(consumer)
+
+      # Restore normal exit handling
+      Process.flag(:trap_exit, false)
+    end
+
+    test "handles transformer that returns nil for all records" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      # Transformer that always returns nil
+      transformer = fn _record -> nil end
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        transformer: transformer
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Send records
+      records = [%{id: 1}, %{id: 2}, %{id: 3}]
+      GenStage.call(producer, {:queue, records})
+
+      # All records filtered out (nil results)
+      # GenStage doesn't send empty events to consumers
+      Process.sleep(100)
+
+      # Verify aggregation state shows no records transformed
+      %{state: state} = :sys.get_state(pc_pid)
+      assert state.total_transformed == 0
+      assert Process.alive?(pc_pid)
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "handles transformer with side effects" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      # Transformer with side effects (sends message)
+      transformer = fn record ->
+        send(test_pid, {:side_effect, record.id})
+        record
+      end
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        transformer: transformer
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Send records
+      records = [%{id: 1}, %{id: 2}]
+      GenStage.call(producer, {:queue, records})
+
+      # Verify side effects occurred
+      assert_receive {:side_effect, 1}, 1000
+      assert_receive {:side_effect, 2}, 1000
+
+      # Verify records still flowed through
+      assert_receive {:consumed, events}, 1000
+      assert length(events) == 2
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "default identity transformer passes records unchanged" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      # No transformer specified - should use default identity function
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}]
+        # transformer not specified
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Send records
+      original_records = [%{id: 1, name: "Alice"}, %{id: 2, name: "Bob"}]
+      GenStage.call(producer, {:queue, original_records})
+
+      # Records should pass through unchanged
+      assert_receive {:consumed, events}, 1000
+      assert events == original_records
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+  end
+
   describe "behavioral tests: error handling" do
     test "handles transformer errors and continues processing" do
       stream_id = "test-stream-#{:rand.uniform(10000)}"
@@ -2197,6 +2867,157 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       # Groups 4 and 5 should not exist (rejected)
       refute Map.has_key?(groups, 4)
       refute Map.has_key?(groups, 5)
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "accepts records at exact max_groups boundary" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      # Set limit to 10 for testing
+      max_groups = 10
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        grouped_aggregations: [
+          %{group_by: :id, aggregations: [:count, :sum], max_groups: max_groups}
+        ]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # Send exactly max_groups records (should all be accepted)
+      records_at_limit = for i <- 1..max_groups, do: %{id: i, value: i * 10}
+      GenStage.call(producer, {:queue, records_at_limit})
+      assert_receive {:consumed, _}, 1000
+
+      # Verify all groups at the limit were created
+      %{state: state} = :sys.get_state(pc_pid)
+      groups = state.grouped_aggregation_state[[:id]]
+      assert map_size(groups) == max_groups
+
+      # Verify group count is exactly at the limit
+      assert state.group_counts[[:id]] == max_groups
+
+      # Verify all groups exist and have correct aggregations
+      for i <- 1..max_groups do
+        assert Map.has_key?(groups, i)
+        assert groups[i].count == 1
+        assert groups[i].sum.value == i * 10
+      end
+
+      # Now send one more record (should be rejected)
+      record_over_limit = [%{id: max_groups + 1, value: 999}]
+      GenStage.call(producer, {:queue, record_over_limit})
+      assert_receive {:consumed, _}, 1000
+
+      # Verify the new group was NOT created
+      %{state: state_after} = :sys.get_state(pc_pid)
+      groups_after = state_after.grouped_aggregation_state[[:id]]
+      assert map_size(groups_after) == max_groups
+      refute Map.has_key?(groups_after, max_groups + 1)
+
+      # Group count should still be at the limit
+      assert state_after.group_counts[[:id]] == max_groups
+
+      cleanup_process(producer)
+      cleanup_process(pc_pid)
+      cleanup_process(consumer)
+    end
+
+    test "handles multiple records for the same group at boundary" do
+      stream_id = "test-stream-#{:rand.uniform(10000)}"
+      test_pid = self()
+
+      {:ok, producer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestProducer,
+          :ok
+        )
+
+      max_groups = 3
+
+      opts = [
+        stream_id: stream_id,
+        subscribe_to: [{producer, []}],
+        grouped_aggregations: [
+          %{group_by: :category, aggregations: [:count, :sum], max_groups: max_groups}
+        ]
+      ]
+
+      {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+      {:ok, consumer} =
+        GenStage.start_link(
+          AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
+          test_pid
+        )
+      GenStage.sync_subscribe(consumer, to: pc_pid)
+
+      Process.sleep(50)
+
+      # First batch: Create groups A, B, C (at limit)
+      first_batch = [
+        %{category: "A", amount: 100},
+        %{category: "B", amount: 200},
+        %{category: "C", amount: 300}
+      ]
+      GenStage.call(producer, {:queue, first_batch})
+      assert_receive {:consumed, _}, 1000
+
+      %{state: state1} = :sys.get_state(pc_pid)
+      groups1 = state1.grouped_aggregation_state[[:category]]
+      assert map_size(groups1) == 3
+      assert groups1["A"].count == 1
+      assert groups1["B"].count == 1
+      assert groups1["C"].count == 1
+
+      # Second batch: Mix of existing groups (should update) and new group (should reject)
+      second_batch = [
+        %{category: "A", amount: 50},
+        # Update existing group A
+        %{category: "D", amount: 400},
+        # New group D (should be rejected)
+        %{category: "B", amount: 75},
+        # Update existing group B
+        %{category: "D", amount: 500}
+        # Another attempt at new group D (should also be rejected)
+      ]
+      GenStage.call(producer, {:queue, second_batch})
+      assert_receive {:consumed, _}, 1000
+
+      # Verify still only 3 groups
+      %{state: state2} = :sys.get_state(pc_pid)
+      groups2 = state2.grouped_aggregation_state[[:category]]
+      assert map_size(groups2) == 3
+
+      # Verify existing groups were updated
+      assert groups2["A"].count == 2
+      assert groups2["A"].sum.amount == 150
+      assert groups2["B"].count == 2
+      assert groups2["B"].sum.amount == 275
+      assert groups2["C"].count == 1
+      assert groups2["C"].sum.amount == 300
+
+      # Verify new group D was NOT created
+      refute Map.has_key?(groups2, "D")
 
       cleanup_process(producer)
       cleanup_process(pc_pid)

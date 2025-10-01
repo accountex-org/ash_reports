@@ -48,6 +48,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
         transformer: &MyModule.transform/1
       )
 
+  ## Health Monitoring
+
+  Integrates with `HealthMonitor` to provide pipeline health metrics:
+  - Emits throughput metrics (records/second) for each batch
+  - Tracks transformation performance and bottlenecks
+  - Enables pipeline-wide health monitoring and alerting
+
   ## Telemetry
 
   Emits the following events:
@@ -93,13 +100,23 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   Metadata:
   - `:stream_id` - Unique identifier for the pipeline
   - `:group_by` - The grouping field(s) that reached the limit
+
+  ### `[:ash_reports, :streaming, :throughput]`
+
+  Emitted via `HealthMonitor` for each processed batch.
+
+  Measurements:
+  - `:records_per_second` - Transformation throughput
+
+  Metadata:
+  - `:stream_id` - Unique identifier for the pipeline
   """
 
   use GenStage
   require Logger
 
   alias AshReports.Typst.{DataProcessor, StreamingPipeline}
-  alias StreamingPipeline.Registry
+  alias StreamingPipeline.{HealthMonitor, Registry}
 
   @default_max_demand 500
   @default_min_demand 100
@@ -131,15 +148,89 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   - `:min_demand` - Minimum demand from producer (default: 100)
   - `:enable_telemetry` - Enable detailed telemetry events (default: true)
 
-  ## Security Considerations
+  ## Memory Requirements for Grouped Aggregations
 
-  Grouped aggregations can grow unbounded if grouping by high-cardinality fields
-  (e.g., user_id, transaction_id). To prevent memory exhaustion:
+  Grouped aggregations maintain in-memory state for each unique group combination.
+  Memory usage grows with the number of unique groups, making it critical to understand
+  and control memory consumption.
 
-  - Each grouping configuration has a `max_groups` limit (default: 10,000)
-  - Once limit is reached, new groups are rejected and warning is logged
-  - Telemetry event `[:ash_reports, :streaming, :producer_consumer, :group_limit_reached]` is emitted
-  - Consider the memory impact: 10K groups × ~500 bytes/group ≈ 5MB per grouping config
+  ### Memory Calculation
+
+  For each grouped aggregation configuration:
+
+      Total Memory = (Number of Unique Groups) × (Bytes per Group)
+
+  **Bytes per Group** depends on:
+  - Group key size (field names + values)
+  - Number of aggregation types (sum, count, avg, min, max)
+  - Number of fields being aggregated
+  - Typical estimate: **300-800 bytes per group**
+
+  ### Examples
+
+  **Single field grouping (low cardinality)**:
+  ```elixir
+  # Group by :territory (50 unique territories)
+  %{group_by: :territory, aggregations: [:sum, :count], fields: [:amount]}
+  # Memory: 50 groups × 400 bytes ≈ 20 KB
+  ```
+
+  **Multi-field grouping (medium cardinality)**:
+  ```elixir
+  # Group by [:region, :product_category] (10 regions × 25 categories = 250 groups)
+  %{group_by: [:region, :product_category], aggregations: [:sum, :avg, :count]}
+  # Memory: 250 groups × 500 bytes ≈ 125 KB
+  ```
+
+  **High cardinality grouping (at default limit)**:
+  ```elixir
+  # Group by [:customer_id, :product_id] (max_groups: 10,000)
+  %{group_by: [:customer_id, :product_id], aggregations: [:sum, :count, :avg, :min, :max]}
+  # Memory: 10,000 groups × 600 bytes ≈ 6 MB
+  ```
+
+  **Multiple grouping configurations**:
+  ```elixir
+  grouped_aggregations: [
+    %{group_by: :territory, aggregations: [:sum, :count]},              # ~20 KB
+    %{group_by: [:territory, :salesperson], aggregations: [:sum]},      # ~200 KB
+    %{group_by: [:customer_id], aggregations: [:sum, :count, :avg]}    # ~4 MB
+  ]
+  # Total Memory: ~4.2 MB
+  ```
+
+  ### Memory Protection
+
+  To prevent unbounded memory growth:
+
+  - **Default limit**: Each grouping config limited to 10,000 unique groups
+  - **Configurable per-config**: Set `max_groups` option in each config
+  - **Rejection behavior**: Once limit reached, new groups are rejected (not aggregated)
+  - **Telemetry alerting**: `[:ash_reports, :streaming, :producer_consumer, :group_limit_reached]` event
+  - **Logging**: Warning logged when limit is reached
+
+  ### Best Practices
+
+  1. **Estimate cardinality before grouping**:
+     - Low cardinality (< 100): Safe for any aggregations
+     - Medium cardinality (100-1,000): Monitor memory usage
+     - High cardinality (> 1,000): Set explicit `max_groups` limit
+
+  2. **Choose appropriate max_groups**:
+     - Based on expected cardinality (with 20% buffer)
+     - Based on available memory budget
+     - Multiple configs share memory - calculate total
+
+  3. **Monitor via telemetry**:
+     - Track `:group_limit_reached` events
+     - Monitor `:records_rejected` in `:batch_transformed` events
+     - Alert when rejection rate > 1%
+
+  4. **Avoid grouping by**:
+     - UUIDs (very high cardinality)
+     - Timestamps (unique per record)
+     - Free-text fields (unbounded cardinality)
+     - Combined high-cardinality fields (multiplicative growth)
 
   ## Examples
 
@@ -225,13 +316,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
     start_time = System.monotonic_time(:millisecond)
 
     # Transform events - if this crashes, let the supervisor restart the process
-    {:ok, transformed_events, new_aggregation_state, new_grouped_aggregation_state, new_group_counts,
-     failed_count, rejected_count} = transform_batch(events, state)
+    {:ok, transformed_events, new_aggregation_state, new_grouped_aggregation_state,
+     new_group_counts, failed_count, rejected_count} = transform_batch(events, state)
 
     end_time = System.monotonic_time(:millisecond)
     duration = end_time - start_time
 
-    # Emit telemetry
+    # Emit telemetry and health metrics
     if state.enable_telemetry do
       :telemetry.execute(
         [:ash_reports, :streaming, :producer_consumer, :batch_transformed],
@@ -258,6 +349,12 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
           }
         )
       end
+
+      # Emit throughput metric to HealthMonitor
+      # Use at least 1ms to avoid division by zero
+      duration_seconds = max(duration, 1) / 1000.0
+      records_per_second = length(transformed_events) / duration_seconds
+      HealthMonitor.emit_throughput(state.stream_id, records_per_second)
     end
 
     # Check buffer size and emit warning if near capacity
@@ -360,9 +457,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
     # Only catch specific, expected errors from user-provided transformers
     # Let system errors (e.g., VM errors) crash the process
     e in [RuntimeError, ArgumentError, KeyError, FunctionClauseError, ArithmeticError] ->
-      Logger.error(
-        "Failed to transform record: #{Exception.message(e)} - Record will be skipped"
-      )
+      Logger.error("Failed to transform record: #{Exception.message(e)} - Record will be skipped")
 
       nil
   end
@@ -513,8 +608,8 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
     # Process each grouping configuration, tracking group counts and enforcing limits
     {new_grouped_state, new_group_counts, total_rejected} =
       Enum.reduce(grouped_configs, {grouped_state, group_counts, 0}, fn config,
-                                                                         {state, counts,
-                                                                          rejected_acc} ->
+                                                                        {state, counts,
+                                                                         rejected_acc} ->
         group_key = normalize_group_by(config.group_by)
         current_groups = Map.get(state, group_key, %{})
         current_count = Map.get(counts, group_key, 0)
@@ -523,7 +618,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
         # Process records for this grouping configuration
         {updated_groups, new_count, rejected_count} =
           Enum.reduce(records, {current_groups, current_count, 0}, fn record,
-                                                                       {groups, count, rejected} ->
+                                                                      {groups, count, rejected} ->
             # Extract group value(s) from record
             record_group_value = extract_group_value(record, config.group_by)
 
@@ -532,6 +627,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
               true ->
                 # Existing group - update aggregations
                 group_agg_state = Map.get(groups, record_group_value)
+
                 updated_group_agg =
                   update_aggregations([record], group_agg_state, config.aggregations)
 
@@ -560,6 +656,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
                 else
                   # Accept new group
                   group_agg_state = initialize_aggregations(config.aggregations)
+
                   updated_group_agg =
                     update_aggregations([record], group_agg_state, config.aggregations)
 
