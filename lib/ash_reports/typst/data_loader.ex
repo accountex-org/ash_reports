@@ -427,40 +427,67 @@ defmodule AshReports.Typst.DataLoader do
       group_list ->
         Logger.debug("Building aggregation configuration for #{length(group_list)} groups")
 
-        group_list
-        |> Enum.sort_by(& &1.level)
-        |> Enum.map(&build_aggregation_config_for_group(&1, report))
+        # Use reduce to accumulate fields from previous levels for cumulative grouping
+        {configs, _accumulated_fields} =
+          group_list
+          |> Enum.sort_by(& &1.level)
+          |> Enum.reduce({[], []}, fn group, {configs, accumulated_fields} ->
+            # Extract field name for current group
+            field_name = extract_field_for_group(group)
+
+            # Add to accumulated fields (cumulative grouping)
+            new_accumulated_fields = accumulated_fields ++ [field_name]
+
+            # Build config with cumulative fields
+            config =
+              build_aggregation_config_for_group_cumulative(
+                group,
+                report,
+                new_accumulated_fields
+              )
+
+            # Return updated accumulator
+            {configs ++ [config], new_accumulated_fields}
+          end)
+
+        configs
         |> Enum.reject(&is_nil/1)
     end
   end
 
-  defp build_aggregation_config_for_group(group, report) do
-    # Extract field name from group expression
-    field_name =
-      case ExpressionParser.extract_field_with_fallback(group.expression, group.name) do
-        {:ok, field} ->
-          field
+  # Extract field name from a group (helper for cumulative grouping)
+  defp extract_field_for_group(group) do
+    case ExpressionParser.extract_field_with_fallback(group.expression, group.name) do
+      {:ok, field} ->
+        field
 
-        _error ->
-          Logger.warning("""
-          Failed to parse group expression for #{group.name}, falling back to group name.
-          Expression: #{inspect(group.expression)}
-          """)
+      _error ->
+        Logger.warning("""
+        Failed to parse group expression for #{group.name}, falling back to group name.
+        Expression: #{inspect(group.expression)}
+        """)
 
-          group.name
-      end
+        group.name
+    end
+  end
 
+  # Build aggregation config with cumulative grouping (includes fields from all previous levels)
+  defp build_aggregation_config_for_group_cumulative(group, report, accumulated_fields) do
     # Derive aggregation types from variables
     aggregations = derive_aggregations_for_group(group.level, report)
 
+    # Normalize group_by: single field as atom, multiple fields as list
+    group_by = normalize_group_by_fields(accumulated_fields)
+
     Logger.debug("""
     Group #{group.name} (level #{group.level}):
-      - Extracted field: #{inspect(field_name)}
+      - Accumulated fields: #{inspect(accumulated_fields)}
+      - Normalized group_by: #{inspect(group_by)}
       - Aggregations: #{inspect(aggregations)}
     """)
 
     %{
-      group_by: field_name,
+      group_by: group_by,
       level: group.level,
       aggregations: aggregations,
       sort: group.sort || :asc
@@ -474,6 +501,10 @@ defmodule AshReports.Typst.DataLoader do
 
       nil
   end
+
+  # Normalize group_by fields: single field as atom, multiple fields as list
+  defp normalize_group_by_fields([single_field]), do: single_field
+  defp normalize_group_by_fields(fields) when is_list(fields), do: fields
 
   defp derive_aggregations_for_group(group_level, report) do
     variables = report.variables || []
@@ -513,6 +544,14 @@ defmodule AshReports.Typst.DataLoader do
       :first -> :first
       :last -> :last
       _ -> nil
+    end
+  end
+
+  # Test-only public interface (DO NOT USE IN PRODUCTION)
+  if Mix.env() == :test do
+    @doc false
+    def __test_build_grouped_aggregations__(report) do
+      build_grouped_aggregations_from_dsl(report)
     end
   end
 end

@@ -263,16 +263,16 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 - [ ] Handle multi-level hierarchical grouping (Territory → Customer → Order Type)
 
 ### 2.4.3 Grouped Aggregation Config Builder
-- [ ] Create `build_grouped_aggregations_from_dsl/1` function
-- [ ] Parse report groups (level 1, 2, 3, ...) from DSL
-- [ ] Generate cumulative grouping configs:
+- [x] Create `build_grouped_aggregations_from_dsl/1` function
+- [x] Parse report groups (level 1, 2, 3, ...) from DSL
+- [x] Generate cumulative grouping configs:
   - Level 1: `group_by: :territory`
   - Level 2: `group_by: [:territory, :customer_name]`
   - Level 3: `group_by: [:territory, :customer_name, :order_type]`
-- [ ] Extract aggregation types from group-level variables
-- [ ] Build `grouped_aggregations` list for ProducerConsumer.start_link/1
-- [ ] Add configuration validation (detect missing fields, invalid expressions)
-- [ ] Create comprehensive error messages for debugging
+- [x] Extract aggregation types from group-level variables
+- [x] Build `grouped_aggregations` list for ProducerConsumer.start_link/1
+- [x] Add configuration validation (detect missing fields, invalid expressions)
+- [x] Create comprehensive error messages for debugging
 
 ### 2.4.4 Integration and Testing
 - [ ] Integrate with existing test report in `test/support/test_helpers.ex` (lines 129-221)

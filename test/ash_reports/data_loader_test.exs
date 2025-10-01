@@ -177,7 +177,7 @@ defmodule AshReports.DataLoaderTest do
         %AshReports.Report{
           name: report_name,
           title: "Test Report",
-          driving_resource: TestResource,
+          driving_resource: DataLoaderTest.TestResource,
           parameters: [],
           variables: [],
           groups: [],
@@ -204,7 +204,7 @@ defmodule MockDomain do
         %AshReports.Report{
           name: :test_report,
           title: "Test Report",
-          driving_resource: TestResource,
+          driving_resource: DataLoaderTest.TestResource,
           parameters: [],
           variables: [],
           groups: [],
@@ -215,9 +215,9 @@ defmodule MockDomain do
   end
 
   def read(_query), do: {:ok, []}
-  def resources, do: [TestResource]
+  def resources, do: [DataLoaderTest.TestResource]
 end
 
-defmodule TestResource do
+defmodule DataLoaderTest.TestResource do
   def __resource__, do: true
 end
