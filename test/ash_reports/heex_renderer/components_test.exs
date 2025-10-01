@@ -14,7 +14,7 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
 
   describe "report_container/1" do
     test "renders report container with basic attributes" do
-      assigns = %{
+      _assigns = %{
         report: build_test_report(),
         config: %{},
         class: "custom-class",
@@ -86,8 +86,7 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
       band = %Band{
         name: :detail,
         type: :detail,
-        height: 30,
-        background_color: "#f5f5f5"
+        height: 30
       }
 
       styles = Components.band_styles(band)

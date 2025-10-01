@@ -372,7 +372,7 @@ defmodule AshReports.HeexRendererTest do
           type: :header,
           height: 50,
           elements: [
-            %Label{name: :title, text: "Test Report", x: 0, y: 0}
+            %Label{name: :title, text: "Test Report"}
           ]
         },
         %Band{
@@ -380,8 +380,8 @@ defmodule AshReports.HeexRendererTest do
           type: :detail,
           height: 30,
           elements: [
-            %Field{name: :name_field, field: :name, x: 0, y: 0},
-            %Field{name: :value_field, field: :value, x: 100, y: 0}
+            %Field{name: :name_field, field: :name},
+            %Field{name: :value_field, field: :value}
           ]
         }
       ]

@@ -827,58 +827,56 @@ defmodule AshReports.PerformanceBaselineTest do
     @tag timeout: @performance_timeout
     test "stress tests compilation with many elements" do
       element_counts = [10, 25, 50, 100]
-      stress_results = []
 
-      for count <- element_counts do
-        {time_microseconds, {memory_used, _result}} =
-          measure_time(fn ->
-            measure_memory(fn ->
-              module_name = :"StressTestDomain#{count}"
+      stress_results =
+        for count <- element_counts do
+          {time_microseconds, {memory_used, _result}} =
+            measure_time(fn ->
+              measure_memory(fn ->
+                module_name = :"StressTestDomain#{count}"
 
-              elements_ast =
-                for i <- 1..count do
-                  quote do
-                    field(unquote(:"field_#{i}"), source: [:name])
-                  end
-                end
-
-              module_ast =
-                quote do
-                  defmodule unquote(module_name) do
-                    use Ash.Domain, extensions: [AshReports.Domain]
-
-                    resources do
-                      resource AshReports.Test.Customer
+                elements_ast =
+                  for i <- 1..count do
+                    quote do
+                      field(unquote(:"field_#{i}"), source: [:name])
                     end
+                  end
 
-                    reports do
-                      report :stress_test_report do
-                        title("Stress Test Report")
-                        driving_resource(AshReports.Test.Customer)
-                        formats([:html])
+                module_ast =
+                  quote do
+                    defmodule unquote(module_name) do
+                      use Ash.Domain, extensions: [AshReports.Domain]
 
-                        bands do
-                          band :detail do
-                            elements do
-                              (unquote_splicing(elements_ast))
+                      resources do
+                        resource AshReports.Test.Customer
+                      end
+
+                      reports do
+                        report :stress_test_report do
+                          title("Stress Test Report")
+                          driving_resource(AshReports.Test.Customer)
+                          formats([:html])
+
+                          bands do
+                            band :detail do
+                              elements do
+                                (unquote_splicing(elements_ast))
+                              end
                             end
                           end
                         end
                       end
                     end
                   end
-                end
 
-              Code.eval_quoted(module_ast)
+                Code.eval_quoted(module_ast)
+              end)
             end)
-          end)
 
-        time_ms = time_microseconds / 1000
-        memory_mb = memory_used / (1024 * 1024)
-        stress_results = [{count, time_ms, memory_mb} | stress_results]
-      end
-
-      stress_results = Enum.reverse(stress_results)
+          time_ms = time_microseconds / 1000
+          memory_mb = memory_used / (1024 * 1024)
+          {count, time_ms, memory_mb}
+        end
 
       IO.puts("\n=== Element Count Stress Test ===")
 
@@ -908,60 +906,58 @@ defmodule AshReports.PerformanceBaselineTest do
     @tag timeout: @performance_timeout
     test "stress tests compilation with deep nesting" do
       nesting_levels = [2, 4, 6, 8]
-      nesting_results = []
 
-      for level <- nesting_levels do
-        {time_microseconds, {memory_used, _result}} =
-          measure_time(fn ->
-            measure_memory(fn ->
-              module_name = :"NestingStressTestDomain#{level}"
+      nesting_results =
+        for level <- nesting_levels do
+          {time_microseconds, {memory_used, _result}} =
+            measure_time(fn ->
+              measure_memory(fn ->
+                module_name = :"NestingStressTestDomain#{level}"
 
-              # Build nested band structure
-              bands_ast = build_nested_bands_ast(level)
+                # Build nested band structure
+                bands_ast = build_nested_bands_ast(level)
 
-              module_ast =
-                quote do
-                  defmodule unquote(module_name) do
-                    use Ash.Domain, extensions: [AshReports.Domain]
+                module_ast =
+                  quote do
+                    defmodule unquote(module_name) do
+                      use Ash.Domain, extensions: [AshReports.Domain]
 
-                    resources do
-                      resource AshReports.Test.Customer
-                    end
+                      resources do
+                        resource AshReports.Test.Customer
+                      end
 
-                    reports do
-                      report :nesting_stress_test do
-                        title("Nesting Stress Test")
-                        driving_resource(AshReports.Test.Customer)
-                        formats([:html])
+                      reports do
+                        report :nesting_stress_test do
+                          title("Nesting Stress Test")
+                          driving_resource(AshReports.Test.Customer)
+                          formats([:html])
 
-                        groups do
-                          (unquote_splicing(
-                             for i <- 1..level do
-                               quote do
-                                 group(unquote(:"level_#{i}"), field: [:region], sort: :asc)
+                          groups do
+                            (unquote_splicing(
+                               for i <- 1..level do
+                                 quote do
+                                   group(unquote(:"level_#{i}"), field: [:region], sort: :asc)
+                                 end
                                end
-                             end
-                           ))
-                        end
+                             ))
+                          end
 
-                        bands do
-                          unquote(bands_ast)
+                          bands do
+                            unquote(bands_ast)
+                          end
                         end
                       end
                     end
                   end
-                end
 
-              Code.eval_quoted(module_ast)
+                Code.eval_quoted(module_ast)
+              end)
             end)
-          end)
 
-        time_ms = time_microseconds / 1000
-        memory_mb = memory_used / (1024 * 1024)
-        nesting_results = [{level, time_ms, memory_mb} | nesting_results]
-      end
-
-      nesting_results = Enum.reverse(nesting_results)
+          time_ms = time_microseconds / 1000
+          memory_mb = memory_used / (1024 * 1024)
+          {level, time_ms, memory_mb}
+        end
 
       IO.puts("\n=== Nesting Depth Stress Test ===")
 

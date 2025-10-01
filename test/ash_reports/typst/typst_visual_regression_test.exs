@@ -4,7 +4,7 @@ defmodule AshReports.TypstVisualRegressionTest do
   import AshReports.TypstVisualRegression
   import AshReports.TypstTestHelpers
 
-  @test_baseline_name "test_visual_regression_#{:rand.uniform(100000)}"
+  @test_baseline_name "test_visual_regression_#{:rand.uniform(100_000)}"
 
   setup do
     # Clean up test baselines after each test
@@ -104,10 +104,12 @@ defmodule AshReports.TypstVisualRegressionTest do
       Content for page 2
       """
 
-      pdf_multi = case AshReports.Typst.BinaryWrapper.compile(multi_page_template) do
-        {:ok, pdf} -> pdf
-        {:error, _} -> generate_test_pdf()  # Fallback
-      end
+      pdf_multi =
+        case AshReports.Typst.BinaryWrapper.compile(multi_page_template) do
+          {:ok, pdf} -> pdf
+          # Fallback
+          {:error, _} -> generate_test_pdf()
+        end
 
       capture_pdf_snapshot(pdf_multi, @test_baseline_name)
 

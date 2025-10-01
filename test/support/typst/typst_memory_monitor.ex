@@ -257,7 +257,8 @@ defmodule AshReports.TypstMemoryMonitor do
 
   defp start_memory_sampler(num_samples) do
     parent = self()
-    interval = 50  # Sample every 50ms
+    # Sample every 50ms
+    interval = 50
 
     spawn(fn ->
       samples = collect_samples(num_samples, interval, [])

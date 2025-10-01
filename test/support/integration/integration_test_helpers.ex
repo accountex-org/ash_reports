@@ -6,9 +6,8 @@ defmodule AshReports.Integration.TestHelpers do
   multi-renderer consistency, and complex internationalization features.
   """
 
-  alias AshReports.{Cldr, Formatter, RtlLayoutEngine, Translation}
   alias AshReports.{HeexRenderer, HtmlRenderer, JsonRenderer, PdfRenderer}
-  alias AshReports.Test.{Customer, Order}
+  alias AshReports.Test.Customer
   alias AshReports.TestHelpers
 
   @locales ["en", "ar", "he", "fa", "ur", "es", "fr", "de", "ja", "zh"]
@@ -159,7 +158,7 @@ defmodule AshReports.Integration.TestHelpers do
   # Report Building
 
   def build_rtl_test_report do
-    TestHelpers.build_test_report()
+    TestHelpers.build_simple_report()
     # "Customer Report" in Arabic
     |> Map.put(:title, "تقرير العملاء")
     |> Map.put(:supports_rtl, true)
@@ -167,7 +166,7 @@ defmodule AshReports.Integration.TestHelpers do
   end
 
   def build_translatable_report do
-    TestHelpers.build_test_report()
+    TestHelpers.build_simple_report()
     |> Map.put(:translatable_fields, [:title, :field_labels, :band_headers])
     |> Map.put(:translation_keys, %{
       title: "report.customer.title",
@@ -177,7 +176,7 @@ defmodule AshReports.Integration.TestHelpers do
   end
 
   def build_phase4_enhanced_report do
-    TestHelpers.build_test_report()
+    TestHelpers.build_simple_report()
     |> Map.put(:cldr_formatting, true)
     |> Map.put(:custom_format_specs, true)
     |> Map.put(:rtl_support, true)

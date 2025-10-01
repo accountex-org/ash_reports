@@ -51,7 +51,8 @@ defmodule AshReports.Typst.ExpressionParserTest do
       # Simulating customer.region
       ash_expr = %{
         __struct__: Ash.Expr,
-        expression: {:get_path, [], [%{__struct__: Ash.Expr, expression: {:ref, [], :customer}}, :region]}
+        expression:
+          {:get_path, [], [%{__struct__: Ash.Expr, expression: {:ref, [], :customer}}, :region]}
       }
 
       assert {:ok, :region} = ExpressionParser.extract_field(ash_expr)
@@ -123,7 +124,8 @@ defmodule AshReports.Typst.ExpressionParserTest do
       # Simulating customer.region
       ash_expr = %{
         __struct__: Ash.Expr,
-        expression: {:get_path, [], [%{__struct__: Ash.Expr, expression: {:ref, [], :customer}}, :region]}
+        expression:
+          {:get_path, [], [%{__struct__: Ash.Expr, expression: {:ref, [], :customer}}, :region]}
       }
 
       assert {:ok, [:customer, :region]} = ExpressionParser.extract_field_path(ash_expr)
@@ -174,7 +176,10 @@ defmodule AshReports.Typst.ExpressionParserTest do
                ExpressionParser.extract_field_with_fallback(:region, :fallback)
 
       assert {:ok, :region} =
-               ExpressionParser.extract_field_with_fallback({:field, :customer, :region}, :fallback)
+               ExpressionParser.extract_field_with_fallback(
+                 {:field, :customer, :region},
+                 :fallback
+               )
 
       ash_expr = %{__struct__: Ash.Expr, expression: {:ref, [], :status}}
       assert {:ok, :status} = ExpressionParser.extract_field_with_fallback(ash_expr, :fallback)
@@ -209,7 +214,8 @@ defmodule AshReports.Typst.ExpressionParserTest do
       # Pattern that might come from Ash.Expr parsing
       ash_expr = %{
         __struct__: Ash.Expr,
-        expression: {:get_path, [], [%{__struct__: Ash.Expr, expression: {:ref, [], :order}}, :status]}
+        expression:
+          {:get_path, [], [%{__struct__: Ash.Expr, expression: {:ref, [], :order}}, :status]}
       }
 
       assert {:ok, :status} = ExpressionParser.extract_field(ash_expr)
@@ -219,7 +225,9 @@ defmodule AshReports.Typst.ExpressionParserTest do
       # order.customer.company.name
       expression = {:field, :order, :customer, :company, :name}
       assert {:ok, :name} = ExpressionParser.extract_field(expression)
-      assert {:ok, [:order, :customer, :company, :name]} = ExpressionParser.extract_field_path(expression)
+
+      assert {:ok, [:order, :customer, :company, :name]} =
+               ExpressionParser.extract_field_path(expression)
     end
   end
 

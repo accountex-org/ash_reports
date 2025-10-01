@@ -334,22 +334,6 @@ defmodule AshReports.TypstMockData do
     |> Enum.join(" ")
   end
 
-  defp simple_table_generator do
-    rows = :rand.uniform(5) + 2
-    cols = :rand.uniform(4) + 2
-
-    headers = for i <- 1..cols, do: "Col#{i}"
-
-    data =
-      for _i <- 1..rows do
-        for _j <- 1..cols do
-          "Data#{:rand.uniform(100)}"
-        end
-      end
-
-    generate_table_template(%{headers: headers, rows: data})
-  end
-
   defp cell_value_generator do
     types = [:string, :number, :currency, :date]
     type = Enum.random(types)
@@ -362,7 +346,7 @@ defmodule AshReports.TypstMockData do
     end
   end
 
-  defp nested_structure_helper(max_depth, items_range, current_depth)
+  defp nested_structure_helper(max_depth, _items_range, current_depth)
        when current_depth >= max_depth do
     constant(%{
       name: "Leaf#{:rand.uniform(100)}",

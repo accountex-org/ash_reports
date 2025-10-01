@@ -117,11 +117,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -190,11 +192,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -207,9 +211,12 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       assert_receive {:telemetry, :batch_transformed, measurements, metadata}, 1000
 
       assert measurements.records_in == 4
-      assert measurements.records_out == 2  # Only odd IDs pass through
-      assert measurements.records_failed == 2  # Two records returned nil
-      assert measurements.records_rejected == 0  # No group rejections
+      # Only odd IDs pass through
+      assert measurements.records_out == 2
+      # Two records returned nil
+      assert measurements.records_failed == 2
+      # No group rejections
+      assert measurements.records_rejected == 0
       assert metadata.stream_id == stream_id
 
       :telemetry.detach(telemetry_handler_id)
@@ -256,11 +263,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -272,8 +281,10 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
 
       # Verify failed count is tracked
       assert measurements.records_in == 5
-      assert measurements.records_out == 3  # Only 1, 3, 5 succeed
-      assert measurements.records_failed == 2  # IDs 2 and 4 failed
+      # Only 1, 3, 5 succeed
+      assert measurements.records_out == 3
+      # IDs 2 and 4 failed
+      assert measurements.records_failed == 2
       assert measurements.records_rejected == 0
 
       :telemetry.detach(telemetry_handler_id)
@@ -314,11 +325,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -331,9 +344,12 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
 
       # Verify rejected count is tracked
       assert measurements.records_in == 6
-      assert measurements.records_out == 6  # All records still flow through
-      assert measurements.records_failed == 0  # No transformation failures
-      assert measurements.records_rejected == 3  # Last 3 rejected from grouping
+      # All records still flow through
+      assert measurements.records_out == 6
+      # No transformation failures
+      assert measurements.records_failed == 0
+      # Last 3 rejected from grouping
+      assert measurements.records_rejected == 3
 
       :telemetry.detach(telemetry_handler_id)
       cleanup_process(producer)
@@ -370,11 +386,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -437,11 +455,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -451,6 +471,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
         %{category: "B", amount: 200},
         %{category: "A", amount: 150}
       ]
+
       GenStage.call(producer, {:queue, records})
 
       # Verify aggregation telemetry was emitted
@@ -506,11 +527,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -574,15 +597,18 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
         stream_id: stream_id,
         subscribe_to: [{producer, []}],
         aggregations: [:sum, :count],
-        enable_telemetry: false  # Telemetry disabled
+        # Telemetry disabled
+        enable_telemetry: false
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -634,11 +660,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -740,11 +768,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -812,11 +842,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -867,15 +899,18 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
         stream_id: stream_id,
         subscribe_to: [{producer, []}],
         buffer_size: buffer_size,
-        enable_telemetry: false  # Telemetry disabled
+        # Telemetry disabled
+        enable_telemetry: false
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -918,11 +953,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid, max_demand: 100, min_demand: 50)
 
       # Give GenStage time to establish demand
@@ -1024,11 +1061,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -1073,11 +1112,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -1114,11 +1155,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -1163,11 +1206,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid, max_demand: 10, min_demand: 5)
 
       # Give GenStage time to establish demand
@@ -1209,11 +1254,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -1255,11 +1302,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -1303,11 +1352,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid, max_demand: 10, min_demand: 5)
 
       # Give GenStage time to establish demand
@@ -1351,11 +1402,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -1406,11 +1459,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -1421,6 +1476,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
         %{id: 2, amount: nil, price: 200},
         %{id: 3, amount: 150, price: 300}
       ]
+
       GenStage.call(producer, {:queue, records})
 
       assert_receive {:consumed, _}, 1000
@@ -1432,8 +1488,10 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       assert state.aggregation_state.count == 3
 
       # Sum should only include non-nil values
-      assert state.aggregation_state.sum.amount == 250  # 100 + 150 (nil ignored)
-      assert state.aggregation_state.sum.price == 500   # 200 + 300 (nil ignored)
+      # 100 + 150 (nil ignored)
+      assert state.aggregation_state.sum.amount == 250
+      # 200 + 300 (nil ignored)
+      assert state.aggregation_state.sum.price == 500
 
       # Min/Max should only consider non-nil values
       assert state.aggregation_state.min.amount == 100
@@ -1463,11 +1521,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -1477,6 +1537,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
         %{name: "Alice", category: "A"},
         %{name: "Bob", category: "B"}
       ]
+
       GenStage.call(producer, {:queue, records})
 
       assert_receive {:consumed, _}, 1000
@@ -1518,22 +1579,29 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
 
       # Send records where 'value' field has mixed types
       records = [
-        %{id: 1, value: 100},       # numeric
-        %{id: 2, value: "string"},  # string (should be ignored)
-        %{id: 3, value: 200},       # numeric
-        %{id: 4, value: [1, 2, 3]}  # list (should be ignored)
+        # numeric
+        %{id: 1, value: 100},
+        # string (should be ignored)
+        %{id: 2, value: "string"},
+        # numeric
+        %{id: 3, value: 200},
+        # list (should be ignored)
+        %{id: 4, value: [1, 2, 3]}
       ]
+
       GenStage.call(producer, {:queue, records})
 
       assert_receive {:consumed, _}, 1000
@@ -1541,8 +1609,10 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       # Verify only numeric values were aggregated
       %{state: state} = :sys.get_state(pc_pid)
 
-      assert state.aggregation_state.count == 4  # All records counted
-      assert state.aggregation_state.sum.value == 300  # Only 100 + 200
+      # All records counted
+      assert state.aggregation_state.count == 4
+      # Only 100 + 200
+      assert state.aggregation_state.sum.value == 300
       assert state.aggregation_state.min.value == 100
       assert state.aggregation_state.max.value == 200
 
@@ -1568,11 +1638,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -1613,11 +1685,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -1629,13 +1703,15 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
         %{balance: -200},
         %{balance: 75}
       ]
+
       GenStage.call(producer, {:queue, records})
 
       assert_receive {:consumed, _}, 1000
 
       %{state: state} = :sys.get_state(pc_pid)
       assert state.aggregation_state.count == 4
-      assert state.aggregation_state.sum.balance == -75  # 100 - 50 - 200 + 75
+      # 100 - 50 - 200 + 75
+      assert state.aggregation_state.sum.balance == -75
       assert state.aggregation_state.min.balance == -200
       assert state.aggregation_state.max.balance == 100
 
@@ -1661,11 +1737,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -1677,6 +1755,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
         %{amount: 50},
         %{amount: 0}
       ]
+
       GenStage.call(producer, {:queue, records})
 
       assert_receive {:consumed, _}, 1000
@@ -1684,7 +1763,8 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       %{state: state} = :sys.get_state(pc_pid)
       assert state.aggregation_state.count == 4
       assert state.aggregation_state.sum.amount == 150
-      assert state.aggregation_state.min.amount == 0  # Zero is valid minimum
+      # Zero is valid minimum
+      assert state.aggregation_state.min.amount == 0
       assert state.aggregation_state.max.amount == 100
       assert state.aggregation_state.avg.sum.amount == 150
       assert state.aggregation_state.avg.count == 4
@@ -1711,11 +1791,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -1726,6 +1808,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
         %{price: 29.50},
         %{price: 15.75}
       ]
+
       GenStage.call(producer, {:queue, records})
 
       assert_receive {:consumed, _}, 1000
@@ -1763,11 +1846,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -1815,11 +1900,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -1870,11 +1957,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -1924,11 +2013,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -1936,11 +2027,14 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       # Send mix of records - some with category, some without
       records = [
         %{category: "A", amount: 100},
-        %{amount: 150},  # Missing category field
+        # Missing category field
+        %{amount: 150},
         %{category: "B", amount: 200},
-        %{amount: 250},  # Missing category field
+        # Missing category field
+        %{amount: 250},
         %{category: "A", amount: 300}
       ]
+
       GenStage.call(producer, {:queue, records})
 
       assert_receive {:consumed, _}, 1000
@@ -1950,13 +2044,15 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       groups = state.grouped_aggregation_state[[:category]]
 
       # Records with category should be grouped normally
-      assert groups["A"].sum.amount == 400  # 100 + 300
+      # 100 + 300
+      assert groups["A"].sum.amount == 400
       assert groups["A"].count == 2
       assert groups["B"].sum.amount == 200
       assert groups["B"].count == 1
 
       # Records without category should be grouped under nil key
-      assert groups[nil].sum.amount == 400  # 150 + 250
+      # 150 + 250
+      assert groups[nil].sum.amount == 400
       assert groups[nil].count == 2
 
       cleanup_process(producer)
@@ -1983,11 +2079,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -1995,11 +2093,15 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       # Send records with various missing fields
       records = [
         %{territory: "North", category: "A", amount: 100},
-        %{territory: "North", amount: 150},  # Missing category
-        %{category: "A", amount: 200},  # Missing territory
-        %{amount: 250},  # Missing both fields
+        # Missing category
+        %{territory: "North", amount: 150},
+        # Missing territory
+        %{category: "A", amount: 200},
+        # Missing both fields
+        %{amount: 250},
         %{territory: "South", category: "B", amount: 300}
       ]
+
       GenStage.call(producer, {:queue, records})
 
       assert_receive {:consumed, _}, 1000
@@ -2047,11 +2149,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -2062,6 +2166,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
         %{amount: 200, name: "Item2"},
         %{amount: 300, name: "Item3"}
       ]
+
       GenStage.call(producer, {:queue, records})
 
       assert_receive {:consumed, _}, 1000
@@ -2072,7 +2177,8 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       # All records should be grouped under nil
       assert groups[nil].count == 3
       assert groups[nil].sum.amount == 600
-      assert map_size(groups) == 1  # Only one group (nil)
+      # Only one group (nil)
+      assert map_size(groups) == 1
 
       cleanup_process(producer)
       cleanup_process(pc_pid)
@@ -2098,11 +2204,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -2110,10 +2218,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       # Mix of explicit nil and missing field
       records = [
         %{id: 1, status: "active"},
-        %{id: 2, status: nil},  # Explicit nil
-        %{id: 3},  # Missing status field (Map.get returns nil)
+        # Explicit nil
+        %{id: 2, status: nil},
+        # Missing status field (Map.get returns nil)
+        %{id: 3},
         %{id: 4, status: "inactive"}
       ]
+
       GenStage.call(producer, {:queue, records})
 
       assert_receive {:consumed, _}, 1000
@@ -2124,7 +2235,8 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       # Both explicit nil and missing field should group together
       assert groups["active"].count == 1
       assert groups["inactive"].count == 1
-      assert groups[nil].count == 2  # Both nil and missing
+      # Both nil and missing
+      assert groups[nil].count == 2
 
       cleanup_process(producer)
       cleanup_process(pc_pid)
@@ -2151,21 +2263,27 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
 
       records = [
         %{region: "US", territory: "West", category: "A"},
-        %{region: "US", territory: "West"},  # Missing category
-        %{region: "US"},  # Missing territory and category
-        %{}  # Missing all fields
+        # Missing category
+        %{region: "US", territory: "West"},
+        # Missing territory and category
+        %{region: "US"},
+        # Missing all fields
+        %{}
       ]
+
       GenStage.call(producer, {:queue, records})
 
       assert_receive {:consumed, _}, 1000
@@ -2199,18 +2317,21 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       opts = [
         stream_id: stream_id,
         subscribe_to: [{producer, []}],
-        transformer: nil  # Invalid transformer
+        # Invalid transformer
+        transformer: nil
       ]
 
       # Trap exits to handle the crash gracefully in the test
       Process.flag(:trap_exit, true)
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -2246,18 +2367,21 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       opts = [
         stream_id: stream_id,
         subscribe_to: [{producer, []}],
-        transformer: "not_a_function"  # Invalid type
+        # Invalid type
+        transformer: "not_a_function"
       ]
 
       # Trap exits to handle the crash gracefully in the test
       Process.flag(:trap_exit, true)
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -2302,11 +2426,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       Process.flag(:trap_exit, true)
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -2351,11 +2477,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       Process.flag(:trap_exit, true)
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -2397,11 +2525,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -2447,11 +2577,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -2491,11 +2623,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -2541,11 +2675,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -2574,8 +2710,10 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       # 2. Processing continued (records 1 and 3 were successfully transformed)
       # 3. The ProducerConsumer process didn't crash
       %{state: state} = :sys.get_state(pc_pid)
-      assert state.errors == []  # No batch-level errors
-      assert state.total_transformed == 2  # Only the 2 successful records
+      # No batch-level errors
+      assert state.errors == []
+      # Only the 2 successful records
+      assert state.total_transformed == 2
 
       cleanup_process(producer)
       cleanup_process(pc_pid)
@@ -2616,11 +2754,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -2688,11 +2828,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       # Give GenStage time to establish demand
@@ -2830,11 +2972,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -2895,11 +3039,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -2964,11 +3110,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
       ]
 
       {:ok, pc_pid} = ProducerConsumer.start_link(opts)
+
       {:ok, consumer} =
         GenStage.start_link(
           AshReports.Typst.StreamingPipeline.ProducerConsumerTest.TestConsumer,
           test_pid
         )
+
       GenStage.sync_subscribe(consumer, to: pc_pid)
 
       Process.sleep(50)
@@ -2979,6 +3127,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
         %{category: "B", amount: 200},
         %{category: "C", amount: 300}
       ]
+
       GenStage.call(producer, {:queue, first_batch})
       assert_receive {:consumed, _}, 1000
 
@@ -3000,6 +3149,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
         %{category: "D", amount: 500}
         # Another attempt at new group D (should also be rejected)
       ]
+
       GenStage.call(producer, {:queue, second_batch})
       assert_receive {:consumed, _}, 1000
 
@@ -3072,6 +3222,7 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumerTest do
 
       # Track unfulfilled demand
       remaining_demand = demand - length(events)
+
       new_state = %{
         queue: new_queue,
         pending_demand: state.pending_demand + remaining_demand

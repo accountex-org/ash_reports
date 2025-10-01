@@ -404,7 +404,6 @@ defmodule AshReports.HeexRenderer.LiveViewIntegrationTest do
 
   defp build_test_report do
     %Report{
-      id: "test_report_id",
       name: :test_report,
       title: "Test Report",
       bands: [

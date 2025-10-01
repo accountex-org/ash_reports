@@ -138,14 +138,21 @@ defmodule AshReports.TypstBenchmarkHelpers do
 
     target =
       case type do
-        :simple -> 500_000_000
+        :simple ->
+          500_000_000
+
         # 500ms in nanoseconds
-        :medium -> 5_000_000_000
+        :medium ->
+          5_000_000_000
+
         # 5s in nanoseconds
-        :complex -> 30_000_000_000
+        :complex ->
+          30_000_000_000
+
         # 30s in nanoseconds
-        _ -> 1_000_000_000
-        # 1s default
+        _ ->
+          1_000_000_000
+          # 1s default
       end
 
     passed = result.median_time <= target

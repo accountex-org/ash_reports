@@ -73,7 +73,7 @@ defmodule AshReports.Typst.ExpressionParser do
           {:ok, field}
 
         # Pattern 4: Multi-level nested - {:field, rel1, rel2, ..., field_name}
-        {:field, _ , _ , field} when is_atom(field) ->
+        {:field, _, _, field} when is_atom(field) ->
           {:ok, field}
 
         # Pattern 5: Multi-level with more relationships

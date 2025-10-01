@@ -5,7 +5,8 @@ defmodule AshReports.TypstTestHelpersTest do
 
   describe "compile_and_validate/2" do
     test "compiles valid Typst template and returns PDF" do
-      template = "#set page(paper: \"a4\")" <> "\n" <> "= Test Report" <> "\n" <> "This is a test."
+      template =
+        "#set page(paper: \"a4\")" <> "\n" <> "= Test Report" <> "\n" <> "This is a test."
 
       assert {:ok, pdf} = compile_and_validate(template)
       assert is_binary(pdf)

@@ -131,7 +131,7 @@ defmodule AshReports.TypstVisualRegression do
 
       true ->
         # Load baseline
-        baseline_pdf = File.read!(baseline_path)
+        _baseline_pdf = File.read!(baseline_path)
         baseline_text = File.read!(text_path)
         baseline_meta = File.read!(meta_path) |> Jason.decode!()
 
