@@ -188,7 +188,7 @@ defmodule AshReports.Integration.PerformanceIntegrationTest do
 
       scenarios = %{
         "ltr_layout_processing" => fn ->
-          context = TestHelpers.create_integration_context("en")
+          _context = TestHelpers.create_integration_context("en")
 
           Enum.map(data, fn customer ->
             # Simulate basic LTR processing

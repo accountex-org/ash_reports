@@ -31,27 +31,27 @@ defmodule AshReports.Integration.BenchmarkHelpers do
   def default_scenarios do
     %{
       "baseline_rendering" => fn ->
-        report = BaseTestHelpers.build_test_report()
+        report = BaseTestHelpers.build_simple_report()
         data = TestHelpers.create_multilingual_test_data()
-        AshReports.HtmlRenderer.render(report, data)
+        AshReports.HtmlRenderer.render(report, data, %{})
       end,
       "phase4_cldr_integration" => fn ->
         context = TestHelpers.create_cldr_context("en")
         report = TestHelpers.build_phase4_enhanced_report()
         data = TestHelpers.create_multilingual_test_data()
-        AshReports.HtmlRenderer.render_with_context(%{context | report: report, data: data})
+        AshReports.HtmlRenderer.render_with_context(%{context | report: report, records: data})
       end,
       "phase4_rtl_translation" => fn ->
         context = TestHelpers.create_full_phase4_context("ar")
         report = TestHelpers.build_rtl_test_report()
         data = TestHelpers.create_arabic_test_data()
-        AshReports.HtmlRenderer.render_with_context(%{context | report: report, data: data})
+        AshReports.HtmlRenderer.render_with_context(%{context | report: report, records: data})
       end,
       "full_phase4_integration" => fn ->
         context = TestHelpers.create_full_phase4_context("ar")
         report = TestHelpers.build_phase4_enhanced_report()
         data = TestHelpers.create_multilingual_test_data()
-        AshReports.HtmlRenderer.render_with_context(%{context | report: report, data: data})
+        AshReports.HtmlRenderer.render_with_context(%{context | report: report, records: data})
       end
     }
   end
@@ -63,19 +63,19 @@ defmodule AshReports.Integration.BenchmarkHelpers do
     scenarios = %{
       "html_renderer_phase4" => fn ->
         context = TestHelpers.create_full_phase4_context("ar")
-        AshReports.HtmlRenderer.render_with_context(%{context | report: report, data: data})
+        AshReports.HtmlRenderer.render_with_context(%{context | report: report, records: data})
       end,
       "heex_renderer_phase4" => fn ->
         context = TestHelpers.create_full_phase4_context("ar")
-        AshReports.HeexRenderer.render_with_context(%{context | report: report, data: data})
+        AshReports.HeexRenderer.render_with_context(%{context | report: report, records: data})
       end,
       "pdf_renderer_phase4" => fn ->
         context = TestHelpers.create_full_phase4_context("ar")
-        AshReports.PdfRenderer.render_with_context(%{context | report: report, data: data})
+        AshReports.PdfRenderer.render_with_context(%{context | report: report, records: data})
       end,
       "json_renderer_phase4" => fn ->
         context = TestHelpers.create_full_phase4_context("ar")
-        AshReports.JsonRenderer.render_with_context(%{context | report: report, data: data})
+        AshReports.JsonRenderer.render_with_context(%{context | report: report, records: data})
       end
     }
 
@@ -102,7 +102,7 @@ defmodule AshReports.Integration.BenchmarkHelpers do
                _ -> TestHelpers.create_multilingual_test_data()
              end
 
-           AshReports.HtmlRenderer.render_with_context(%{context | report: report, data: data})
+           AshReports.HtmlRenderer.render_with_context(%{context | report: report, records: data})
          end}
       end)
 
@@ -116,15 +116,15 @@ defmodule AshReports.Integration.BenchmarkHelpers do
     scenarios = %{
       "small_dataset_10" => fn ->
         data = TestHelpers.create_performance_test_data(10)
-        AshReports.HtmlRenderer.render_with_context(%{context | report: report, data: data})
+        AshReports.HtmlRenderer.render_with_context(%{context | report: report, records: data})
       end,
       "medium_dataset_100" => fn ->
         data = TestHelpers.create_performance_test_data(100)
-        AshReports.HtmlRenderer.render_with_context(%{context | report: report, data: data})
+        AshReports.HtmlRenderer.render_with_context(%{context | report: report, records: data})
       end,
       "large_dataset_1000" => fn ->
         data = TestHelpers.create_performance_test_data(1000)
-        AshReports.HtmlRenderer.render_with_context(%{context | report: report, data: data})
+        AshReports.HtmlRenderer.render_with_context(%{context | report: report, records: data})
       end
     }
 

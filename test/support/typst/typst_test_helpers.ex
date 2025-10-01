@@ -116,8 +116,8 @@ defmodule AshReports.TypstTestHelpers do
   """
   def extract_pdf_text(pdf_binary) when is_binary(pdf_binary) do
     # Write PDF to temporary file
-    tmp_pdf = Path.join(System.tmp_dir!(), "test_pdf_#{:rand.uniform(100000)}.pdf")
-    tmp_txt = Path.join(System.tmp_dir!(), "test_pdf_#{:rand.uniform(100000)}.txt")
+    tmp_pdf = Path.join(System.tmp_dir!(), "test_pdf_#{:rand.uniform(100_000)}.pdf")
+    tmp_txt = Path.join(System.tmp_dir!(), "test_pdf_#{:rand.uniform(100_000)}.txt")
 
     try do
       File.write!(tmp_pdf, pdf_binary)

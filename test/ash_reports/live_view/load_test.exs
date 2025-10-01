@@ -610,7 +610,7 @@ defmodule AshReports.LiveView.LoadTest do
       chart_id = "user_#{user_id}_chart_#{i}"
 
       # Simulate chart data updates
-      for j <- 1..duration_seconds(div(2)) do
+      for j <- 1..div(duration_seconds, 2) do
         test_data = %{
           user: user_id,
           chart: i,

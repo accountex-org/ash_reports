@@ -7,8 +7,10 @@ defmodule AshReports.TypstMockDataTest do
 
   describe "report_template_generator/1" do
     property "generates valid Typst templates" do
-      check all template <- report_template_generator(sections: 1..3),
-                max_runs: 10 do
+      check all(
+              template <- report_template_generator(sections: 1..3),
+              max_runs: 10
+            ) do
         assert is_binary(template)
         assert template =~ "#set page"
         assert template =~ "= Test Report"
@@ -29,8 +31,10 @@ defmodule AshReports.TypstMockDataTest do
 
   describe "table_generator/1" do
     property "generates tables with correct dimensions" do
-      check all table <- table_generator(rows: 5..5, cols: 3..3),
-                max_runs: 10 do
+      check all(
+              table <- table_generator(rows: 5..5, cols: 3..3),
+              max_runs: 10
+            ) do
         assert length(table.headers) == 3
         assert length(table.rows) == 5
         assert Enum.all?(table.rows, &(length(&1) == 3))
@@ -41,16 +45,18 @@ defmodule AshReports.TypstMockDataTest do
       tables = Enum.take(table_generator(rows: 1..10, cols: 2..5), 5)
 
       assert Enum.all?(tables, fn table ->
-        length(table.headers) >= 2 and length(table.headers) <= 5 and
-          length(table.rows) >= 1 and length(table.rows) <= 10
-      end)
+               length(table.headers) >= 2 and length(table.headers) <= 5 and
+                 length(table.rows) >= 1 and length(table.rows) <= 10
+             end)
     end
   end
 
   describe "edge_case_generator/0" do
     property "generates various edge case values" do
-      check all value <- edge_case_generator(),
-                max_runs: 20 do
+      check all(
+              value <- edge_case_generator(),
+              max_runs: 20
+            ) do
         assert is_binary(value) or is_nil(value)
       end
     end
@@ -68,8 +74,10 @@ defmodule AshReports.TypstMockDataTest do
 
   describe "nested_structure_generator/1" do
     property "generates nested structures with correct depth" do
-      check all structure <- nested_structure_generator(depth: 2, items_per_level: 1..2),
-                max_runs: 10 do
+      check all(
+              structure <- nested_structure_generator(depth: 2, items_per_level: 1..2),
+              max_runs: 10
+            ) do
         assert is_map(structure)
         assert Map.has_key?(structure, :name)
         assert Map.has_key?(structure, :value)

@@ -12,7 +12,7 @@ defmodule AshReports.LiveView.AccessibilityTest do
   """
 
   use ExUnit.Case, async: true
-  use Phoenix.LiveViewTest
+  import Phoenix.LiveViewTest
 
   alias AshReports.ChartEngine.ChartConfig
   alias AshReports.LiveView.{ChartLiveComponent, DashboardLive}

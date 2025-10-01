@@ -13,8 +13,6 @@ defmodule AshReports.LiveView.DashboardLiveTest do
 
   # Async false due to PubSub interactions
   use ExUnit.Case, async: false
-  use Phoenix.LiveViewTest
-
   import Phoenix.LiveViewTest
 
   alias AshReports.ChartEngine.ChartConfig

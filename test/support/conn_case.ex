@@ -8,9 +8,6 @@ defmodule AshReports.ConnCase do
 
   use ExUnit.CaseTemplate
 
-  # Set the endpoint for PhoenixTest compatibility
-  @endpoint AshReports.TestEndpoint
-
   using do
     quote do
       # The default endpoint for testing
