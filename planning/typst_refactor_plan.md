@@ -313,24 +313,28 @@ report.variables = [
 
 **Note**: Uses Section 2.4 DSL parsing to auto-configure streaming pipelines with grouped aggregations
 
-### 2.5.1 API Implementation
+### 2.5.1 API Implementation ✅ **COMPLETED**
 - [x] Implement `create_streaming_pipeline/4` function in DataLoader
 - [x] Replace error placeholder with actual GenStage pipeline
 - [x] Add streaming configuration options (8 new options)
 - [x] Integrate `build_grouped_aggregations_from_dsl/1` (from Section 2.4)
-- [x] Create unified API for batch vs. streaming modes (`load_report_data/4`)
+- [x] Create unified API (`load_report_data/4` - always streams)
 - [x] Document API usage patterns and examples
 - [x] Enhance `build_pipeline_opts/7` for comprehensive configuration
-- [x] Add automatic mode selection with `:mode` option
-- [x] Create 18 comprehensive API tests
+- [x] Create comprehensive API tests
 - [x] Maintain backward compatibility
 
-### 2.5.2 Automatic Mode Selection
-- [x] Create automatic fallback for small datasets (<10K records)
-- [x] Implement dataset size detection (`estimate_record_count/2`)
-- [x] Add configuration for streaming threshold (`:streaming_threshold` option)
-- [x] Create performance heuristics for mode selection (`:estimate_count` option)
-- [x] Add manual override options (`:mode` - `:auto | :batch | :streaming`)
+### 2.5.2 Streaming-Only Architecture ✅ **COMPLETED**
+- [x] Remove batch mode (`load_for_typst/4`) - ~260 lines removed
+- [x] Simplify `load_report_data/4` to always use streaming
+- [x] Remove mode selection logic and dataset size estimation
+- [x] Remove batch-specific DataProcessor functions
+- [x] Establish streaming-only architecture for all dataset sizes
+- [x] Document streaming-only approach and performance characteristics
+- [x] Update tests to reflect streaming-only behavior
+
+**Architectural Decision**: Removed dual-mode (batch/streaming) in favor of streaming-only.
+All reports now use GenStage pipeline regardless of size for consistency and memory safety.
 
 ### 2.5.3 Stream Control
 - [ ] Implement stream cancellation support
