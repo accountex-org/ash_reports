@@ -260,7 +260,8 @@ defmodule AshReports.Typst.StreamingPipeline.QueryCache do
 
     # Delete expired entries and update stats
     {evicted_count, freed_bytes} =
-      Enum.reduce(expired_entries, {0, 0}, fn {key, _value, _inserted, _accessed, size}, {count, bytes} ->
+      Enum.reduce(expired_entries, {0, 0}, fn {key, _value, _inserted, _accessed, size},
+                                              {count, bytes} ->
         :ets.delete(@table_name, key)
         {count + 1, bytes + size}
       end)

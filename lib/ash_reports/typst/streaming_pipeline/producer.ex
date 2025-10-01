@@ -315,7 +315,7 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
           )
 
           # Exponential backoff
-          backoff = :timer.seconds(1) * :math.pow(2, state.retry_count) |> round()
+          backoff = (:timer.seconds(1) * :math.pow(2, state.retry_count)) |> round()
           Process.sleep(backoff)
 
           # Retry with updated retry count

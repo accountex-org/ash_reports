@@ -10,25 +10,28 @@ defmodule AshReports.Typst.StreamingPipeline do
   - Health monitoring and circuit breakers
   - Resource cleanup on completion/failure
 
+  **Design Note**: This module is designed for internal use by `AshReports.Typst.DataLoader`.
+  Transformation functions are generated internally from DSL definitions, not provided
+  by external callers. This ensures type safety and prevents arbitrary code execution.
+
   ## Architecture
 
   A streaming pipeline consists of three stages:
 
       Producer → ProducerConsumer → Consumer
-      (Query)    (Transform)        (Your code)
+      (Query)    (DSL Transform)    (Stream)
 
   1. **Producer**: Fetches data from Ash resources in chunks
-  2. **ProducerConsumer**: Transforms raw records
-  3. **Consumer**: Your code that processes transformed data (e.g., renders to Typst)
+  2. **ProducerConsumer**: Applies DSL-generated transformations
+  3. **Consumer**: Elixir Stream for downstream consumption
 
   ## Usage
 
-      # Basic usage: create a pipeline and consume the stream
+      # Typical usage (called internally by DataLoader):
       {:ok, stream_id, stream} = StreamingPipeline.start_pipeline(
         domain: MyApp.Reporting,
         resource: MyApp.Sales.Order,
-        query: Ash.Query.filter(Order, status == :completed),
-        transformer: &transform_order/1
+        query: Ash.Query.filter(Order, status == :completed)
       )
 
       # Consume the stream
@@ -106,15 +109,21 @@ defmodule AshReports.Typst.StreamingPipeline do
 
   Creates a Producer → ProducerConsumer → Stream pipeline for processing large datasets.
 
+  **Note**: This function is designed for internal use by AshReports.Typst.DataLoader.
+  The transformer function is generated internally from DSL definitions and should not
+  be provided by external callers.
+
   ## Options
 
   - `:domain` - The Ash domain module (required)
   - `:resource` - The Ash resource module (required)
   - `:query` - The Ash query to execute (required)
-  - `:transformer` - Function to transform records (default: identity)
   - `:chunk_size` - Records per chunk (default: 1000)
   - `:max_demand` - ProducerConsumer max demand (default: 500)
-  - `:report_config` - Additional config passed to transformer (optional)
+
+  **Internal Options** (used by DataLoader only):
+  - `:transformer` - DSL-generated transformation function (internal use only)
+  - `:report_config` - Report configuration (internal use only)
 
   ## Returns
 
@@ -123,25 +132,11 @@ defmodule AshReports.Typst.StreamingPipeline do
 
   ## Examples
 
-      # Basic usage
+      # Basic usage (typically called by DataLoader)
       {:ok, stream_id, stream} = StreamingPipeline.start_pipeline(
         domain: MyApp.Reporting,
         resource: Order,
         query: Ash.Query.filter(Order, status == :completed)
-      )
-
-      # With custom transformer
-      {:ok, stream_id, stream} = StreamingPipeline.start_pipeline(
-        domain: MyApp.Reporting,
-        resource: Order,
-        query: query,
-        transformer: fn order ->
-          %{
-            id: order.id,
-            total: Money.to_string(order.total),
-            date: Calendar.strftime(order.date, "%Y-%m-%d")
-          }
-        end
       )
 
       # Consume the stream
