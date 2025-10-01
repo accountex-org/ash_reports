@@ -155,8 +155,13 @@ defmodule AshReports.Typst.DataLoader do
 
     * `:chunk_size` - Size of streaming chunks (default: 500)
     * `:max_demand` - Maximum demand for backpressure (default: 1000)
+    * `:buffer_size` - ProducerConsumer buffer size (default: 1000)
+    * `:enable_telemetry` - Enable telemetry events (default: true)
+    * `:aggregations` - Global aggregation functions (default: [])
+    * `:grouped_aggregations` - Override DSL-inferred grouped aggregations (default: auto from DSL)
+    * `:memory_limit` - Memory limit per stream in bytes (default: 500MB)
+    * `:timeout` - Pipeline timeout in milliseconds (default: :infinity)
     * `:type_conversion` - Type conversion options
-    * `:buffer_size` - Internal buffer size (default: 100)
 
   ## Returns
 
@@ -165,13 +170,30 @@ defmodule AshReports.Typst.DataLoader do
 
   ## Examples
 
+      # Basic streaming with defaults
       iex> {:ok, stream} = DataLoader.stream_for_typst(MyApp.Domain, :large_report, params)
-      iex> stream
-      ...> |> Stream.take(5)
-      ...> |> Enum.to_list()
-      ...> |> List.flatten()
-      ...> |> length()
+      iex> stream |> Stream.take(5) |> Enum.to_list() |> List.flatten() |> length()
       2500  # 5 chunks * 500 records each
+
+      # Custom chunk size for faster throughput
+      iex> {:ok, stream} = DataLoader.stream_for_typst(MyApp.Domain, :large_report, params,
+      ...>   chunk_size: 2000,
+      ...>   max_demand: 5000
+      ...> )
+
+      # Override DSL-inferred aggregations
+      iex> {:ok, stream} = DataLoader.stream_for_typst(MyApp.Domain, :report, params,
+      ...>   grouped_aggregations: [
+      ...>     %{group_by: :region, aggregations: [:sum, :count], level: 1, sort: :asc}
+      ...>   ]
+      ...> )
+
+      # Memory-constrained environment
+      iex> {:ok, stream} = DataLoader.stream_for_typst(MyApp.Domain, :report, params,
+      ...>   memory_limit: 100_000_000,  # 100MB
+      ...>   chunk_size: 100,
+      ...>   buffer_size: 500
+      ...> )
 
   """
   @spec stream_for_typst(module(), atom(), map(), load_options()) ::
@@ -187,6 +209,119 @@ defmodule AshReports.Typst.DataLoader do
       {:error, reason} = error ->
         Logger.error("Failed to create streaming pipeline for #{report_name}: #{inspect(reason)}")
         error
+    end
+  end
+
+  @doc """
+  Loads report data with automatic batch vs. streaming mode selection.
+
+  Automatically chooses the most efficient loading strategy:
+  - Small datasets (< threshold): Batch loading via `load_for_typst/4`
+  - Large datasets (>= threshold): Streaming via `stream_for_typst/4`
+
+  The threshold can be customized or disabled for manual control.
+
+  ## Options
+
+    * `:mode` - Force mode (`:auto | :batch | :streaming`, default: `:auto`)
+    * `:streaming_threshold` - Record count threshold (default: 10,000)
+    * `:estimate_count` - Pre-count records for mode selection (default: false)
+    * All options from `load_for_typst/4` and `stream_for_typst/4` apply
+
+  When `:mode` is `:auto` and `:estimate_count` is `false`, streaming is used
+  for safety (cannot know size without counting). Set `:estimate_count` to `true`
+  to enable intelligent mode selection, but be aware this adds overhead.
+
+  ## Returns
+
+    * `{:ok, data}` - Batch mode returns list of records
+    * `{:ok, stream}` - Streaming mode returns Enumerable.t()
+    * `{:error, term()}` - Loading failure
+
+  ## Examples
+
+      # Automatic mode selection (defaults to streaming for safety)
+      iex> {:ok, result} = DataLoader.load_report_data(MyApp.Domain, :report, params)
+
+      # Force batch mode
+      iex> {:ok, data} = DataLoader.load_report_data(MyApp.Domain, :small_report, params, mode: :batch)
+      iex> is_list(data)
+      true
+
+      # Force streaming mode
+      iex> {:ok, stream} = DataLoader.load_report_data(MyApp.Domain, :large_report, params, mode: :streaming)
+
+      # Automatic with intelligent size detection (adds overhead)
+      iex> {:ok, result} = DataLoader.load_report_data(MyApp.Domain, :report, params,
+      ...>   estimate_count: true,
+      ...>   streaming_threshold: 5000
+      ...> )
+
+  """
+  @spec load_report_data(module(), atom(), map(), load_options()) ::
+          {:ok, list() | Enumerable.t()} | {:error, term()}
+  def load_report_data(domain, report_name, params, opts \\ []) do
+    mode = Keyword.get(opts, :mode, :auto)
+
+    case mode do
+      :batch ->
+        load_for_typst(domain, report_name, params, opts)
+
+      :streaming ->
+        stream_for_typst(domain, report_name, params, opts)
+
+      :auto ->
+        select_and_load(domain, report_name, params, opts)
+
+      _ ->
+        {:error, {:invalid_mode, mode}}
+    end
+  end
+
+  # Automatically select batch or streaming mode
+  defp select_and_load(domain, report_name, params, opts) do
+    estimate_count? = Keyword.get(opts, :estimate_count, false)
+    threshold = Keyword.get(opts, :streaming_threshold, 10_000)
+
+    if estimate_count? do
+      # Estimate record count and choose mode intelligently
+      with {:ok, report} <- get_report_definition(domain, report_name),
+           {:ok, query} <- build_query_from_report(domain, report, params),
+           {:ok, count} <- estimate_record_count(domain, query) do
+        if count < threshold do
+          Logger.debug("Auto-selecting batch mode (#{count} records < #{threshold} threshold)")
+          load_for_typst(domain, report_name, params, opts)
+        else
+          Logger.debug(
+            "Auto-selecting streaming mode (#{count} records >= #{threshold} threshold)"
+          )
+
+          stream_for_typst(domain, report_name, params, opts)
+        end
+      else
+        # On error estimating, fall back to streaming for safety
+        {:error, reason} ->
+          Logger.warning(
+            "Failed to estimate count (#{inspect(reason)}), falling back to streaming mode"
+          )
+
+          stream_for_typst(domain, report_name, params, opts)
+      end
+    else
+      # Default to streaming when we can't estimate size
+      Logger.debug("Auto-selecting streaming mode (no size estimation)")
+      stream_for_typst(domain, report_name, params, opts)
+    end
+  end
+
+  # Estimate the number of records that would be returned by a query
+  defp estimate_record_count(domain, query) do
+    try do
+      count = Ash.count!(query, domain: domain)
+      {:ok, count}
+    rescue
+      error ->
+        {:error, {:count_failed, error}}
     end
   end
 
@@ -278,18 +413,17 @@ defmodule AshReports.Typst.DataLoader do
       #{inspect(grouped_aggregations, pretty: true)}
       """)
 
-      # Start streaming pipeline
-      pipeline_opts = [
-        domain: domain,
-        resource: report.resource,
-        query: query,
-        transformer: transformer,
-        chunk_size: Keyword.get(opts, :chunk_size, 500),
-        max_demand: Keyword.get(opts, :max_demand, 1000),
-        report_name: report.name,
-        report_config: build_report_config(report, params),
-        grouped_aggregations: grouped_aggregations
-      ]
+      # Start streaming pipeline with enhanced configuration
+      pipeline_opts =
+        build_pipeline_opts(
+          domain,
+          report,
+          query,
+          params,
+          opts,
+          grouped_aggregations,
+          transformer
+        )
 
       case StreamingPipeline.start_pipeline(pipeline_opts) do
         {:ok, _stream_id, stream} ->
@@ -299,6 +433,31 @@ defmodule AshReports.Typst.DataLoader do
           {:error, {:streaming_pipeline_failed, reason}}
       end
     end
+  end
+
+  # Build comprehensive pipeline options from user configuration
+  defp build_pipeline_opts(domain, report, query, params, opts, grouped_aggregations, transformer) do
+    [
+      domain: domain,
+      resource: report.resource,
+      query: query,
+      transformer: transformer,
+      # Core streaming configuration
+      chunk_size: Keyword.get(opts, :chunk_size, 500),
+      max_demand: Keyword.get(opts, :max_demand, 1000),
+      buffer_size: Keyword.get(opts, :buffer_size, 1000),
+      # Telemetry and monitoring
+      enable_telemetry: Keyword.get(opts, :enable_telemetry, true),
+      # Report configuration
+      report_name: report.name,
+      report_config: build_report_config(report, params),
+      # Aggregations (allow override of DSL-inferred aggregations)
+      aggregations: Keyword.get(opts, :aggregations, []),
+      grouped_aggregations: Keyword.get(opts, :grouped_aggregations, grouped_aggregations),
+      # Resource limits
+      memory_limit: Keyword.get(opts, :memory_limit, 500_000_000),
+      timeout: Keyword.get(opts, :timeout, :infinity)
+    ]
   end
 
   defp build_query_from_report(_domain, report, params) do
