@@ -15,7 +15,7 @@ This plan implements a complete architectural refactor of AshReports to replace 
 # Stage 1: Infrastructure Foundation and Typst Integration
 
 **Duration**: 2-3 weeks
-**Status**: ✅ **COMPLETED** - Sections 1.1, 1.2, 1.3 Complete
+**Status**: ✅ **COMPLETED** - All Sections (1.1, 1.2, 1.3, 1.4) Complete
 **Goal**: Establish core Typst integration infrastructure and replace basic rendering pipeline
 
 ## 1.1 Typst Runtime Integration
@@ -80,14 +80,28 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 - [x] Implement variable scopes (detail, group, page, report) - **COMPLETED**
 - [ ] Handle large dataset streaming with GenStage - **See Stage 2 for implementation**
 
-## 1.4 Integration Testing Infrastructure
+## 1.4 Integration Testing Infrastructure **← COMPLETED** ✅
 
 ### 1.4.1 Test Framework Setup
-- [ ] Create Typst rendering test helpers
-- [ ] Add performance benchmarking for compilation speed
-- [ ] Implement visual regression testing for PDF output
-- [ ] Create mock data generators for complex scenarios
-- [ ] Add memory usage monitoring for large reports
+- [x] Create Typst rendering test helpers - **COMPLETED**
+  - `AshReports.TypstTestHelpers` with PDF validation, text extraction, and test utilities
+  - 16 tests covering compilation, validation, and PDF generation
+- [x] Add performance benchmarking for compilation speed - **COMPLETED**
+  - `AshReports.TypstBenchmarkHelpers` using Benchee for performance testing
+  - Benchmark suite for simple/medium/complex reports with performance targets
+  - 12 tests for benchmarking, validation, and regression detection
+- [x] Implement visual regression testing for PDF output - **COMPLETED**
+  - `AshReports.TypstVisualRegression` for baseline capture and comparison
+  - PDF text extraction and structure comparison
+  - 12 tests for baseline management and visual regression detection
+- [x] Create mock data generators for complex scenarios - **COMPLETED**
+  - `AshReports.TypstMockData` using StreamData for property-based testing
+  - Generators for templates, tables, edge cases, and nested structures
+  - 14 tests (4 properties, 10 unit tests) for data generation
+- [x] Add memory usage monitoring for large reports - **COMPLETED**
+  - `AshReports.TypstMemoryMonitor` for memory tracking and leak detection
+  - Real-time memory sampling during compilation with GC statistics
+  - 15 tests for memory monitoring, leak detection, and limit validation
 
 ---
 
