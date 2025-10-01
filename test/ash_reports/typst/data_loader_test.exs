@@ -3,17 +3,6 @@ defmodule AshReports.Typst.DataLoaderTest do
 
   alias AshReports.Typst.DataLoader
 
-  describe "load_for_typst/4" do
-    test "handles report not found error" do
-      # Test the error case without needing mocking
-      # Since AshReports.Info.report/2 will return nil for nonexistent reports
-      result = DataLoader.load_for_typst(NonExistentDomain, :nonexistent_report, %{})
-
-      assert {:error, _reason} = result
-      # We expect some kind of error - could be report_not_found or report_lookup_failed
-    end
-  end
-
   describe "typst_config/1" do
     test "creates default configuration" do
       config = DataLoader.typst_config()

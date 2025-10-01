@@ -55,7 +55,7 @@ defmodule AshReports.Typst.DataLoader do
   ```
   """
 
-  alias AshReports.{DataLoader, Report}
+  alias AshReports.Report
   alias AshReports.Typst.{DataProcessor, ExpressionParser, StreamingPipeline}
 
   require Logger
@@ -81,62 +81,6 @@ defmodule AshReports.Typst.DataLoader do
           variable_scopes: [atom()],
           preload_strategy: :auto | :explicit | [atom()]
         ]
-
-  @doc """
-  Loads report data optimized for Typst template compilation.
-
-  Returns data in a format directly compatible with DSL-generated
-  Typst templates, including proper type conversion and relationship
-  flattening.
-
-  ## Parameters
-
-    * `domain` - The Ash domain containing the report definition
-    * `report_name` - Name of the report to load data for
-    * `params` - Parameters for report generation (filters, date ranges, etc.)
-    * `opts` - Loading options for customization
-
-  ## Options
-
-    * `:chunk_size` - Size of data chunks for processing (default: 1000)
-    * `:enable_streaming` - Use streaming for large datasets (default: false)
-    * `:type_conversion` - Custom type conversion options
-    * `:variable_scopes` - Variable scopes to calculate (default: all)
-    * `:preload_strategy` - Relationship preloading strategy (default: :auto)
-
-  ## Returns
-
-    * `{:ok, typst_data()}` - Successfully loaded and formatted data
-    * `{:error, term()}` - Loading or transformation failure
-
-  ## Examples
-
-      iex> {:ok, data} = DataLoader.load_for_typst(MyApp.Domain, :sales_report, %{
-      ...>   customer_id: 123,
-      ...>   date_range: {~D[2024-01-01], ~D[2024-01-31]}
-      ...> })
-      iex> length(data.records)
-      42
-      iex> data.records |> List.first() |> Map.keys()
-      [:id, :customer_name, :amount, :created_at, :customer_address]
-
-  """
-  @spec load_for_typst(module(), atom(), map(), load_options()) ::
-          {:ok, typst_data()} | {:error, term()}
-  def load_for_typst(domain, report_name, params, opts \\ []) do
-    Logger.debug("Loading Typst data for report #{report_name} in domain #{inspect(domain)}")
-
-    with {:ok, report} <- get_report_definition(domain, report_name),
-         {:ok, raw_data} <- load_raw_data(domain, report, params, opts),
-         {:ok, processed_data} <- process_for_typst(raw_data, report, opts) do
-      Logger.debug("Successfully loaded #{length(processed_data.records)} records for Typst")
-      {:ok, processed_data}
-    else
-      {:error, reason} = error ->
-        Logger.error("Failed to load Typst data for #{report_name}: #{inspect(reason)}")
-        error
-    end
-  end
 
   @doc """
   Streams large datasets for memory-efficient Typst compilation.
@@ -213,116 +157,44 @@ defmodule AshReports.Typst.DataLoader do
   end
 
   @doc """
-  Loads report data with automatic batch vs. streaming mode selection.
+  Loads report data using the streaming pipeline.
 
-  Automatically chooses the most efficient loading strategy:
-  - Small datasets (< threshold): Batch loading via `load_for_typst/4`
-  - Large datasets (>= threshold): Streaming via `stream_for_typst/4`
+  All data loading uses the GenStage streaming pipeline for memory-efficient
+  processing of datasets from small (100s) to very large (1M+) records.
 
-  The threshold can be customized or disabled for manual control.
+  This function is equivalent to `stream_for_typst/4` and provides a unified
+  API for report data loading.
 
-  ## Options
+  ## Parameters
 
-    * `:mode` - Force mode (`:auto | :batch | :streaming`, default: `:auto`)
-    * `:streaming_threshold` - Record count threshold (default: 10,000)
-    * `:estimate_count` - Pre-count records for mode selection (default: false)
-    * All options from `load_for_typst/4` and `stream_for_typst/4` apply
-
-  When `:mode` is `:auto` and `:estimate_count` is `false`, streaming is used
-  for safety (cannot know size without counting). Set `:estimate_count` to `true`
-  to enable intelligent mode selection, but be aware this adds overhead.
+    * `domain` - The Ash domain containing the report definition
+    * `report_name` - Name of the report to load data for
+    * `params` - Parameters for report generation
+    * `opts` - Streaming options (see `stream_for_typst/4`)
 
   ## Returns
 
-    * `{:ok, data}` - Batch mode returns list of records
-    * `{:ok, stream}` - Streaming mode returns Enumerable.t()
+    * `{:ok, Enumerable.t()}` - Stream of processed records
     * `{:error, term()}` - Loading failure
 
   ## Examples
 
-      # Automatic mode selection (defaults to streaming for safety)
-      iex> {:ok, result} = DataLoader.load_report_data(MyApp.Domain, :report, params)
+      # Load report data (always streams)
+      iex> {:ok, stream} = DataLoader.load_report_data(MyApp.Domain, :report, params)
+      iex> records = Enum.to_list(stream)
 
-      # Force batch mode
-      iex> {:ok, data} = DataLoader.load_report_data(MyApp.Domain, :small_report, params, mode: :batch)
-      iex> is_list(data)
-      true
-
-      # Force streaming mode
-      iex> {:ok, stream} = DataLoader.load_report_data(MyApp.Domain, :large_report, params, mode: :streaming)
-
-      # Automatic with intelligent size detection (adds overhead)
-      iex> {:ok, result} = DataLoader.load_report_data(MyApp.Domain, :report, params,
-      ...>   estimate_count: true,
-      ...>   streaming_threshold: 5000
+      # With streaming options
+      iex> {:ok, stream} = DataLoader.load_report_data(MyApp.Domain, :large_report, params,
+      ...>   chunk_size: 1000,
+      ...>   memory_limit: 500_000_000
       ...> )
 
   """
   @spec load_report_data(module(), atom(), map(), load_options()) ::
-          {:ok, list() | Enumerable.t()} | {:error, term()}
+          {:ok, Enumerable.t()} | {:error, term()}
   def load_report_data(domain, report_name, params, opts \\ []) do
-    mode = Keyword.get(opts, :mode, :auto)
-
-    case mode do
-      :batch ->
-        load_for_typst(domain, report_name, params, opts)
-
-      :streaming ->
-        stream_for_typst(domain, report_name, params, opts)
-
-      :auto ->
-        select_and_load(domain, report_name, params, opts)
-
-      _ ->
-        {:error, {:invalid_mode, mode}}
-    end
-  end
-
-  # Automatically select batch or streaming mode
-  defp select_and_load(domain, report_name, params, opts) do
-    estimate_count? = Keyword.get(opts, :estimate_count, false)
-    threshold = Keyword.get(opts, :streaming_threshold, 10_000)
-
-    if estimate_count? do
-      # Estimate record count and choose mode intelligently
-      with {:ok, report} <- get_report_definition(domain, report_name),
-           {:ok, query} <- build_query_from_report(domain, report, params),
-           {:ok, count} <- estimate_record_count(domain, query) do
-        if count < threshold do
-          Logger.debug("Auto-selecting batch mode (#{count} records < #{threshold} threshold)")
-          load_for_typst(domain, report_name, params, opts)
-        else
-          Logger.debug(
-            "Auto-selecting streaming mode (#{count} records >= #{threshold} threshold)"
-          )
-
-          stream_for_typst(domain, report_name, params, opts)
-        end
-      else
-        # On error estimating, fall back to streaming for safety
-        {:error, reason} ->
-          Logger.warning(
-            "Failed to estimate count (#{inspect(reason)}), falling back to streaming mode"
-          )
-
-          stream_for_typst(domain, report_name, params, opts)
-      end
-    else
-      # Default to streaming when we can't estimate size
-      Logger.debug("Auto-selecting streaming mode (no size estimation)")
-      stream_for_typst(domain, report_name, params, opts)
-    end
-  end
-
-  # Estimate the number of records that would be returned by a query
-  defp estimate_record_count(domain, query) do
-    try do
-      count = Ash.count!(query, domain: domain)
-      {:ok, count}
-    rescue
-      error ->
-        {:error, {:count_failed, error}}
-    end
+    # Always delegate to streaming implementation
+    stream_for_typst(domain, report_name, params, opts)
   end
 
   @doc """
@@ -368,35 +240,6 @@ defmodule AshReports.Typst.DataLoader do
   rescue
     error ->
       {:error, {:report_lookup_failed, error}}
-  end
-
-  defp load_raw_data(domain, report, params, opts) do
-    # Use existing DataLoader for basic data loading
-    DataLoader.load_report(domain, report.name, params, build_loader_opts(opts))
-  rescue
-    error ->
-      {:error, {:data_loading_failed, error}}
-  end
-
-  defp process_for_typst(raw_data, report, opts) do
-    with {:ok, converted_records} <- DataProcessor.convert_records(raw_data.records, opts),
-         {:ok, variables} <-
-           DataProcessor.calculate_variable_scopes(converted_records, report.variables || []),
-         {:ok, groups} <- DataProcessor.process_groups(converted_records, report.groups || []) do
-      typst_data = %{
-        records: converted_records,
-        config: Map.new(raw_data.parameters || %{}),
-        variables: variables,
-        groups: groups,
-        metadata: %{
-          total_records: length(converted_records),
-          report_name: report.name,
-          generated_at: DateTime.utc_now() |> DateTime.to_iso8601()
-        }
-      }
-
-      {:ok, typst_data}
-    end
   end
 
   defp create_streaming_pipeline(domain, report, params, opts) do
@@ -559,18 +402,6 @@ defmodule AshReports.Typst.DataLoader do
       end
     end)
     |> Enum.uniq()
-  end
-
-  defp build_loader_opts(typst_opts) do
-    # Convert Typst-specific options to DataLoader options
-    chunk_size = Keyword.get(typst_opts, :chunk_size, 1000)
-    enable_caching = Keyword.get(typst_opts, :enable_caching, true)
-
-    [
-      chunk_size: chunk_size,
-      enable_caching: enable_caching,
-      load_relationships: true
-    ]
   end
 
   # DSL Integration Functions

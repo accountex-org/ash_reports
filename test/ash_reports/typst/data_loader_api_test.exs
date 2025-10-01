@@ -1,37 +1,25 @@
 defmodule AshReports.Typst.DataLoaderAPITest do
   @moduledoc """
-  Tests for Section 2.5.1: DataLoader API Implementation.
+  Tests for DataLoader API - Streaming-Only Architecture.
 
-  Tests the enhanced streaming configuration options and unified API for
-  automatic batch/streaming mode selection.
+  Tests the enhanced streaming configuration options and unified API that
+  always uses the GenStage streaming pipeline.
   """
 
   use ExUnit.Case, async: true
 
   alias AshReports.Typst.DataLoader
-  alias AshReports.{Report, Group, Variable}
 
-  describe "load_report_data/4 - unified API (Section 2.5.1)" do
-    test "mode: :batch delegates to load_for_typst" do
-      # Since we don't have a real domain/report setup, we test the mode selection logic
-      # by verifying the function exists and accepts the right parameters
+  describe "load_report_data/4 - unified API (always streaming)" do
+    test "delegates to stream_for_typst/4" do
+      # Functions with default parameters export with full arity
       assert function_exported?(DataLoader, :load_report_data, 4)
+      assert function_exported?(DataLoader, :stream_for_typst, 4)
     end
 
-    test "mode: :streaming delegates to stream_for_typst" do
+    test "function is exported with correct arity" do
+      # With default parameter opts \\ [], function exports as arity 4
       assert function_exported?(DataLoader, :load_report_data, 4)
-    end
-
-    test "mode: :auto defaults to streaming when estimate_count is false" do
-      # This tests the default behavior documented in the function
-      # In practice, auto mode with estimate_count: false should use streaming
-      assert function_exported?(DataLoader, :load_report_data, 4)
-    end
-
-    test "returns error for invalid mode" do
-      # We can test this even without a real domain/report
-      result = DataLoader.load_report_data(FakeDomain, :fake_report, %{}, mode: :invalid)
-      assert {:error, {:invalid_mode, :invalid}} = result
     end
   end
 
@@ -82,7 +70,7 @@ defmodule AshReports.Typst.DataLoaderAPITest do
     end
   end
 
-  describe "unified API documentation (Section 2.5.1)" do
+  describe "unified API documentation (streaming-only)" do
     test "load_report_data/4 has comprehensive documentation" do
       {:docs_v1, _, :elixir, "text/markdown", _, _, functions} = Code.fetch_docs(DataLoader)
 
@@ -96,14 +84,10 @@ defmodule AshReports.Typst.DataLoaderAPITest do
       {{:function, :load_report_data, 4}, _, _, doc_content, _} = load_report_data_docs
       doc_string = doc_content["en"]
 
-      # Verify key documentation elements
-      assert doc_string =~ "automatic batch vs. streaming mode selection"
-      assert doc_string =~ ":mode"
-      assert doc_string =~ ":streaming_threshold"
-      assert doc_string =~ ":estimate_count"
-      assert doc_string =~ "# Automatic mode selection"
-      assert doc_string =~ "# Force batch mode"
-      assert doc_string =~ "# Force streaming mode"
+      # Verify streaming-only documentation
+      assert doc_string =~ "streaming pipeline"
+      assert doc_string =~ "GenStage"
+      assert doc_string =~ "stream_for_typst"
     end
 
     test "load_report_data/4 function is exported" do
@@ -174,13 +158,8 @@ defmodule AshReports.Typst.DataLoaderAPITest do
     end
   end
 
-  describe "error handling (Section 2.5.1)" do
-    test "load_report_data with invalid mode returns error" do
-      result = DataLoader.load_report_data(FakeDomain, :report, %{}, mode: :invalid_mode)
-      assert {:error, {:invalid_mode, :invalid_mode}} = result
-    end
-
-    test "invalid mode is documented behavior" do
+  describe "error handling" do
+    test "error cases are documented" do
       # Verify the error handling is documented
       {:docs_v1, _, :elixir, "text/markdown", _, _, functions} = Code.fetch_docs(DataLoader)
 
@@ -194,43 +173,6 @@ defmodule AshReports.Typst.DataLoaderAPITest do
 
       # Verify error cases are documented
       assert doc_string =~ "{:error, term()}"
-    end
-  end
-
-  describe "mode selection logic (Section 2.5.1)" do
-    test "auto mode with estimate_count false defaults to streaming" do
-      # This tests the documented behavior:
-      # "When :mode is :auto and :estimate_count is false, streaming is used for safety"
-      # We verify this through the function signature and documentation
-      {:docs_v1, _, :elixir, "text/markdown", _, _, functions} = Code.fetch_docs(DataLoader)
-
-      load_docs =
-        Enum.find(functions, fn {{:function, name, arity}, _, _, _, _} ->
-          name == :load_report_data and arity == 4
-        end)
-
-      {{:function, :load_report_data, 4}, _, _, doc_content, _} = load_docs
-      doc_string = doc_content["en"]
-
-      assert doc_string =~ "estimate_count"
-      assert doc_string =~ "streaming is used"
-      assert doc_string =~ "for safety"
-    end
-
-    test "streaming_threshold is configurable" do
-      # Verify the option is documented
-      {:docs_v1, _, :elixir, "text/markdown", _, _, functions} = Code.fetch_docs(DataLoader)
-
-      load_docs =
-        Enum.find(functions, fn {{:function, name, arity}, _, _, _, _} ->
-          name == :load_report_data and arity == 4
-        end)
-
-      {{:function, :load_report_data, 4}, _, _, doc_content, _} = load_docs
-      doc_string = doc_content["en"]
-
-      assert doc_string =~ ":streaming_threshold"
-      assert doc_string =~ "10,000"
     end
   end
 end
