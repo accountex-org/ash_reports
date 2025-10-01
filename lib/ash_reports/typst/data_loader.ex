@@ -56,7 +56,7 @@ defmodule AshReports.Typst.DataLoader do
   """
 
   alias AshReports.{DataLoader, Report}
-  alias AshReports.Typst.{DataProcessor, StreamingPipeline}
+  alias AshReports.Typst.{DataProcessor, ExpressionParser, StreamingPipeline}
 
   require Logger
 
@@ -270,6 +270,14 @@ defmodule AshReports.Typst.DataLoader do
       # Build transformer function
       transformer = build_typst_transformer(report, opts)
 
+      # Build grouped aggregations from DSL
+      grouped_aggregations = build_grouped_aggregations_from_dsl(report)
+
+      Logger.debug("""
+      Configured grouped aggregations from DSL:
+      #{inspect(grouped_aggregations, pretty: true)}
+      """)
+
       # Start streaming pipeline
       pipeline_opts = [
         domain: domain,
@@ -279,7 +287,8 @@ defmodule AshReports.Typst.DataLoader do
         chunk_size: Keyword.get(opts, :chunk_size, 500),
         max_demand: Keyword.get(opts, :max_demand, 1000),
         report_name: report.name,
-        report_config: build_report_config(report, params)
+        report_config: build_report_config(report, params),
+        grouped_aggregations: grouped_aggregations
       ]
 
       case StreamingPipeline.start_pipeline(pipeline_opts) do
@@ -403,5 +412,107 @@ defmodule AshReports.Typst.DataLoader do
       enable_caching: enable_caching,
       load_relationships: true
     ]
+  end
+
+  # DSL Integration Functions
+
+  defp build_grouped_aggregations_from_dsl(report) do
+    groups = report.groups || []
+
+    case groups do
+      [] ->
+        Logger.debug("No groups defined in report, skipping aggregation configuration")
+        []
+
+      group_list ->
+        Logger.debug("Building aggregation configuration for #{length(group_list)} groups")
+
+        group_list
+        |> Enum.sort_by(& &1.level)
+        |> Enum.map(&build_aggregation_config_for_group(&1, report))
+        |> Enum.reject(&is_nil/1)
+    end
+  end
+
+  defp build_aggregation_config_for_group(group, report) do
+    # Extract field name from group expression
+    field_name =
+      case ExpressionParser.extract_field_with_fallback(group.expression, group.name) do
+        {:ok, field} ->
+          field
+
+        _error ->
+          Logger.warning("""
+          Failed to parse group expression for #{group.name}, falling back to group name.
+          Expression: #{inspect(group.expression)}
+          """)
+
+          group.name
+      end
+
+    # Derive aggregation types from variables
+    aggregations = derive_aggregations_for_group(group.level, report)
+
+    Logger.debug("""
+    Group #{group.name} (level #{group.level}):
+      - Extracted field: #{inspect(field_name)}
+      - Aggregations: #{inspect(aggregations)}
+    """)
+
+    %{
+      group_by: field_name,
+      level: group.level,
+      aggregations: aggregations,
+      sort: group.sort || :asc
+    }
+  rescue
+    error ->
+      Logger.error("""
+      Failed to build aggregation config for group #{inspect(group)}:
+      #{inspect(error)}
+      """)
+
+      nil
+  end
+
+  defp derive_aggregations_for_group(group_level, report) do
+    variables = report.variables || []
+
+    # Find variables that reset at this group level
+    group_variables =
+      variables
+      |> Enum.filter(fn var ->
+        var.reset_on == :group and var.reset_group == group_level
+      end)
+
+    # Map variable types to aggregation functions
+    aggregation_types =
+      group_variables
+      |> Enum.map(&map_variable_type_to_aggregation/1)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
+    # Default aggregations if none specified
+    case aggregation_types do
+      [] ->
+        Logger.debug("No group-scoped variables found for level #{group_level}, using defaults")
+        [:sum, :count]
+
+      types ->
+        types
+    end
+  end
+
+  defp map_variable_type_to_aggregation(variable) do
+    case variable.type do
+      :sum -> :sum
+      :average -> :avg
+      :count -> :count
+      :min -> :min
+      :max -> :max
+      :first -> :first
+      :last -> :last
+      _ -> nil
+    end
   end
 end

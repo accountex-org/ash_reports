@@ -243,12 +243,12 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 **Reference**: See `planning/grouped_aggregation_dsl_integration.md` for detailed research and design decisions
 
 ### 2.4.1 Expression Parsing and Field Extraction
-- [ ] Implement expression parser for `Ash.Expr.t()` from group definitions
-- [ ] Extract field names from group expressions: `expr(customer.region)` → `:region`
-- [ ] Support nested field access patterns
-- [ ] Handle relationship traversal in expressions: `{:field, :customer, :region}`
-- [ ] Add expression validation and error handling
-- [ ] Create fallback mechanisms for unparseable expressions
+- [x] Implement expression parser for `Ash.Expr.t()` from group definitions
+- [x] Extract field names from group expressions: `expr(customer.region)` → `:region`
+- [x] Support nested field access patterns
+- [x] Handle relationship traversal in expressions: `{:field, :customer, :region}`
+- [x] Add expression validation and error handling
+- [x] Create fallback mechanisms for unparseable expressions
 
 ### 2.4.2 Variable-to-Aggregation Mapping
 - [ ] Map DSL variable types to ProducerConsumer aggregation types:
