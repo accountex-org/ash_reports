@@ -51,8 +51,48 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   ## Telemetry
 
   Emits the following events:
-  - `[:ash_reports, :streaming, :producer_consumer, :batch_transformed]`
-  - `[:ash_reports, :streaming, :producer_consumer, :error]`
+
+  ### `[:ash_reports, :streaming, :producer_consumer, :batch_transformed]`
+
+  Measurements:
+  - `:records_in` - Number of records received from producer
+  - `:records_out` - Number of records emitted after transformation
+  - `:records_failed` - Number of records that failed transformation (returned nil)
+  - `:records_rejected` - Number of records rejected due to group limits
+  - `:duration_ms` - Time taken to transform batch (milliseconds)
+  - `:records_buffered` - Current buffer usage
+
+  Metadata:
+  - `:stream_id` - Unique identifier for the pipeline
+
+  ### `[:ash_reports, :streaming, :producer_consumer, :aggregation_computed]`
+
+  Measurements:
+  - `:records_processed` - Number of records included in aggregations
+
+  Metadata:
+  - `:stream_id` - Unique identifier for the pipeline
+  - `:aggregations` - Current global aggregation state
+  - `:grouped_aggregations` - Current grouped aggregation state
+
+  ### `[:ash_reports, :streaming, :producer_consumer, :buffer_full]`
+
+  Measurements:
+  - `:buffer_size` - Configured buffer size
+  - `:records_buffered` - Current number of records in buffer
+
+  Metadata:
+  - `:stream_id` - Unique identifier for the pipeline
+
+  ### `[:ash_reports, :streaming, :producer_consumer, :group_limit_reached]`
+
+  Measurements:
+  - `:max_groups` - Maximum allowed groups for this configuration
+  - `:current_count` - Current number of groups
+
+  Metadata:
+  - `:stream_id` - Unique identifier for the pipeline
+  - `:group_by` - The grouping field(s) that reached the limit
   """
 
   use GenStage
@@ -185,8 +225,8 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
     start_time = System.monotonic_time(:millisecond)
 
     # Transform events - if this crashes, let the supervisor restart the process
-    {:ok, transformed_events, new_aggregation_state, new_grouped_aggregation_state, new_group_counts} =
-      transform_batch(events, state)
+    {:ok, transformed_events, new_aggregation_state, new_grouped_aggregation_state, new_group_counts,
+     failed_count, rejected_count} = transform_batch(events, state)
 
     end_time = System.monotonic_time(:millisecond)
     duration = end_time - start_time
@@ -198,6 +238,8 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
         %{
           records_in: length(events),
           records_out: length(transformed_events),
+          records_failed: failed_count,
+          records_rejected: rejected_count,
           duration_ms: duration,
           records_buffered: length(transformed_events)
         },
@@ -280,20 +322,24 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
       end
 
     # Step 2: Apply custom transformer function to each event
-    transformed =
+    transformed_with_nils =
       converted_events
       |> Enum.map(fn event ->
         transform_record(event, state)
       end)
-      # Filter out any nil results
-      |> Enum.reject(&is_nil/1)
+
+    # Count failed transformations (nil results)
+    failed_count = Enum.count(transformed_with_nils, &is_nil/1)
+
+    # Filter out any nil results
+    transformed = Enum.reject(transformed_with_nils, &is_nil/1)
 
     # Step 3: Update global aggregations
     new_aggregation_state =
       update_aggregations(transformed, state.aggregation_state, state.aggregations)
 
     # Step 4: Update grouped aggregations
-    {new_grouped_aggregation_state, new_group_counts} =
+    {new_grouped_aggregation_state, new_group_counts, rejected_count} =
       update_grouped_aggregations(
         transformed,
         state.grouped_aggregation_state,
@@ -303,7 +349,8 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
         state.enable_telemetry
       )
 
-    {:ok, transformed, new_aggregation_state, new_grouped_aggregation_state, new_group_counts}
+    {:ok, transformed, new_aggregation_state, new_grouped_aggregation_state, new_group_counts,
+     failed_count, rejected_count}
   end
 
   defp transform_record(record, state) do
@@ -464,9 +511,10 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
          enable_telemetry
        ) do
     # Process each grouping configuration, tracking group counts and enforcing limits
-    {new_grouped_state, new_group_counts} =
-      Enum.reduce(grouped_configs, {grouped_state, group_counts}, fn config,
-                                                                      {state, counts} ->
+    {new_grouped_state, new_group_counts, total_rejected} =
+      Enum.reduce(grouped_configs, {grouped_state, group_counts, 0}, fn config,
+                                                                         {state, counts,
+                                                                          rejected_acc} ->
         group_key = normalize_group_by(config.group_by)
         current_groups = Map.get(state, group_key, %{})
         current_count = Map.get(counts, group_key, 0)
@@ -484,7 +532,9 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
               true ->
                 # Existing group - update aggregations
                 group_agg_state = Map.get(groups, record_group_value)
-                updated_group_agg = update_aggregations([record], group_agg_state, config.aggregations)
+                updated_group_agg =
+                  update_aggregations([record], group_agg_state, config.aggregations)
+
                 {Map.put(groups, record_group_value, updated_group_agg), count, rejected}
 
               false ->
@@ -510,7 +560,9 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
                 else
                   # Accept new group
                   group_agg_state = initialize_aggregations(config.aggregations)
-                  updated_group_agg = update_aggregations([record], group_agg_state, config.aggregations)
+                  updated_group_agg =
+                    update_aggregations([record], group_agg_state, config.aggregations)
+
                   {Map.put(groups, record_group_value, updated_group_agg), count + 1, rejected}
                 end
             end
@@ -523,11 +575,12 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
           )
         end
 
-        # Update state and counts
-        {Map.put(state, group_key, updated_groups), Map.put(counts, group_key, new_count)}
+        # Update state and counts, accumulate rejected count
+        {Map.put(state, group_key, updated_groups), Map.put(counts, group_key, new_count),
+         rejected_acc + rejected_count}
       end)
 
-    {new_grouped_state, new_group_counts}
+    {new_grouped_state, new_group_counts, total_rejected}
   end
 
   defp normalize_group_by(group_by) when is_list(group_by), do: group_by
