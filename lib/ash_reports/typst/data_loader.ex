@@ -55,7 +55,7 @@ defmodule AshReports.Typst.DataLoader do
   ```
   """
 
-  alias AshReports.{DataLoader, Report}
+  alias AshReports.Report
   alias AshReports.Typst.{DataProcessor, ExpressionParser, StreamingPipeline}
 
   require Logger
@@ -76,67 +76,8 @@ defmodule AshReports.Typst.DataLoader do
   """
   @type load_options :: [
           chunk_size: pos_integer(),
-          enable_streaming: boolean(),
-          type_conversion: keyword(),
-          variable_scopes: [atom()],
-          preload_strategy: :auto | :explicit | [atom()]
+          type_conversion: keyword()
         ]
-
-  @doc """
-  Loads report data optimized for Typst template compilation.
-
-  Returns data in a format directly compatible with DSL-generated
-  Typst templates, including proper type conversion and relationship
-  flattening.
-
-  ## Parameters
-
-    * `domain` - The Ash domain containing the report definition
-    * `report_name` - Name of the report to load data for
-    * `params` - Parameters for report generation (filters, date ranges, etc.)
-    * `opts` - Loading options for customization
-
-  ## Options
-
-    * `:chunk_size` - Size of data chunks for processing (default: 1000)
-    * `:enable_streaming` - Use streaming for large datasets (default: false)
-    * `:type_conversion` - Custom type conversion options
-    * `:variable_scopes` - Variable scopes to calculate (default: all)
-    * `:preload_strategy` - Relationship preloading strategy (default: :auto)
-
-  ## Returns
-
-    * `{:ok, typst_data()}` - Successfully loaded and formatted data
-    * `{:error, term()}` - Loading or transformation failure
-
-  ## Examples
-
-      iex> {:ok, data} = DataLoader.load_for_typst(MyApp.Domain, :sales_report, %{
-      ...>   customer_id: 123,
-      ...>   date_range: {~D[2024-01-01], ~D[2024-01-31]}
-      ...> })
-      iex> length(data.records)
-      42
-      iex> data.records |> List.first() |> Map.keys()
-      [:id, :customer_name, :amount, :created_at, :customer_address]
-
-  """
-  @spec load_for_typst(module(), atom(), map(), load_options()) ::
-          {:ok, typst_data()} | {:error, term()}
-  def load_for_typst(domain, report_name, params, opts \\ []) do
-    Logger.debug("Loading Typst data for report #{report_name} in domain #{inspect(domain)}")
-
-    with {:ok, report} <- get_report_definition(domain, report_name),
-         {:ok, raw_data} <- load_raw_data(domain, report, params, opts),
-         {:ok, processed_data} <- process_for_typst(raw_data, report, opts) do
-      Logger.debug("Successfully loaded #{length(processed_data.records)} records for Typst")
-      {:ok, processed_data}
-    else
-      {:error, reason} = error ->
-        Logger.error("Failed to load Typst data for #{report_name}: #{inspect(reason)}")
-        error
-    end
-  end
 
   @doc """
   Streams large datasets for memory-efficient Typst compilation.
@@ -155,8 +96,13 @@ defmodule AshReports.Typst.DataLoader do
 
     * `:chunk_size` - Size of streaming chunks (default: 500)
     * `:max_demand` - Maximum demand for backpressure (default: 1000)
+    * `:buffer_size` - ProducerConsumer buffer size (default: 1000)
+    * `:enable_telemetry` - Enable telemetry events (default: true)
+    * `:aggregations` - Global aggregation functions (default: [])
+    * `:grouped_aggregations` - Override DSL-inferred grouped aggregations (default: auto from DSL)
+    * `:memory_limit` - Memory limit per stream in bytes (default: 500MB)
+    * `:timeout` - Pipeline timeout in milliseconds (default: 300_000 / 5 minutes)
     * `:type_conversion` - Type conversion options
-    * `:buffer_size` - Internal buffer size (default: 100)
 
   ## Returns
 
@@ -165,27 +111,54 @@ defmodule AshReports.Typst.DataLoader do
 
   ## Examples
 
+      # Basic streaming with defaults
       iex> {:ok, stream} = DataLoader.stream_for_typst(MyApp.Domain, :large_report, params)
-      iex> stream
-      ...> |> Stream.take(5)
-      ...> |> Enum.to_list()
-      ...> |> List.flatten()
-      ...> |> length()
+      iex> stream |> Stream.take(5) |> Enum.to_list() |> List.flatten() |> length()
       2500  # 5 chunks * 500 records each
+
+      # Custom chunk size for faster throughput
+      iex> {:ok, stream} = DataLoader.stream_for_typst(MyApp.Domain, :large_report, params,
+      ...>   chunk_size: 2000,
+      ...>   max_demand: 5000
+      ...> )
+
+      # Override DSL-inferred aggregations
+      iex> {:ok, stream} = DataLoader.stream_for_typst(MyApp.Domain, :report, params,
+      ...>   grouped_aggregations: [
+      ...>     %{group_by: :region, aggregations: [:sum, :count], level: 1, sort: :asc}
+      ...>   ]
+      ...> )
+
+      # Memory-constrained environment
+      iex> {:ok, stream} = DataLoader.stream_for_typst(MyApp.Domain, :report, params,
+      ...>   memory_limit: 100_000_000,  # 100MB
+      ...>   chunk_size: 100,
+      ...>   buffer_size: 500
+      ...> )
+
+      # Long-running report with extended timeout
+      iex> {:ok, stream} = DataLoader.stream_for_typst(MyApp.Domain, :huge_report, params,
+      ...>   timeout: 600_000  # 10 minutes
+      ...> )
 
   """
   @spec stream_for_typst(module(), atom(), map(), load_options()) ::
           {:ok, Enumerable.t()} | {:error, term()}
   def stream_for_typst(domain, report_name, params, opts \\ []) do
-    Logger.info("Setting up streaming for report #{report_name} in domain #{inspect(domain)}")
+    Logger.info(fn ->
+      "Setting up streaming for report #{report_name} in domain #{inspect(domain)}"
+    end)
 
     with {:ok, report} <- get_report_definition(domain, report_name),
          {:ok, stream} <- create_streaming_pipeline(domain, report, params, opts) do
-      Logger.debug("Successfully created streaming pipeline for #{report_name}")
+      Logger.debug(fn -> "Successfully created streaming pipeline for #{report_name}" end)
       {:ok, stream}
     else
       {:error, reason} = error ->
-        Logger.error("Failed to create streaming pipeline for #{report_name}: #{inspect(reason)}")
+        Logger.error(fn ->
+          "Failed to create streaming pipeline for #{report_name}: #{inspect(reason)}"
+        end)
+
         error
     end
   end
@@ -195,7 +168,7 @@ defmodule AshReports.Typst.DataLoader do
 
   ## Examples
 
-      iex> config = DataLoader.typst_config(chunk_size: 2000, enable_streaming: true)
+      iex> config = DataLoader.typst_config(chunk_size: 2000)
       iex> config[:chunk_size]
       2000
 
@@ -204,14 +177,11 @@ defmodule AshReports.Typst.DataLoader do
   def typst_config(overrides \\ []) do
     defaults = [
       chunk_size: 1000,
-      enable_streaming: false,
       type_conversion: [
         datetime_format: :iso8601,
         decimal_precision: 2,
         money_format: :symbol
-      ],
-      variable_scopes: [:detail, :group, :page, :report],
-      preload_strategy: :auto
+      ]
     ]
 
     Keyword.merge(defaults, overrides)
@@ -235,35 +205,6 @@ defmodule AshReports.Typst.DataLoader do
       {:error, {:report_lookup_failed, error}}
   end
 
-  defp load_raw_data(domain, report, params, opts) do
-    # Use existing DataLoader for basic data loading
-    DataLoader.load_report(domain, report.name, params, build_loader_opts(opts))
-  rescue
-    error ->
-      {:error, {:data_loading_failed, error}}
-  end
-
-  defp process_for_typst(raw_data, report, opts) do
-    with {:ok, converted_records} <- DataProcessor.convert_records(raw_data.records, opts),
-         {:ok, variables} <-
-           DataProcessor.calculate_variable_scopes(converted_records, report.variables || []),
-         {:ok, groups} <- DataProcessor.process_groups(converted_records, report.groups || []) do
-      typst_data = %{
-        records: converted_records,
-        config: Map.new(raw_data.parameters || %{}),
-        variables: variables,
-        groups: groups,
-        metadata: %{
-          total_records: length(converted_records),
-          report_name: report.name,
-          generated_at: DateTime.utc_now() |> DateTime.to_iso8601()
-        }
-      }
-
-      {:ok, typst_data}
-    end
-  end
-
   defp create_streaming_pipeline(domain, report, params, opts) do
     # Get the query from report definition
     with {:ok, query} <- build_query_from_report(domain, report, params) do
@@ -273,23 +214,24 @@ defmodule AshReports.Typst.DataLoader do
       # Build grouped aggregations from DSL
       grouped_aggregations = build_grouped_aggregations_from_dsl(report)
 
-      Logger.debug("""
-      Configured grouped aggregations from DSL:
-      #{inspect(grouped_aggregations, pretty: true)}
-      """)
+      Logger.debug(fn ->
+        """
+        Configured grouped aggregations from DSL:
+        #{inspect(grouped_aggregations, pretty: true)}
+        """
+      end)
 
-      # Start streaming pipeline
-      pipeline_opts = [
-        domain: domain,
-        resource: report.resource,
-        query: query,
-        transformer: transformer,
-        chunk_size: Keyword.get(opts, :chunk_size, 500),
-        max_demand: Keyword.get(opts, :max_demand, 1000),
-        report_name: report.name,
-        report_config: build_report_config(report, params),
-        grouped_aggregations: grouped_aggregations
-      ]
+      # Start streaming pipeline with enhanced configuration
+      pipeline_opts =
+        build_pipeline_opts(
+          domain,
+          report,
+          query,
+          params,
+          opts,
+          grouped_aggregations,
+          transformer
+        )
 
       case StreamingPipeline.start_pipeline(pipeline_opts) do
         {:ok, _stream_id, stream} ->
@@ -299,6 +241,31 @@ defmodule AshReports.Typst.DataLoader do
           {:error, {:streaming_pipeline_failed, reason}}
       end
     end
+  end
+
+  # Build comprehensive pipeline options from user configuration
+  defp build_pipeline_opts(domain, report, query, params, opts, grouped_aggregations, transformer) do
+    [
+      domain: domain,
+      resource: report.resource,
+      query: query,
+      transformer: transformer,
+      # Core streaming configuration
+      chunk_size: Keyword.get(opts, :chunk_size, 500),
+      max_demand: Keyword.get(opts, :max_demand, 1000),
+      buffer_size: Keyword.get(opts, :buffer_size, 1000),
+      # Telemetry and monitoring
+      enable_telemetry: Keyword.get(opts, :enable_telemetry, true),
+      # Report configuration
+      report_name: report.name,
+      report_config: build_report_config(report, params),
+      # Aggregations (allow override of DSL-inferred aggregations)
+      aggregations: Keyword.get(opts, :aggregations, []),
+      grouped_aggregations: Keyword.get(opts, :grouped_aggregations, grouped_aggregations),
+      # Resource limits
+      memory_limit: Keyword.get(opts, :memory_limit, 500_000_000),
+      timeout: Keyword.get(opts, :timeout, 300_000)
+    ]
   end
 
   defp build_query_from_report(_domain, report, params) do
@@ -402,18 +369,6 @@ defmodule AshReports.Typst.DataLoader do
     |> Enum.uniq()
   end
 
-  defp build_loader_opts(typst_opts) do
-    # Convert Typst-specific options to DataLoader options
-    chunk_size = Keyword.get(typst_opts, :chunk_size, 1000)
-    enable_caching = Keyword.get(typst_opts, :enable_caching, true)
-
-    [
-      chunk_size: chunk_size,
-      enable_caching: enable_caching,
-      load_relationships: true
-    ]
-  end
-
   # DSL Integration Functions
 
   defp build_grouped_aggregations_from_dsl(report) do
@@ -421,11 +376,13 @@ defmodule AshReports.Typst.DataLoader do
 
     case groups do
       [] ->
-        Logger.debug("No groups defined in report, skipping aggregation configuration")
+        Logger.debug(fn -> "No groups defined in report, skipping aggregation configuration" end)
         []
 
       group_list ->
-        Logger.debug("Building aggregation configuration for #{length(group_list)} groups")
+        Logger.debug(fn ->
+          "Building aggregation configuration for #{length(group_list)} groups"
+        end)
 
         # Use reduce to accumulate fields from previous levels for cumulative grouping
         {configs, _accumulated_fields} =
@@ -462,10 +419,12 @@ defmodule AshReports.Typst.DataLoader do
         field
 
       _error ->
-        Logger.warning("""
-        Failed to parse group expression for #{group.name}, falling back to group name.
-        Expression: #{inspect(group.expression)}
-        """)
+        Logger.warning(fn ->
+          """
+          Failed to parse group expression for #{group.name}, falling back to group name.
+          Expression: #{inspect(group.expression)}
+          """
+        end)
 
         group.name
     end
@@ -479,12 +438,14 @@ defmodule AshReports.Typst.DataLoader do
     # Normalize group_by: single field as atom, multiple fields as list
     group_by = normalize_group_by_fields(accumulated_fields)
 
-    Logger.debug("""
-    Group #{group.name} (level #{group.level}):
-      - Accumulated fields: #{inspect(accumulated_fields)}
-      - Normalized group_by: #{inspect(group_by)}
-      - Aggregations: #{inspect(aggregations)}
-    """)
+    Logger.debug(fn ->
+      """
+      Group #{group.name} (level #{group.level}):
+        - Accumulated fields: #{inspect(accumulated_fields)}
+        - Normalized group_by: #{inspect(group_by)}
+        - Aggregations: #{inspect(aggregations)}
+      """
+    end)
 
     %{
       group_by: group_by,
@@ -526,7 +487,10 @@ defmodule AshReports.Typst.DataLoader do
     # Default aggregations if none specified
     case aggregation_types do
       [] ->
-        Logger.debug("No group-scoped variables found for level #{group_level}, using defaults")
+        Logger.debug(fn ->
+          "No group-scoped variables found for level #{group_level}, using defaults"
+        end)
+
         [:sum, :count]
 
       types ->

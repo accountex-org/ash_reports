@@ -1,20 +1,16 @@
 defmodule AshReports.Typst.DataProcessor do
   @moduledoc """
-  Handles data transformation and formatting for Typst templates.
-  Converts Ash resource data into Typst-compatible format with
-  proper type conversion and relationship handling.
+  Handles data transformation and type conversion for Typst templates.
 
-  This module provides the core data transformation logic that bridges
-  Ash resource structures with Typst template requirements, ensuring
-  proper type conversion and relationship flattening.
+  Converts Ash resource data into Typst-compatible format with proper type
+  conversion and relationship handling. This module is used by the streaming
+  pipeline's transformer function to process individual records.
 
   ## Key Responsibilities
 
   - **Type Conversion**: DateTime, Decimal, Money, UUID to Typst-compatible formats
   - **Relationship Flattening**: Deep relationship traversal with nil safety
-  - **Variable Calculations**: Multi-scope variable processing (detail, group, page, report)
-  - **Group Processing**: Multi-level grouping with break detection
-  - **Memory Efficiency**: Streaming-friendly transformations
+  - **Streaming-Friendly**: Designed for per-record transformation in GenStage pipelines
 
   ## Type Conversion Strategy
 
@@ -36,7 +32,6 @@ defmodule AshReports.Typst.DataProcessor do
 
   """
 
-  alias AshReports.{Group, Variable}
   alias Decimal, as: D
 
   require Logger
@@ -45,16 +40,6 @@ defmodule AshReports.Typst.DataProcessor do
   Typst-compatible record format (plain map with string/atom keys).
   """
   @type typst_record :: %{(atom() | String.t()) => term()}
-
-  @typedoc """
-  Variable scope calculations for different band types.
-  """
-  @type variable_scopes :: %{
-          detail: map(),
-          group: map(),
-          page: map(),
-          report: map()
-        }
 
   @typedoc """
   Options for data conversion and processing.
@@ -122,124 +107,73 @@ defmodule AshReports.Typst.DataProcessor do
   @spec convert_records([struct()], conversion_options()) ::
           {:ok, [typst_record()]} | {:error, term()}
   def convert_records(ash_records, options \\ []) when is_list(ash_records) do
-    Logger.debug("Converting #{length(ash_records)} records for Typst")
+    Logger.debug(fn -> "Converting #{length(ash_records)} records for Typst" end)
 
     try do
       opts = build_conversion_options(options)
       converted = Enum.map(ash_records, &convert_single_record(&1, opts))
 
-      Logger.debug("Successfully converted #{length(converted)} records")
+      Logger.debug(fn -> "Successfully converted #{length(converted)} records" end)
       {:ok, converted}
     rescue
+      error in [ArgumentError, KeyError, Protocol.UndefinedError] ->
+        Logger.error(fn -> "Failed to convert records: #{inspect(error)}" end)
+        {:error, {:conversion_failed, error}}
+
       error ->
-        Logger.error("Failed to convert records: #{inspect(error)}")
+        Logger.error(
+          fn -> "Unexpected error during record conversion: #{inspect(error)}" end,
+          crash_reason: {error, __STACKTRACE__}
+        )
+
         {:error, {:conversion_failed, error}}
     end
   end
 
   @doc """
-  Implements variable scope calculations for different band types.
+  Converts a single Ash record to Typst-compatible format.
 
-  Calculates variables at different scopes (detail, group, page, report)
-  based on AshReports variable definitions and record data.
+  This function is useful for custom streaming transformers that need to
+  process individual records with the same type conversion logic used by
+  the batch conversion.
 
   ## Parameters
 
-    * `records` - Converted typst records
-    * `variables` - AshReports variable definitions
+    * `record` - An Ash struct or plain map to convert
+    * `opts` - Conversion options (same as `convert_records/2`)
 
   ## Returns
 
-    * `{:ok, variable_scopes()}` - Calculated variable values
-    * `{:error, term()}` - Calculation failure
+  A plain map with Typst-compatible values.
 
   ## Examples
 
-      iex> records = [%{amount: 100}, %{amount: 200}, %{amount: 150}]
-      iex> variables = [
-      ...>   %Variable{name: :total_amount, function: :sum, source: :amount, scope: :report}
-      ...> ]
-      iex> {:ok, scopes} = DataProcessor.calculate_variable_scopes(records, variables)
-      iex> scopes.report.total_amount
-      450
+      iex> record = %MyApp.Customer{name: "Acme", created_at: ~U[2024-01-15 10:30:00Z]}
+      iex> DataProcessor.convert_single_record(record)
+      %{name: "Acme", created_at: "2024-01-15T10:30:00Z"}
+
+      # With custom options
+      iex> DataProcessor.convert_single_record(record, datetime_format: :custom)
+      %{name: "Acme", created_at: "2024-01-15"}
 
   """
-  @spec calculate_variable_scopes([typst_record()], [Variable.t()]) ::
-          {:ok, variable_scopes()} | {:error, term()}
-  def calculate_variable_scopes(records, variables)
-      when is_list(records) and is_list(variables) do
-    Logger.debug("Calculating variable scopes for #{length(variables)} variables")
+  @spec convert_single_record(struct() | map(), conversion_options()) :: typst_record()
+  def convert_single_record(record, opts \\ [])
 
-    try do
-      scopes = %{
-        detail: calculate_detail_variables(records, filter_variables(variables, :detail)),
-        group: calculate_group_variables(records, filter_variables(variables, :group)),
-        page: calculate_page_variables(records, filter_variables(variables, :page)),
-        report: calculate_report_variables(records, filter_variables(variables, :report))
-      }
-
-      Logger.debug(
-        "Successfully calculated variable scopes: #{map_size(scopes.report)} report, #{map_size(scopes.group)} group"
-      )
-
-      {:ok, scopes}
-    rescue
-      error ->
-        Logger.error("Failed to calculate variable scopes: #{inspect(error)}")
-        {:error, {:variable_calculation_failed, error}}
-    end
-  end
-
-  @doc """
-  Processes group definitions and creates grouped data structures.
-
-  Creates multi-level grouped data based on AshReports group definitions,
-  with proper break detection and hierarchy preservation.
-
-  ## Parameters
-
-    * `records` - Converted typst records
-    * `groups` - AshReports group definitions
-
-  ## Returns
-
-    * `{:ok, [group_data()]}` - Grouped data structures
-    * `{:error, term()}` - Processing failure
-
-  """
-  @spec process_groups([typst_record()], [Group.t()]) :: {:ok, [map()]} | {:error, term()}
-  def process_groups(records, groups) when is_list(records) and is_list(groups) do
-    Logger.debug("Processing #{length(groups)} group definitions for #{length(records)} records")
-
-    if Enum.empty?(groups) do
-      {:ok, []}
-    else
-      try do
-        grouped_data = create_grouped_structure(records, groups)
-        Logger.debug("Successfully created #{length(grouped_data)} groups")
-        {:ok, grouped_data}
-      rescue
-        error ->
-          Logger.error("Failed to process groups: #{inspect(error)}")
-          {:error, {:group_processing_failed, error}}
-      end
-    end
-  end
-
-  # Private Functions - Type Conversion
-
-  defp convert_single_record(record, opts) when is_struct(record) do
+  def convert_single_record(record, opts) when is_struct(record) do
     record
     |> Map.from_struct()
     |> convert_map_values(opts)
     |> maybe_flatten_relationships(opts)
   end
 
-  defp convert_single_record(record, opts) when is_map(record) do
+  def convert_single_record(record, opts) when is_map(record) do
     record
     |> convert_map_values(opts)
     |> maybe_flatten_relationships(opts)
   end
+
+  # Private Functions - Type Conversion
 
   defp convert_map_values(map, opts) when is_map(map) do
     Map.new(map, fn {key, value} ->
@@ -360,118 +294,6 @@ defmodule AshReports.Typst.DataProcessor do
 
       {flattened_key, flattened_value}
     end)
-  end
-
-  # Private Functions - Variable Calculations
-
-  defp filter_variables(variables, scope) do
-    Enum.filter(variables, fn var ->
-      Map.get(var, :reset_on, :detail) == scope
-    end)
-  end
-
-  defp calculate_detail_variables(_records, variables) do
-    # Detail variables are typically calculated per-record during iteration
-    # For now, return empty map as detail variables are handled in templates
-    Map.new(variables, fn var -> {var.name, nil} end)
-  end
-
-  defp calculate_group_variables(_records, variables) do
-    # Group variables will be calculated during grouping phase
-    Map.new(variables, fn var -> {var.name, nil} end)
-  end
-
-  defp calculate_page_variables(_records, variables) do
-    # Page variables like page numbers, calculated during rendering
-    Map.new(variables, fn var -> {var.name, nil} end)
-  end
-
-  defp calculate_report_variables(records, variables) do
-    Map.new(variables, fn var ->
-      value = calculate_variable_value(records, var)
-      {var.name, value}
-    end)
-  end
-
-  defp calculate_variable_value(records, %{type: type, name: name}) do
-    # For now, we'll use a simple approach where we assume the variable name
-    # corresponds to a field in the records. In a full implementation,
-    # this would evaluate the variable's expression.
-    source_field = extract_source_field(name)
-    values = Enum.map(records, &Map.get(&1, source_field))
-
-    case type do
-      :sum ->
-        Enum.sum(values)
-
-      :count ->
-        length(records)
-
-      :average ->
-        case Enum.sum(values) do
-          0 -> 0
-          sum -> sum / length(records)
-        end
-
-      :min ->
-        Enum.min(values, fn -> nil end)
-
-      :max ->
-        Enum.max(values, fn -> nil end)
-
-      _ ->
-        nil
-    end
-  rescue
-    _ -> nil
-  end
-
-  # Helper to extract source field from variable name
-  # This is a simplified approach - in reality this would be based on the variable's expression
-  defp extract_source_field(name) do
-    name_str = to_string(name)
-
-    cond do
-      String.contains?(name_str, "amount") -> :amount
-      String.contains?(name_str, "score") -> :score
-      String.contains?(name_str, "count") -> :id
-      # default fallback
-      true -> :amount
-    end
-  end
-
-  # Private Functions - Group Processing
-
-  defp create_grouped_structure(records, groups) do
-    case groups do
-      [] ->
-        []
-
-      [primary_group | nested_groups] ->
-        create_groups_by_field(records, primary_group, nested_groups)
-    end
-  end
-
-  defp create_groups_by_field(records, group, nested_groups) do
-    grouped = Enum.group_by(records, &Map.get(&1, group.field))
-
-    Map.new(grouped, fn {group_value, group_records} ->
-      nested_structure =
-        if length(nested_groups) > 0 do
-          create_grouped_structure(group_records, nested_groups)
-        else
-          group_records
-        end
-
-      {group_value,
-       %{
-         group_key: group_value,
-         records: group_records,
-         nested_groups: nested_structure,
-         record_count: length(group_records)
-       }}
-    end)
-    |> Map.values()
   end
 
   # Private Functions - Options
