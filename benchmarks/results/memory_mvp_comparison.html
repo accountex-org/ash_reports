@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <title>Benchee Report</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html; charset=utf8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+    <link rel="stylesheet" type="text/css" href="assets/stylesheets/benchee.css">
+    <link rel="stylesheet" type="text/css" href="assets/fontello/css/fontello.css">
+  
+</head>
+
+  <body>
+
+    <div class="header">
+  <h1>benchee report</h1>
+  
+
+  <span class="version-note">
+  <a href="javascript:toggleSystemDataInfo();" title="Click to toggle system info">System info</a>
+</span>
+
+</div>
+
+
+    <article id="system-info" class="benchee-systeminfo" >
+  <h3>System info</h3>
+  <ul class="benchee-systeminfo-list">
+    <li>Elixir: 1.18.4</li>
+    <li>Erlang: 27.3</li>
+    <li>Operating system: Linux</li>
+    <li>Available memory: 62.58 GB</li>
+    <li>CPU Information: 12th Gen Intel(R) Core(TM) i7-12700F</li>
+    <li>Number of Available Cores: 20</li>
+  </ul>
+</article>
+
+
+    
+
+    
+      <article>
+        <h2>
+          Memory Usage Comparison
+          <a href="https://github.com/PragTob/benchee_html/wiki/Chart-Types#comparison">
+            <i
+            class="benchee-help-icon icon-question-circle-o"
+            title="This is a memory usage comparison"
+            ></i>
+          </a>
+        </h2>
+        <section>
+          <table>
+  <thead>
+    <tr>
+      <th class="text-left">Name</th>
+      
+      <th>Average</th>
+      <th>Deviation</th>
+      <th>Median</th>
+      <th>Mode</th>
+      <th>Minimum</th>
+      <th>Maximum</th>
+      <th>Sample size</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+      
+      <tr>
+        
+          <td class="text-left"><a href="memory_mvp_streaming_100k_records.html">Streaming 100K records</a></td>
+        
+        
+          <td>80.19 MB</td>
+          <td>±0.00%</td>
+          <td>80.19 MB</td>
+          <td>none</td>
+          <td>80.19 MB</td>
+          <td>80.19 MB</td>
+        
+        <td>1</td>
+      </tr>
+    
+  </tbody>
+</table>
+
+        </section>
+
+        <section class="benchee-plot-container">
+          <div id="memory-comparison" class="job-count-1 plot"></div>
+        </section>
+
+        <section class="benchee-plot-container">
+          <div id="memory-box-plot" class="job-count-1 plot"></div>
+        </section>
+      </article>
+    
+
+    <footer>
+      <a href="https://github.com/PragTob/benchee" target="blank">benchee version: 1.4.0 </a>
+<br/>
+<a href="https://github.com/PragTob/benchee_html" target="blank">benchee_html version: 1.0.1</a>
+
+
+    </footer>
+
+    
+  <script src="assets/javascripts/plotly-2.27.0.min.js"></script>
+  <script src="assets/javascripts/benchee.js"></script>
+
+
+
+    <script>
+      var scenarios     = [{"name":"Streaming 100K records","job_name":"Streaming 100K records","input_name":"__no_input","run_time_data":{"statistics":{"maximum":null,"mode":null,"percentiles":null,"average":null,"median":null,"minimum":null,"sample_size":0,"std_dev":null,"ips":null,"std_dev_ratio":null,"relative_more":null,"absolute_difference":null,"relative_less":null,"std_dev_ips":null},"samples":[]},"memory_usage_data":{"statistics":{"maximum":84088592,"mode":null,"percentiles":{"25":84088592,"50":84088592.0,"75":84088592.0,"99":84088592.0},"average":84088592.0,"median":84088592.0,"minimum":84088592,"sample_size":1,"std_dev":0.0,"ips":null,"std_dev_ratio":0.0,"relative_more":null,"absolute_difference":null,"relative_less":null,"std_dev_ips":null},"samples":[84088592]},"tag":null}];
+      var inputHeadline = "";
+
+      
+
+      
+        drawMemoryComparisonChart(scenarios, inputHeadline);
+        drawMemoryComparisonBoxPlot(scenarios, inputHeadline);
+      
+    </script>
+  </body>
+</html>

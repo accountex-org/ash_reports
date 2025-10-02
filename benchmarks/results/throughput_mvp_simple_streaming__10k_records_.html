@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <title>Benchee Report</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html; charset=utf8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+    <link rel="stylesheet" type="text/css" href="assets/stylesheets/benchee.css">
+    <link rel="stylesheet" type="text/css" href="assets/fontello/css/fontello.css">
+  
+</head>
+
+  <body>
+
+    <div class="header">
+  <h1>benchee report</h1>
+  
+
+  <span class="version-note">
+  <a href="javascript:toggleSystemDataInfo();" title="Click to toggle system info">System info</a>
+</span>
+
+</div>
+
+
+    <article id="system-info" class="benchee-systeminfo" >
+  <h3>System info</h3>
+  <ul class="benchee-systeminfo-list">
+    <li>Elixir: 1.18.4</li>
+    <li>Erlang: 27.3</li>
+    <li>Operating system: Linux</li>
+    <li>Available memory: 62.58 GB</li>
+    <li>CPU Information: 12th Gen Intel(R) Core(TM) i7-12700F</li>
+    <li>Number of Available Cores: 20</li>
+  </ul>
+</article>
+
+
+    
+      <article>
+        <h2>
+          <a name="run_time" href="#run_time">Simple streaming (10K records) Run Time</a>
+          <a href="https://github.com/PragTob/benchee_html/wiki/Chart-Types#individual">
+            <i
+              class="benchee-help-icon icon-question-circle-o"
+              title="Graphs showing the individual run time distribution for Simple streaming (10K records).
+  Run Times Histogram shows the distribution of occurrences of specific run times in buckets.
+  Raw Run Times shows all individual recorded run times in the order they were recorded in."
+            ></i>
+          </a>
+        </h2>
+
+        <section>
+          <table>
+  <thead>
+    <tr>
+      <th class="text-left">Name</th>
+      
+        <th>Iterations per Second</th>
+      
+      <th>Average</th>
+      <th>Deviation</th>
+      <th>Median</th>
+      <th>Mode</th>
+      <th>Minimum</th>
+      <th>Maximum</th>
+      <th>Sample size</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+      
+      <tr>
+        
+          <td class="text-left">Simple streaming (10K records)</td>
+        
+        
+          <td>197.21</td>
+          <td>5.07 ms</td>
+          <td>±12.81%</td>
+          <td>4.91 ms</td>
+          <td>none</td>
+          <td>4.05 ms</td>
+          <td>6.67 ms</td>
+        
+        <td>20</td>
+      </tr>
+    
+  </tbody>
+</table>
+
+        </section>
+
+        <section class="benchee-plot-container">
+          <div id="run-times-histogram" class="plot"></div>
+        </section>
+        <section class="benchee-plot-container">
+          <div id="raw-run-times" class="plot"></div>
+        </section>
+      </article>
+    
+
+    
+      <article>
+        <h2>
+          <a name="memory" href="#memory">Simple streaming (10K records) Memory</a>
+          <a href="https://github.com/PragTob/benchee_html/wiki/Chart-Types#individual">
+            <i
+              class="benchee-help-icon icon-question-circle-o"
+              title="Graphs showing the individual memory usage distribution for Simple streaming (10K records).
+  Run Times Histogram shows the distribution of occurrences of specific run times in buckets.
+  Raw Run Times shows all individual recorded run times in the order they were recorded in."
+            ></i>
+          </a>
+        </h2>
+
+        <section>
+          <table>
+  <thead>
+    <tr>
+      <th class="text-left">Name</th>
+      
+      <th>Average</th>
+      <th>Deviation</th>
+      <th>Median</th>
+      <th>Mode</th>
+      <th>Minimum</th>
+      <th>Maximum</th>
+      <th>Sample size</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+      
+      <tr>
+        
+          <td class="text-left">Simple streaming (10K records)</td>
+        
+        
+          <td>7.86 MB</td>
+          <td>±0.00%</td>
+          <td>7.86 MB</td>
+          <td>7.86 MB</td>
+          <td>7.86 MB</td>
+          <td>7.86 MB</td>
+        
+        <td>126</td>
+      </tr>
+    
+  </tbody>
+</table>
+
+        </section>
+
+        
+      </article>
+    
+
+    <footer>
+      <a href="https://github.com/PragTob/benchee" target="blank">benchee version: 1.4.0 </a>
+<br/>
+<a href="https://github.com/PragTob/benchee_html" target="blank">benchee_html version: 1.0.1</a>
+
+
+    </footer>
+
+    
+  <script src="assets/javascripts/plotly-2.27.0.min.js"></script>
+  <script src="assets/javascripts/benchee.js"></script>
+
+
+
+    <script>
+      var scenario = {"name":"Simple streaming (10K records)","job_name":"Simple streaming (10K records)","input_name":"__no_input","run_time_data":{"statistics":{"maximum":6666339,"mode":null,"percentiles":{"25":4594650.0,"50":4911738.5,"75":5450305.75,"99":6666339.0},"average":5070693.8,"median":4911738.5,"minimum":4049980,"sample_size":20,"std_dev":649628.4944739449,"ips":197.21167150735863,"std_dev_ratio":0.12811432125401556,"relative_more":null,"absolute_difference":null,"relative_less":null,"std_dev_ips":25.265639438535132},"samples":[4886176,5805569,4923325,4317938,4393709,4538591,5669009,5068431,4526674,4049980,4900152,5290968,5482340,4774378,5354203,6666339,6206677,4818820,4977770,4762827]},"memory_usage_data":{"statistics":{"maximum":8240496,"mode":8240496,"percentiles":{"25":8240496.0,"50":8240496.0,"75":8240496.0,"99":8240496.0},"average":8240496.0,"median":8240496.0,"minimum":8240496,"sample_size":126,"std_dev":0.0,"ips":null,"std_dev_ratio":0.0,"relative_more":null,"absolute_difference":null,"relative_less":null,"std_dev_ips":null},"samples":[8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496,8240496]},"tag":null};
+
+      var inputHeadline = ""
+
+      
+        drawRunTimeHistogram(scenario, inputHeadline);
+        drawRawRunTimeChart(scenario, inputHeadline);
+      
+
+      
+        if (scenario.memory_usage_data.statistics.std_dev !== 0) {
+          drawMemoryHistogram(scenario, inputHeadline);
+          drawRawMemoryChart(scenario, inputHeadline);
+        };
+      
+    </script>
+  </body>
+</html>
