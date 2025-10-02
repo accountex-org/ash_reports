@@ -108,7 +108,7 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 # Stage 2: GenStage Streaming Pipeline for Large Datasets
 
 **Duration**: 3-4 weeks (Section 2.4 adds ~1 week for DSL integration)
-**Status**: 🔄 **In Progress** - Sections 2.1-2.3 Complete ✅
+**Status**: ✅ **95% COMPLETE** - All Core Implementation Done, Testing Remaining
 **Goal**: Implement memory-efficient streaming for reports and visualizations with 10K+ records using GenStage/Flow, with automatic configuration from Report DSL
 
 **Why This Stage**: GenStage streaming provides foundational infrastructure for both full report generation (100K+ records) and D3 chart data aggregation (1M records → 500 datapoints). This must be implemented before D3 visualization work (Stage 3) to enable efficient chart generation from large datasets.
@@ -121,21 +121,38 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 - Real-time report updates with incremental data loading
 - Memory-efficient export for large datasets
 
-## 2.1 GenStage Infrastructure Setup
+## 2.1 GenStage Infrastructure Setup ✅ **COMPLETED**
 
-### 2.1.1 Dependencies and Core Modules
-- [ ] Add gen_stage dependency to mix.exs (~> 1.2)
-- [ ] Add flow dependency to mix.exs (~> 1.2)
-- [ ] Create `AshReports.Typst.StreamingPipeline` module
-- [ ] Design producer-consumer architecture
-- [ ] Document streaming API and usage patterns
+### 2.1.1 Dependencies and Core Modules ✅
+- [x] Add gen_stage dependency to mix.exs (~> 1.2)
+- [x] Add flow dependency to mix.exs (~> 1.2)
+- [x] Create `AshReports.Typst.StreamingPipeline` module
+  - Complete API with start_pipeline, stop_pipeline, pause/resume
+  - Comprehensive documentation and examples
+- [x] Design producer-consumer architecture
+  - Producer → ProducerConsumer → Consumer (Stream)
+  - Fully implemented with backpressure and telemetry
+- [x] Document streaming API and usage patterns
+  - Detailed @moduledoc with architecture diagrams
+  - Examples for all common use cases
 
-### 2.1.2 Supervision Tree
-- [ ] Implement supervision tree for streaming processes
-- [ ] Add dynamic supervisor for concurrent streams
-- [ ] Create stream registry for tracking active pipelines
-- [ ] Implement cleanup on process termination
-- [ ] Add health monitoring and restart strategies
+### 2.1.2 Supervision Tree ✅
+- [x] Implement supervision tree for streaming processes
+  - `StreamingPipeline.Supervisor` with :one_for_one strategy
+  - Max 10 restarts in 60 seconds
+- [x] Add dynamic supervisor for concurrent streams
+  - `PipelineSupervisor` (DynamicSupervisor)
+  - Isolates individual pipeline failures
+- [x] Create stream registry for tracking active pipelines
+  - `Registry` module with ETS-based tracking
+  - Pipeline metadata and status management
+- [x] Implement cleanup on process termination
+  - Automatic cleanup on pipeline stop
+  - Telemetry events for monitoring
+- [x] Add health monitoring and restart strategies
+  - `HealthMonitor` GenServer with periodic checks
+  - Circuit breaker support
+  - Automatic restart via supervisor
 
 ## 2.2 Producer Implementation ✅
 
@@ -250,17 +267,26 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 - [x] Add expression validation and error handling
 - [x] Create fallback mechanisms for unparseable expressions
 
-### 2.4.2 Variable-to-Aggregation Mapping
-- [ ] Map DSL variable types to ProducerConsumer aggregation types:
-  - `:sum` → `:sum`
-  - `:count` → `:count`
-  - `:average` → `:avg`
-  - `:min` → `:min`
-  - `:max` → `:max`
-- [ ] Filter variables by `reset_on: :group` scope
-- [ ] Match variables to group levels via `reset_group` field
+### 2.4.2 Variable-to-Aggregation Mapping ✅ **COMPLETED** (except report-level)
+- [x] Map DSL variable types to ProducerConsumer aggregation types:
+  - `:sum` → `:sum` ✅
+  - `:count` → `:count` ✅
+  - `:average` → `:avg` ✅
+  - `:min` → `:min` ✅
+  - `:max` → `:max` ✅
+  - Plus: `:first` → `:first`, `:last` → `:last`
+  - Implemented in `map_variable_type_to_aggregation/1` (data_loader.ex:501-512)
+- [x] Filter variables by `reset_on: :group` scope
+  - Implemented in `derive_aggregations_for_group/2` (data_loader.ex:476-478)
+- [x] Match variables to group levels via `reset_group` field
+  - Fully implemented with group level matching
+  - Tested with multi-level grouping scenarios
 - [ ] Support report-level variables (`reset_on: :report`) as global aggregations
-- [ ] Handle multi-level hierarchical grouping (Territory → Customer → Order Type)
+  - **Deferred**: May use different mechanism or post-streaming calculation
+  - Global aggregations currently handled via `:aggregations` option
+- [x] Handle multi-level hierarchical grouping (Territory → Customer → Order Type)
+  - Fully implemented with cumulative field accumulation
+  - Tested with 3-level hierarchy (test: "three-level grouping returns fully cumulative fields")
 
 ### 2.4.3 Grouped Aggregation Config Builder
 - [x] Create `build_grouped_aggregations_from_dsl/1` function
@@ -336,22 +362,45 @@ report.variables = [
 **Architectural Decision**: Removed dual-mode (batch/streaming) in favor of streaming-only.
 All reports now use GenStage pipeline regardless of size for consistency and memory safety.
 
-### 2.5.3 Stream Control
-- [ ] Implement stream cancellation support
-- [ ] Add pause/resume functionality
-- [ ] Create stream timeout handling
-- [ ] Implement graceful shutdown
-- [ ] Add stream status queries
+### 2.5.3 Stream Control ✅ **COMPLETED**
+- [x] Implement stream cancellation support
+  - `StreamingPipeline.stop_pipeline/1` implemented
+  - Stops Producer and ProducerConsumer stages
+  - Updates registry status to `:stopped`
+- [x] Add pause/resume functionality
+  - `StreamingPipeline.pause_pipeline/1` implemented
+  - `StreamingPipeline.resume_pipeline/1` implemented
+  - Circuit breaker support via status updates
+- [x] Create stream timeout handling
+  - Default timeout: 300_000ms (5 minutes)
+  - Configurable via `:timeout` option
+  - Prevents hung processes
+- [x] Implement graceful shutdown
+  - Cleanup on process termination
+  - Telemetry events on stop
+  - Forced garbage collection
+- [x] Add stream status queries
+  - `StreamingPipeline.get_pipeline_info/1` implemented
+  - `StreamingPipeline.list_pipelines/1` with filtering
+  - Registry tracks: `:running`, `:paused`, `:stopped`, `:failed`
 
 ## 2.6 Testing and Performance Validation
 
 ### 2.6.1 Unit and Integration Tests
-- [ ] Create streaming pipeline unit tests
-- [ ] Test producer demand handling
-- [ ] Test consumer backpressure
-- [ ] Test aggregation functions (global and grouped)
-- [ ] Test DSL-driven aggregation config generation (from Section 2.4)
-- [ ] Test error handling and recovery
+- [x] Create streaming pipeline unit tests
+  - MVP test suite: 16 critical tests covering producer, consumer, aggregations, and end-to-end
+  - Test file: `test/ash_reports/typst/streaming_pipeline/streaming_mvp_test.exs`
+- [x] Test producer demand handling
+  - Basic demand, chunk size respect, backpressure, completion, empty data
+- [x] Test consumer backpressure
+  - ProducerConsumer maintains backpressure through transformation pipeline
+- [x] Test aggregation functions (global and grouped)
+  - Sum, count, average, min/max aggregations tested
+  - Grouped aggregations by field tested
+- [x] Test DSL-driven aggregation config generation (from Section 2.4)
+  - Existing tests in `data_loader_test.exs` cover cumulative grouping
+- [x] Test error handling and recovery
+  - Transformation error handling tested
 
 ### 2.6.2 Performance Benchmarks
 - [ ] Add memory usage benchmarks (target: <1.5x baseline)
