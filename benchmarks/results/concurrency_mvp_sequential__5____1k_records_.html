@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <title>Benchee Report</title>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html; charset=utf8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+    <link rel="stylesheet" type="text/css" href="assets/stylesheets/benchee.css">
+    <link rel="stylesheet" type="text/css" href="assets/fontello/css/fontello.css">
+  
+</head>
+
+  <body>
+
+    <div class="header">
+  <h1>benchee report</h1>
+  
+
+  <span class="version-note">
+  <a href="javascript:toggleSystemDataInfo();" title="Click to toggle system info">System info</a>
+</span>
+
+</div>
+
+
+    <article id="system-info" class="benchee-systeminfo" >
+  <h3>System info</h3>
+  <ul class="benchee-systeminfo-list">
+    <li>Elixir: 1.18.4</li>
+    <li>Erlang: 27.3</li>
+    <li>Operating system: Linux</li>
+    <li>Available memory: 62.58 GB</li>
+    <li>CPU Information: 12th Gen Intel(R) Core(TM) i7-12700F</li>
+    <li>Number of Available Cores: 20</li>
+  </ul>
+</article>
+
+
+    
+      <article>
+        <h2>
+          <a name="run_time" href="#run_time">Sequential (5 × 1K records) Run Time</a>
+          <a href="https://github.com/PragTob/benchee_html/wiki/Chart-Types#individual">
+            <i
+              class="benchee-help-icon icon-question-circle-o"
+              title="Graphs showing the individual run time distribution for Sequential (5 × 1K records).
+  Run Times Histogram shows the distribution of occurrences of specific run times in buckets.
+  Raw Run Times shows all individual recorded run times in the order they were recorded in."
+            ></i>
+          </a>
+        </h2>
+
+        <section>
+          <table>
+  <thead>
+    <tr>
+      <th class="text-left">Name</th>
+      
+        <th>Iterations per Second</th>
+      
+      <th>Average</th>
+      <th>Deviation</th>
+      <th>Median</th>
+      <th>Mode</th>
+      <th>Minimum</th>
+      <th>Maximum</th>
+      <th>Sample size</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+      
+      <tr>
+        
+          <td class="text-left">Sequential (5 × 1K records)</td>
+        
+        
+          <td>425.26</td>
+          <td>2.35 ms</td>
+          <td>±12.22%</td>
+          <td>2.32 ms</td>
+          <td>none</td>
+          <td>1.92 ms</td>
+          <td>3.37 ms</td>
+        
+        <td>43</td>
+      </tr>
+    
+  </tbody>
+</table>
+
+        </section>
+
+        <section class="benchee-plot-container">
+          <div id="run-times-histogram" class="plot"></div>
+        </section>
+        <section class="benchee-plot-container">
+          <div id="raw-run-times" class="plot"></div>
+        </section>
+      </article>
+    
+
+    
+      <article>
+        <h2>
+          <a name="memory" href="#memory">Sequential (5 × 1K records) Memory</a>
+          <a href="https://github.com/PragTob/benchee_html/wiki/Chart-Types#individual">
+            <i
+              class="benchee-help-icon icon-question-circle-o"
+              title="Graphs showing the individual memory usage distribution for Sequential (5 × 1K records).
+  Run Times Histogram shows the distribution of occurrences of specific run times in buckets.
+  Raw Run Times shows all individual recorded run times in the order they were recorded in."
+            ></i>
+          </a>
+        </h2>
+
+        <section>
+          <table>
+  <thead>
+    <tr>
+      <th class="text-left">Name</th>
+      
+      <th>Average</th>
+      <th>Deviation</th>
+      <th>Median</th>
+      <th>Mode</th>
+      <th>Minimum</th>
+      <th>Maximum</th>
+      <th>Sample size</th>
+    </tr>
+  </thead>
+  <tbody>
+    
+      
+      <tr>
+        
+          <td class="text-left">Sequential (5 × 1K records)</td>
+        
+        
+          <td>3.93 MB</td>
+          <td>±0.00%</td>
+          <td>3.93 MB</td>
+          <td>3.93 MB</td>
+          <td>3.93 MB</td>
+          <td>3.93 MB</td>
+        
+        <td>327</td>
+      </tr>
+    
+  </tbody>
+</table>
+
+        </section>
+
+        
+      </article>
+    
+
+    <footer>
+      <a href="https://github.com/PragTob/benchee" target="blank">benchee version: 1.4.0 </a>
+<br/>
+<a href="https://github.com/PragTob/benchee_html" target="blank">benchee_html version: 1.0.1</a>
+
+
+    </footer>
+
+    
+  <script src="assets/javascripts/plotly-2.27.0.min.js"></script>
+  <script src="assets/javascripts/benchee.js"></script>
+
+
+
+    <script>
+      var scenario = {"name":"Sequential (5 × 1K records)","job_name":"Sequential (5 × 1K records)","input_name":"__no_input","run_time_data":{"statistics":{"maximum":3374301,"mode":null,"percentiles":{"25":2127008.0,"50":2315247.0,"75":2550625.0,"99":3374301.0},"average":2351527.2558139535,"median":2315247.0,"minimum":1922189,"sample_size":43,"std_dev":287344.8480959597,"ips":425.25554297854046,"std_dev_ratio":0.12219498939913356,"relative_more":1.9522604509538202,"absolute_difference":1147012.123283833,"relative_less":0.512226736709965,"std_dev_ips":51.96409656618554},"samples":[3374301,2441592,2265353,2288190,2372839,2292847,2177330,2465935,2553318,2264663,2550625,2655747,2408348,2346652,2419183,2850511,1965126,1969913,2526963,2563237,2315247,2163664,2273297,2445982,2117955,2661559,2579792,1931839,2039148,1922189,1923981,2055793,2663618,2650740,2127008,2222935,2064935,2352907,2313434,2680894,2544680,2202513,2108889]},"memory_usage_data":{"statistics":{"maximum":4119264,"mode":4119264,"percentiles":{"25":4119264.0,"50":4119264.0,"75":4119264.0,"99":4119264.0},"average":4119264.0,"median":4119264.0,"minimum":4119264,"sample_size":327,"std_dev":0.0,"ips":null,"std_dev_ratio":0.0,"relative_more":138.7450402471541,"absolute_difference":4089574.54953271,"relative_less":0.007207464845003797,"std_dev_ips":null},"samples":[4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264,4119264]},"tag":null};
+
+      var inputHeadline = ""
+
+      
+        drawRunTimeHistogram(scenario, inputHeadline);
+        drawRawRunTimeChart(scenario, inputHeadline);
+      
+
+      
+        if (scenario.memory_usage_data.statistics.std_dev !== 0) {
+          drawMemoryHistogram(scenario, inputHeadline);
+          drawRawMemoryChart(scenario, inputHeadline);
+        };
+      
+    </script>
+  </body>
+</html>
