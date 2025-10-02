@@ -387,12 +387,20 @@ All reports now use GenStage pipeline regardless of size for consistency and mem
 ## 2.6 Testing and Performance Validation
 
 ### 2.6.1 Unit and Integration Tests
-- [ ] Create streaming pipeline unit tests
-- [ ] Test producer demand handling
-- [ ] Test consumer backpressure
-- [ ] Test aggregation functions (global and grouped)
-- [ ] Test DSL-driven aggregation config generation (from Section 2.4)
-- [ ] Test error handling and recovery
+- [x] Create streaming pipeline unit tests
+  - MVP test suite: 16 critical tests covering producer, consumer, aggregations, and end-to-end
+  - Test file: `test/ash_reports/typst/streaming_pipeline/streaming_mvp_test.exs`
+- [x] Test producer demand handling
+  - Basic demand, chunk size respect, backpressure, completion, empty data
+- [x] Test consumer backpressure
+  - ProducerConsumer maintains backpressure through transformation pipeline
+- [x] Test aggregation functions (global and grouped)
+  - Sum, count, average, min/max aggregations tested
+  - Grouped aggregations by field tested
+- [x] Test DSL-driven aggregation config generation (from Section 2.4)
+  - Existing tests in `data_loader_test.exs` cover cumulative grouping
+- [x] Test error handling and recovery
+  - Transformation error handling tested
 
 ### 2.6.2 Performance Benchmarks
 - [ ] Add memory usage benchmarks (target: <1.5x baseline)
