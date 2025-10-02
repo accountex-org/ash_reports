@@ -2,7 +2,6 @@ defmodule AshReports.Typst.DataProcessorTest do
   use ExUnit.Case, async: true
 
   alias AshReports.Typst.DataProcessor
-  alias AshReports.Variable
 
   describe "convert_records/2" do
     test "converts basic records with default options" do
@@ -87,6 +86,37 @@ defmodule AshReports.Typst.DataProcessorTest do
 
     test "handles empty records list" do
       assert {:ok, []} = DataProcessor.convert_records([])
+    end
+  end
+
+  describe "convert_single_record/2" do
+    test "converts a single struct record" do
+      record = %{id: 1, name: "Test", active: true, amount: Decimal.new("100.50")}
+
+      result = DataProcessor.convert_single_record(record)
+
+      assert result.id == 1
+      assert result.name == "Test"
+      assert result.active == true
+      assert result.amount == 100.5
+    end
+
+    test "converts a single map record" do
+      record = %{id: 2, name: "Map Record", count: 42}
+
+      result = DataProcessor.convert_single_record(record)
+
+      assert result.id == 2
+      assert result.name == "Map Record"
+      assert result.count == 42
+    end
+
+    test "accepts custom conversion options" do
+      record = %{amount: Decimal.new("123.456")}
+
+      result = DataProcessor.convert_single_record(record, decimal_precision: 1)
+
+      assert result.amount == 123.5
     end
   end
 

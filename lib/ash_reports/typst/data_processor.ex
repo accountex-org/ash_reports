@@ -42,16 +42,6 @@ defmodule AshReports.Typst.DataProcessor do
   @type typst_record :: %{(atom() | String.t()) => term()}
 
   @typedoc """
-  Variable scope calculations for different band types.
-  """
-  @type variable_scopes :: %{
-          detail: map(),
-          group: map(),
-          page: map(),
-          report: map()
-        }
-
-  @typedoc """
   Options for data conversion and processing.
   """
   @type conversion_options :: [
@@ -117,35 +107,73 @@ defmodule AshReports.Typst.DataProcessor do
   @spec convert_records([struct()], conversion_options()) ::
           {:ok, [typst_record()]} | {:error, term()}
   def convert_records(ash_records, options \\ []) when is_list(ash_records) do
-    Logger.debug("Converting #{length(ash_records)} records for Typst")
+    Logger.debug(fn -> "Converting #{length(ash_records)} records for Typst" end)
 
     try do
       opts = build_conversion_options(options)
       converted = Enum.map(ash_records, &convert_single_record(&1, opts))
 
-      Logger.debug("Successfully converted #{length(converted)} records")
+      Logger.debug(fn -> "Successfully converted #{length(converted)} records" end)
       {:ok, converted}
     rescue
+      error in [ArgumentError, KeyError, Protocol.UndefinedError] ->
+        Logger.error(fn -> "Failed to convert records: #{inspect(error)}" end)
+        {:error, {:conversion_failed, error}}
+
       error ->
-        Logger.error("Failed to convert records: #{inspect(error)}")
+        Logger.error(
+          fn -> "Unexpected error during record conversion: #{inspect(error)}" end,
+          crash_reason: {error, __STACKTRACE__}
+        )
+
         {:error, {:conversion_failed, error}}
     end
   end
 
-  # Private Functions - Type Conversion
+  @doc """
+  Converts a single Ash record to Typst-compatible format.
 
-  defp convert_single_record(record, opts) when is_struct(record) do
+  This function is useful for custom streaming transformers that need to
+  process individual records with the same type conversion logic used by
+  the batch conversion.
+
+  ## Parameters
+
+    * `record` - An Ash struct or plain map to convert
+    * `opts` - Conversion options (same as `convert_records/2`)
+
+  ## Returns
+
+  A plain map with Typst-compatible values.
+
+  ## Examples
+
+      iex> record = %MyApp.Customer{name: "Acme", created_at: ~U[2024-01-15 10:30:00Z]}
+      iex> DataProcessor.convert_single_record(record)
+      %{name: "Acme", created_at: "2024-01-15T10:30:00Z"}
+
+      # With custom options
+      iex> DataProcessor.convert_single_record(record, datetime_format: :custom)
+      %{name: "Acme", created_at: "2024-01-15"}
+
+  """
+  @spec convert_single_record(struct() | map(), conversion_options()) :: typst_record()
+  def convert_single_record(record, opts \\ [])
+
+  def convert_single_record(record, opts) when is_struct(record) do
     record
     |> Map.from_struct()
     |> convert_map_values(opts)
     |> maybe_flatten_relationships(opts)
   end
 
-  defp convert_single_record(record, opts) when is_map(record) do
+  def convert_single_record(record, opts) when is_map(record) do
     record
     |> convert_map_values(opts)
     |> maybe_flatten_relationships(opts)
   end
+
+  # Private Functions - Type Conversion
 
   defp convert_map_values(map, opts) when is_map(map) do
     Map.new(map, fn {key, value} ->

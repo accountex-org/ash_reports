@@ -130,15 +130,17 @@ Lazy Stream (constant memory)
 
 ## Performance Characteristics
 
+> **⚠️ Disclaimer**: Memory overhead estimates below are based on component analysis and architectural design, not empirical benchmarks. Actual memory usage may vary depending on data complexity, Erlang VM configuration, and system load. The figures represent reasonable approximations for planning purposes.
+
 | Dataset Size | Batch Mode (Removed) | Streaming Mode (Current) | Impact |
 |-------------|---------------------|-------------------------|--------|
-| 100 records | ~1 MB | ~117 MB | +116 MB overhead |
-| 1,000 records | ~10 MB | ~120 MB | +110 MB overhead |
-| 10,000 records | ~100 MB | ~150 MB | +50 MB overhead |
-| 100,000 records | ~1 GB (or OOM) | ~200 MB | **-800 MB savings** |
+| 100 records | ~1 MB | ~117 MB | +116 MB overhead (estimated) |
+| 1,000 records | ~10 MB | ~120 MB | +110 MB overhead (estimated) |
+| 10,000 records | ~100 MB | ~150 MB | +50 MB overhead (estimated) |
+| 100,000 records | ~1 GB (or OOM) | ~200 MB | **-800 MB savings** (estimated) |
 | 1,000,000 records | **OOM failure** | ~250 MB | **Prevents crashes** |
 
-**Trade-off**: Accept ~110-117 MB baseline overhead for architectural simplicity and memory safety guarantees.
+**Trade-off**: Accept ~110-117 MB estimated baseline overhead for architectural simplicity and memory safety guarantees.
 
 ## Benefits
 
@@ -211,17 +213,19 @@ Still handled by `DataProcessor.convert_records/2` (unchanged):
 
 ## Future Optimizations
 
-If the ~110 MB overhead becomes problematic for small datasets, potential optimizations:
+If the estimated ~110 MB overhead becomes problematic for small datasets, potential optimizations:
 
 1. **Fast Path**: Detect datasets < 1,000 records and process in single ProducerConsumer pass
 2. **Buffer Tuning**: Reduce default buffer_size for small datasets
 3. **Lazy Registry**: Only start Registry/HealthMonitor when needed
 4. **Memory Pooling**: Reuse buffers across multiple streaming operations
+5. **Benchmarking**: Add actual memory profiling to validate estimates and identify optimization opportunities
 
 However, these optimizations are **not currently needed** given:
-- 110 MB is acceptable in modern server environments
+- Estimated 110 MB is acceptable in modern server environments
 - Benefits of simplicity outweigh performance concerns
 - Most reports involve thousands+ of records where streaming excels
+- Actual overhead should be measured in production before optimization
 
 ## Conclusion
 

@@ -8,16 +8,13 @@ defmodule AshReports.Typst.DataLoaderTest do
       config = DataLoader.typst_config()
 
       assert config[:chunk_size] == 1000
-      assert config[:enable_streaming] == false
       assert config[:type_conversion][:datetime_format] == :iso8601
-      assert config[:variable_scopes] == [:detail, :group, :page, :report]
     end
 
     test "allows configuration overrides" do
-      config = DataLoader.typst_config(chunk_size: 2000, enable_streaming: true)
+      config = DataLoader.typst_config(chunk_size: 2000)
 
       assert config[:chunk_size] == 2000
-      assert config[:enable_streaming] == true
       # Defaults should still be present
       assert config[:type_conversion][:datetime_format] == :iso8601
     end
