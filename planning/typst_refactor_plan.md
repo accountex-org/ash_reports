@@ -649,13 +649,40 @@ Ash Query → StreamingProducer (chunks of 500-1000 records)
 
 ## 3.3 Typst Chart Integration
 
-### 3.3.1 SVG Embedding System
-- [ ] Create `AshReports.Typst.ChartEmbedder` module
-- [ ] Implement SVG-to-Typst image embedding (`#image()` function)
-- [ ] Add chart positioning and layout in Typst templates
-- [ ] Create caption and title support with Typst formatting
-- [ ] Implement multi-chart page layouts (grid/flow layouts)
-- [ ] Add chart scaling and responsive sizing (percentage widths)
+### 3.3.1 SVG Embedding System ✅ **COMPLETED** (MVP)
+- [x] Create `AshReports.Typst.ChartEmbedder` module
+  - Module: `lib/ash_reports/typst/chart_embedder.ex` (~270 lines)
+  - Helper: `lib/ash_reports/typst/chart_embedder/typst_formatter.ex` (~150 lines)
+  - Base64 encoding with file fallback for large SVGs (>1MB)
+  - Four main functions: `embed/2`, `embed_grid/2`, `embed_flow/2`, `generate_and_embed/4`
+- [x] Implement SVG-to-Typst image embedding (`#image()` function)
+  - Primary: `#image.decode()` with base64 encoding
+  - Fallback: `#image()` with file paths for large charts
+  - Automatic encoding selection based on SVG size
+- [x] Add chart positioning and layout in Typst templates
+  - Width/height support with multiple formats (pt, mm, cm, %, fr)
+  - Dimension formatting utilities
+  - Maintains aspect ratio when only one dimension specified
+- [x] Create caption and title support with Typst formatting
+  - Title: `#text(size: 14pt, weight: "bold")[...]`
+  - Caption: `#text(size: 10pt, style: "italic")[...]`
+  - Special character escaping for Typst safety
+- [x] Implement multi-chart page layouts (grid/flow layouts)
+  - Grid layout: `#grid()` with configurable columns, gutter, column widths
+  - Flow layout: vertical stacking with `#v()` spacing
+  - Supports custom layout options per chart
+- [x] Add chart scaling and responsive sizing (percentage widths)
+  - Supports percentage widths (e.g., "100%", "50%")
+  - Fractional widths for grid layouts (e.g., "1fr", "2fr")
+  - Numeric values auto-converted to points
+
+**Implementation Summary**:
+- 2 modules (ChartEmbedder + TypstFormatter, ~420 lines)
+- 18 comprehensive tests, all passing
+- Full integration with Charts module
+- Supports single and multi-chart layouts
+- Caption, title, and sizing support
+- Base64 and file encoding strategies
 
 ### 3.3.2 DSL Chart Element
 - [ ] Extend Report DSL with `chart` element type
