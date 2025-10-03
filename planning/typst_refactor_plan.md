@@ -684,13 +684,44 @@ Ash Query → StreamingProducer (chunks of 500-1000 records)
 - Caption, title, and sizing support
 - Base64 and file encoding strategies
 
-### 3.3.2 DSL Chart Element
-- [ ] Extend Report DSL with `chart` element type
-- [ ] Add chart configuration in band definitions (header/detail/footer)
+### 3.3.2 DSL Chart Element ✅ **COMPLETED** (MVP)
+- [x] Extend Report DSL with `chart` element type
+  - Module: `lib/ash_reports/element/chart.ex` (~75 lines)
+  - Added chart_element_entity and chart_element_schema to DSL
+  - Registered in elements list for band definitions
+- [x] Add chart configuration in band definitions (header/detail/footer)
+  - Charts can be added to any band type
+  - Full DSL syntax support for all chart types
+  - Config and embed_options support
+- [x] Basic chart generation in DSLGenerator
+  - Added "Chart" case to generate_element/2
+  - Placeholder generation with title/caption support
+  - Ready for data binding implementation
 - [ ] Implement chart data binding from report query data
+  - **Deferred**: Requires expression evaluation in DSLGenerator
+  - data_source field exists and accepts expressions
+  - Full implementation needs runtime data context
 - [ ] Create chart variable support for dynamic configuration
+  - **Deferred**: Requires variable substitution in DSLGenerator
+  - config field accepts expressions for dynamic values
+  - Infrastructure in place, runtime evaluation needed
 - [ ] Add chart conditional rendering (show/hide based on conditions)
-- [ ] Document chart DSL syntax and examples
+  - **Deferred**: Requires conditional evaluation in DSLGenerator
+  - conditional field exists in element struct
+  - Runtime evaluation infrastructure needed
+
+**Implementation Summary**:
+- 1 new element module (Chart, ~75 lines)
+- DSL extended with chart element entity and schema
+- Basic generation support in DSLGenerator (~30 lines)
+- 5 tests passing (element struct + DSL schema)
+- Foundation for full data binding and dynamic configuration
+
+**Deferred to Future Work**:
+- Runtime expression evaluation for data_source
+- Variable substitution in chart config
+- Conditional rendering based on expressions
+- Full documentation with working examples
 
 ### 3.3.3 Performance Optimization
 - [ ] Implement parallel chart generation with Task.async

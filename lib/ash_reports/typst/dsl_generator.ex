@@ -145,6 +145,9 @@ defmodule AshReports.Typst.DSLGenerator do
       "Image" ->
         generate_image_element(element, context)
 
+      "Chart" ->
+        generate_chart_element(element, context)
+
       _ ->
         Logger.warning("Unknown element type: #{element_type}")
         "// Unknown element: #{element_type}"
@@ -447,6 +450,37 @@ defmodule AshReports.Typst.DSLGenerator do
       end
 
     "[#image(\"#{source}\", width: 5cm, #{fit_param})]"
+  end
+
+  defp generate_chart_element(chart, _context) do
+    # For now, generate a placeholder comment
+    # Full implementation will be added in the next step
+    chart_type = Map.get(chart, :chart_type, :bar)
+    caption = Map.get(chart, :caption)
+    title = Map.get(chart, :title)
+
+    lines = []
+
+    # Add title if present
+    lines =
+      if title do
+        lines ++ ["#text(size: 14pt, weight: \"bold\")[#{title}]"]
+      else
+        lines
+      end
+
+    # Add chart placeholder (will be replaced with actual chart generation)
+    lines = lines ++ ["// Chart: #{chart.name} (#{chart_type})"]
+
+    # Add caption if present
+    lines =
+      if caption do
+        lines ++ ["#text(size: 10pt, style: \"italic\")[#{caption}]"]
+      else
+        lines
+      end
+
+    Enum.join(lines, "\n")
   end
 
   # Private Functions - Expression Conversion

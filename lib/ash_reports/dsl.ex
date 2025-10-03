@@ -170,7 +170,8 @@ defmodule AshReports.Dsl do
           aggregate_element_entity(),
           line_element_entity(),
           box_element_entity(),
-          image_element_entity()
+          image_element_entity(),
+          chart_element_entity()
         ]
       ],
       recursive_as: :bands
@@ -327,6 +328,16 @@ defmodule AshReports.Dsl do
       target: AshReports.Element.Image,
       args: [:name],
       schema: image_element_schema()
+    }
+  end
+
+  defp chart_element_entity do
+    %Entity{
+      name: :chart,
+      describe: "A chart visualization element.",
+      target: AshReports.Element.Chart,
+      args: [:name],
+      schema: chart_element_schema()
     }
   end
 
@@ -762,6 +773,40 @@ defmodule AshReports.Dsl do
           type: {:in, [:fit, :fill, :stretch, :none]},
           default: :fit,
           doc: "How to scale the image within its bounds."
+        ]
+      ]
+  end
+
+  defp chart_element_schema do
+    base_element_schema() ++
+      [
+        chart_type: [
+          type: {:in, [:bar, :line, :pie, :area, :scatter]},
+          required: true,
+          doc: "The type of chart to generate."
+        ],
+        data_source: [
+          type: :any,
+          required: true,
+          doc: "Expression that evaluates to chart data (list of maps)."
+        ],
+        config: [
+          type: {:or, [:map, :any]},
+          default: %{},
+          doc: "Chart configuration (map or expression that returns a map)."
+        ],
+        embed_options: [
+          type: :map,
+          default: %{},
+          doc: "Options for ChartEmbedder (width, height, etc.)."
+        ],
+        caption: [
+          type: {:or, [:string, :any]},
+          doc: "Caption text below chart (string or expression)."
+        ],
+        title: [
+          type: {:or, [:string, :any]},
+          doc: "Title text above chart (string or expression)."
         ]
       ]
   end
