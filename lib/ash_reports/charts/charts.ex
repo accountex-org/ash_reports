@@ -45,7 +45,7 @@ defmodule AshReports.Charts do
   - `[:ash_reports, :charts, :generate, :exception]` - Chart generation failed
   """
 
-  alias AshReports.Charts.{Registry, Renderer, Config}
+  alias AshReports.Charts.{Config, Registry, Renderer, Theme}
 
   @doc """
   Generates a chart and returns SVG string.
@@ -95,6 +95,8 @@ defmodule AshReports.Charts do
     result =
       with {:ok, chart_module} <- Registry.get(type),
            {:ok, config} <- normalize_config(config),
+           {:ok, config} <- apply_theme(config),
+           :ok <- check_min_data_points(data, config),
            {:ok, svg} <- Renderer.render(chart_module, data, config) do
         {:ok, svg}
       else
@@ -180,4 +182,28 @@ defmodule AshReports.Charts do
   end
 
   defp normalize_config(_), do: {:error, :invalid_config}
+
+  defp apply_theme(%Config{theme_name: theme_name} = config) when theme_name != :default do
+    # Apply theme if it's not the default
+    if Theme.exists?(theme_name) do
+      themed_config = Theme.apply(config, theme_name)
+      {:ok, themed_config}
+    else
+      # Theme doesn't exist, just use config as-is
+      {:ok, config}
+    end
+  end
+
+  defp apply_theme(config), do: {:ok, config}
+
+  defp check_min_data_points(data, %Config{min_data_points: min}) when is_integer(min) do
+    if length(data) >= min do
+      :ok
+    else
+      {:error,
+       {:insufficient_data, "Chart requires at least #{min} data points, got #{length(data)}"}}
+    end
+  end
+
+  defp check_min_data_points(_data, _config), do: :ok
 end

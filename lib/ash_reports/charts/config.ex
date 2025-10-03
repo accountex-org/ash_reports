@@ -7,15 +7,28 @@ defmodule AshReports.Charts.Config do
 
   ## Fields
 
+  ### Basic Configuration
     - `title` - Chart title (optional)
     - `width` - Chart width in pixels (default: 600)
     - `height` - Chart height in pixels (default: 400)
     - `colors` - List of color hex codes for chart series (optional)
+
+  ### Theme and Layout (Section 3.2.3)
+    - `theme_name` - Reference to predefined theme (e.g., :corporate, :minimal)
+    - `responsive` - Auto-adjust size based on data (default: false)
+    - `show_data_labels` - Display data values on chart (default: false)
+    - `min_data_points` - Minimum data points required to render (default: nil)
+
+  ### Legend Configuration
     - `show_legend` - Whether to display legend (default: true)
     - `legend_position` - Legend position: :top, :bottom, :left, :right (default: :right)
+
+  ### Axis Configuration
     - `x_axis_label` - X-axis label (optional)
     - `y_axis_label` - Y-axis label (optional)
     - `show_grid` - Whether to show grid lines (default: true)
+
+  ### Typography
     - `font_family` - Font family for text (default: "sans-serif")
     - `font_size` - Base font size in pixels (default: 12)
 
@@ -26,6 +39,9 @@ defmodule AshReports.Charts.Config do
         width: 800,
         height: 600,
         colors: ["#FF6B6B", "#4ECDC4", "#45B7D1"],
+        theme_name: :corporate,
+        responsive: true,
+        show_data_labels: true,
         show_legend: true,
         x_axis_label: "Month",
         y_axis_label: "Sales ($)"
@@ -40,15 +56,31 @@ defmodule AshReports.Charts.Config do
 
   @primary_key false
   embedded_schema do
+    # Basic configuration
     field :title, :string
     field :width, :integer, default: 600
     field :height, :integer, default: 400
     field :colors, {:array, :string}, default: []
+
+    # Theme and layout (Section 3.2.3)
+    field :theme_name, Ecto.Enum,
+      values: [:default, :corporate, :minimal, :vibrant],
+      default: :default
+
+    field :responsive, :boolean, default: false
+    field :show_data_labels, :boolean, default: false
+    field :min_data_points, :integer
+
+    # Legend configuration
     field :show_legend, :boolean, default: true
     field :legend_position, Ecto.Enum, values: [:top, :bottom, :left, :right], default: :right
+
+    # Axis configuration
     field :x_axis_label, :string
     field :y_axis_label, :string
     field :show_grid, :boolean, default: true
+
+    # Typography
     field :font_family, :string, default: "sans-serif"
     field :font_size, :integer, default: 12
   end
@@ -72,6 +104,10 @@ defmodule AshReports.Charts.Config do
       :width,
       :height,
       :colors,
+      :theme_name,
+      :responsive,
+      :show_data_labels,
+      :min_data_points,
       :show_legend,
       :legend_position,
       :x_axis_label,
@@ -84,6 +120,7 @@ defmodule AshReports.Charts.Config do
     |> validate_number(:width, greater_than: 0, less_than_or_equal_to: 5000)
     |> validate_number(:height, greater_than: 0, less_than_or_equal_to: 5000)
     |> validate_number(:font_size, greater_than: 0, less_than_or_equal_to: 100)
+    |> validate_number(:min_data_points, greater_than: 0)
     |> validate_colors()
   end
 
