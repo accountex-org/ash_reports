@@ -1,7 +1,7 @@
 defmodule AshReports.Charts.ThemeTest do
   use ExUnit.Case, async: true
 
-  alias AshReports.Charts.{Theme, Config}
+  alias AshReports.Charts.{Config, Theme}
 
   describe "get/1" do
     test "returns default theme configuration" do

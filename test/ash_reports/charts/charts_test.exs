@@ -2,7 +2,7 @@ defmodule AshReports.Charts.ChartsTest do
   use ExUnit.Case, async: false
 
   alias AshReports.Charts
-  alias AshReports.Charts.{Config, Registry}
+  alias AshReports.Charts.Config
 
   describe "generate/3" do
     test "generates a bar chart with valid data" do

@@ -45,7 +45,7 @@ defmodule AshReports.Charts do
   - `[:ash_reports, :charts, :generate, :exception]` - Chart generation failed
   """
 
-  alias AshReports.Charts.{Registry, Renderer, Config, Theme}
+  alias AshReports.Charts.{Config, Registry, Renderer, Theme}
 
   @doc """
   Generates a chart and returns SVG string.
@@ -200,7 +200,8 @@ defmodule AshReports.Charts do
     if length(data) >= min do
       :ok
     else
-      {:error, {:insufficient_data, "Chart requires at least #{min} data points, got #{length(data)}"}}
+      {:error,
+       {:insufficient_data, "Chart requires at least #{min} data points, got #{length(data)}"}}
     end
   end
 
