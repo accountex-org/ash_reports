@@ -602,13 +602,50 @@ Ash Query → StreamingProducer (chunks of 500-1000 records)
 - All tests passing (12 chart generation tests)
 - Total new code: ~290 lines
 
-### 3.2.3 Dynamic Chart Configuration
+### 3.2.3 Dynamic Chart Configuration ✅ **COMPLETED** (MVP)
+- [x] Create chart theming system (colors, fonts, styles, dimensions)
+  - Module: `lib/ash_reports/charts/theme.ex` (200 lines)
+  - 4 predefined themes: `:default`, `:corporate`, `:minimal`, `:vibrant`
+  - Theme application with cascading config: theme → user config → overrides
+  - Smart merging that only overrides user-set values
+- [x] Extend Config schema with theme and layout fields
+  - Module: `lib/ash_reports/charts/config.ex` (enhanced)
+  - New fields: `theme_name`, `responsive`, `show_data_labels`, `min_data_points`
+  - Backward compatible with existing code
+- [x] Implement conditional chart rendering based on data
+  - `min_data_points` validation in chart generation
+  - Returns error if insufficient data points
+  - Integrated into `Charts.generate/3` pipeline
+- [x] Add theme application logic in Charts module
+  - Automatic theme application in generation pipeline
+  - Theme validation and fallback
+  - Config → Theme → Render flow
 - [ ] Add runtime chart configuration from Report DSL
-- [ ] Implement conditional chart rendering based on data
-- [ ] Create chart theming system (colors, fonts, styles, dimensions)
+  - **Deferred**: Would require DSL element integration (Section 3.3.2)
+  - Can be added when implementing chart elements
 - [ ] Add chart size and layout options (responsive sizing)
+  - **Partial**: `responsive` field added to Config
+  - **Deferred**: Implementation logic for dynamic sizing
 - [ ] Implement legend and axis customization (labels, ticks, gridlines)
+  - **Partial**: Existing fields in Config (show_legend, legend_position, axis labels, show_grid)
+  - **Note**: Contex provides limited customization options
 - [ ] Add data labels and annotations support
+  - **Partial**: `show_data_labels` field added to Config
+  - **Deferred**: Rendering logic (would require SVG post-processing)
+
+**Implementation Summary**:
+- 1 new module (Theme) with 4 predefined themes
+- Config schema extended with 4 new fields
+- Chart generation pipeline enhanced with theme application
+- Conditional rendering based on data availability
+- 51 tests passing (20 new theme/config tests)
+- Total new code: ~200 lines
+
+**Future Enhancements**:
+- DSL chart element integration
+- Responsive sizing implementation
+- Data labels rendering
+- Annotations and reference lines
 
 ## 3.3 Typst Chart Integration
 
