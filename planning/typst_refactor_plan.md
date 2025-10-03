@@ -111,13 +111,13 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
 **Status**: ✅ **95% COMPLETE** - All Core Implementation Done, Testing Remaining
 **Goal**: Implement memory-efficient streaming for reports and visualizations with 10K+ records using GenStage/Flow, with automatic configuration from Report DSL
 
-**Why This Stage**: GenStage streaming provides foundational infrastructure for both full report generation (100K+ records) and D3 chart data aggregation (1M records → 500 datapoints). This must be implemented before D3 visualization work (Stage 3) to enable efficient chart generation from large datasets.
+**Why This Stage**: GenStage streaming provides foundational infrastructure for both full report generation (100K+ records) and chart data aggregation (1M records → 500 datapoints). This must be implemented before visualization work (Stage 3) to enable efficient chart generation from large datasets.
 
 **New in This Stage**: Section 2.4 implements DSL-driven grouped aggregation configuration, automatically parsing Report groups and variables to configure ProducerConsumer streaming aggregations.
 
 **Use Cases**:
 - Full report generation with 100K+ records
-- D3 chart data aggregation - stream 1M records → aggregate to 500 chart datapoints
+- Chart data aggregation - stream 1M records → aggregate to 500 chart datapoints for SVG rendering
 - Real-time report updates with incremental data loading
 - Memory-efficient export for large datasets
 
@@ -225,8 +225,8 @@ AshReports should generate Typst templates dynamically from Spark DSL report def
   - `:min` - Minimum values per field
   - `:max` - Maximum values per field
   - `:running_total` - Cumulative totals
-- [ ] Add support for time-series bucketing and grouping (for D3 charts)
-  - Deferred to Stage 3 (D3 integration)
+- [ ] Add support for time-series bucketing and grouping (for chart data)
+  - Deferred to Stage 3 (visualization integration)
 - [ ] Create window-based aggregations (sliding, tumbling)
   - Deferred to future enhancement
 - [x] Implement running totals and cumulative calculations
@@ -449,69 +449,138 @@ Ash Query → StreamingProducer (chunks of 500-1000 records)
                 ↓
       StreamingConsumer (DataProcessor transformation)
                 ↓
-         Enumerable Stream → Typst Compilation / D3 Aggregation
+         Enumerable Stream → Typst Compilation / Chart Aggregation
 ```
 
 ---
 
-# Stage 3: D3.js Visualization System Integration
+# Stage 3: Pure Elixir Visualization System Integration
 
 **Duration**: 2-3 weeks
 **Status**: 📋 Planned
-**Goal**: Implement comprehensive D3.js chart integration with server-side rendering
+**Goal**: Implement comprehensive chart generation using pure Elixir libraries with SVG output for Typst embedding
 
-**Dependencies**: Requires Stage 2 (GenStage Streaming) for large dataset chart generation
+**Dependencies**: Requires Stage 2 (GenStage Streaming) for large dataset chart aggregation
 
-## 3.1 D3 Rendering Service
+**🔄 ARCHITECTURAL DECISION**: Use pure Elixir charting libraries (Contex/VegaLite) instead of Node.js D3 service for simpler, more maintainable architecture without external service dependencies.
 
-### 3.1.1 Node.js Service Development
-- [ ] Create standalone Node.js D3 rendering service
-- [ ] Implement chart type abstraction (bar, line, pie, heatmap)
-- [ ] Add SVG optimization and compression
-- [ ] Create chart configuration schema
-- [ ] Implement error handling and fallback generation
+**Why Pure Elixir Approach**:
+- ✅ **No external services** - Eliminates Node.js dependency and HTTP communication overhead
+- ✅ **Simpler architecture** - No service orchestration, connection pooling, or failover complexity
+- ✅ **Better performance** - Direct SVG generation without network latency
+- ✅ **Easier maintenance** - Single language stack (Elixir) for entire system
+- ✅ **Native integration** - Seamless Ash resource and GenStage pipeline integration
+- ✅ **Production ready** - Contex (pure Elixir) and VegaLite (Elixir bindings) are mature, well-maintained libraries
 
-### 3.1.2 Service Integration
-- [ ] Create `AshReports.Typst.D3Client` module
-- [ ] Implement HTTP client for D3 service communication
-- [ ] Add connection pooling and health checking
-- [ ] Create chart caching system
-- [ ] Implement service failover mechanisms
+## 3.1 Elixir Chart Generation Infrastructure ✅ COMPLETED
+
+### 3.1.1 Chart Library Integration ✅ COMPLETED
+- [x] Add Contex dependency to mix.exs (~> 0.5.0) for pure Elixir SVG charts
+- [x] Create `AshReports.Charts` base module for chart abstraction layer
+  - Public API: `generate/3`, `list_types/0`, `type_available?/1`
+  - Automatic config normalization (map → struct)
+  - Telemetry integration for monitoring
+- [x] Implement chart type registry (bar, line, pie)
+  - GenServer-based registry with ETS for fast lookups
+  - Runtime registration support via `Registry.register/2`
+  - Module: `lib/ash_reports/charts/registry.ex`
+- [x] Create common chart configuration schema (Ecto embedded schema)
+  - Module: `lib/ash_reports/charts/config.ex`
+  - Validated fields: dimensions, colors, legend, fonts, axis labels
+  - Default color palette with hex validation
+- [x] Add chart builder behavior for extensibility
+  - Behavior: `AshReports.Charts.Types.Behavior`
+  - Callbacks: `build/2`, `validate/1`
+  - Allows custom chart type registration
+
+### 3.1.2 SVG Generation Pipeline ✅ COMPLETED
+- [x] Create `AshReports.Charts.Renderer` module for SVG output
+  - Module: `lib/ash_reports/charts/renderer.ex`
+  - Functions: `render/3`, `render_without_cache/3`
+  - Integrates with Contex.Plot for SVG generation
+- [x] Implement chart-to-SVG conversion using Contex
+  - Supports Bar, Line, and Pie charts
+  - Uses Contex mapping API (category_col, value_cols, x_col, y_cols)
+  - Proper iodata → binary conversion
+- [x] Add SVG optimization and minification (remove unnecessary attributes)
+  - Basic whitespace optimization in `optimize_svg/1`
+  - Removes redundant spacing from SVG output
+- [x] Create SVG caching system with ETS (cache compiled charts)
+  - Module: `lib/ash_reports/charts/cache.ex`
+  - TTL-based expiration (default: 5 minutes)
+  - Automatic cleanup with GenServer timer
+  - Cache statistics via `get_stats/0`
+- [x] Implement error handling and fallback rendering (simple text-based charts)
+  - Fallback SVG generation on render failures
+  - Validation at chart type level
+  - Error telemetry events
+- [x] Add telemetry events for chart generation metrics
+  - Events: `[:ash_reports, :charts, :generate, :start]`
+  - Events: `[:ash_reports, :charts, :generate, :stop]`
+  - Metadata: chart_type, data_size, cache_status, svg_size
 
 ## 3.2 Chart Data Processing
 
 ### 3.2.1 Data Transformation Pipeline
-- [ ] Create chart data extraction from Ash resources
-- [ ] Implement aggregation functions for visualization
-- [ ] Add support for time-series data formatting
-- [ ] Create multi-dimensional data pivoting
-- [ ] Implement statistical calculations for charts
-- [ ] Integrate with GenStage streaming for large dataset aggregation (see Stage 2)
+- [ ] Create `AshReports.Charts.DataExtractor` for Ash resource queries
+- [ ] Implement aggregation functions (sum, count, avg, min, max, grouping)
+- [ ] Add time-series data formatting and time bucketing (daily, weekly, monthly)
+- [ ] Create multi-dimensional data pivoting for complex charts
+- [ ] Integrate with GenStage streaming for large datasets (>10K records)
+- [ ] Implement statistical calculations (percentiles, std deviation, median)
 
-**Note**: For datasets >10K records, use GenStage streaming pipeline (Stage 2) to perform server-side aggregation before sending to D3 rendering service. This is essential for performance - D3.js can render ~5,000 SVG elements or ~50,000 canvas points efficiently, so large datasets must be aggregated server-side first.
+**Performance Note**: For datasets >10K records, use GenStage streaming pipeline (Stage 2) to perform server-side aggregation before chart generation. Aggregate 1M records → 500-1000 chart datapoints for optimal SVG rendering performance.
 
-### 3.2.2 Dynamic Chart Generation
-- [ ] Add runtime chart configuration from DSL
-- [ ] Implement conditional chart rendering
-- [ ] Create chart theming system
-- [ ] Add interactive chart options
-- [ ] Implement chart export functionality
+### 3.2.2 Chart Type Implementations
+- [x] Implement BarChart using Contex (grouped, stacked, horizontal)
+  - Module: `lib/ash_reports/charts/types/bar_chart.ex`
+  - Supports: simple, grouped, stacked modes
+  - Data format: `%{category: string, value: number}`
+- [x] Implement LineChart using Contex (single/multi-series, area fill)
+  - Module: `lib/ash_reports/charts/types/line_chart.ex`
+  - Supports: x/y coordinates, date/value time-series
+  - Data format: `%{x: number, y: number}` or `%{date: Date.t(), value: number}`
+- [x] Implement PieChart using Contex (with percentage labels)
+  - Module: `lib/ash_reports/charts/types/pie_chart.ex`
+  - Automatic percentage calculation
+  - Data format: `%{category: string, value: number}` or `%{label: string, value: number}`
+- [ ] Implement AreaChart (stacked areas for time-series)
+- [ ] Implement ScatterPlot with optional regression lines
+- [ ] Create custom chart builder API for complex visualizations
+
+### 3.2.3 Dynamic Chart Configuration
+- [ ] Add runtime chart configuration from Report DSL
+- [ ] Implement conditional chart rendering based on data
+- [ ] Create chart theming system (colors, fonts, styles, dimensions)
+- [ ] Add chart size and layout options (responsive sizing)
+- [ ] Implement legend and axis customization (labels, ticks, gridlines)
+- [ ] Add data labels and annotations support
 
 ## 3.3 Typst Chart Integration
 
 ### 3.3.1 SVG Embedding System
-- [ ] Create SVG-to-Typst conversion helpers
-- [ ] Implement chart positioning and layout
-- [ ] Add caption and legend support
-- [ ] Create multi-chart page layouts
-- [ ] Implement chart scaling and responsiveness
+- [ ] Create `AshReports.Typst.ChartEmbedder` module
+- [ ] Implement SVG-to-Typst image embedding (`#image()` function)
+- [ ] Add chart positioning and layout in Typst templates
+- [ ] Create caption and title support with Typst formatting
+- [ ] Implement multi-chart page layouts (grid/flow layouts)
+- [ ] Add chart scaling and responsive sizing (percentage widths)
 
-### 3.3.2 Performance Optimization
-- [ ] Add parallel chart generation
-- [ ] Implement chart result caching
-- [ ] Create lazy loading for complex visualizations
-- [ ] Add compression for embedded SVG data
-- [ ] Implement memory-efficient chart processing
+### 3.3.2 DSL Chart Element
+- [ ] Extend Report DSL with `chart` element type
+- [ ] Add chart configuration in band definitions (header/detail/footer)
+- [ ] Implement chart data binding from report query data
+- [ ] Create chart variable support for dynamic configuration
+- [ ] Add chart conditional rendering (show/hide based on conditions)
+- [ ] Document chart DSL syntax and examples
+
+### 3.3.3 Performance Optimization
+- [ ] Implement parallel chart generation with Task.async
+- [ ] Add chart result caching (ETS cache for compiled SVG)
+- [ ] Create lazy chart loading for complex multi-chart reports
+- [ ] Add SVG compression for embedded chart data (gzip)
+- [ ] Implement memory-efficient chart processing (streaming aggregation)
+- [ ] Add telemetry for chart generation performance tracking
 
 ---
 
@@ -573,9 +642,9 @@ Ash Query → StreamingProducer (chunks of 500-1000 records)
 ## 5.1 Containerization and Orchestration
 
 ### 5.1.1 Docker Configuration
-- [ ] Create multi-stage Dockerfile with Typst, Node.js, and Elixir
+- [ ] Create multi-stage Dockerfile with Typst and Elixir
 - [ ] Implement proper font installation and configuration
-- [ ] Add health checks for all services
+- [ ] Add health checks for report generation service
 - [ ] Create volume management for templates and cache
 - [ ] Implement security hardening
 
@@ -692,7 +761,7 @@ Based on the research document `ash_reports_typst_research.md`, the current AshR
 The DSL-driven Typst refactor will provide:
 - **18x faster compilation** compared to current PDF generation
 - **DSL-driven template generation** from AshReports band definitions
-- **Enhanced visualizations** with D3.js server-side rendering
+- **Enhanced visualizations** with pure Elixir SVG chart generation (Contex/VegaLite)
 - **Better developer experience** with declarative report definitions
 - **Improved scalability** with streaming and concurrent processing
 - **Production-ready deployment** with monitoring and observability
@@ -738,8 +807,8 @@ PDF Output (18x faster)
 - **Typst 0.1.7** (Elixir package): Rust NIF bindings for Typst compilation ✅ **IMPLEMENTED**
 - **AshReports DSL System**: Existing Spark DSL extensions for report definitions ✅ **AVAILABLE**
 - **Ash Framework 3.0+**: Resource querying and data transformation ✅ **AVAILABLE**
-- **GenStage/Flow**: Stream processing for large datasets (Stage 2)
-- **Node.js + D3.js**: Server-side chart generation (Stage 3)
+- **GenStage/Flow**: Stream processing for large datasets (Stage 2) ✅ **IMPLEMENTED**
+- **Contex/VegaLite**: Pure Elixir SVG chart generation (Stage 3)
 - **Phoenix LiveView**: Enhanced web interface (Stage 4)
 
 ### Risk Mitigation
@@ -757,9 +826,10 @@ PDF Output (18x faster)
 
 **Next Steps**:
 1. **✅ Stage 1 COMPLETED**: Infrastructure Foundation and Typst Integration
-2. **🎯 NEXT PRIORITY**: Stage 2 - GenStage Streaming Pipeline
-3. Implement producer-consumer architecture for memory-efficient large dataset processing
-4. Create streaming aggregation functions for D3 chart data preparation
-5. Prepare foundational infrastructure for D3.js visualization work (Stage 3)
+2. **✅ Stage 2 COMPLETED**: GenStage Streaming Pipeline (95% - core implementation done)
+3. **🎯 NEXT PRIORITY**: Stage 3 - Pure Elixir Visualization System
+4. Implement Contex/VegaLite chart generation with SVG output
+5. Create chart data aggregation pipeline leveraging GenStage streaming
+6. Integrate charts into Typst reports via SVG embedding
 
 **Architectural Pivot Complete**: From static template files → Dynamic DSL-driven template generation
