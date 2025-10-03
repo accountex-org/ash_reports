@@ -171,12 +171,14 @@ defmodule AshReports.Charts.Registry do
 
   # Private helper to register types directly in ETS during init
   defp register_default_types_direct do
-    alias AshReports.Charts.Types.{BarChart, LineChart, PieChart}
+    alias AshReports.Charts.Types.{BarChart, LineChart, PieChart, AreaChart, ScatterPlot}
 
     types = [
       {:bar, BarChart},
       {:line, LineChart},
-      {:pie, PieChart}
+      {:pie, PieChart},
+      {:area, AreaChart},
+      {:scatter, ScatterPlot}
     ]
 
     Enum.each(types, fn {type, module} ->

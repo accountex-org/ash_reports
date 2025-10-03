@@ -47,6 +47,48 @@ defmodule AshReports.Charts.ChartsTest do
       assert String.contains?(svg, "<svg")
     end
 
+    test "generates an area chart with valid data" do
+      data = [
+        %{x: 1, y: 10},
+        %{x: 2, y: 15},
+        %{x: 3, y: 12}
+      ]
+
+      config = %Config{title: "Test Area Chart"}
+
+      assert {:ok, svg} = Charts.generate(:area, data, config)
+      assert is_binary(svg)
+      assert String.contains?(svg, "<svg")
+    end
+
+    test "generates an area chart with date/value format" do
+      data = [
+        %{date: ~D[2024-01-01], value: 100},
+        %{date: ~D[2024-01-02], value: 150},
+        %{date: ~D[2024-01-03], value: 120}
+      ]
+
+      config = %Config{title: "Time Series Area"}
+
+      assert {:ok, svg} = Charts.generate(:area, data, config)
+      assert is_binary(svg)
+      assert String.contains?(svg, "<svg")
+    end
+
+    test "generates a scatter plot with valid data" do
+      data = [
+        %{x: 1.5, y: 10.2},
+        %{x: 2.3, y: 15.7},
+        %{x: 3.1, y: 12.5}
+      ]
+
+      config = %Config{title: "Scatter Plot"}
+
+      assert {:ok, svg} = Charts.generate(:scatter, data, config)
+      assert is_binary(svg)
+      assert String.contains?(svg, "<svg")
+    end
+
     test "returns error for unknown chart type" do
       data = [%{x: 1, y: 2}]
       config = %Config{}
@@ -78,6 +120,8 @@ defmodule AshReports.Charts.ChartsTest do
       assert :bar in types
       assert :line in types
       assert :pie in types
+      assert :area in types
+      assert :scatter in types
     end
   end
 
@@ -86,11 +130,13 @@ defmodule AshReports.Charts.ChartsTest do
       assert Charts.type_available?(:bar) == true
       assert Charts.type_available?(:line) == true
       assert Charts.type_available?(:pie) == true
+      assert Charts.type_available?(:area) == true
+      assert Charts.type_available?(:scatter) == true
     end
 
     test "returns false for unregistered chart types" do
       assert Charts.type_available?(:unknown) == false
-      assert Charts.type_available?(:scatter) == false
+      assert Charts.type_available?(:heatmap) == false
     end
   end
 end
