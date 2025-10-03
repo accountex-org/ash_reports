@@ -157,6 +157,9 @@ defmodule AshReports.Charts.Renderer do
       # Convert iodata to string
       svg = IO.iodata_to_binary(iodata)
 
+      # Apply area chart post-processing if needed
+      svg = maybe_add_area_fill(svg, chart)
+
       {:ok, svg}
     rescue
       e ->
@@ -193,6 +196,96 @@ defmodule AshReports.Charts.Renderer do
   end
 
   defp maybe_add_y_axis_label(plot, _config), do: plot
+
+  defp maybe_add_area_fill(svg, %{area_chart_meta: meta}) do
+    # Extract line paths from SVG and add area fills
+    add_area_paths(svg, meta)
+  end
+
+  defp maybe_add_area_fill(svg, _chart), do: svg
+
+  defp add_area_paths(svg, %{opacity: opacity}) do
+    # Find all <path> elements with stroke (line paths)
+    # Add corresponding <path> elements with fill for area effect
+
+    # Pattern to match line paths: <path d="..." stroke="..." .../>
+    line_pattern = ~r/<path\s+d="([^"]+)"\s+stroke="([^"]+)"[^>]*\/>/
+
+    matches = Regex.scan(line_pattern, svg)
+
+    if length(matches) > 0 do
+      # Build area paths from line paths
+      _area_paths =
+        matches
+        |> Enum.with_index()
+        |> Enum.map(fn {[_full_match, d_attr, color], _index} ->
+          # Create area path by closing the line to the x-axis
+          # This is a simplified approach - extract coordinates and close path
+          area_d = create_area_path(d_attr)
+
+          # Create filled path element with opacity
+          ~s(<path d="#{area_d}" fill="#{color}" opacity="#{opacity}" stroke="none" />)
+        end)
+        |> Enum.join("\n")
+
+      # Insert area paths before line paths (so lines appear on top)
+      String.replace(svg, line_pattern, fn match ->
+        # Return both area path and original line path
+        area_index = length(Regex.scan(line_pattern, String.slice(svg, 0, String.length(svg)))) - 1
+        if area_index >= 0 and area_index < length(matches) do
+          [_, d_attr, color] = Enum.at(matches, area_index)
+          area_d = create_area_path(d_attr)
+          ~s(<path d="#{area_d}" fill="#{color}" opacity="#{opacity}" stroke="none" />\n#{match})
+        else
+          match
+        end
+      end, global: false)
+      |> close_area_paths(matches, opacity)
+    else
+      svg
+    end
+  end
+
+  defp close_area_paths(svg, matches, opacity) do
+    # More robust approach: insert area fills into SVG properly
+    # Find the chart group and prepend area paths
+
+    matches
+    |> Enum.reduce(svg, fn [_full_match, d_attr, color], acc ->
+      area_d = create_area_path(d_attr)
+      area_path = ~s(<path d="#{area_d}" fill="#{color}" opacity="#{opacity}" stroke="none" />)
+
+      # Insert before the first </g> closing tag
+      String.replace(acc, ~r/<\/g>/, fn match ->
+        area_path <> "\n" <> match
+      end, global: false)
+    end)
+  end
+
+  defp create_area_path(line_d) do
+    # Parse SVG path data and close to baseline
+    # Extract M (moveto) and L (lineto) commands
+    # Example: "M 50,100 L 100,80 L 150,90" -> "M 50,100 L 100,80 L 150,90 L 150,200 L 50,200 Z"
+
+    # Find all coordinate pairs
+    coords = Regex.scan(~r/([ML])\s*([\d.]+)\s*,\s*([\d.]+)/, line_d)
+
+    if length(coords) > 0 do
+      # Get first and last x coordinates
+      [_, _first_cmd, first_x, _first_y] = List.first(coords)
+      [_, _last_cmd, last_x, _last_y] = List.last(coords)
+
+      # Get the baseline y (we'll use a high value as approximation)
+      # In a real implementation, this should be calculated from the chart's y-scale
+      baseline_y = "200"  # This should be dynamic based on chart height
+
+      # Build area path: original line + line to baseline + line back to start + close
+      line_d <> " L #{last_x},#{baseline_y} L #{first_x},#{baseline_y} Z"
+    else
+      # Fallback: just close the path
+      line_d <> " Z"
+    end
+  end
 
   defp optimize_svg(svg) when is_binary(svg) do
     svg

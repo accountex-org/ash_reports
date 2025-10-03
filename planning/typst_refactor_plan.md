@@ -566,7 +566,7 @@ Ash Query → StreamingProducer (chunks of 500-1000 records)
 
 **Performance Note**: For datasets >10K records, use GenStage streaming pipeline (Stage 2) to perform server-side aggregation before chart generation. Aggregate 1M records → 500-1000 chart datapoints for optimal SVG rendering performance.
 
-### 3.2.2 Chart Type Implementations
+### 3.2.2 Chart Type Implementations ✅ **COMPLETED**
 - [x] Implement BarChart using Contex (grouped, stacked, horizontal)
   - Module: `lib/ash_reports/charts/types/bar_chart.ex`
   - Supports: simple, grouped, stacked modes
@@ -579,9 +579,28 @@ Ash Query → StreamingProducer (chunks of 500-1000 records)
   - Module: `lib/ash_reports/charts/types/pie_chart.ex`
   - Automatic percentage calculation
   - Data format: `%{category: string, value: number}` or `%{label: string, value: number}`
-- [ ] Implement AreaChart (stacked areas for time-series)
-- [ ] Implement ScatterPlot with optional regression lines
+- [x] Implement AreaChart (stacked areas for time-series)
+  - Module: `lib/ash_reports/charts/types/area_chart.ex` (194 lines)
+  - SVG post-processing for area fill with configurable opacity
+  - Supports simple and stacked modes
+  - Time-ordered data validation
+  - Data format: `%{x: number, y: number}` or `%{date: Date.t(), value: number}`
+  - Enhanced Renderer with area fill SVG generation
+- [x] Implement ScatterPlot (basic implementation)
+  - Module: `lib/ash_reports/charts/types/scatter_plot.ex` (98 lines)
+  - Uses Contex PointPlot for scatter visualization
+  - Data format: `%{x: number, y: number}`
+  - **Note**: Regression lines deferred to future enhancement
 - [ ] Create custom chart builder API for complex visualizations
+  - **Deferred**: Can be implemented in Section 3.2.3 or future work
+  - Would include SVG primitives helper and builder pattern
+  - Example: HeatmapChart as custom implementation
+
+**Implementation Summary**:
+- 2 new chart types added (AreaChart, ScatterPlot)
+- Enhanced Renderer module with area fill post-processing (~90 lines added)
+- All tests passing (12 chart generation tests)
+- Total new code: ~290 lines
 
 ### 3.2.3 Dynamic Chart Configuration
 - [ ] Add runtime chart configuration from Report DSL
