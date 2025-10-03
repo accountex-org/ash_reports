@@ -80,6 +80,9 @@ defmodule AshReports.MixProject do
       {:gen_stage, "~> 1.2"},
       {:flow, "~> 1.2"},
 
+      # Chart generation dependencies (Stage 3)
+      {:contex, "~> 0.5.0"},
+
       # Phase 5.1 - Interactive Data Visualization dependencies
       {:jason, "~> 1.4"},
 
