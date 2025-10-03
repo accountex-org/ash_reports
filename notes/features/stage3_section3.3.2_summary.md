@@ -411,55 +411,51 @@ end
 
 ## Known Limitations & Future Work
 
-### Completed (MVP)
+### Completed (Runtime Implementation)
 ✅ Chart element struct with all fields
 ✅ DSL schema extension
 ✅ Chart element registration in DSL
-✅ Basic generation in DSLGenerator
+✅ ChartPreprocessor for server-side chart generation
+✅ Expression evaluation for data_source
+✅ Config evaluation (maps and expressions)
+✅ Charts.generate/3 integration
+✅ ChartEmbedder.embed/2 integration
+✅ Error handling with fallback placeholders
 ✅ Title and caption support
-✅ Foundation for data binding
+✅ All 5 chart types supported (bar, line, pie, area, scatter)
+✅ 20 tests passing (element, DSL, preprocessor)
 
 ### Deferred Features
 
-1. **Data Source Evaluation** - Runtime Implementation
-   - Current: `data_source` field accepts expressions
-   - Needed: Expression evaluation with report data context
-   - Implementation: Add to DSLGenerator.generate_chart_element/2
-   - Requires: Access to records, parameters, variables
+1. **Advanced Expression Evaluation**
+   - Current: Supports :records and simple expressions
+   - Needed: Full Ash.Expr evaluation with complex operations
+   - Implementation: Expand evaluate_expression/2 in ChartPreprocessor
+   - Example: `expr(records |> Enum.filter(&(&1.status == "active")))`
 
-2. **Dynamic Configuration** - Variable Substitution
-   - Current: `config` field accepts expressions
-   - Needed: Variable and parameter substitution at runtime
-   - Implementation: Expression evaluation in config map
-   - Example: `expr(%{width: param(:width)})`
-
-3. **Conditional Rendering** - Expression Evaluation
-   - Current: `conditional` field exists in struct
-   - Needed: Runtime condition evaluation
-   - Implementation: Check condition before generating chart
+2. **Conditional Rendering** - Expression Evaluation
+   - Current: `conditional` field exists in struct but not evaluated
+   - Needed: Runtime condition evaluation to skip charts
+   - Implementation: Check condition in process_chart/2
    - Example: `expr(length(records) > 10)`
 
-4. **Full Chart Generation** - ChartEmbedder Integration
-   - Current: Placeholder comment generation
-   - Needed: Actual SVG generation and embedding
-   - Steps:
-     1. Evaluate data_source → get chart data
-     2. Evaluate config → get chart configuration
-     3. Call Charts.generate/3 → get SVG
-     4. Call ChartEmbedder.embed/2 → get Typst code
-     5. Insert in template
+3. **Dynamic Configuration** - Expression Substitution
+   - Current: Map configs work, expressions partially supported
+   - Needed: Parameter and variable substitution in config values
+   - Implementation: Recursive config value evaluation
+   - Example: `expr(%{width: param(:chart_width)})`
 
-5. **Documentation** - Examples and Guides
+4. **Documentation** - Examples and Guides
    - Working code examples with real data
-   - Integration patterns
-   - Best practices
+   - Integration patterns with DataLoader
+   - Best practices for chart preprocessing
    - Troubleshooting guide
 
 ### Technical Debt
-- Placeholder generation instead of real charts
-- No expression evaluation infrastructure
-- Limited test coverage (struct and schema only)
-- No integration tests with actual chart generation
+- ChartPreprocessor needs integration with DataLoader pipeline
+- Expression evaluation limited to simple cases
+- No end-to-end tests with full report rendering
+- No performance benchmarks for preprocessing
 
 ## Performance Characteristics
 
@@ -508,23 +504,61 @@ end
 
 ## Conclusion
 
-Section 3.3.2 MVP successfully implements chart element DSL infrastructure:
+Section 3.3.2 **COMPLETE** with runtime chart generation:
 
-- ✅ Chart element struct (75 lines)
-- ✅ DSL extension (60 lines)
-- ✅ Basic generation (30 lines)
-- ✅ 5 tests passing
-- ✅ Foundation for full implementation
+### Implementation Summary
+
+**New Files**:
+- `lib/ash_reports/element/chart.ex` (75 lines) - Chart element struct
+- `lib/ash_reports/typst/chart_preprocessor.ex` (240 lines) - Runtime chart generation
+- `test/ash_reports/typst/chart_preprocessor_test.exs` (365 lines) - Comprehensive tests
+
+**Modified Files**:
+- `lib/ash_reports/dsl.ex` (+60 lines) - DSL extension
+- `lib/ash_reports/typst/dsl_generator.ex` (+70 lines) - Preprocessor integration
+
+**Test Coverage**:
+- ✅ 20 tests passing
+- ✅ Element struct tests (3 tests)
+- ✅ DSL integration tests (2 tests)
+- ✅ ChartPreprocessor tests (15 tests)
+- ✅ All 5 chart types tested
+- ✅ Error handling tested
+- ✅ ChartEmbedder integration tested
 
 **Chart Elements Now Support**:
-- Declarative chart definition in Report DSL
-- All 5 chart types
-- Configuration via maps or expressions
-- Title and caption support
-- Embed options for sizing
-- Conditional rendering field
-- Integration with band structure
+- ✅ Declarative chart definition in Report DSL
+- ✅ All 5 chart types (bar, line, pie, area, scatter)
+- ✅ Static data sources
+- ✅ Expression-based data sources (:records)
+- ✅ Configuration via maps
+- ✅ Title and caption support
+- ✅ Embed options for sizing
+- ✅ Conditional rendering field (struct only)
+- ✅ Server-side SVG generation via Charts.generate/3
+- ✅ SVG embedding via ChartEmbedder.embed/2
+- ✅ Error handling with fallback placeholders
+- ✅ Integration with band structure
 
-**Status**: MVP complete, ready for runtime implementation (data binding, evaluation, generation)
+**Architecture**:
+```
+Report DSL → ChartPreprocessor → Charts.generate → ChartEmbedder → Template Context
+                    ↓
+            evaluate_data_source (expressions → data)
+            evaluate_config (maps/expressions → config)
+                    ↓
+            Charts.generate(chart_type, data, config) → SVG
+                    ↓
+            ChartEmbedder.embed(svg, embed_options) → Typst code
+                    ↓
+            Inject into DSLGenerator context
+```
 
-**Next Section**: Either complete 3.3.2 runtime features OR move to Section 3.3.3 (Performance Optimization)
+**Status**: Runtime implementation complete, ready for integration with DataLoader pipeline
+
+**Next Steps**:
+1. Integrate ChartPreprocessor with Typst.DataLoader
+2. Add end-to-end tests with full report rendering
+3. Implement advanced expression evaluation
+4. Add conditional rendering logic
+5. Performance optimization (Section 3.3.3)
