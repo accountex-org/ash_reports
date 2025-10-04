@@ -50,7 +50,7 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
 
   alias AshReports.{Charts, Report}
   alias AshReports.Element.Chart
-  alias AshReports.Typst.ChartEmbedder
+  alias AshReports.Typst.{ChartEmbedder, ChartHelpers}
 
   @type aggregation_ref :: %{
           group_by: atom() | [atom()],
@@ -208,56 +208,35 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
     # Extract aggregation data
     group_key = normalize_group_key(config.aggregation_ref.group_by)
 
-    case Map.get(grouped_aggregation_state, group_key) do
-      nil ->
-        # Aggregation not found - generate error placeholder
-        generate_error_placeholder(config.name, :aggregation_not_found)
+    # Use with clause for clean error handling
+    with {:get_data, group_data} when not is_nil(group_data) <-
+           {:get_data, Map.get(grouped_aggregation_state, group_key)},
+         chart_data <- convert_to_chart_format(group_data, config),
+         {:ok, svg} <- Charts.generate(config.chart_type, chart_data, config.chart_config),
+         embed_opts = Map.to_list(config.embed_options),
+         {:ok, embedded_code} <- ChartEmbedder.embed(svg, embed_opts) do
+      %{
+        name: config.name,
+        chart_type: config.chart_type,
+        svg: svg,
+        embedded_code: embedded_code,
+        error: nil
+      }
+    else
+      {:get_data, nil} ->
+        Logger.debug("Aggregation not found for chart #{config.name}")
+        ChartHelpers.generate_error_placeholder(config.name, :aggregation_not_found)
 
-      group_data ->
-        # Convert aggregation data to chart data format
-        chart_data = convert_to_chart_format(group_data, config)
+      {:error, reason} ->
+        Logger.debug("Chart processing failed for #{config.name}: #{inspect(reason)}")
+        Logger.error("Chart processing failed for chart: #{config.name}")
+        ChartHelpers.generate_error_placeholder(config.name, reason)
 
-        # Generate chart using Charts.generate
-        try do
-          case Charts.generate(config.chart_type, chart_data, config.chart_config) do
-            {:ok, svg} ->
-              # Embed the chart (convert map to keyword list)
-              embed_opts = Map.to_list(config.embed_options)
-
-              case ChartEmbedder.embed(svg, embed_opts) do
-                {:ok, embedded_code} ->
-                  %{
-                    name: config.name,
-                    chart_type: config.chart_type,
-                    svg: svg,
-                    embedded_code: embedded_code,
-                    error: nil
-                  }
-
-                {:error, reason} ->
-                  Logger.error("Chart embedding failed for #{config.name}: #{inspect(reason)}")
-                  generate_error_placeholder(config.name, {:embedding_failed, reason})
-              end
-
-            {:error, reason} ->
-              Logger.error("Chart generation failed for #{config.name}: #{inspect(reason)}")
-              generate_error_placeholder(config.name, {:generation_failed, reason})
-          end
-        rescue
-          error in FunctionClauseError ->
-            Logger.error("FunctionClauseError in chart generation for #{config.name}: module=#{error.module}, function=#{error.function}, arity=#{error.arity}")
-            Logger.error("Stacktrace: #{inspect(__STACKTRACE__, pretty: true)}")
-            generate_error_placeholder(config.name, {:chart_generation_error, error})
-
-          error ->
-            Logger.error("Unexpected error in chart generation for #{config.name}: #{inspect(error)}")
-            generate_error_placeholder(config.name, {:unexpected_error, error})
-        end
+      unexpected ->
+        Logger.debug("Unexpected result in chart generation for #{config.name}: #{inspect(unexpected)}")
+        Logger.error("Unexpected result in chart generation for chart: #{config.name}")
+        ChartHelpers.generate_error_placeholder(config.name, {:unexpected_result, unexpected})
     end
-  rescue
-    error ->
-      Logger.error("Unexpected error generating chart #{config.name}: #{inspect(error)}")
-      generate_error_placeholder(config.name, {:unexpected_error, error})
   end
 
   defp normalize_group_key(group_by) when is_list(group_by), do: group_by
@@ -345,29 +324,4 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
   defp sort_key(%{label: label}), do: label
   defp sort_key(%{x: x}), do: x
   defp sort_key(_), do: ""
-
-  defp generate_error_placeholder(chart_name, error) do
-    error_text = "Chart Error: #{chart_name}\n\nAggregation data not available"
-
-    embedded_code = """
-    #block(
-      width: 100%,
-      height: 200pt,
-      fill: rgb(255, 230, 230),
-      stroke: 1pt + rgb(200, 0, 0),
-      radius: 4pt,
-      inset: 10pt
-    )[
-      #text(size: 12pt, weight: "bold", fill: rgb(150, 0, 0))[#{error_text}]
-    ]
-    """
-
-    %{
-      name: chart_name,
-      chart_type: :bar,
-      svg: nil,
-      embedded_code: embedded_code,
-      error: error
-    }
-  end
 end

@@ -93,7 +93,8 @@ defmodule AshReports.Typst.DSLGenerator do
     {:ok, template}
   rescue
     error ->
-      Logger.error("Template generation failed for report #{report.name}: #{inspect(error)}")
+      Logger.debug(fn -> "Template generation failed for report #{report.name}: #{inspect(error)}" end)
+      Logger.error("Template generation failed for report #{report.name}")
       {:error, {:generation_failed, error}}
   end
 

@@ -117,14 +117,17 @@ defmodule AshReports.Typst.DataProcessor do
       {:ok, converted}
     rescue
       error in [ArgumentError, KeyError, Protocol.UndefinedError] ->
-        Logger.error(fn -> "Failed to convert records: #{inspect(error)}" end)
+        Logger.debug(fn -> "Failed to convert records: #{inspect(error)}" end)
+        Logger.error("Record conversion failed")
         {:error, {:conversion_failed, error}}
 
       error ->
-        Logger.error(
-          fn -> "Unexpected error during record conversion: #{inspect(error)}" end,
-          crash_reason: {error, __STACKTRACE__}
-        )
+        Logger.debug(fn ->
+          "Unexpected error during record conversion: #{inspect(error, pretty: true)}\n" <>
+            "Stacktrace: #{Exception.format_stacktrace(__STACKTRACE__)}"
+        end)
+
+        Logger.error("Unexpected record conversion failure")
 
         {:error, {:conversion_failed, error}}
     end

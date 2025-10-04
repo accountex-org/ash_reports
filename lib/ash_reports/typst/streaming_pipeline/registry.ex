@@ -107,6 +107,24 @@ defmodule AshReports.Typst.StreamingPipeline.Registry do
   end
 
   @doc """
+  Stores partition worker information for a partitioned pipeline.
+
+  Used by horizontal scaling to track multiple worker PIDs for result merging.
+  """
+  @spec store_partition_workers(binary(), [map()]) :: :ok | {:error, :not_found}
+  def store_partition_workers(stream_id, workers) when is_list(workers) do
+    GenServer.call(__MODULE__, {:store_partition_workers, stream_id, workers})
+  end
+
+  @doc """
+  Retrieves partition worker information for a partitioned pipeline.
+  """
+  @spec get_partition_workers(binary()) :: {:ok, [map()]} | {:error, :not_found}
+  def get_partition_workers(stream_id) do
+    GenServer.call(__MODULE__, {:get_partition_workers, stream_id})
+  end
+
+  @doc """
   Gets pipeline information by stream_id.
   """
   @spec get_pipeline(binary()) :: {:ok, map()} | {:error, :not_found}
@@ -289,6 +307,36 @@ defmodule AshReports.Typst.StreamingPipeline.Registry do
     :ets.delete(state.table, {:stream, stream_id})
     Logger.debug("Deregistered streaming pipeline: #{stream_id}")
     {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call({:store_partition_workers, stream_id, workers}, _from, state) do
+    case :ets.lookup(state.table, {:stream, stream_id}) do
+      [{{:stream, ^stream_id}, info}] ->
+        updated_info = %{
+          info
+          | partition_workers: workers,
+            last_updated_at: DateTime.utc_now()
+        }
+
+        :ets.insert(state.table, {{:stream, stream_id}, updated_info})
+        {:reply, :ok, state}
+
+      [] ->
+        {:reply, {:error, :not_found}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:get_partition_workers, stream_id}, _from, state) do
+    case :ets.lookup(state.table, {:stream, stream_id}) do
+      [{{:stream, ^stream_id}, info}] ->
+        workers = Map.get(info, :partition_workers, [])
+        {:reply, {:ok, workers}, state}
+
+      [] ->
+        {:reply, {:error, :not_found}, state}
+    end
   end
 
   @impl true

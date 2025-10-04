@@ -322,9 +322,11 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
           new_state = %{state | retry_count: state.retry_count + 1}
           fetch_records(records_needed, new_state, acc)
         else
-          Logger.error(
+          Logger.debug(fn ->
             "Producer #{state.stream_id} failed after #{state.max_retries} retries: #{inspect(reason)}"
-          )
+          end)
+
+          Logger.error("Producer #{state.stream_id} failed after #{state.max_retries} retries")
 
           :telemetry.execute(
             [:ash_reports, :streaming, :producer, :error],

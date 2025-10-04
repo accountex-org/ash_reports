@@ -46,70 +46,65 @@ defmodule AshReports.Typst.DataLoaderAPITest do
   end
 
   describe "streaming configuration options (Section 2.5.1)" do
-    test "build_pipeline_opts includes all configuration options" do
-      # Test that the private function is called with enhanced options
-      # We verify this by checking the function exists and the documentation describes all options
-      {:docs_v1, _, :elixir, "text/markdown", module_doc, _, functions} =
+    test "load_for_typst includes all configuration options" do
+      # Test that the unified API documents all options
+      {:docs_v1, _, :elixir, "text/markdown", _module_doc, _, functions} =
         Code.fetch_docs(DataLoader)
 
-      stream_for_typst_docs =
+      load_for_typst_docs =
         Enum.find(functions, fn {{:function, name, arity}, _, _, _, _} ->
-          name == :stream_for_typst and arity == 4
+          name == :load_for_typst and arity == 4
         end)
 
-      assert stream_for_typst_docs != nil
+      assert load_for_typst_docs != nil
 
-      {{:function, :stream_for_typst, 4}, _, _, doc_content, _} = stream_for_typst_docs
+      {{:function, :load_for_typst, 4}, _, _, doc_content, _} = load_for_typst_docs
 
       # Verify documentation mentions all the new options
       doc_string = doc_content["en"]
       assert doc_string =~ ":chunk_size"
       assert doc_string =~ ":max_demand"
-      assert doc_string =~ ":buffer_size"
-      assert doc_string =~ ":enable_telemetry"
-      assert doc_string =~ ":aggregations"
-      assert doc_string =~ ":grouped_aggregations"
-      assert doc_string =~ ":memory_limit"
-      assert doc_string =~ ":timeout"
+      assert doc_string =~ ":include_sample"
+      assert doc_string =~ ":sample_size"
+      assert doc_string =~ ":strategy"
     end
 
     test "documentation includes comprehensive examples" do
       {:docs_v1, _, :elixir, "text/markdown", _, _, functions} = Code.fetch_docs(DataLoader)
 
-      stream_for_typst_docs =
+      load_for_typst_docs =
         Enum.find(functions, fn {{:function, name, arity}, _, _, _, _} ->
-          name == :stream_for_typst and arity == 4
+          name == :load_for_typst and arity == 4
         end)
 
-      {{:function, :stream_for_typst, 4}, _, _, doc_content, _} = stream_for_typst_docs
+      {{:function, :load_for_typst, 4}, _, _, doc_content, _} = load_for_typst_docs
       doc_string = doc_content["en"]
 
       # Verify examples are present
-      assert doc_string =~ "# Basic streaming with defaults"
-      assert doc_string =~ "# Custom chunk size for faster throughput"
-      assert doc_string =~ "# Override DSL-inferred aggregations"
-      assert doc_string =~ "# Memory-constrained environment"
+      assert doc_string =~ "# Automatic strategy selection"
+      assert doc_string =~ "# Force in-memory strategy"
+      assert doc_string =~ "# Use aggregation strategy"
+      assert doc_string =~ "# Get a stream for custom processing"
     end
   end
 
   describe "streaming API documentation" do
-    test "stream_for_typst/4 has comprehensive documentation" do
+    test "load_for_typst/4 has comprehensive documentation" do
       {:docs_v1, _, :elixir, "text/markdown", _, _, functions} = Code.fetch_docs(DataLoader)
 
-      stream_docs =
+      load_docs =
         Enum.find(functions, fn {{:function, name, arity}, _, _, _, _} ->
-          name == :stream_for_typst and arity == 4
+          name == :load_for_typst and arity == 4
         end)
 
-      assert stream_docs != nil
+      assert load_docs != nil
 
-      {{:function, :stream_for_typst, 4}, _, _, doc_content, _} = stream_docs
+      {{:function, :load_for_typst, 4}, _, _, doc_content, _} = load_docs
       doc_string = doc_content["en"]
 
       # Verify streaming documentation
-      assert doc_string =~ "streaming"
-      assert doc_string =~ "GenStage"
-      assert doc_string =~ "memory-efficient"
+      assert doc_string =~ "strategy"
+      assert doc_string =~ ":streaming"
     end
   end
 
@@ -149,14 +144,15 @@ defmodule AshReports.Typst.DataLoaderAPITest do
   end
 
   describe "backward compatibility (Section 2.5.1)" do
-    test "stream_for_typst with no options still works" do
-      # The function should work with arity 4
-      assert function_exported?(DataLoader, :stream_for_typst, 4)
+    test "stream_for_typst is still available (deprecated)" do
+      # The function has default params so exports as arity 3
+      assert function_exported?(DataLoader, :stream_for_typst, 3) or
+               function_exported?(DataLoader, :stream_for_typst, 4)
     end
 
-    test "existing code using stream_for_typst continues to work" do
-      # Verify that the enhanced version maintains the same basic interface
-      assert function_exported?(DataLoader, :stream_for_typst, 4)
+    test "load_with_aggregations_for_typst is still available (deprecated)" do
+      # Verify backward compatibility
+      assert function_exported?(DataLoader, :load_with_aggregations_for_typst, 4)
     end
   end
 
@@ -165,12 +161,12 @@ defmodule AshReports.Typst.DataLoaderAPITest do
       # Verify the error handling is documented
       {:docs_v1, _, :elixir, "text/markdown", _, _, functions} = Code.fetch_docs(DataLoader)
 
-      stream_docs =
+      load_docs =
         Enum.find(functions, fn {{:function, name, arity}, _, _, _, _} ->
-          name == :stream_for_typst and arity == 4
+          name == :load_for_typst and arity == 4
         end)
 
-      {{:function, :stream_for_typst, 4}, _, _, doc_content, _} = stream_docs
+      {{:function, :load_for_typst, 4}, _, _, doc_content, _} = load_docs
       doc_string = doc_content["en"]
 
       # Verify error cases are documented
@@ -178,9 +174,8 @@ defmodule AshReports.Typst.DataLoaderAPITest do
     end
   end
 
-  describe "load_for_typst/4 - non-streaming API with chart preprocessing (Section 3.3.2)" do
+  describe "load_for_typst/4 - unified API with strategy selection" do
     test "function is exported with correct arity" do
-      # Arity 4 required (no default params to avoid conflict with stream_for_typst)
       assert function_exported?(DataLoader, :load_for_typst, 4)
     end
 
@@ -195,11 +190,31 @@ defmodule AshReports.Typst.DataLoaderAPITest do
       assert {:error, _} = result
     end
 
-    test "accepts chart preprocessing options" do
+    test "accepts strategy option" do
       fake_domain = FakeModule
       fake_report = :test_report
       params = %{}
-      opts = [preprocess_charts: false, limit: 100]
+
+      # Test different strategies
+      for strategy <- [:auto, :in_memory, :aggregation, :streaming] do
+        opts = [strategy: strategy]
+        result = DataLoader.load_for_typst(fake_domain, fake_report, params, opts)
+        # Should return error for fake domain, but options are accepted
+        assert {:error, _} = result
+      end
+    end
+
+    test "accepts all loading options" do
+      fake_domain = FakeModule
+      fake_report = :test_report
+      params = %{}
+      opts = [
+        strategy: :in_memory,
+        preprocess_charts: false,
+        limit: 100,
+        chunk_size: 500,
+        include_sample: true
+      ]
 
       result = DataLoader.load_for_typst(fake_domain, fake_report, params, opts)
 
@@ -220,12 +235,15 @@ defmodule AshReports.Typst.DataLoaderAPITest do
       {{:function, :load_for_typst, 4}, _, _, doc_content, _} = load_docs
       doc_string = doc_content["en"]
 
-      # Verify documentation mentions chart preprocessing
-      assert doc_string =~ "chart"
-      assert doc_string =~ "small to medium reports"
+      # Verify documentation mentions strategies
+      assert doc_string =~ "strategy"
+      assert doc_string =~ ":auto"
+      assert doc_string =~ ":in_memory"
+      assert doc_string =~ ":aggregation"
+      assert doc_string =~ ":streaming"
     end
 
-    test "documentation describes chart preprocessing behavior" do
+    test "documentation describes all strategies" do
       {:docs_v1, _, :elixir, "text/markdown", _, _, functions} = Code.fetch_docs(DataLoader)
 
       load_docs =
@@ -236,9 +254,38 @@ defmodule AshReports.Typst.DataLoaderAPITest do
       {{:function, :load_for_typst, 4}, _, _, doc_content, _} = load_docs
       doc_string = doc_content["en"]
 
-      # Verify chart preprocessing steps are documented
-      assert doc_string =~ "data source"
-      assert doc_string =~ "SVG"
+      # Verify all strategies are documented
+      assert doc_string =~ "Automatically selects the best strategy"
+      assert doc_string =~ "Loads all records into memory"
+      assert doc_string =~ "streaming aggregations"
+      assert doc_string =~ "Returns a stream"
+    end
+  end
+
+  describe "deprecated functions" do
+    test "load_with_aggregations_for_typst delegates to load_for_typst" do
+      # This should still work but emit a warning
+      fake_domain = FakeModule
+      fake_report = :test_report
+      params = %{}
+      opts = []
+
+      result = DataLoader.load_with_aggregations_for_typst(fake_domain, fake_report, params, opts)
+
+      # Should behave the same as the new API
+      assert {:error, _} = result
+    end
+
+    test "stream_for_typst delegates to load_for_typst" do
+      fake_domain = FakeModule
+      fake_report = :test_report
+      params = %{}
+      opts = []
+
+      result = DataLoader.stream_for_typst(fake_domain, fake_report, params, opts)
+
+      # Should behave the same as the new API
+      assert {:error, _} = result
     end
   end
 end
