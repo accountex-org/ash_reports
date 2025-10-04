@@ -139,6 +139,18 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
   end
 
   @impl true
+  def handle_info(
+        {AshReportsDemoWeb.ReportBuilderLive.VisualizationConfig,
+         {:visualizations_updated, visualizations}},
+        socket
+      ) do
+    config = socket.assigns.config
+    updated_config = Map.put(config, :visualizations, visualizations)
+
+    {:noreply, assign(socket, :config, updated_config)}
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -274,35 +286,81 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
   defp preview_step(assigns) do
     ~H"""
     <div>
-      <h2 class="text-lg font-semibold text-gray-900">Preview Report</h2>
+      <h2 class="text-lg font-semibold text-gray-900">Configure Visualizations & Preview</h2>
       <p class="mt-1 text-sm text-gray-600">
-        Review your report configuration and preview the output
+        Add charts and visualizations, then preview your report
       </p>
 
-      <div class="mt-6">
-        <.button phx-click="generate_preview">
-          Generate Preview
-        </.button>
+      <div class="mt-6 space-y-6">
+        <!-- Visualization Configuration -->
+        <div>
+          <.live_component
+            module={AshReportsDemoWeb.ReportBuilderLive.VisualizationConfig}
+            id="visualization-config"
+            config={@config}
+          />
+        </div>
+        <!-- Chart Previews -->
+        <div :if={has_visualizations?(@config)} class="border-t border-gray-200 pt-6">
+          <h3 class="text-sm font-semibold text-gray-900">Chart Previews</h3>
+          <p class="mt-1 text-xs text-gray-500">
+            Sample visualizations (will use actual data in final report)
+          </p>
 
-        <div :if={length(@preview_data) > 0} class="mt-4">
-          <h3 class="text-sm font-medium text-gray-900">Preview Data</h3>
-          <div class="mt-2 overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-50">
-                <tr>
-                  <th :for={key <- preview_headers(@preview_data)} class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    <%= key %>
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200 bg-white">
-                <tr :for={row <- Enum.take(@preview_data, 10)}>
-                  <td :for={{_key, value} <- row} class="whitespace-nowrap px-3 py-2 text-sm text-gray-900">
-                    <%= value %>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            <div
+              :for={viz <- @config[:visualizations] || []}
+              class="rounded-lg border border-gray-200 bg-white p-4"
+            >
+              <h4 class="text-sm font-medium text-gray-900">
+                <%= viz.config.title || "Untitled Chart" %>
+              </h4>
+              <div class="mt-2 flex items-center justify-center bg-gray-50 p-8 rounded">
+                <div class="text-center text-gray-400">
+                  <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                  <p class="mt-2 text-sm">
+                    <%= humanize_chart_type(viz.type) %> · <%= viz.config.width %>x<%= viz.config.height %>px
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Preview Data Section -->
+        <div class="border-t border-gray-200 pt-6">
+          <h3 class="text-sm font-semibold text-gray-900">Data Preview</h3>
+
+          <.button phx-click="generate_preview" class="mt-3">
+            Generate Preview
+          </.button>
+
+          <div :if={length(@preview_data) > 0} class="mt-4">
+            <h4 class="text-sm font-medium text-gray-900">Sample Data (first 10 rows)</h4>
+            <div class="mt-2 overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th :for={key <- preview_headers(@preview_data)} class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                      <%= key %>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                  <tr :for={row <- Enum.take(@preview_data, 10)}>
+                    <td :for={{_key, value} <- row} class="whitespace-nowrap px-3 py-2 text-sm text-gray-900">
+                      <%= value %>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -408,5 +466,20 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
 
   defp steps do
     ["Select Template", "Configure Data", "Preview", "Generate"]
+  end
+
+  defp has_visualizations?(config) do
+    case config[:visualizations] do
+      nil -> false
+      [] -> false
+      _list -> true
+    end
+  end
+
+  defp humanize_chart_type(type) when is_atom(type) do
+    type
+    |> Atom.to_string()
+    |> String.split("_")
+    |> Enum.map_join(" ", &String.capitalize/1)
   end
 end
