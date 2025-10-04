@@ -369,11 +369,20 @@ defmodule AshReports.Typst.DataLoader do
     sample_size = Keyword.get(opts, :sample_size, 100)
 
     if include_sample? do
-      # Take first N records as sample, then drain the rest
-      sample = stream |> Enum.take(sample_size)
-      # Drain remaining stream
-      stream |> Stream.drop(sample_size) |> Stream.run()
-      {:ok, sample}
+      # Collect sample while draining the entire stream
+      # Use reduce to process stream once, collecting first N records
+      {sample, _count} =
+        stream
+        |> Enum.reduce({[], 0}, fn item, {acc, count} ->
+          if count < sample_size do
+            {[item | acc], count + 1}
+          else
+            # Still process but don't collect (drains the stream)
+            {acc, count + 1}
+          end
+        end)
+
+      {:ok, Enum.reverse(sample)}
     else
       # Just drain the stream without collecting records
       Stream.run(stream)
