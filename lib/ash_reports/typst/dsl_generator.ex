@@ -45,6 +45,7 @@ defmodule AshReports.Typst.DSLGenerator do
   require Logger
 
   alias AshReports.{Band, Report}
+  alias AshReports.Typst.CustomizationRenderer
 
   @doc """
   Generates a Typst template from an AshReports report definition.
@@ -166,6 +167,7 @@ defmodule AshReports.Typst.DSLGenerator do
       format: Keyword.get(options, :format, :pdf),
       theme: Keyword.get(options, :theme, "default"),
       debug: Keyword.get(options, :debug, false),
+      customization: Keyword.get(options, :customization),
       variables: extract_report_variables(report),
       groups: extract_report_groups(report)
     }
@@ -197,26 +199,32 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   defp generate_page_setup(report, context) do
-    """
-    // Page configuration
-    set page(
-      paper: "#{get_paper_size(context.format)}",
-      margin: (x: 2cm, y: 2cm),
-      #{generate_page_headers_footers(report, context)}
-    )
+    if context.customization do
+      # Use customization-aware page setup
+      CustomizationRenderer.render_page_setup(report, context.customization)
+    else
+      # Default page setup without customization
+      """
+      // Page configuration
+      set page(
+        paper: "#{get_paper_size(context.format)}",
+        margin: (x: 2cm, y: 2cm),
+        #{generate_page_headers_footers(report, context)}
+      )
 
-    // Document properties
-    set document(
-      title: "#{report.title || report.name}",
-      author: "AshReports"
-    )
+      // Document properties
+      set document(
+        title: "#{report.title || report.name}",
+        author: "AshReports"
+      )
 
-    // Text formatting
-    set text(
-      font: "Liberation Serif",
-      size: 11pt
-    )
-    """
+      // Text formatting
+      set text(
+        font: "Liberation Serif",
+        size: 11pt
+      )
+      """
+    end
   end
 
   defp generate_page_headers_footers(report, context) do
