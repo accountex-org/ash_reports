@@ -174,6 +174,139 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
       assert is_nil(chart_data.error)
     end
 
+    test "converts min aggregation to bar chart data" do
+      grouped_aggregation_state = %{
+        [:region] => %{
+          "North" => %{min: %{temperature: -15}},
+          "South" => %{min: %{temperature: 5}},
+          "East" => %{min: %{temperature: -8}}
+        }
+      }
+
+      chart_config = %{
+        name: :min_temp_by_region,
+        chart_type: :bar,
+        aggregation_ref: %{
+          group_by: :region,
+          aggregation_type: :min,
+          field: :temperature
+        },
+        chart_config: %{width: 600, height: 400},
+        embed_options: %{}
+      }
+
+      result = ChartDataCollector.convert_aggregations_to_charts(
+        grouped_aggregation_state,
+        [chart_config]
+      )
+
+      chart_data = result[:min_temp_by_region]
+
+      assert chart_data.name == :min_temp_by_region
+      assert chart_data.chart_type == :bar
+      assert is_binary(chart_data.svg)
+      assert is_binary(chart_data.embedded_code)
+      assert is_nil(chart_data.error)
+    end
+
+    test "converts max aggregation to area chart data" do
+      grouped_aggregation_state = %{
+        [:month] => %{
+          "Jan" => %{max: %{sales: 25000}},
+          "Feb" => %{max: %{sales: 30000}},
+          "Mar" => %{max: %{sales: 28000}}
+        }
+      }
+
+      chart_config = %{
+        name: :max_sales_trend,
+        chart_type: :area,
+        aggregation_ref: %{
+          group_by: :month,
+          aggregation_type: :max,
+          field: :sales
+        },
+        chart_config: %{width: 800, height: 400},
+        embed_options: %{}
+      }
+
+      result = ChartDataCollector.convert_aggregations_to_charts(
+        grouped_aggregation_state,
+        [chart_config]
+      )
+
+      chart_data = result[:max_sales_trend]
+
+      assert chart_data.chart_type == :area
+      assert is_binary(chart_data.svg)
+      assert is_nil(chart_data.error)
+    end
+
+    test "handles min aggregation with nil values" do
+      grouped_aggregation_state = %{
+        [:category] => %{
+          "A" => %{min: %{price: nil}},
+          "B" => %{min: %{price: 10}},
+          "C" => %{min: %{price: 5}}
+        }
+      }
+
+      chart_config = %{
+        name: :min_prices,
+        chart_type: :bar,
+        aggregation_ref: %{
+          group_by: :category,
+          aggregation_type: :min,
+          field: :price
+        },
+        chart_config: %{},
+        embed_options: %{}
+      }
+
+      result = ChartDataCollector.convert_aggregations_to_charts(
+        grouped_aggregation_state,
+        [chart_config]
+      )
+
+      chart_data = result[:min_prices]
+
+      assert is_binary(chart_data.svg)
+      assert is_nil(chart_data.error)
+    end
+
+    test "handles max aggregation with multi-field grouping" do
+      grouped_aggregation_state = %{
+        [:region, :product] => %{
+          {"North", "Widget"} => %{max: %{revenue: 50000}},
+          {"North", "Gadget"} => %{max: %{revenue: 75000}},
+          {"South", "Widget"} => %{max: %{revenue: 60000}}
+        }
+      }
+
+      chart_config = %{
+        name: :max_revenue_by_region_product,
+        chart_type: :bar,
+        aggregation_ref: %{
+          group_by: [:region, :product],
+          aggregation_type: :max,
+          field: :revenue
+        },
+        chart_config: %{width: 700, height: 450},
+        embed_options: %{}
+      }
+
+      result = ChartDataCollector.convert_aggregations_to_charts(
+        grouped_aggregation_state,
+        [chart_config]
+      )
+
+      chart_data = result[:max_revenue_by_region_product]
+
+      assert is_binary(chart_data.svg)
+      assert chart_data.svg =~ "North"
+      assert is_nil(chart_data.error)
+    end
+
     test "handles multi-field grouping" do
       grouped_aggregation_state = %{
         [:region, :quarter] => %{
