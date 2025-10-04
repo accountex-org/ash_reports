@@ -255,7 +255,7 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
 
   describe "evaluate_data_source/2" do
     test "returns static list data as-is" do
-      data = [%{x: 1, y: 2}, %{x: 3, y: 4}]
+      data = [%{category: "A", value: 10}, %{category: "B", value: 20}]
       context = %{records: [], config: %{}, variables: %{}}
 
       # Call via process_chart to test indirectly
