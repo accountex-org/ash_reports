@@ -1,7 +1,7 @@
 defmodule AshReports.Typst.DataLoaderTest do
   use ExUnit.Case, async: true
 
-  alias AshReports.Typst.DataLoader
+  alias AshReports.Typst.{AggregationConfigurator, DataLoader}
 
   describe "typst_config/1" do
     test "creates default configuration" do
@@ -44,7 +44,7 @@ defmodule AshReports.Typst.DataLoaderTest do
       }
 
       # Call the private function via send
-      result = call_private(DataLoader, :build_grouped_aggregations_from_dsl, [report])
+      result = AggregationConfigurator.build_aggregations(report)
 
       # Assert: Single field should be an atom, not a list
       assert [config] = result
@@ -63,7 +63,7 @@ defmodule AshReports.Typst.DataLoaderTest do
         variables: []
       }
 
-      result = call_private(DataLoader, :build_grouped_aggregations_from_dsl, [report])
+      result = AggregationConfigurator.build_aggregations(report)
 
       # Assert: Level 1 should have single field (atom)
       assert [level1, level2] = result
@@ -86,7 +86,7 @@ defmodule AshReports.Typst.DataLoaderTest do
         variables: []
       }
 
-      result = call_private(DataLoader, :build_grouped_aggregations_from_dsl, [report])
+      result = AggregationConfigurator.build_aggregations(report)
 
       assert [level1, level2, level3] = result
 
@@ -118,7 +118,7 @@ defmodule AshReports.Typst.DataLoaderTest do
         variables: []
       }
 
-      result = call_private(DataLoader, :build_grouped_aggregations_from_dsl, [report])
+      result = AggregationConfigurator.build_aggregations(report)
 
       assert [level1, level2] = result
 
@@ -134,7 +134,7 @@ defmodule AshReports.Typst.DataLoaderTest do
     test "empty groups list returns empty config" do
       report = %{groups: [], variables: []}
 
-      result = call_private(DataLoader, :build_grouped_aggregations_from_dsl, [report])
+      result = AggregationConfigurator.build_aggregations(report)
 
       assert result == []
     end
@@ -148,7 +148,7 @@ defmodule AshReports.Typst.DataLoaderTest do
         variables: []
       }
 
-      result = call_private(DataLoader, :build_grouped_aggregations_from_dsl, [report])
+      result = AggregationConfigurator.build_aggregations(report)
 
       assert [level1, level2] = result
       assert level1.sort == :desc
@@ -168,7 +168,7 @@ defmodule AshReports.Typst.DataLoaderTest do
         ]
       }
 
-      result = call_private(DataLoader, :build_grouped_aggregations_from_dsl, [report])
+      result = AggregationConfigurator.build_aggregations(report)
 
       assert [level1, level2] = result
 
@@ -191,7 +191,7 @@ defmodule AshReports.Typst.DataLoaderTest do
         variables: []
       }
 
-      result = call_private(DataLoader, :build_grouped_aggregations_from_dsl, [report])
+      result = AggregationConfigurator.build_aggregations(report)
 
       # Should be sorted by level and cumulative
       assert [level1, level2, level3] = result
@@ -216,7 +216,7 @@ defmodule AshReports.Typst.DataLoaderTest do
         variables: []
       }
 
-      result = call_private(DataLoader, :build_grouped_aggregations_from_dsl, [report])
+      result = AggregationConfigurator.build_aggregations(report)
 
       # Should still accumulate correctly despite gaps
       assert [level1, level3, level5] = result
@@ -233,7 +233,4 @@ defmodule AshReports.Typst.DataLoaderTest do
   end
 
   # Helper to call test interface
-  defp call_private(_module, :build_grouped_aggregations_from_dsl, [report]) do
-    DataLoader.__test_build_grouped_aggregations__(report)
-  end
 end

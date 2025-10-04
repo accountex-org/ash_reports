@@ -58,9 +58,10 @@ defmodule AshReports.Typst.DataLoader do
   alias AshReports.Report
 
   alias AshReports.Typst.{
+    AggregationConfigurator,
     ChartPreprocessor,
     DataProcessor,
-    ExpressionParser,
+    QueryBuilder,
     StreamingPipeline
   }
 
@@ -318,14 +319,8 @@ defmodule AshReports.Typst.DataLoader do
   # Helper Functions
 
   defp load_report_records(domain, report, params, opts) do
-    case build_query_from_report(domain, report, params) do
+    case QueryBuilder.build_query(domain, report, params, opts) do
       {:ok, query} ->
-        # Apply any limit/offset from options
-        query =
-          query
-          |> maybe_apply_limit(opts)
-          |> maybe_apply_offset(opts)
-
         case Ash.read(query, domain: domain) do
           {:ok, records} -> {:ok, records}
           {:error, reason} -> {:error, {:query_failed, reason}}
@@ -333,20 +328,6 @@ defmodule AshReports.Typst.DataLoader do
 
       {:error, reason} ->
         {:error, reason}
-    end
-  end
-
-  defp maybe_apply_limit(query, opts) do
-    case Keyword.get(opts, :limit) do
-      nil -> query
-      limit -> Ash.Query.limit(query, limit)
-    end
-  end
-
-  defp maybe_apply_offset(query, opts) do
-    case Keyword.get(opts, :offset) do
-      nil -> query
-      offset -> Ash.Query.offset(query, offset)
     end
   end
 
@@ -573,12 +554,12 @@ defmodule AshReports.Typst.DataLoader do
 
   defp create_streaming_pipeline(domain, report, params, opts) do
     # Get the query from report definition
-    with {:ok, query} <- build_query_from_report(domain, report, params) do
+    with {:ok, query} <- QueryBuilder.build_query(domain, report, params, opts) do
       # Build transformer function
       transformer = build_typst_transformer(report, opts)
 
       # Build grouped aggregations from DSL
-      grouped_aggregations = build_grouped_aggregations_from_dsl(report)
+      grouped_aggregations = AggregationConfigurator.build_aggregations(report)
 
       Logger.debug(fn ->
         """
@@ -634,22 +615,6 @@ defmodule AshReports.Typst.DataLoader do
     ]
   end
 
-  defp build_query_from_report(_domain, report, params) do
-    # Build Ash query from report definition and parameters
-    try do
-      query =
-        report.resource
-        |> Ash.Query.new()
-        |> apply_report_filters(report, params)
-        |> apply_report_sort(report)
-        |> apply_preloads(report)
-
-      {:ok, query}
-    rescue
-      error ->
-        {:error, {:query_build_failed, error}}
-    end
-  end
 
   defp build_typst_transformer(_report, opts) do
     # Create a transformer function that processes records for Typst
@@ -673,269 +638,4 @@ defmodule AshReports.Typst.DataLoader do
     }
   end
 
-  defp apply_report_filters(query, report, params) do
-    # Apply filters from report definition and runtime parameters
-    query_with_report_filter =
-      case report.filter do
-        nil ->
-          query
-
-        filter_expr ->
-          Ash.Query.do_filter(query, filter_expr)
-      end
-
-    apply_runtime_filters(query_with_report_filter, params)
-  end
-
-  defp apply_runtime_filters(query, params) when params == %{}, do: query
-
-  defp apply_runtime_filters(query, params) do
-    # Apply runtime filters from parameters
-    Enum.reduce(params, query, fn {_key, value}, acc_query ->
-      case value do
-        nil -> acc_query
-        # Simplified - real implementation would apply filter
-        _ -> acc_query
-      end
-    end)
-  end
-
-  defp apply_report_sort(query, report) do
-    case report.sort do
-      nil ->
-        query
-
-      sort_spec ->
-        Ash.Query.sort(query, sort_spec)
-    end
-  end
-
-  defp apply_preloads(query, report) do
-    # Determine what relationships need to be preloaded
-    preloads = extract_relationship_preloads(report)
-
-    case preloads do
-      [] -> query
-      list -> Ash.Query.load(query, list)
-    end
-  end
-
-  defp extract_relationship_preloads(report) do
-    # Extract relationship paths from column definitions
-    # This is a simplified implementation - could be enhanced
-    columns = report.columns || []
-
-    columns
-    |> Enum.flat_map(fn column ->
-      case column.source do
-        {:relationship, path} -> [path]
-        _ -> []
-      end
-    end)
-    |> Enum.uniq()
-  end
-
-  # DSL Integration Functions
-
-  defp build_grouped_aggregations_from_dsl(report) do
-    groups = report.groups || []
-
-    case groups do
-      [] ->
-        Logger.debug(fn -> "No groups defined in report, skipping aggregation configuration" end)
-        []
-
-      group_list ->
-        Logger.debug(fn ->
-          "Building aggregation configuration for #{length(group_list)} groups"
-        end)
-
-        # Use reduce to accumulate fields from previous levels for cumulative grouping
-        # Prepend to lists (O(1)) instead of append (O(n)), then reverse at the end
-        {configs, _accumulated_fields} =
-          group_list
-          |> Enum.sort_by(& &1.level)
-          |> Enum.reduce({[], []}, fn group, {configs, accumulated_fields} ->
-            # Extract field name for current group
-            field_name = extract_field_for_group(group)
-
-            # Prepend to accumulated fields (O(1) instead of O(n))
-            new_accumulated_fields = [field_name | accumulated_fields]
-
-            # Build config with cumulative fields (reverse for correct order)
-            config =
-              build_aggregation_config_for_group_cumulative(
-                group,
-                report,
-                Enum.reverse(new_accumulated_fields)
-              )
-
-            # Prepend config (O(1) instead of O(n))
-            {[config | configs], new_accumulated_fields}
-          end)
-
-        configs = configs |> Enum.reverse() |> Enum.reject(&is_nil/1)
-
-        # Validate memory requirements for cumulative grouping
-        validate_aggregation_memory(configs, report)
-
-        configs
-    end
-  end
-
-  # Validate that aggregation memory requirements are reasonable
-  defp validate_aggregation_memory(configs, report) do
-    # Estimate total groups across all aggregation configs
-    total_estimated_groups =
-      Enum.reduce(configs, 0, fn config, acc ->
-        # Estimate groups for this config based on field count
-        # This is a heuristic - actual cardinality depends on data
-        field_count =
-          case config.group_by do
-            list when is_list(list) -> length(list)
-            _atom -> 1
-          end
-        estimated_groups = estimate_group_cardinality(field_count)
-        acc + estimated_groups
-      end)
-
-    # Estimate memory per group (aggregation state + overhead)
-    bytes_per_group = 600
-    estimated_memory = total_estimated_groups * bytes_per_group
-
-    # Log warning if memory estimate is high
-    if estimated_memory > 50_000_000 do
-      # 50 MB threshold
-      Logger.warning("""
-      High memory usage estimated for aggregations in report #{report.name}:
-        - Total estimated groups: #{total_estimated_groups}
-        - Estimated memory: #{format_bytes(estimated_memory)}
-        - Consider reducing grouping levels or field cardinality
-
-      This is based on heuristics and actual usage may vary.
-      """)
-    end
-
-    :ok
-  end
-
-  # Estimate group cardinality based on number of grouping fields
-  # This is a rough heuristic - actual cardinality depends on data distribution
-  defp estimate_group_cardinality(field_count) when field_count == 1, do: 100
-  defp estimate_group_cardinality(field_count) when field_count == 2, do: 1_000
-  defp estimate_group_cardinality(field_count) when field_count == 3, do: 5_000
-  defp estimate_group_cardinality(field_count) when field_count >= 4, do: 10_000
-
-  # Format bytes for human-readable output
-  defp format_bytes(bytes) when bytes < 1_024, do: "#{bytes} bytes"
-  defp format_bytes(bytes) when bytes < 1_048_576, do: "#{Float.round(bytes / 1_024, 2)} KB"
-  defp format_bytes(bytes) when bytes < 1_073_741_824, do: "#{Float.round(bytes / 1_048_576, 2)} MB"
-  defp format_bytes(bytes), do: "#{Float.round(bytes / 1_073_741_824, 2)} GB"
-
-  # Extract field name from a group (helper for cumulative grouping)
-  defp extract_field_for_group(group) do
-    case ExpressionParser.extract_field_with_fallback(group.expression, group.name) do
-      {:ok, field} ->
-        field
-
-      _error ->
-        Logger.warning(fn ->
-          """
-          Failed to parse group expression for #{group.name}, falling back to group name.
-          Expression: #{inspect(group.expression)}
-          """
-        end)
-
-        group.name
-    end
-  end
-
-  # Build aggregation config with cumulative grouping (includes fields from all previous levels)
-  defp build_aggregation_config_for_group_cumulative(group, report, accumulated_fields) do
-    # Derive aggregation types from variables
-    aggregations = derive_aggregations_for_group(group.level, report)
-
-    # Normalize group_by: single field as atom, multiple fields as list
-    group_by = normalize_group_by_fields(accumulated_fields)
-
-    Logger.debug(fn ->
-      """
-      Group #{group.name} (level #{group.level}):
-        - Accumulated fields: #{inspect(accumulated_fields)}
-        - Normalized group_by: #{inspect(group_by)}
-        - Aggregations: #{inspect(aggregations)}
-      """
-    end)
-
-    %{
-      group_by: group_by,
-      level: group.level,
-      aggregations: aggregations,
-      sort: group.sort || :asc
-    }
-  rescue
-    error ->
-      Logger.error("""
-      Failed to build aggregation config for group #{inspect(group)}:
-      #{inspect(error)}
-      """)
-
-      nil
-  end
-
-  # Normalize group_by fields: single field as atom, multiple fields as list
-  defp normalize_group_by_fields([single_field]), do: single_field
-  defp normalize_group_by_fields(fields) when is_list(fields), do: fields
-
-  defp derive_aggregations_for_group(group_level, report) do
-    variables = report.variables || []
-
-    # Find variables that reset at this group level
-    group_variables =
-      variables
-      |> Enum.filter(fn var ->
-        var.reset_on == :group and var.reset_group == group_level
-      end)
-
-    # Map variable types to aggregation functions
-    aggregation_types =
-      group_variables
-      |> Enum.map(&map_variable_type_to_aggregation/1)
-      |> Enum.reject(&is_nil/1)
-      |> Enum.uniq()
-
-    # Default aggregations if none specified
-    case aggregation_types do
-      [] ->
-        Logger.debug(fn ->
-          "No group-scoped variables found for level #{group_level}, using defaults"
-        end)
-
-        [:sum, :count]
-
-      types ->
-        types
-    end
-  end
-
-  defp map_variable_type_to_aggregation(variable) do
-    case variable.type do
-      :sum -> :sum
-      :average -> :avg
-      :count -> :count
-      :min -> :min
-      :max -> :max
-      :first -> :first
-      :last -> :last
-      _ -> nil
-    end
-  end
-
-  # Test-only public interface (DO NOT USE IN PRODUCTION)
-  if Mix.env() == :test do
-    @doc false
-    def __test_build_grouped_aggregations__(report) do
-      build_grouped_aggregations_from_dsl(report)
-    end
-  end
 end
