@@ -35,6 +35,9 @@ defmodule AshReportsDemoWeb.Router do
     live "/charts/line", ChartLive.Line, :show
     live "/charts/bar", ChartLive.Bar, :show
     live "/charts/pie", ChartLive.Pie, :show
+
+    # Report Builder
+    live "/reports/builder", ReportBuilderLive.Index, :index
   end
 
   # Other scopes may use custom stacks.
