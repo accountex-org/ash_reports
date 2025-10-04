@@ -1118,13 +1118,13 @@ real-time progress from actual report generation.
    - ⏭️ Test concurrent user scenarios
    - ⏭️ Optimize bottlenecks
 
-3. **Day 15: UI/UX Polish** ⏳ **PARTIALLY COMPLETE**
+3. **Day 15: UI/UX Polish** ✅ **COMPLETE**
    - ✅ Refine generation step user interface
    - ✅ Improve loading states (added animated spinner, progress bar animations)
    - ✅ Enhanced status feedback (success/error/cancelled/failed states with icons)
    - ✅ Added configuration summary display
    - ✅ Form validation enhancements (completed - step-by-step validation)
-   - ⏳ Add helpful tooltips/guidance (pending)
+   - ✅ Add helpful tooltips/guidance (completed - all steps have info tooltips)
    - ⏭️ Accessibility improvements (deferred)
 
 **Deliverables**: ⏳ **Partially Complete**
@@ -1163,10 +1163,20 @@ real-time progress from actual report generation.
 - Navigation buttons disabled when validation fails
 - Validation errors cleared on successful navigation
 
+**Tooltip System** ✨:
+- Info icons with hover tooltips on all step headers
+- CSS-only tooltips using group-hover (no JavaScript)
+- Dark theme tooltips (gray-900 background, white text)
+- Contextual help text for each step:
+  - Template: Explains template purpose and customization
+  - Data Source: Describes Ash resources, filters, and relationships
+  - Visualization: Explains chart configuration and preview behavior
+  - Generation: Describes progress tracking and cancellation
+
 **Next Steps**:
-- Add tooltips and help text throughout UI
 - Complete integration test suite setup
 - Document the report builder interface
+- Consider accessibility improvements (ARIA labels, keyboard navigation)
 
 ---
 

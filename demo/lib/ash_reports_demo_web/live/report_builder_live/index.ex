@@ -299,10 +299,30 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
   defp template_selector_step(assigns) do
     ~H"""
     <div>
-      <h2 class="text-lg font-semibold text-gray-900">Select Template</h2>
-      <p class="mt-1 text-sm text-gray-600">
-        Choose a report template to get started
-      </p>
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Select Template</h2>
+          <p class="mt-1 text-sm text-gray-600">
+            Choose a report template to get started
+          </p>
+        </div>
+        <div class="group relative">
+          <svg
+            class="h-5 w-5 text-gray-400 hover:text-gray-600"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          <div class="invisible absolute right-0 top-6 z-10 w-64 rounded-md bg-gray-900 px-3 py-2 text-sm text-white opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100">
+            Templates provide pre-configured layouts and styles for your reports. Each template includes default formatting, sections, and visualization options that you can customize in the following steps.
+          </div>
+        </div>
+      </div>
 
       <%= if @errors[:template] do %>
         <div class="mt-4 rounded-md bg-red-50 p-4">
@@ -344,10 +364,30 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
   defp data_source_step(assigns) do
     ~H"""
     <div>
-      <h2 class="text-lg font-semibold text-gray-900">Configure Data Source</h2>
-      <p class="mt-1 text-sm text-gray-600">
-        Select your data source and configure filters
-      </p>
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Configure Data Source</h2>
+          <p class="mt-1 text-sm text-gray-600">
+            Select your data source and configure filters
+          </p>
+        </div>
+        <div class="group relative">
+          <svg
+            class="h-5 w-5 text-gray-400 hover:text-gray-600"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          <div class="invisible absolute right-0 top-6 z-10 w-64 rounded-md bg-gray-900 px-3 py-2 text-sm text-white opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100">
+            Choose an Ash resource as your data source. You can add filters to refine the data included in your report. Relationships can be preloaded for accessing nested data.
+          </div>
+        </div>
+      </div>
 
       <%= if @errors[:data_source] do %>
         <div class="mt-4 rounded-md bg-red-50 p-4">
@@ -382,10 +422,30 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
   defp preview_step(assigns) do
     ~H"""
     <div>
-      <h2 class="text-lg font-semibold text-gray-900">Configure Visualizations & Preview</h2>
-      <p class="mt-1 text-sm text-gray-600">
-        Add charts and visualizations, then preview your report
-      </p>
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Configure Visualizations & Preview</h2>
+          <p class="mt-1 text-sm text-gray-600">
+            Add charts and visualizations, then preview your report
+          </p>
+        </div>
+        <div class="group relative">
+          <svg
+            class="h-5 w-5 text-gray-400 hover:text-gray-600"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1 a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          <div class="invisible absolute right-0 top-6 z-10 w-64 rounded-md bg-gray-900 px-3 py-2 text-sm text-white opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100">
+            Add charts to visualize your data. You can configure chart type, dimensions, themes, and other display options. Preview shows sample data - the final report will use actual data from your configured source.
+          </div>
+        </div>
+      </div>
 
       <div class="mt-6 space-y-6">
         <!-- Visualization Configuration -->
@@ -467,10 +527,30 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
   defp generation_step(assigns) do
     ~H"""
     <div>
-      <h2 class="text-lg font-semibold text-gray-900">Generate Report</h2>
-      <p class="mt-1 text-sm text-gray-600">
-        Review your configuration and generate the final report
-      </p>
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Generate Report</h2>
+          <p class="mt-1 text-sm text-gray-600">
+            Review your configuration and generate the final report
+          </p>
+        </div>
+        <div class="group relative">
+          <svg
+            class="h-5 w-5 text-gray-400 hover:text-gray-600"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          <div class="invisible absolute right-0 top-6 z-10 w-64 rounded-md bg-gray-900 px-3 py-2 text-sm text-white opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100">
+            Review your configuration summary and click "Generate Report" to start the report generation process. Progress will be tracked in real-time and you can cancel at any point.
+          </div>
+        </div>
+      </div>
       <!-- Configuration Summary -->
       <div class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
         <h3 class="text-sm font-semibold text-gray-900">Configuration Summary</h3>
