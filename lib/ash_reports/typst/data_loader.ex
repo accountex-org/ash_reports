@@ -741,6 +741,7 @@ defmodule AshReports.Typst.DataLoader do
         end)
 
         # Use reduce to accumulate fields from previous levels for cumulative grouping
+        # Prepend to lists (O(1)) instead of append (O(n)), then reverse at the end
         {configs, _accumulated_fields} =
           group_list
           |> Enum.sort_by(& &1.level)
@@ -748,22 +749,23 @@ defmodule AshReports.Typst.DataLoader do
             # Extract field name for current group
             field_name = extract_field_for_group(group)
 
-            # Add to accumulated fields (cumulative grouping)
-            new_accumulated_fields = accumulated_fields ++ [field_name]
+            # Prepend to accumulated fields (O(1) instead of O(n))
+            new_accumulated_fields = [field_name | accumulated_fields]
 
-            # Build config with cumulative fields
+            # Build config with cumulative fields (reverse for correct order)
             config =
               build_aggregation_config_for_group_cumulative(
                 group,
                 report,
-                new_accumulated_fields
+                Enum.reverse(new_accumulated_fields)
               )
 
-            # Return updated accumulator
-            {configs ++ [config], new_accumulated_fields}
+            # Prepend config (O(1) instead of O(n))
+            {[config | configs], new_accumulated_fields}
           end)
 
         configs
+        |> Enum.reverse()
         |> Enum.reject(&is_nil/1)
     end
   end
