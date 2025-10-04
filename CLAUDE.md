@@ -308,3 +308,4 @@ _
 - do not ever put a co-authored line in the git commits
 - Never include a co-authored line in a git commit message
 - IMPORTANT You must always ask explicit permission for commit even if give permission to do so
+- NEVER ASK PERMISSION TO RUN BASH COMMANDS THAT INCLUDE "mix test" IN THEM
