@@ -93,7 +93,10 @@ defmodule AshReports.Typst.DSLGenerator do
     {:ok, template}
   rescue
     error ->
-      Logger.debug(fn -> "Template generation failed for report #{report.name}: #{inspect(error)}" end)
+      Logger.debug(fn ->
+        "Template generation failed for report #{report.name}: #{inspect(error)}"
+      end)
+
       Logger.error("Template generation failed for report #{report.name}")
       {:error, {:generation_failed, error}}
   end
@@ -483,9 +486,14 @@ defmodule AshReports.Typst.DSLGenerator do
     # Add caption if present
     lines =
       case Map.get(chart, :caption) do
-        nil -> lines
-        caption when is_binary(caption) -> lines ++ ["#text(size: 10pt, style: \"italic\")[#{caption}]"]
-        _ -> lines
+        nil ->
+          lines
+
+        caption when is_binary(caption) ->
+          lines ++ ["#text(size: 10pt, style: \"italic\")[#{caption}]"]
+
+        _ ->
+          lines
       end
 
     Enum.join(lines, "\n")

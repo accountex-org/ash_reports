@@ -263,12 +263,16 @@ defmodule AshReports.Typst.DataLoaderTest do
       }
 
       # Cumulative: Level 2 has 2 fields
-      assert {:ok, cumulative_result} = AggregationConfigurator.build_aggregations(report, cumulative: true)
+      assert {:ok, cumulative_result} =
+               AggregationConfigurator.build_aggregations(report, cumulative: true)
+
       [_, level2_cumulative] = cumulative_result
       assert level2_cumulative.group_by == [:region, :city]
 
       # Non-cumulative: Level 2 has 1 field
-      assert {:ok, non_cumulative_result} = AggregationConfigurator.build_aggregations(report, cumulative: false)
+      assert {:ok, non_cumulative_result} =
+               AggregationConfigurator.build_aggregations(report, cumulative: false)
+
       [_, level2_non_cumulative] = non_cumulative_result
       assert level2_non_cumulative.group_by == :city
     end

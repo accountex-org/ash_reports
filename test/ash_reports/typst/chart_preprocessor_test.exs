@@ -25,14 +25,15 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
     end
 
     test "processes a single chart with static data" do
-      chart_element = Chart.new(:sales_chart,
-        chart_type: :bar,
-        data_source: [
-          %{category: "Q1", value: 100},
-          %{category: "Q2", value: 150}
-        ],
-        config: %{width: 600, height: 400}
-      )
+      chart_element =
+        Chart.new(:sales_chart,
+          chart_type: :bar,
+          data_source: [
+            %{category: "Q1", value: 100},
+            %{category: "Q2", value: 150}
+          ],
+          config: %{width: 600, height: 400}
+        )
 
       report = %Report{
         name: :sales_report,
@@ -60,17 +61,19 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
     end
 
     test "processes multiple charts in different bands" do
-      chart1 = Chart.new(:chart1,
-        chart_type: :bar,
-        data_source: [%{category: "A", value: 10}],
-        config: %{width: 400, height: 300}
-      )
+      chart1 =
+        Chart.new(:chart1,
+          chart_type: :bar,
+          data_source: [%{category: "A", value: 10}],
+          config: %{width: 400, height: 300}
+        )
 
-      chart2 = Chart.new(:chart2,
-        chart_type: :line,
-        data_source: [%{x: "Jan", y: 20}],
-        config: %{width: 500, height: 350}
-      )
+      chart2 =
+        Chart.new(:chart2,
+          chart_type: :line,
+          data_source: [%{x: "Jan", y: 20}],
+          config: %{width: 500, height: 350}
+        )
 
       report = %Report{
         name: :multi_chart_report,
@@ -100,15 +103,16 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
     end
 
     test "handles chart with embed options" do
-      chart_element = Chart.new(:sized_chart,
-        chart_type: :pie,
-        data_source: [
-          %{label: "A", value: 30},
-          %{label: "B", value: 70}
-        ],
-        config: %{width: 500, height: 500},
-        embed_options: %{width: "80%", caption: "Revenue Split"}
-      )
+      chart_element =
+        Chart.new(:sized_chart,
+          chart_type: :pie,
+          data_source: [
+            %{label: "A", value: 30},
+            %{label: "B", value: 70}
+          ],
+          config: %{width: 500, height: 500},
+          embed_options: %{width: "80%", caption: "Revenue Split"}
+        )
 
       report = %Report{
         name: :sized_report,
@@ -134,11 +138,12 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
 
   describe "process_chart/2" do
     test "processes chart with static list data" do
-      chart = Chart.new(:test_chart,
-        chart_type: :bar,
-        data_source: [%{category: "A", value: 100}],
-        config: %{width: 600, height: 400}
-      )
+      chart =
+        Chart.new(:test_chart,
+          chart_type: :bar,
+          data_source: [%{category: "A", value: 100}],
+          config: %{width: 600, height: 400}
+        )
 
       data_context = %{records: [], config: %{}, variables: %{}}
 
@@ -152,11 +157,12 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
     end
 
     test "generates error placeholder for missing data source" do
-      chart = Chart.new(:broken_chart,
-        chart_type: :bar,
-        data_source: nil,
-        config: %{width: 600, height: 400}
-      )
+      chart =
+        Chart.new(:broken_chart,
+          chart_type: :bar,
+          data_source: nil,
+          config: %{width: 600, height: 400}
+        )
 
       data_context = %{records: [], config: %{}, variables: %{}}
 
@@ -173,11 +179,12 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
       # Create an Ash.Expr-like struct for testing
       expr_struct = %{__struct__: Ash.Expr, expression: :records}
 
-      chart = Chart.new(:records_chart,
-        chart_type: :bar,
-        data_source: expr_struct,
-        config: %{width: 600, height: 400}
-      )
+      chart =
+        Chart.new(:records_chart,
+          chart_type: :bar,
+          data_source: expr_struct,
+          config: %{width: 600, height: 400}
+        )
 
       records = [
         %{category: "Q1", value: 100},
@@ -197,55 +204,65 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
       data_context = %{records: [], config: %{}, variables: %{}}
 
       # Bar chart
-      bar_chart = Chart.new(:bar_chart,
-        chart_type: :bar,
-        data_source: [%{category: "A", value: 10}],
-        config: %{width: 400, height: 300}
-      )
+      bar_chart =
+        Chart.new(:bar_chart,
+          chart_type: :bar,
+          data_source: [%{category: "A", value: 10}],
+          config: %{width: 400, height: 300}
+        )
+
       result = ChartPreprocessor.process_chart(bar_chart, data_context)
       assert result.chart_type == :bar
       assert is_binary(result.svg)
       assert is_nil(result.error)
 
       # Line chart
-      line_chart = Chart.new(:line_chart,
-        chart_type: :line,
-        data_source: [%{x: 1, y: 10}],
-        config: %{width: 400, height: 300}
-      )
+      line_chart =
+        Chart.new(:line_chart,
+          chart_type: :line,
+          data_source: [%{x: 1, y: 10}],
+          config: %{width: 400, height: 300}
+        )
+
       result = ChartPreprocessor.process_chart(line_chart, data_context)
       assert result.chart_type == :line
       assert is_binary(result.svg)
       assert is_nil(result.error)
 
       # Pie chart
-      pie_chart = Chart.new(:pie_chart,
-        chart_type: :pie,
-        data_source: [%{category: "A", value: 30}],
-        config: %{width: 400, height: 300}
-      )
+      pie_chart =
+        Chart.new(:pie_chart,
+          chart_type: :pie,
+          data_source: [%{category: "A", value: 30}],
+          config: %{width: 400, height: 300}
+        )
+
       result = ChartPreprocessor.process_chart(pie_chart, data_context)
       assert result.chart_type == :pie
       assert is_binary(result.svg)
       assert is_nil(result.error)
 
       # Area chart
-      area_chart = Chart.new(:area_chart,
-        chart_type: :area,
-        data_source: [%{x: 1, y: 10}],
-        config: %{width: 400, height: 300}
-      )
+      area_chart =
+        Chart.new(:area_chart,
+          chart_type: :area,
+          data_source: [%{x: 1, y: 10}],
+          config: %{width: 400, height: 300}
+        )
+
       result = ChartPreprocessor.process_chart(area_chart, data_context)
       assert result.chart_type == :area
       assert is_binary(result.svg)
       assert is_nil(result.error)
 
       # Scatter plot
-      scatter_chart = Chart.new(:scatter_chart,
-        chart_type: :scatter,
-        data_source: [%{x: 1, y: 10}],
-        config: %{width: 400, height: 300}
-      )
+      scatter_chart =
+        Chart.new(:scatter_chart,
+          chart_type: :scatter,
+          data_source: [%{x: 1, y: 10}],
+          config: %{width: 400, height: 300}
+        )
+
       result = ChartPreprocessor.process_chart(scatter_chart, data_context)
       assert result.chart_type == :scatter
       assert is_binary(result.svg)
@@ -259,11 +276,12 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
       context = %{records: [], config: %{}, variables: %{}}
 
       # Call via process_chart to test indirectly
-      chart = Chart.new(:test,
-        chart_type: :bar,
-        data_source: data,
-        config: %{}
-      )
+      chart =
+        Chart.new(:test,
+          chart_type: :bar,
+          data_source: data,
+          config: %{}
+        )
 
       result = ChartPreprocessor.process_chart(chart, context)
       assert is_nil(result.error)
@@ -276,11 +294,12 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
       # Create an Ash.Expr-like struct for testing
       expr_struct = %{__struct__: Ash.Expr, expression: :records}
 
-      chart = Chart.new(:test,
-        chart_type: :bar,
-        data_source: expr_struct,
-        config: %{}
-      )
+      chart =
+        Chart.new(:test,
+          chart_type: :bar,
+          data_source: expr_struct,
+          config: %{}
+        )
 
       result = ChartPreprocessor.process_chart(chart, context)
       assert is_nil(result.error)
@@ -293,11 +312,12 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
       config = %{width: 600, height: 400, title: "Test Chart"}
       context = %{records: [], config: %{}, variables: %{}}
 
-      chart = Chart.new(:test,
-        chart_type: :bar,
-        data_source: [%{category: "A", value: 10}],
-        config: config
-      )
+      chart =
+        Chart.new(:test,
+          chart_type: :bar,
+          data_source: [%{category: "A", value: 10}],
+          config: config
+        )
 
       result = ChartPreprocessor.process_chart(chart, context)
       assert is_nil(result.error)
@@ -306,11 +326,12 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
     test "handles nil config" do
       context = %{records: [], config: %{}, variables: %{}}
 
-      chart = Chart.new(:test,
-        chart_type: :bar,
-        data_source: [%{category: "A", value: 10}],
-        config: nil
-      )
+      chart =
+        Chart.new(:test,
+          chart_type: :bar,
+          data_source: [%{category: "A", value: 10}],
+          config: nil
+        )
 
       result = ChartPreprocessor.process_chart(chart, context)
       assert is_nil(result.error)
@@ -320,11 +341,12 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
   describe "error handling" do
     test "generates error placeholder for chart generation failure" do
       # Invalid data format that will cause Charts.generate to fail
-      chart = Chart.new(:invalid_chart,
-        chart_type: :bar,
-        data_source: "invalid_data_type",
-        config: %{width: 600, height: 400}
-      )
+      chart =
+        Chart.new(:invalid_chart,
+          chart_type: :bar,
+          data_source: "invalid_data_type",
+          config: %{width: 600, height: 400}
+        )
 
       data_context = %{records: [], config: %{}, variables: %{}}
 
@@ -338,11 +360,12 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
     end
 
     test "error placeholder contains chart name" do
-      chart = Chart.new(:my_broken_chart,
-        chart_type: :bar,
-        data_source: nil,
-        config: %{}
-      )
+      chart =
+        Chart.new(:my_broken_chart,
+          chart_type: :bar,
+          data_source: nil,
+          config: %{}
+        )
 
       data_context = %{records: [], config: %{}, variables: %{}}
 
@@ -355,12 +378,13 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
 
   describe "integration with ChartEmbedder" do
     test "embedded code uses ChartEmbedder format" do
-      chart = Chart.new(:embedded_chart,
-        chart_type: :bar,
-        data_source: [%{category: "A", value: 100}],
-        config: %{width: 600, height: 400},
-        embed_options: %{width: "100%"}
-      )
+      chart =
+        Chart.new(:embedded_chart,
+          chart_type: :bar,
+          data_source: [%{category: "A", value: 100}],
+          config: %{width: 600, height: 400},
+          embed_options: %{width: "100%"}
+        )
 
       data_context = %{records: [], config: %{}, variables: %{}}
 

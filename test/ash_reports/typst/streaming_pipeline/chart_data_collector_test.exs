@@ -8,13 +8,14 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
   describe "extract_chart_configs/1" do
     test "extracts aggregation-based chart configurations" do
       # Create a chart element with aggregation data source
-      chart_element = Chart.new(:sales_chart,
-        chart_type: :bar,
-        # This would be an Ash.Expr in real usage
-        data_source: {:aggregation, nil, [:region, :sum, :amount]},
-        config: %{width: 600, height: 400},
-        embed_options: %{width: "100%"}
-      )
+      chart_element =
+        Chart.new(:sales_chart,
+          chart_type: :bar,
+          # This would be an Ash.Expr in real usage
+          data_source: {:aggregation, nil, [:region, :sum, :amount]},
+          config: %{width: 600, height: 400},
+          embed_options: %{width: "100%"}
+        )
 
       report = %Report{
         name: :test_report,
@@ -41,11 +42,12 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
 
     test "ignores non-aggregation charts" do
       # Chart with static data
-      chart_element = Chart.new(:static_chart,
-        chart_type: :bar,
-        data_source: [%{category: "A", value: 10}],
-        config: %{}
-      )
+      chart_element =
+        Chart.new(:static_chart,
+          chart_type: :bar,
+          data_source: [%{category: "A", value: 10}],
+          config: %{}
+        )
 
       report = %Report{
         name: :test_report,
@@ -93,10 +95,11 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
         embed_options: %{}
       }
 
-      result = ChartDataCollector.convert_aggregations_to_charts(
-        grouped_aggregation_state,
-        [chart_config]
-      )
+      result =
+        ChartDataCollector.convert_aggregations_to_charts(
+          grouped_aggregation_state,
+          [chart_config]
+        )
 
       assert Map.has_key?(result, :sales_by_region)
       chart_data = result[:sales_by_region]
@@ -129,10 +132,11 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
         embed_options: %{}
       }
 
-      result = ChartDataCollector.convert_aggregations_to_charts(
-        grouped_aggregation_state,
-        [chart_config]
-      )
+      result =
+        ChartDataCollector.convert_aggregations_to_charts(
+          grouped_aggregation_state,
+          [chart_config]
+        )
 
       chart_data = result[:orders_by_category]
 
@@ -162,10 +166,11 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
         embed_options: %{}
       }
 
-      result = ChartDataCollector.convert_aggregations_to_charts(
-        grouped_aggregation_state,
-        [chart_config]
-      )
+      result =
+        ChartDataCollector.convert_aggregations_to_charts(
+          grouped_aggregation_state,
+          [chart_config]
+        )
 
       chart_data = result[:avg_price_trend]
 
@@ -195,10 +200,11 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
         embed_options: %{}
       }
 
-      result = ChartDataCollector.convert_aggregations_to_charts(
-        grouped_aggregation_state,
-        [chart_config]
-      )
+      result =
+        ChartDataCollector.convert_aggregations_to_charts(
+          grouped_aggregation_state,
+          [chart_config]
+        )
 
       chart_data = result[:min_temp_by_region]
 
@@ -230,10 +236,11 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
         embed_options: %{}
       }
 
-      result = ChartDataCollector.convert_aggregations_to_charts(
-        grouped_aggregation_state,
-        [chart_config]
-      )
+      result =
+        ChartDataCollector.convert_aggregations_to_charts(
+          grouped_aggregation_state,
+          [chart_config]
+        )
 
       chart_data = result[:max_sales_trend]
 
@@ -263,10 +270,11 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
         embed_options: %{}
       }
 
-      result = ChartDataCollector.convert_aggregations_to_charts(
-        grouped_aggregation_state,
-        [chart_config]
-      )
+      result =
+        ChartDataCollector.convert_aggregations_to_charts(
+          grouped_aggregation_state,
+          [chart_config]
+        )
 
       chart_data = result[:min_prices]
 
@@ -295,10 +303,11 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
         embed_options: %{}
       }
 
-      result = ChartDataCollector.convert_aggregations_to_charts(
-        grouped_aggregation_state,
-        [chart_config]
-      )
+      result =
+        ChartDataCollector.convert_aggregations_to_charts(
+          grouped_aggregation_state,
+          [chart_config]
+        )
 
       chart_data = result[:max_revenue_by_region_product]
 
@@ -328,10 +337,11 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
         embed_options: %{}
       }
 
-      result = ChartDataCollector.convert_aggregations_to_charts(
-        grouped_aggregation_state,
-        [chart_config]
-      )
+      result =
+        ChartDataCollector.convert_aggregations_to_charts(
+          grouped_aggregation_state,
+          [chart_config]
+        )
 
       chart_data = result[:regional_quarterly_sales]
 
@@ -358,10 +368,11 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
         embed_options: %{}
       }
 
-      result = ChartDataCollector.convert_aggregations_to_charts(
-        grouped_aggregation_state,
-        [chart_config]
-      )
+      result =
+        ChartDataCollector.convert_aggregations_to_charts(
+          grouped_aggregation_state,
+          [chart_config]
+        )
 
       chart_data = result[:missing_chart]
 
@@ -398,10 +409,11 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollectorTest do
         }
       ]
 
-      result = ChartDataCollector.convert_aggregations_to_charts(
-        grouped_aggregation_state,
-        chart_configs
-      )
+      result =
+        ChartDataCollector.convert_aggregations_to_charts(
+          grouped_aggregation_state,
+          chart_configs
+        )
 
       assert Map.has_key?(result, :chart1)
       assert Map.has_key?(result, :chart2)

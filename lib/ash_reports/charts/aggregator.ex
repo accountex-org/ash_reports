@@ -389,6 +389,7 @@ defmodule AshReports.Charts.Aggregator do
   defp get_field(_record, _field), do: nil
 
   defp group_key_name(field) when is_atom(field), do: field
+
   defp group_key_name(field) when is_binary(field) do
     String.to_existing_atom(field)
   rescue

@@ -28,8 +28,10 @@ defmodule AshReports.Charts.Cache do
   require Logger
 
   @table_name :ash_reports_chart_cache
-  @cleanup_interval 60_000  # Cleanup every minute
-  @default_ttl 300_000      # 5 minutes default TTL
+  # Cleanup every minute
+  @cleanup_interval 60_000
+  # 5 minutes default TTL
+  @default_ttl 300_000
 
   # Client API
 

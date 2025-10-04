@@ -233,7 +233,10 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
         ChartHelpers.generate_error_placeholder(config.name, reason)
 
       unexpected ->
-        Logger.debug("Unexpected result in chart generation for #{config.name}: #{inspect(unexpected)}")
+        Logger.debug(
+          "Unexpected result in chart generation for #{config.name}: #{inspect(unexpected)}"
+        )
+
         Logger.error("Unexpected result in chart generation for chart: #{config.name}")
         ChartHelpers.generate_error_placeholder(config.name, {:unexpected_result, unexpected})
     end

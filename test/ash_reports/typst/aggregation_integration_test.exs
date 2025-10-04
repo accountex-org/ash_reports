@@ -43,7 +43,7 @@ defmodule AshReports.Typst.AggregationIntegrationTest do
           MockDomain,
           :nonexistent_report,
           %{},
-          [strategy: :aggregation]
+          strategy: :aggregation
         )
 
       assert {:error, _reason} = result

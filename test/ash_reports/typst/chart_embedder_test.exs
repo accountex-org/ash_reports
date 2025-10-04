@@ -13,7 +13,8 @@ defmodule AshReports.Typst.ChartEmbedderTest do
 
       assert typst =~ "#image.decode("
       assert typst =~ "format: \"svg\""
-      refute typst =~ "#image("  # Shouldn't use file path
+      # Shouldn't use file path
+      refute typst =~ "#image("
     end
 
     test "embeds SVG with width option" do
@@ -176,7 +177,8 @@ defmodule AshReports.Typst.ChartEmbedderTest do
 
       assert flow =~ "Q1 Results"
       assert flow =~ "Q2 Results"
-      assert flow =~ "#v(20pt)"  # Default spacing
+      # Default spacing
+      assert flow =~ "#v(20pt)"
     end
 
     test "uses custom spacing" do
