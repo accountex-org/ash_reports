@@ -38,8 +38,20 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
 
   @impl true
   def handle_event("next_step", _params, socket) do
-    next_step = min(socket.assigns.active_step + 1, 4)
-    {:noreply, assign(socket, :active_step, next_step)}
+    current_step = socket.assigns.active_step
+    config = socket.assigns.config
+
+    case validate_step(current_step, config) do
+      :ok ->
+        next_step = min(current_step + 1, 4)
+        {:noreply, socket |> assign(:active_step, next_step) |> assign(:errors, %{})}
+
+      {:error, errors} ->
+        {:noreply,
+         socket
+         |> assign(:errors, errors)
+         |> put_flash(:error, "Please fix validation errors before proceeding")}
+    end
   end
 
   @impl true
@@ -252,13 +264,28 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
         <.button
           :if={@active_step < 4}
           phx-click="next_step"
+          disabled={!can_proceed?(@active_step, @config, @errors)}
+          class={
+            if !can_proceed?(@active_step, @config, @errors) do
+              "cursor-not-allowed opacity-50"
+            else
+              ""
+            end
+          }
         >
           Next
         </.button>
         <.button
           :if={@active_step == 4}
           phx-click="generate_report"
-          class="bg-green-600 hover:bg-green-700"
+          disabled={!can_proceed?(4, @config, @errors)}
+          class={
+            if !can_proceed?(4, @config, @errors) do
+              "cursor-not-allowed opacity-50"
+            else
+              "bg-green-600 hover:bg-green-700"
+            end
+          }
         >
           Generate Report
         </.button>
@@ -276,6 +303,25 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
       <p class="mt-1 text-sm text-gray-600">
         Choose a report template to get started
       </p>
+
+      <%= if @errors[:template] do %>
+        <div class="mt-4 rounded-md bg-red-50 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-red-800"><%= @errors[:template] %></p>
+            </div>
+          </div>
+        </div>
+      <% end %>
 
       <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div
@@ -302,6 +348,25 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
       <p class="mt-1 text-sm text-gray-600">
         Select your data source and configure filters
       </p>
+
+      <%= if @errors[:data_source] do %>
+        <div class="mt-4 rounded-md bg-red-50 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-red-800"><%= @errors[:data_source] %></p>
+            </div>
+          </div>
+        </div>
+      <% end %>
 
       <div class="mt-6">
         <.live_component
@@ -607,6 +672,58 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
 
   defp steps do
     ["Select Template", "Configure Data", "Preview", "Generate"]
+  end
+
+  # Validation Functions
+
+  defp validate_step(1, config) do
+    # Step 1: Template selection
+    if config[:template] do
+      :ok
+    else
+      {:error, %{template: "Please select a template to continue"}}
+    end
+  end
+
+  defp validate_step(2, config) do
+    # Step 2: Data source configuration
+    errors = %{}
+
+    errors =
+      if config[:data_source] && config[:data_source][:resource] do
+        errors
+      else
+        Map.put(errors, :data_source, "Please select a data source")
+      end
+
+    if map_size(errors) == 0 do
+      :ok
+    else
+      {:error, errors}
+    end
+  end
+
+  defp validate_step(3, _config) do
+    # Step 3: Preview - no validation required
+    :ok
+  end
+
+  defp validate_step(4, config) do
+    # Step 4: Generation - validate complete config
+    case ReportBuilder.validate_config(config) do
+      {:ok, _} -> :ok
+      {:error, errors} -> {:error, errors}
+    end
+  end
+
+  defp validate_step(_step, _config), do: :ok
+
+  defp can_proceed?(step, config, errors) do
+    # Check if current step is valid
+    case validate_step(step, config) do
+      :ok -> map_size(errors) == 0
+      {:error, _} -> false
+    end
   end
 
   defp has_visualizations?(config) do

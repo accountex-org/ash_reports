@@ -1123,8 +1123,8 @@ real-time progress from actual report generation.
    - ✅ Improve loading states (added animated spinner, progress bar animations)
    - ✅ Enhanced status feedback (success/error/cancelled/failed states with icons)
    - ✅ Added configuration summary display
-   - ⏳ Add helpful tooltips/guidance (in progress)
-   - ⏳ Form validation enhancements (pending)
+   - ✅ Form validation enhancements (completed - step-by-step validation)
+   - ⏳ Add helpful tooltips/guidance (pending)
    - ⏭️ Accessibility improvements (deferred)
 
 **Deliverables**: ⏳ **Partially Complete**
@@ -1141,17 +1141,29 @@ real-time progress from actual report generation.
 - Visual feedback for all generation states
 - Improved button styling and layout
 - Better visual hierarchy
+- **Form validation with step-by-step validation** ✨
+- Inline error messages for template and data source selection
+- Disabled "Next" button until current step is valid
+- Validation error display with icons and clear messaging
 
 **Files Modified**:
-1. `demo/lib/ash_reports_demo_web/live/report_builder_live/index.ex` (+150 lines - enhanced generation_step)
+1. `demo/lib/ash_reports_demo_web/live/report_builder_live/index.ex` (+150 lines UI + 60 lines validation)
 2. `lib/ash_reports/test_endpoint.ex` (created for test compatibility)
 3. `lib/ash_reports/test_router.ex` (created for test compatibility)
 4. `config/test.exs` (+2 lines - enhanced endpoint config)
 
-**Total New Code**: ~180 lines
+**Total New Code**: ~240 lines
+
+**Validation Features**:
+- Step 1: Validates template selection before proceeding
+- Step 2: Validates data source configuration
+- Step 3: No validation (preview step)
+- Step 4: Full config validation before generation
+- Error messages displayed inline with red alert boxes
+- Navigation buttons disabled when validation fails
+- Validation errors cleared on successful navigation
 
 **Next Steps**:
-- Add form validation to template/data source selection
 - Add tooltips and help text throughout UI
 - Complete integration test suite setup
 - Document the report builder interface
