@@ -286,34 +286,36 @@ charts[:sales_by_region].embedded_code
 
 ### Memory Usage
 
-**Before (Full-Record Charts)**:
-```
-1,000,000 records × 1 KB each = 1 GB memory
-```
+**Memory Complexity**:
 
-**After (Aggregation-Based Charts)**:
+**Traditional Approach (Loading All Records)**:
 ```
-1,000,000 records → 50 regions
-50 regions × 200 bytes = 10 KB memory
+Memory = O(n) where n = total records
+Example: 1,000,000 records = potentially 100s of MB to GBs
 ```
 
-**Memory Savings**: **100,000x reduction** 🎉
+**Aggregation-Based Approach**:
+```
+Memory = O(g) where g = unique groups
+Example: 1,000,000 records → 50 groups = ~10-50 KB
+```
 
-### Processing Time
+**Key Benefit**: Memory usage is bounded by number of groups, not records. This enables chart generation on datasets of any size with predictable memory usage.
 
-**Streaming with Aggregations**:
-- 1M records @ 10K records/sec = 100 seconds
-- Aggregation computation: negligible (inline with streaming)
-- Chart generation: 50 groups × 50ms = 2.5 seconds
-- **Total**: ~102 seconds
+### Processing Characteristics
 
-**Memory-Based (if it worked)**:
-- Load 1M records: 30-60 seconds
-- Chart generation: same 2.5 seconds
-- **Total**: ~35 seconds
-- **BUT**: Requires 1 GB memory (often crashes)
+**Strengths**:
+- Memory usage independent of dataset size
+- Works with existing streaming infrastructure
+- Single-pass aggregation computation
+- Bounded memory footprint
 
-**Trade-off**: Slightly slower but **works at any scale**
+**Considerations**:
+- Memory grows with number of unique groups
+- High-cardinality groupings (10K+ groups) may impact performance
+- Default limit: 10,000 groups per aggregation config
+
+**Trade-off**: Streaming is slightly slower than in-memory processing, but enables charts on unlimited dataset sizes without memory constraints
 
 ## Benefits
 

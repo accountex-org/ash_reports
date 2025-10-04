@@ -228,11 +228,13 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
         generate_error_placeholder(config.name, :aggregation_not_found)
 
       {:error, reason} ->
-        Logger.error("Chart processing failed for #{config.name}: #{inspect(reason)}")
+        Logger.debug("Chart processing failed for #{config.name}: #{inspect(reason)}")
+        Logger.error("Chart processing failed for chart: #{config.name}")
         generate_error_placeholder(config.name, reason)
 
       unexpected ->
-        Logger.error("Unexpected result in chart generation for #{config.name}: #{inspect(unexpected)}")
+        Logger.debug("Unexpected result in chart generation for #{config.name}: #{inspect(unexpected)}")
+        Logger.error("Unexpected result in chart generation for chart: #{config.name}")
         generate_error_placeholder(config.name, {:unexpected_result, unexpected})
     end
   end
