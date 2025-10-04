@@ -93,6 +93,7 @@ defmodule AshReports.Typst.StreamingPipeline do
 
   alias AshReports.Typst.StreamingPipeline.{
     HealthMonitor,
+    PartitionedProducerConsumer,
     Producer,
     ProducerConsumer,
     Registry,
@@ -120,10 +121,25 @@ defmodule AshReports.Typst.StreamingPipeline do
   - `:query` - The Ash query to execute (required)
   - `:chunk_size` - Records per chunk (default: 1000)
   - `:max_demand` - ProducerConsumer max demand (default: 500)
+  - `:partition_count` - Number of parallel workers for aggregations (default: 1)
 
   **Internal Options** (used by DataLoader only):
   - `:transformer` - DSL-generated transformation function (internal use only)
   - `:report_config` - Report configuration (internal use only)
+
+  ## Horizontal Scalability
+
+  Set `:partition_count` to enable parallel aggregation processing:
+
+      # 4 parallel workers (≈4x throughput for aggregations)
+      StreamingPipeline.start_pipeline(
+        domain: MyApp,
+        resource: Order,
+        query: query,
+        partition_count: 4
+      )
+
+  Recommended: partition_count = number of CPU cores
 
   ## Returns
 
@@ -337,17 +353,26 @@ defmodule AshReports.Typst.StreamingPipeline do
   @spec get_aggregation_state(stream_id()) ::
           {:ok, map()} | {:error, :not_found | :no_producer_consumer | term()}
   def get_aggregation_state(stream_id) do
-    with {:ok, pipeline_info} <- Registry.get_pipeline(stream_id),
-         {:ok, producer_consumer_pid} <- get_producer_consumer_pid(pipeline_info) do
-      # Call the ProducerConsumer to get aggregation state
-      try do
-        GenStage.call(producer_consumer_pid, :get_aggregation_state, 5000)
-      catch
-        :exit, {:noproc, _} ->
-          {:error, :producer_consumer_stopped}
+    with {:ok, pipeline_info} <- Registry.get_pipeline(stream_id) do
+      # Check if this is a partitioned pipeline
+      case Registry.get_partition_workers(stream_id) do
+        {:ok, [_ | _] = workers} ->
+          # Merge results from all partition workers
+          PartitionedProducerConsumer.merge_partitions(workers)
 
-        :exit, {:timeout, _} ->
-          {:error, :timeout}
+        _ ->
+          # Single worker pipeline
+          with {:ok, producer_consumer_pid} <- get_producer_consumer_pid(pipeline_info) do
+            try do
+              GenStage.call(producer_consumer_pid, :get_aggregation_state, 5000)
+            catch
+              :exit, {:noproc, _} ->
+                {:error, :producer_consumer_stopped}
+
+              :exit, {:timeout, _} ->
+                {:error, :timeout}
+            end
+          end
       end
     end
   end
@@ -397,6 +422,8 @@ defmodule AshReports.Typst.StreamingPipeline do
   end
 
   defp start_pipeline_stages(stream_id, producer_opts, max_demand, transformer, report_config) do
+    partition_count = Keyword.get(producer_opts, :partition_count, 1)
+
     with {:ok, pipeline_supervisor_pid} <- get_pipeline_supervisor(stream_id),
          {:ok, producer_pid} <-
            start_producer_stage(pipeline_supervisor_pid, producer_opts, stream_id),
@@ -407,7 +434,8 @@ defmodule AshReports.Typst.StreamingPipeline do
              producer_pid,
              max_demand,
              transformer,
-             report_config
+             report_config,
+             partition_count
            ) do
       {:ok, stream_id, stream}
     end
@@ -443,6 +471,40 @@ defmodule AshReports.Typst.StreamingPipeline do
          producer_pid,
          max_demand,
          transformer,
+         report_config,
+         partition_count
+       ) do
+    grouped_aggregations = get_in(report_config, [:grouped_aggregations]) || []
+
+    if partition_count > 1 and length(grouped_aggregations) > 0 do
+      # Start partitioned workers for parallel aggregation processing
+      start_partitioned_workers(
+        stream_id,
+        producer_pid,
+        max_demand,
+        transformer,
+        report_config,
+        partition_count
+      )
+    else
+      # Start single ProducerConsumer (backward compatible)
+      start_single_worker(
+        pipeline_supervisor_pid,
+        stream_id,
+        producer_pid,
+        max_demand,
+        transformer,
+        report_config
+      )
+    end
+  end
+
+  defp start_single_worker(
+         pipeline_supervisor_pid,
+         stream_id,
+         producer_pid,
+         max_demand,
+         transformer,
          report_config
        ) do
     producer_consumer_opts = [
@@ -466,6 +528,45 @@ defmodule AshReports.Typst.StreamingPipeline do
         Logger.error("Failed to start ProducerConsumer")
         Registry.update_status(stream_id, :failed)
         {:error, {:producer_consumer_start_failed, reason}}
+    end
+  end
+
+  defp start_partitioned_workers(
+         stream_id,
+         producer_pid,
+         max_demand,
+         transformer,
+         report_config,
+         partition_count
+       ) do
+    partition_opts = [
+      stream_id: stream_id,
+      producer_pid: producer_pid,
+      max_demand: max_demand,
+      transformer: transformer,
+      partition_count: partition_count,
+      grouped_aggregations: get_in(report_config, [:grouped_aggregations]) || []
+    ]
+
+    case PartitionedProducerConsumer.start_partitions(partition_opts) do
+      {:ok, workers} ->
+        # Store worker info in registry for result merging
+        Registry.store_partition_workers(stream_id, workers)
+
+        # Create stream from first worker (all workers produce same transformed records)
+        # Aggregations will be merged at the end via get_aggregation_state
+        first_worker = hd(workers)
+        stream = create_stream(first_worker.pid, stream_id)
+        {:ok, stream}
+
+      {:error, reason} ->
+        Logger.debug(fn ->
+          "Failed to start partitioned workers: #{inspect(reason)}"
+        end)
+
+        Logger.error("Failed to start partitioned ProducerConsumer workers")
+        Registry.update_status(stream_id, :failed)
+        {:error, {:partitioned_workers_start_failed, reason}}
     end
   end
 end
