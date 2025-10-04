@@ -1,4 +1,35 @@
 defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
+  @moduledoc """
+  Interactive LiveView-based Report Builder interface.
+
+  Provides a step-by-step wizard for creating and configuring reports without
+  writing DSL code. Users can select templates, configure data sources, add
+  visualizations, and generate reports with real-time progress tracking.
+
+  ## Features
+
+  - **4-Step Wizard**: Template → Data Source → Visualization → Generation
+  - **Form Validation**: Step-by-step validation with inline error messages
+  - **Real-time Progress**: Live progress tracking during report generation
+  - **Contextual Help**: Hover tooltips on each step for guidance
+  - **Responsive Design**: Mobile-friendly interface with Tailwind CSS
+
+  ## State Management
+
+  The LiveView maintains the following assigns:
+
+  - `:config` - Report configuration map (template, data_source, visualizations)
+  - `:active_step` - Current wizard step (1-4)
+  - `:generation_status` - Report generation status (:idle, :generating, :completed, etc.)
+  - `:progress` - Generation progress percentage (0-100)
+  - `:errors` - Validation errors map
+  - `:tracker_id` - Progress tracker ID for monitoring generation
+
+  ## Usage
+
+  Navigate to `/reports/builder` to access the interactive report builder.
+  """
+
   use AshReportsDemoWeb, :live_view
 
   alias AshReports.ReportBuilder
@@ -295,7 +326,18 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
   end
 
   # Step Components
+  #
+  # Each step component renders the UI for a specific wizard step.
+  # Components include:
+  # - Info icon with hover tooltip for contextual help
+  # - Inline error messages when validation fails
+  # - Step-specific configuration UI
 
+  # Renders Step 1: Template Selection.
+  #
+  # Displays available report templates as clickable cards. When a template is selected,
+  # it automatically advances to the next step. Includes validation error display and
+  # contextual help tooltip.
   defp template_selector_step(assigns) do
     ~H"""
     <div>
@@ -756,6 +798,15 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
 
   # Validation Functions
 
+  # Validates the current step's configuration.
+  #
+  # Each step has specific validation requirements:
+  # - Step 1: Template must be selected
+  # - Step 2: Data source must be configured with a resource
+  # - Step 3: No validation (preview is optional)
+  # - Step 4: Full configuration validation via ReportBuilder
+  #
+  # Returns `:ok` if valid, or `{:error, errors_map}` with validation errors.
   defp validate_step(1, config) do
     # Step 1: Template selection
     if config[:template] do
@@ -798,6 +849,10 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
 
   defp validate_step(_step, _config), do: :ok
 
+  # Checks if navigation should proceed from the current step.
+  #
+  # Used to enable/disable the "Next" and "Generate Report" buttons.
+  # Returns `true` if the step is valid and there are no pending errors.
   defp can_proceed?(step, config, errors) do
     # Check if current step is valid
     case validate_step(step, config) do
