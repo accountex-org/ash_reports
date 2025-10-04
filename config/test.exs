@@ -19,4 +19,6 @@ config :phoenix_test, :endpoint, AshReports.TestEndpoint
 config :ash_reports, AshReports.TestEndpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "test_secret_key_base_ash_reports_test_endpoint_very_long_and_secure",
-  server: false
+  server: false,
+  live_view: [signing_salt: "test_live_view_salt"],
+  pubsub_server: false

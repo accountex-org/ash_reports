@@ -404,41 +404,151 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
     <div>
       <h2 class="text-lg font-semibold text-gray-900">Generate Report</h2>
       <p class="mt-1 text-sm text-gray-600">
-        Review and generate your final report
+        Review your configuration and generate the final report
       </p>
-
+      <!-- Configuration Summary -->
+      <div class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <h3 class="text-sm font-semibold text-gray-900">Configuration Summary</h3>
+        <dl class="mt-3 space-y-2 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-gray-600">Template:</dt>
+            <dd class="font-medium text-gray-900"><%= @config[:template] || "Not selected" %></dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-600">Data Source:</dt>
+            <dd class="font-medium text-gray-900">
+              <%= if @config[:data_source], do: "Configured", else: "Not configured" %>
+            </dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-600">Visualizations:</dt>
+            <dd class="font-medium text-gray-900">
+              <%= length(@config[:visualizations] || []) %> chart(s)
+            </dd>
+          </div>
+        </dl>
+      </div>
+      <!-- Generation Status -->
       <div class="mt-6">
-        <%= case @status do %>
+        <%= case @generation_status do %>
           <% :idle -> %>
-            <p class="text-sm text-gray-600">Ready to generate report</p>
+            <div class="text-center">
+              <p class="text-sm text-gray-600">Ready to generate report</p>
+              <p class="mt-2 text-xs text-gray-500">
+                Click the button below to start report generation
+              </p>
+            </div>
           <% :generating -> %>
             <div class="space-y-4">
-              <p class="text-sm text-gray-900">Generating report...</p>
+              <div class="flex items-center gap-3">
+                <div class="h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"></div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium text-gray-900">Generating report...</p>
+                  <p class="text-xs text-gray-500">This may take a few moments</p>
+                </div>
+              </div>
+
               <div class="relative pt-1">
                 <div class="mb-2 flex items-center justify-between">
-                  <span class="inline-block rounded-full bg-blue-200 px-2 py-1 text-xs font-semibold uppercase text-blue-600">
+                  <span class="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                    <svg
+                      class="-ml-1 mr-1.5 h-4 w-4 animate-pulse"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
                     In Progress
                   </span>
-                  <span class="text-xs font-semibold text-gray-700">
+                  <span class="text-sm font-semibold text-gray-900">
                     <%= @progress %>%
                   </span>
                 </div>
-                <div class="mb-4 flex h-2 overflow-hidden rounded bg-blue-200 text-xs">
+                <div class="mb-4 flex h-3 overflow-hidden rounded-full bg-gray-200">
                   <div
                     style={"width: #{@progress}%"}
-                    class="flex flex-col justify-center whitespace-nowrap bg-blue-500 text-center text-white shadow-none"
+                    class="flex flex-col justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-center text-xs text-white shadow-sm transition-all duration-500"
                   >
                   </div>
                 </div>
               </div>
-              <.button phx-click="cancel_generation" class="bg-red-600 hover:bg-red-700">
-                Cancel
+
+              <.button phx-click="cancel_generation" class="w-full bg-red-600 hover:bg-red-700">
+                <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+                Cancel Generation
               </.button>
             </div>
           <% :completed -> %>
-            <p class="text-sm text-green-600">Report generated successfully!</p>
+            <div class="rounded-lg bg-green-50 p-4">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-green-800">Report generated successfully!</h3>
+                  <div class="mt-2 text-sm text-green-700">
+                    <p>Your report has been generated and is ready to download.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           <% :cancelled -> %>
-            <p class="text-sm text-gray-600">Report generation was cancelled</p>
+            <div class="rounded-lg bg-yellow-50 p-4">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fill-rule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-yellow-800">Report generation was cancelled</h3>
+                  <div class="mt-2 text-sm text-yellow-700">
+                    <p>You can start a new generation when ready.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% :failed -> %>
+            <div class="rounded-lg bg-red-50 p-4">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-red-800">Report generation failed</h3>
+                  <div class="mt-2 text-sm text-red-700">
+                    <p>An error occurred during generation. Please try again.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
         <% end %>
       </div>
     </div>
