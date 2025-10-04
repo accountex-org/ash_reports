@@ -773,11 +773,59 @@ defmodule AshReports.Typst.DataLoader do
             {[config | configs], new_accumulated_fields}
           end)
 
+        configs = configs |> Enum.reverse() |> Enum.reject(&is_nil/1)
+
+        # Validate memory requirements for cumulative grouping
+        validate_aggregation_memory(configs, report)
+
         configs
-        |> Enum.reverse()
-        |> Enum.reject(&is_nil/1)
     end
   end
+
+  # Validate that aggregation memory requirements are reasonable
+  defp validate_aggregation_memory(configs, report) do
+    # Estimate total groups across all aggregation configs
+    total_estimated_groups =
+      Enum.reduce(configs, 0, fn config, acc ->
+        # Estimate groups for this config based on field count
+        # This is a heuristic - actual cardinality depends on data
+        field_count = length(config.group_by)
+        estimated_groups = estimate_group_cardinality(field_count)
+        acc + estimated_groups
+      end)
+
+    # Estimate memory per group (aggregation state + overhead)
+    bytes_per_group = 600
+    estimated_memory = total_estimated_groups * bytes_per_group
+
+    # Log warning if memory estimate is high
+    if estimated_memory > 50_000_000 do
+      # 50 MB threshold
+      Logger.warning("""
+      High memory usage estimated for aggregations in report #{report.name}:
+        - Total estimated groups: #{total_estimated_groups}
+        - Estimated memory: #{format_bytes(estimated_memory)}
+        - Consider reducing grouping levels or field cardinality
+
+      This is based on heuristics and actual usage may vary.
+      """)
+    end
+
+    :ok
+  end
+
+  # Estimate group cardinality based on number of grouping fields
+  # This is a rough heuristic - actual cardinality depends on data distribution
+  defp estimate_group_cardinality(field_count) when field_count == 1, do: 100
+  defp estimate_group_cardinality(field_count) when field_count == 2, do: 1_000
+  defp estimate_group_cardinality(field_count) when field_count == 3, do: 5_000
+  defp estimate_group_cardinality(field_count) when field_count >= 4, do: 10_000
+
+  # Format bytes for human-readable output
+  defp format_bytes(bytes) when bytes < 1_024, do: "#{bytes} bytes"
+  defp format_bytes(bytes) when bytes < 1_048_576, do: "#{Float.round(bytes / 1_024, 2)} KB"
+  defp format_bytes(bytes) when bytes < 1_073_741_824, do: "#{Float.round(bytes / 1_048_576, 2)} MB"
+  defp format_bytes(bytes), do: "#{Float.round(bytes / 1_073_741_824, 2)} GB"
 
   # Extract field name from a group (helper for cumulative grouping)
   defp extract_field_for_group(group) do
