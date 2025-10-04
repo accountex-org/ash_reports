@@ -38,7 +38,7 @@ defmodule AshReports.Typst.ChartPreprocessor do
 
   alias AshReports.{Band, Charts, Report}
   alias AshReports.Element.Chart
-  alias AshReports.Typst.ChartEmbedder
+  alias AshReports.Typst.{ChartEmbedder, ChartHelpers}
 
   @type data_context :: %{
           records: [map()],
@@ -122,13 +122,8 @@ defmodule AshReports.Typst.ChartPreprocessor do
       {:error, reason} ->
         Logger.warning("Chart #{chart.name} generation failed: #{inspect(reason)}")
 
-        %{
-          name: chart.name,
-          svg: nil,
-          embedded_code: generate_error_placeholder(chart.name, reason),
-          chart_type: chart.chart_type,
-          error: reason
-        }
+        result = ChartHelpers.generate_error_placeholder(chart.name, reason, style: :compact)
+        Map.put(result, :chart_type, chart.chart_type)
     end
   end
 
@@ -229,27 +224,4 @@ defmodule AshReports.Typst.ChartPreprocessor do
     {:error, {:unsupported_expression, expr}}
   end
 
-  defp generate_error_placeholder(name, reason) do
-    error_msg = format_error(reason)
-
-    """
-    #block(
-      width: 100%,
-      fill: rgb(255, 240, 240),
-      inset: 1em,
-      stroke: 1pt + red,
-      [
-        #text(weight: "bold", fill: red)[Chart Error: #{name}]
-        #linebreak()
-        #text(size: 10pt)[#{error_msg}]
-      ]
-    )
-    """
-  end
-
-  defp format_error({:unsupported_expression, _expr}), do: "Unsupported expression format"
-  defp format_error(:missing_data_source), do: "No data source specified"
-  defp format_error(:config_must_be_map), do: "Config must evaluate to a map"
-  defp format_error({:generation_failed, reason}), do: "Chart generation failed: #{inspect(reason)}"
-  defp format_error(reason), do: "Error: #{inspect(reason)}"
 end

@@ -50,7 +50,7 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
 
   alias AshReports.{Charts, Report}
   alias AshReports.Element.Chart
-  alias AshReports.Typst.ChartEmbedder
+  alias AshReports.Typst.{ChartEmbedder, ChartHelpers}
 
   @type aggregation_ref :: %{
           group_by: atom() | [atom()],
@@ -225,17 +225,17 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
     else
       {:get_data, nil} ->
         Logger.debug("Aggregation not found for chart #{config.name}")
-        generate_error_placeholder(config.name, :aggregation_not_found)
+        ChartHelpers.generate_error_placeholder(config.name, :aggregation_not_found)
 
       {:error, reason} ->
         Logger.debug("Chart processing failed for #{config.name}: #{inspect(reason)}")
         Logger.error("Chart processing failed for chart: #{config.name}")
-        generate_error_placeholder(config.name, reason)
+        ChartHelpers.generate_error_placeholder(config.name, reason)
 
       unexpected ->
         Logger.debug("Unexpected result in chart generation for #{config.name}: #{inspect(unexpected)}")
         Logger.error("Unexpected result in chart generation for chart: #{config.name}")
-        generate_error_placeholder(config.name, {:unexpected_result, unexpected})
+        ChartHelpers.generate_error_placeholder(config.name, {:unexpected_result, unexpected})
     end
   end
 
@@ -324,29 +324,4 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
   defp sort_key(%{label: label}), do: label
   defp sort_key(%{x: x}), do: x
   defp sort_key(_), do: ""
-
-  defp generate_error_placeholder(chart_name, error) do
-    error_text = "Chart Error: #{chart_name}\n\nAggregation data not available"
-
-    embedded_code = """
-    #block(
-      width: 100%,
-      height: 200pt,
-      fill: rgb(255, 230, 230),
-      stroke: 1pt + rgb(200, 0, 0),
-      radius: 4pt,
-      inset: 10pt
-    )[
-      #text(size: 12pt, weight: "bold", fill: rgb(150, 0, 0))[#{error_text}]
-    ]
-    """
-
-    %{
-      name: chart_name,
-      chart_type: :bar,
-      svg: nil,
-      embedded_code: embedded_code,
-      error: error
-    }
-  end
 end
