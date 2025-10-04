@@ -293,10 +293,14 @@ defmodule AshReports.Typst.AggregationConfigurator do
     }
   rescue
     error ->
-      Logger.error("""
-      Failed to build aggregation config for group #{inspect(group)}:
-      #{inspect(error)}
-      """)
+      Logger.debug(fn ->
+        """
+        Failed to build aggregation config for group #{inspect(group)}:
+        #{inspect(error)}
+        """
+      end)
+
+      Logger.error("Failed to build aggregation config for group")
 
       nil
   end

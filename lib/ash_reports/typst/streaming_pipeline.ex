@@ -430,7 +430,8 @@ defmodule AshReports.Typst.StreamingPipeline do
         {:ok, producer_pid}
 
       {:error, reason} ->
-        Logger.error("Failed to start Producer: #{inspect(reason)}")
+        Logger.debug(fn -> "Failed to start Producer: #{inspect(reason)}" end)
+        Logger.error("Failed to start Producer")
         Registry.deregister_pipeline(stream_id)
         {:error, {:producer_start_failed, reason}}
     end
@@ -461,7 +462,8 @@ defmodule AshReports.Typst.StreamingPipeline do
         {:ok, stream}
 
       {:error, reason} ->
-        Logger.error("Failed to start ProducerConsumer: #{inspect(reason)}")
+        Logger.debug(fn -> "Failed to start ProducerConsumer: #{inspect(reason)}" end)
+        Logger.error("Failed to start ProducerConsumer")
         Registry.update_status(stream_id, :failed)
         {:error, {:producer_consumer_start_failed, reason}}
     end

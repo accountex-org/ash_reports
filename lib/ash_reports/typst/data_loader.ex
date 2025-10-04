@@ -428,7 +428,8 @@ defmodule AshReports.Typst.DataLoader do
     end
   rescue
     error ->
-      Logger.error("Error collecting sample: #{inspect(error)}")
+      Logger.debug(fn -> "Error collecting sample: #{inspect(error)}" end)
+      Logger.error("Sample collection failed")
       {:error, {:sample_collection_failed, error}}
   end
 
@@ -478,7 +479,8 @@ defmodule AshReports.Typst.DataLoader do
     end
   rescue
     error ->
-      Logger.error("Error generating charts: #{inspect(error)}")
+      Logger.debug(fn -> "Error generating charts: #{inspect(error)}" end)
+      Logger.error("Chart generation failed")
       {:ok, %{}}
   end
 

@@ -420,9 +420,11 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
             converted
 
           {:error, reason} ->
-            Logger.error(
+            Logger.debug(fn ->
               "ProducerConsumer #{state.stream_id} DataProcessor conversion failed: #{inspect(reason)}"
-            )
+            end)
+
+            Logger.error("ProducerConsumer #{state.stream_id} data conversion failed")
 
             # Fall back to raw events
             events
@@ -470,7 +472,8 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
     # Only catch specific, expected errors from user-provided transformers
     # Let system errors (e.g., VM errors) crash the process
     e in [RuntimeError, ArgumentError, KeyError, FunctionClauseError, ArithmeticError] ->
-      Logger.error("Failed to transform record: #{Exception.message(e)} - Record will be skipped")
+      Logger.debug(fn -> "Failed to transform record: #{Exception.message(e)}" end)
+      Logger.error("Record transformation failed - record skipped")
 
       nil
   end

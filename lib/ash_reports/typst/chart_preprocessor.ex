@@ -89,7 +89,8 @@ defmodule AshReports.Typst.ChartPreprocessor do
     {:ok, chart_data}
   rescue
     error ->
-      Logger.error("Chart preprocessing failed: #{inspect(error)}")
+      Logger.debug(fn -> "Chart preprocessing failed: #{inspect(error, pretty: true)}" end)
+      Logger.error("Chart preprocessing failed")
       {:error, {:preprocessing_failed, error}}
   end
 
@@ -120,7 +121,8 @@ defmodule AshReports.Typst.ChartPreprocessor do
       }
     else
       {:error, reason} ->
-        Logger.warning("Chart #{chart.name} generation failed: #{inspect(reason)}")
+        Logger.debug(fn -> "Chart #{chart.name} generation failed: #{inspect(reason)}" end)
+        Logger.warning("Chart #{chart.name} generation failed")
 
         result = ChartHelpers.generate_error_placeholder(chart.name, reason, style: :compact)
         Map.put(result, :chart_type, chart.chart_type)
@@ -220,7 +222,8 @@ defmodule AshReports.Typst.ChartPreprocessor do
 
   defp evaluate_expression(expr, _context) do
     # Unsupported expression format
-    Logger.warning("Unsupported expression format for chart data: #{inspect(expr)}")
+    Logger.debug(fn -> "Unsupported expression format for chart data: #{inspect(expr)}" end)
+    Logger.warning("Unsupported expression format for chart data")
     {:error, {:unsupported_expression, expr}}
   end
 
