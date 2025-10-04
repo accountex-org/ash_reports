@@ -69,7 +69,6 @@ defmodule AshReports.Charts.Types.BarChart do
     case chart_type do
       :simple -> build_simple_chart(dataset, data, colors)
       :grouped -> build_grouped_chart(dataset, data, colors)
-      :stacked -> build_stacked_chart(dataset, data, colors)
     end
   end
 
@@ -89,14 +88,18 @@ defmodule AshReports.Charts.Types.BarChart do
   # Private functions
 
   defp valid_data_point?(%{category: _category, value: value}) when is_number(value), do: true
-  defp valid_data_point?(%{"category" => _category, "value" => value}) when is_number(value), do: true
+
+  defp valid_data_point?(%{"category" => _category, "value" => value}) when is_number(value),
+    do: true
+
   defp valid_data_point?(_), do: false
 
   defp determine_chart_type(data) do
     # Check if data has series field for grouped/stacked charts
-    has_series? = Enum.any?(data, fn item ->
-      Map.has_key?(item, :series) || Map.has_key?(item, "series")
-    end)
+    has_series? =
+      Enum.any?(data, fn item ->
+        Map.has_key?(item, :series) || Map.has_key?(item, "series")
+      end)
 
     if has_series?, do: :grouped, else: :simple
   end
@@ -142,21 +145,6 @@ defmodule AshReports.Charts.Types.BarChart do
         colour_palette: colors
       )
     end
-  end
-
-  defp build_stacked_chart(dataset, data, colors) do
-    # Similar to grouped but with stacked mode
-    # Note: Contex's BarChart.type can be :grouped or :stacked
-    first = List.first(data)
-
-    cat_col = if Map.has_key?(first, :category), do: :category, else: "category"
-    val_col = if Map.has_key?(first, :value), do: :value, else: "value"
-
-    BarChart.new(dataset,
-      mapping: %{category_col: cat_col, value_cols: [val_col]},
-      type: :stacked,
-      colour_palette: colors
-    )
   end
 
   defp get_colors(%Config{colors: colors}) when is_list(colors) and length(colors) > 0 do

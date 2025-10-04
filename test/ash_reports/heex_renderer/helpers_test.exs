@@ -14,7 +14,7 @@ defmodule AshReports.HeexRenderer.HelpersTest do
 
   describe "element_classes/2" do
     test "generates basic element classes" do
-      element = %Label{name: :test_label, x: 10, y: 20}
+      element = %Label{name: :test_label, position: %{x: 10, y: 20}}
       classes = Helpers.element_classes(element)
 
       assert String.contains?(classes, "ash-element")

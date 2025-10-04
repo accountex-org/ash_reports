@@ -290,29 +290,31 @@ defmodule AshReports.Charts.Pivot do
   """
   @spec transpose([map()], atom()) :: [map()]
   def transpose(pivoted_data, row_field) do
-    if length(pivoted_data) == 0 do
-      []
-    else
-      # Get all column names (excluding row_field)
-      first_row = List.first(pivoted_data)
+    case pivoted_data do
+      [] ->
+        []
 
-      column_names =
-        first_row
-        |> Map.keys()
-        |> Enum.reject(&(&1 == row_field))
+      _ ->
+        # Get all column names (excluding row_field)
+        first_row = List.first(pivoted_data)
 
-      # Create new rows (one per old column)
-      Enum.map(column_names, fn col_name ->
-        values =
-          Enum.map(pivoted_data, fn row ->
-            row_id = Map.get(row, row_field)
-            value = Map.get(row, col_name)
-            {row_id, value}
-          end)
-          |> Map.new()
+        column_names =
+          first_row
+          |> Map.keys()
+          |> Enum.reject(&(&1 == row_field))
 
-        Map.put(values, row_field, col_name)
-      end)
+        # Create new rows (one per old column)
+        Enum.map(column_names, fn col_name ->
+          values =
+            Enum.map(pivoted_data, fn row ->
+              row_id = Map.get(row, row_field)
+              value = Map.get(row, col_name)
+              {row_id, value}
+            end)
+            |> Map.new()
+
+          Map.put(values, row_field, col_name)
+        end)
     end
   end
 
@@ -350,14 +352,12 @@ defmodule AshReports.Charts.Pivot do
     Enum.flat_map(nested_data, fn {key, value} ->
       new_prefix = prefix ++ [key]
 
-      cond do
-        is_map(value) and not Map.has_key?(value, :__struct__) ->
-          # Recursively flatten
-          flatten(value, new_prefix)
-
-        true ->
-          # Leaf node - create record
-          [create_flat_record(new_prefix, value)]
+      if is_map(value) and not Map.has_key?(value, :__struct__) do
+        # Recursively flatten
+        flatten(value, new_prefix)
+      else
+        # Leaf node - create record
+        [create_flat_record(new_prefix, value)]
       end
     end)
   end

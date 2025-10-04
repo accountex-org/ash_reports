@@ -11,12 +11,13 @@ defmodule AshReports.Dsl.ChartElementTest do
     end
 
     test "chart element struct matches DSL expectations" do
-      chart = Chart.new(:test_chart,
-        chart_type: :bar,
-        data_source: {:expr, "data"},
-        config: %{width: 600},
-        caption: "Test"
-      )
+      chart =
+        Chart.new(:test_chart,
+          chart_type: :bar,
+          data_source: {:expr, "data"},
+          config: %{width: 600},
+          caption: "Test"
+        )
 
       # Verify struct fields align with DSL schema
       assert chart.name == :test_chart

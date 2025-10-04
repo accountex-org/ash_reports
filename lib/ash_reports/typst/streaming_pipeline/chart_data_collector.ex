@@ -90,7 +90,7 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
   def extract_chart_configs(%Report{} = report) do
     report.bands
     |> Enum.flat_map(fn band -> band.elements || [] end)
-    |> Enum.filter(&is_chart_element?/1)
+    |> Enum.filter(&chart_element?/1)
     |> Enum.map(&parse_chart_config/1)
     |> Enum.reject(&is_nil/1)
   end
@@ -128,8 +128,8 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
 
   # Private Functions
 
-  defp is_chart_element?(%Chart{}), do: true
-  defp is_chart_element?(_), do: false
+  defp chart_element?(%Chart{}), do: true
+  defp chart_element?(_), do: false
 
   defp parse_chart_config(%Chart{} = chart) do
     case parse_data_source(chart.data_source) do
@@ -233,7 +233,10 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
         ChartHelpers.generate_error_placeholder(config.name, reason)
 
       unexpected ->
-        Logger.debug("Unexpected result in chart generation for #{config.name}: #{inspect(unexpected)}")
+        Logger.debug(
+          "Unexpected result in chart generation for #{config.name}: #{inspect(unexpected)}"
+        )
+
         Logger.error("Unexpected result in chart generation for chart: #{config.name}")
         ChartHelpers.generate_error_placeholder(config.name, {:unexpected_result, unexpected})
     end

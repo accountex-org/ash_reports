@@ -127,16 +127,9 @@ defmodule AshReports.Charts.Statistics do
   def percentile(data, field, percentile) when percentile >= 0 and percentile <= 100 do
     values = extract_numeric_values(data, field)
 
-    if length(values) == 0 do
-      nil
-    else
-      try do
-        :statistics.percentile(values, percentile)
-      rescue
-        e ->
-          Logger.error("Failed to calculate percentile: #{Exception.message(e)}")
-          nil
-      end
+    case values do
+      [] -> nil
+      _ -> calculate_percentile(values, percentile)
     end
   end
 
@@ -161,14 +154,16 @@ defmodule AshReports.Charts.Statistics do
   def quartiles(data, field) do
     values = extract_numeric_values(data, field)
 
-    if length(values) == 0 do
-      nil
-    else
-      %{
-        q1: percentile(data, field, 25),
-        q2: percentile(data, field, 50),
-        q3: percentile(data, field, 75)
-      }
+    case values do
+      [] ->
+        nil
+
+      _ ->
+        %{
+          q1: percentile(data, field, 25),
+          q2: percentile(data, field, 50),
+          q3: percentile(data, field, 75)
+        }
     end
   end
 
@@ -201,19 +196,9 @@ defmodule AshReports.Charts.Statistics do
     if length(values) < 2 do
       nil
     else
-      try do
-        population = Keyword.get(opts, :population, false)
-
-        if population do
-          :statistics.stdev_pop(values)
-        else
-          :statistics.stdev(values)
-        end
-      rescue
-        e ->
-          Logger.error("Failed to calculate standard deviation: #{Exception.message(e)}")
-          nil
-      end
+      population = Keyword.get(opts, :population, false)
+      var = calculate_variance(values, population)
+      if var, do: :math.sqrt(var), else: nil
     end
   end
 
@@ -246,19 +231,8 @@ defmodule AshReports.Charts.Statistics do
     if length(values) < 2 do
       nil
     else
-      try do
-        population = Keyword.get(opts, :population, false)
-
-        if population do
-          :statistics.variance_pop(values)
-        else
-          :statistics.variance(values)
-        end
-      rescue
-        e ->
-          Logger.error("Failed to calculate variance: #{Exception.message(e)}")
-          nil
-      end
+      population = Keyword.get(opts, :population, false)
+      calculate_variance(values, population)
     end
   end
 
@@ -292,28 +266,30 @@ defmodule AshReports.Charts.Statistics do
   def summary(data, field) do
     values = extract_numeric_values(data, field)
 
-    if length(values) == 0 do
-      %{
-        count: 0,
-        min: nil,
-        max: nil,
-        mean: nil,
-        median: nil,
-        q1: nil,
-        q3: nil,
-        std_dev: nil
-      }
-    else
-      %{
-        count: length(values),
-        min: Enum.min(values),
-        max: Enum.max(values),
-        mean: mean(values),
-        median: percentile(data, field, 50),
-        q1: percentile(data, field, 25),
-        q3: percentile(data, field, 75),
-        std_dev: std_dev(data, field)
-      }
+    case values do
+      [] ->
+        %{
+          count: 0,
+          min: nil,
+          max: nil,
+          mean: nil,
+          median: nil,
+          q1: nil,
+          q3: nil,
+          std_dev: nil
+        }
+
+      _ ->
+        %{
+          count: length(values),
+          min: Enum.min(values),
+          max: Enum.max(values),
+          mean: mean(values),
+          median: percentile(data, field, 50),
+          q1: percentile(data, field, 25),
+          q3: percentile(data, field, 75),
+          std_dev: std_dev(data, field)
+        }
     end
   end
 
@@ -395,5 +371,45 @@ defmodule AshReports.Charts.Statistics do
 
   defp mean(values) do
     Enum.sum(values) / length(values)
+  end
+
+  defp calculate_percentile(values, percentile) do
+    sorted = Enum.sort(values)
+    n = length(sorted)
+
+    if n == 0 do
+      nil
+    else
+      rank = percentile / 100.0 * (n - 1)
+      lower_index = floor(rank)
+      upper_index = ceil(rank)
+
+      if lower_index == upper_index do
+        Enum.at(sorted, lower_index)
+      else
+        lower_value = Enum.at(sorted, lower_index)
+        upper_value = Enum.at(sorted, upper_index)
+        fraction = rank - lower_index
+        lower_value + (upper_value - lower_value) * fraction
+      end
+    end
+  end
+
+  defp calculate_variance(values, population?) do
+    avg = mean(values)
+
+    if avg == nil do
+      nil
+    else
+      n = length(values)
+      divisor = if population?, do: n, else: n - 1
+
+      sum_of_squares =
+        values
+        |> Enum.map(fn x -> :math.pow(x - avg, 2) end)
+        |> Enum.sum()
+
+      sum_of_squares / divisor
+    end
   end
 end

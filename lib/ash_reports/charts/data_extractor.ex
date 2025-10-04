@@ -160,12 +160,14 @@ defmodule AshReports.Charts.DataExtractor do
     resource = query.resource
 
     # Start streaming pipeline
-    stream_opts = [
-      chunk_size: chunk_size,
-      enable_telemetry: true
+    pipeline_opts = [
+      domain: domain,
+      resource: resource,
+      query: query,
+      chunk_size: chunk_size
     ]
 
-    case StreamingPipeline.start_stream(domain, resource, query, stream_opts) do
+    case StreamingPipeline.start_pipeline(pipeline_opts) do
       {:ok, stream} ->
         # Apply transformations to stream
         transformed_stream =

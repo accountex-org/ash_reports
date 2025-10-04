@@ -114,9 +114,7 @@ defmodule AshReports.Typst.StreamingPipeline.PartitionedProducerConsumer do
     stream_id = Keyword.fetch!(opts, :stream_id)
     _producer_pid = Keyword.fetch!(opts, :producer_pid)
 
-    Logger.info(
-      "Starting #{partition_count} partitioned workers for stream #{stream_id}"
-    )
+    Logger.info("Starting #{partition_count} partitioned workers for stream #{stream_id}")
 
     # Start workers in parallel
     workers =
@@ -129,10 +127,11 @@ defmodule AshReports.Typst.StreamingPipeline.PartitionedProducerConsumer do
       |> Enum.map(&Task.await(&1, :infinity))
 
     # Check for errors
-    errors = Enum.filter(workers, fn
-      {:error, _} -> true
-      _ -> false
-    end)
+    errors =
+      Enum.filter(workers, fn
+        {:error, _} -> true
+        _ -> false
+      end)
 
     case errors do
       [] ->
@@ -193,10 +192,11 @@ defmodule AshReports.Typst.StreamingPipeline.PartitionedProducerConsumer do
       end)
 
     # Check for errors
-    errors = Enum.filter(partition_states, fn
-      {:error, _} -> true
-      _ -> false
-    end)
+    errors =
+      Enum.filter(partition_states, fn
+        {:error, _} -> true
+        _ -> false
+      end)
 
     case errors do
       [] ->
@@ -268,7 +268,8 @@ defmodule AshReports.Typst.StreamingPipeline.PartitionedProducerConsumer do
     end
   end
 
-  defp belongs_to_partition?(record, _partition_id, _partition_count, _opts) when is_nil(record) do
+  defp belongs_to_partition?(record, _partition_id, _partition_count, _opts)
+       when is_nil(record) do
     # Nil records (filtered by transformer) don't belong to any partition
     false
   end
@@ -310,9 +311,10 @@ defmodule AshReports.Typst.StreamingPipeline.PartitionedProducerConsumer do
     merged_grouped = merge_grouped_aggregations(states)
 
     # Merge metadata
-    total_records = Enum.reduce(states, 0, fn state, acc ->
-      acc + Map.get(state, :total_records_processed, 0)
-    end)
+    total_records =
+      Enum.reduce(states, 0, fn state, acc ->
+        acc + Map.get(state, :total_records_processed, 0)
+      end)
 
     %{
       aggregations: merged_aggregations,

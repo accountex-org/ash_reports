@@ -208,6 +208,7 @@ defmodule AshReports.Typst.DataLoaderAPITest do
       fake_domain = FakeModule
       fake_report = :test_report
       params = %{}
+
       opts = [
         strategy: :in_memory,
         preprocess_charts: false,

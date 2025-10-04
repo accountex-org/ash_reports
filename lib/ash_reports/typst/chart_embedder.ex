@@ -41,7 +41,8 @@ defmodule AshReports.Typst.ChartEmbedder do
   alias AshReports.Charts.Config
   alias AshReports.Typst.ChartEmbedder.TypstFormatter
 
-  @max_base64_size 1_048_576  # 1MB
+  # 1MB
+  @max_base64_size 1_048_576
 
   @doc """
   Embeds a single chart SVG into Typst code.
@@ -241,21 +242,13 @@ defmodule AshReports.Typst.ChartEmbedder do
     # Remove data: protocol URIs that could contain scripts
     |> String.replace(~r/href\s*=\s*["']data:text\/html[^"']*["']/i, "")
     # Remove foreign object elements which can embed HTML
-    |> String.replace(~r/<foreignObject\b[^<]*(?:(?!<\/foreignObject>)<[^<]*)*<\/foreignObject>/i, "")
+    |> String.replace(
+      ~r/<foreignObject\b[^<]*(?:(?!<\/foreignObject>)<[^<]*)*<\/foreignObject>/i,
+      ""
+    )
   end
 
   defp sanitize_svg(svg), do: svg
-
-  defp write_temp_svg(svg) do
-    # Generate unique filename
-    filename = "chart_#{:erlang.unique_integer([:positive])}.svg"
-    path = Path.join(System.tmp_dir!(), filename)
-
-    case File.write(path, svg) do
-      :ok -> {:ok, path}
-      {:error, reason} -> {:error, {:file_write_failed, reason}}
-    end
-  end
 
   defp write_temp_svg_compressed(compressed_data) do
     # Generate unique filename for compressed SVG

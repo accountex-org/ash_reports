@@ -344,5 +344,4 @@ defmodule AshReports.Typst.ChartPreprocessor do
     Logger.warning("Unsupported expression format for chart data")
     {:error, {:unsupported_expression, expr}}
   end
-
 end

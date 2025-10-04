@@ -73,11 +73,12 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
       ]
 
       # Create a simple producer that yields test data
-      {:ok, producer} = GenStage.start_link(
-        TestProducer,
-        {test_data, chunk_size: 2},
-        name: :"producer_#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        GenStage.start_link(
+          TestProducer,
+          {test_data, chunk_size: 2},
+          name: :"producer_#{:rand.uniform(10000)}"
+        )
 
       # Subscribe as a consumer
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
@@ -97,11 +98,12 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
     test "producer respects chunk size" do
       test_data = Enum.map(1..100, &%{id: &1, value: &1 * 10})
 
-      {:ok, producer} = GenStage.start_link(
-        TestProducer,
-        {test_data, chunk_size: 10},
-        name: :"producer_#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        GenStage.start_link(
+          TestProducer,
+          {test_data, chunk_size: 10},
+          name: :"producer_#{:rand.uniform(10000)}"
+        )
 
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
       GenStage.sync_subscribe(consumer, to: producer, max_demand: 50)
@@ -119,11 +121,12 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
     test "producer handles backpressure via demand" do
       test_data = Enum.map(1..20, &%{id: &1})
 
-      {:ok, producer} = GenStage.start_link(
-        TestProducer,
-        {test_data, chunk_size: 5},
-        name: :"producer_#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        GenStage.start_link(
+          TestProducer,
+          {test_data, chunk_size: 5},
+          name: :"producer_#{:rand.uniform(10000)}"
+        )
 
       # Consumer with low demand
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
@@ -131,7 +134,8 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
 
       # Should receive small batches due to backpressure
       assert_receive {:events, events}, 2000
-      assert length(events) <= 5  # Respects chunk size and demand
+      # Respects chunk size and demand
+      assert length(events) <= 5
 
       GenStage.stop(consumer)
       GenStage.stop(producer)
@@ -140,11 +144,12 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
     test "producer completes successfully when data exhausted" do
       test_data = [%{id: 1}, %{id: 2}]
 
-      {:ok, producer} = GenStage.start_link(
-        TestProducer,
-        {test_data, chunk_size: 10},
-        name: :"producer_#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        GenStage.start_link(
+          TestProducer,
+          {test_data, chunk_size: 10},
+          name: :"producer_#{:rand.uniform(10000)}"
+        )
 
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
       GenStage.sync_subscribe(consumer, to: producer, max_demand: 10)
@@ -164,11 +169,12 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
     test "producer handles empty data gracefully" do
       test_data = []
 
-      {:ok, producer} = GenStage.start_link(
-        TestProducer,
-        {test_data, chunk_size: 5},
-        name: :"producer_#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        GenStage.start_link(
+          TestProducer,
+          {test_data, chunk_size: 5},
+          name: :"producer_#{:rand.uniform(10000)}"
+        )
 
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
       GenStage.sync_subscribe(consumer, to: producer, max_demand: 5)
@@ -196,11 +202,12 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
         Map.update(record, :amount, 0, &(&1 * 2))
       end
 
-      {:ok, pc} = ProducerConsumer.start_link(
-        subscribe_to: [producer],
-        transformer: transformer,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, pc} =
+        ProducerConsumer.start_link(
+          subscribe_to: [producer],
+          transformer: transformer,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
       GenStage.sync_subscribe(consumer, to: pc, max_demand: 10)
@@ -223,7 +230,8 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
     test "handles transformation errors gracefully" do
       test_records = [
         %{id: 1, name: "Valid"},
-        %{id: 2, broken: :data}  # This might cause issues
+        # This might cause issues
+        %{id: 2, broken: :data}
       ]
 
       {:ok, producer} = GenStage.start_link(TestProducer, {test_records, chunk_size: 10})
@@ -237,11 +245,12 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
         end
       end
 
-      {:ok, pc} = ProducerConsumer.start_link(
-        subscribe_to: [producer],
-        transformer: transformer,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, pc} =
+        ProducerConsumer.start_link(
+          subscribe_to: [producer],
+          transformer: transformer,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
       GenStage.sync_subscribe(consumer, to: pc, max_demand: 10)
@@ -260,10 +269,11 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
 
       {:ok, producer} = GenStage.start_link(TestProducer, {test_records, chunk_size: 10})
 
-      {:ok, pc} = ProducerConsumer.start_link(
-        subscribe_to: [producer],
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, pc} =
+        ProducerConsumer.start_link(
+          subscribe_to: [producer],
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
       GenStage.sync_subscribe(consumer, to: pc, max_demand: 10)
@@ -281,12 +291,13 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
 
       {:ok, producer} = GenStage.start_link(TestProducer, {test_records, chunk_size: 10})
 
-      {:ok, pc} = ProducerConsumer.start_link(
-        subscribe_to: [producer],
-        transformer: fn records -> records end,
-        buffer_size: 20,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, pc} =
+        ProducerConsumer.start_link(
+          subscribe_to: [producer],
+          transformer: fn records -> records end,
+          buffer_size: 20,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       # Slow consumer
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
@@ -307,18 +318,20 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
 
       {:ok, producer} = GenStage.start_link(TestProducer, {test_records, chunk_size: 50})
 
-      {:ok, pc} = ProducerConsumer.start_link(
-        subscribe_to: [producer],
-        transformer: fn records -> records end,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, pc} =
+        ProducerConsumer.start_link(
+          subscribe_to: [producer],
+          transformer: fn records -> records end,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
       GenStage.sync_subscribe(consumer, to: pc, max_demand: 100)
 
       # Should handle all records
       total = collect_all_events(1000, 5000)
-      assert total >= 50  # At least some records (reduced from 100 for reliability)
+      # At least some records (reduced from 100 for reliability)
+      assert total >= 50
 
       GenStage.stop(consumer)
       GenStage.stop(pc)
@@ -336,11 +349,12 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
 
       {:ok, producer} = GenStage.start_link(TestProducer, {test_records, chunk_size: 10})
 
-      {:ok, pc} = ProducerConsumer.start_link(
-        subscribe_to: [producer],
-        aggregations: [:sum],
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, pc} =
+        ProducerConsumer.start_link(
+          subscribe_to: [producer],
+          aggregations: [:sum],
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
       GenStage.sync_subscribe(consumer, to: pc, max_demand: 10)
@@ -367,11 +381,12 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
 
       {:ok, producer} = GenStage.start_link(TestProducer, {test_records, chunk_size: 5})
 
-      {:ok, pc} = ProducerConsumer.start_link(
-        subscribe_to: [producer],
-        aggregations: [:count],
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, pc} =
+        ProducerConsumer.start_link(
+          subscribe_to: [producer],
+          aggregations: [:count],
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
       GenStage.sync_subscribe(consumer, to: pc, max_demand: 30)
@@ -403,11 +418,12 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
 
       {:ok, producer} = GenStage.start_link(TestProducer, {test_records, chunk_size: 10})
 
-      {:ok, pc} = ProducerConsumer.start_link(
-        subscribe_to: [producer],
-        aggregations: [:avg],
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, pc} =
+        ProducerConsumer.start_link(
+          subscribe_to: [producer],
+          aggregations: [:avg],
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
       GenStage.sync_subscribe(consumer, to: pc, max_demand: 10)
@@ -436,11 +452,12 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
 
       {:ok, producer} = GenStage.start_link(TestProducer, {test_records, chunk_size: 10})
 
-      {:ok, pc} = ProducerConsumer.start_link(
-        subscribe_to: [producer],
-        aggregations: [:min, :max],
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, pc} =
+        ProducerConsumer.start_link(
+          subscribe_to: [producer],
+          aggregations: [:min, :max],
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
       GenStage.sync_subscribe(consumer, to: pc, max_demand: 10)
@@ -469,13 +486,14 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
 
       {:ok, producer} = GenStage.start_link(TestProducer, {test_records, chunk_size: 10})
 
-      {:ok, pc} = ProducerConsumer.start_link(
-        subscribe_to: [producer],
-        grouped_aggregations: [
-          %{group_by: :category, aggregations: [:sum, :count], level: 1}
-        ],
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, pc} =
+        ProducerConsumer.start_link(
+          subscribe_to: [producer],
+          grouped_aggregations: [
+            %{group_by: :category, aggregations: [:sum, :count], level: 1}
+          ],
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
       GenStage.sync_subscribe(consumer, to: pc, max_demand: 10)
@@ -497,20 +515,22 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
   describe "End-to-End Integration" do
     test "complete pipeline: producer -> transformer -> aggregation -> consumer" do
       # Realistic test data
-      test_records = Enum.map(1..100, fn i ->
-        %{
-          id: i,
-          name: "Record #{i}",
-          amount: Decimal.new("#{i * 10}.50"),
-          category: if(rem(i, 2) == 0, do: "even", else: "odd")
-        }
-      end)
+      test_records =
+        Enum.map(1..100, fn i ->
+          %{
+            id: i,
+            name: "Record #{i}",
+            amount: Decimal.new("#{i * 10}.50"),
+            category: if(rem(i, 2) == 0, do: "even", else: "odd")
+          }
+        end)
 
       # Producer
-      {:ok, producer} = GenStage.start_link(
-        TestProducer,
-        {test_records, chunk_size: 20}
-      )
+      {:ok, producer} =
+        GenStage.start_link(
+          TestProducer,
+          {test_records, chunk_size: 20}
+        )
 
       # ProducerConsumer with transformation and aggregation
       # Note: transformer receives a SINGLE record
@@ -522,15 +542,16 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
         end)
       end
 
-      {:ok, pc} = ProducerConsumer.start_link(
-        subscribe_to: [producer],
-        transformer: transformer,
-        aggregations: [:sum, :count],
-        grouped_aggregations: [
-          %{group_by: :category, aggregations: [:sum, :count], level: 1}
-        ],
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, pc} =
+        ProducerConsumer.start_link(
+          subscribe_to: [producer],
+          transformer: transformer,
+          aggregations: [:sum, :count],
+          grouped_aggregations: [
+            %{group_by: :category, aggregations: [:sum, :count], level: 1}
+          ],
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       # Consumer
       {:ok, consumer} = GenStage.start_link(TestConsumer, self())
@@ -540,7 +561,8 @@ defmodule AshReports.Typst.StreamingPipeline.StreamingMvpTest do
       total_events = collect_all_events(100, 8000)
 
       # Should process a significant number of records
-      assert total_events >= 20  # At least some records (lenient for test reliability)
+      # At least some records (lenient for test reliability)
+      assert total_events >= 20
 
       # Check final state
       gen_stage_state = :sys.get_state(pc)

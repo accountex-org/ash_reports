@@ -229,17 +229,25 @@ defmodule AshReports.Charts.Renderer do
         |> Enum.join("\n")
 
       # Insert area paths before line paths (so lines appear on top)
-      String.replace(svg, line_pattern, fn match ->
-        # Return both area path and original line path
-        area_index = length(Regex.scan(line_pattern, String.slice(svg, 0, String.length(svg)))) - 1
-        if area_index >= 0 and area_index < length(matches) do
-          [_, d_attr, color] = Enum.at(matches, area_index)
-          area_d = create_area_path(d_attr)
-          ~s(<path d="#{area_d}" fill="#{color}" opacity="#{opacity}" stroke="none" />\n#{match})
-        else
-          match
-        end
-      end, global: false)
+      String.replace(
+        svg,
+        line_pattern,
+        fn match ->
+          # Return both area path and original line path
+          area_index =
+            length(Regex.scan(line_pattern, String.slice(svg, 0, String.length(svg)))) - 1
+
+          if area_index >= 0 and area_index < length(matches) do
+            [_, d_attr, color] = Enum.at(matches, area_index)
+            area_d = create_area_path(d_attr)
+
+            ~s(<path d="#{area_d}" fill="#{color}" opacity="#{opacity}" stroke="none" />\n#{match})
+          else
+            match
+          end
+        end,
+        global: false
+      )
       |> close_area_paths(matches, opacity)
     else
       svg
@@ -256,9 +264,14 @@ defmodule AshReports.Charts.Renderer do
       area_path = ~s(<path d="#{area_d}" fill="#{color}" opacity="#{opacity}" stroke="none" />)
 
       # Insert before the first </g> closing tag
-      String.replace(acc, ~r/<\/g>/, fn match ->
-        area_path <> "\n" <> match
-      end, global: false)
+      String.replace(
+        acc,
+        ~r/<\/g>/,
+        fn match ->
+          area_path <> "\n" <> match
+        end,
+        global: false
+      )
     end)
   end
 
@@ -277,7 +290,8 @@ defmodule AshReports.Charts.Renderer do
 
       # Get the baseline y (we'll use a high value as approximation)
       # In a real implementation, this should be calculated from the chart's y-scale
-      baseline_y = "200"  # This should be dynamic based on chart height
+      # This should be dynamic based on chart height
+      baseline_y = "200"
 
       # Build area path: original line + line to baseline + line back to start + close
       line_d <> " L #{last_x},#{baseline_y} L #{first_x},#{baseline_y} Z"

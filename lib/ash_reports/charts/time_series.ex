@@ -306,7 +306,8 @@ defmodule AshReports.Charts.TimeSeries do
   end
 
   defp format_period(%Date{} = date, :week) do
-    "Week #{Timex.week_of_year(date)}, #{date.year}"
+    {iso_year, iso_week} = Timex.iso_week(date)
+    "Week #{iso_week}, #{iso_year}"
   end
 
   defp format_period(%Date{} = date, :month) do
