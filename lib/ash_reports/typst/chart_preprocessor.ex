@@ -32,6 +32,16 @@ defmodule AshReports.Typst.ChartPreprocessor do
         config: %{param: value, ...},
         variables: %{var: value, ...}
       }
+
+  ## Telemetry
+
+  Emits the following telemetry events:
+
+    * `[:ash_reports, :chart_preprocessor, :preprocess, :start]` - Preprocessing started
+    * `[:ash_reports, :chart_preprocessor, :preprocess, :stop]` - Preprocessing completed
+    * `[:ash_reports, :chart_preprocessor, :preprocess, :exception]` - Preprocessing failed
+    * `[:ash_reports, :chart_preprocessor, :process_chart, :start]` - Single chart processing started
+    * `[:ash_reports, :chart_preprocessor, :process_chart, :stop]` - Single chart processing completed
   """
 
   require Logger
@@ -75,23 +85,106 @@ defmodule AshReports.Typst.ChartPreprocessor do
       iex> charts[:sales_chart].embedded_code
       "#image.decode(...)"
   """
-  @spec preprocess(Report.t(), data_context()) :: {:ok, %{atom() => chart_data()}} | {:error, term()}
-  def preprocess(%Report{} = report, data_context) do
+  @spec preprocess(Report.t(), data_context(), keyword()) ::
+          {:ok, %{atom() => chart_data()}} | {:error, term()}
+  def preprocess(%Report{} = report, data_context, opts \\ []) do
+    charts = extract_chart_elements(report)
+    parallel = Keyword.get(opts, :parallel, true)
+
+    metadata = %{
+      chart_count: length(charts),
+      parallel: parallel,
+      report_name: Map.get(report, :name)
+    }
+
+    :telemetry.execute(
+      [:ash_reports, :chart_preprocessor, :preprocess, :start],
+      %{system_time: System.system_time()},
+      metadata
+    )
+
+    start_time = System.monotonic_time()
+
+    try do
+      chart_data =
+        if parallel and length(charts) > 1 do
+          # Parallel processing for multiple charts
+          charts
+          |> Enum.map(fn chart ->
+            Task.async(fn -> {chart.name, process_chart(chart, data_context)} end)
+          end)
+          |> Enum.map(&Task.await(&1, :infinity))
+          |> Map.new()
+        else
+          # Sequential processing for single chart or when parallel disabled
+          charts
+          |> Enum.map(fn chart ->
+            {chart.name, process_chart(chart, data_context)}
+          end)
+          |> Map.new()
+        end
+
+      duration = System.monotonic_time() - start_time
+
+      :telemetry.execute(
+        [:ash_reports, :chart_preprocessor, :preprocess, :stop],
+        %{duration: duration},
+        Map.put(metadata, :success_count, map_size(chart_data))
+      )
+
+      {:ok, chart_data}
+    rescue
+      error ->
+        duration = System.monotonic_time() - start_time
+
+        :telemetry.execute(
+          [:ash_reports, :chart_preprocessor, :preprocess, :exception],
+          %{duration: duration},
+          Map.merge(metadata, %{error: error, kind: :error})
+        )
+
+        Logger.debug(fn -> "Chart preprocessing failed: #{inspect(error, pretty: true)}" end)
+        Logger.error("Chart preprocessing failed")
+        {:error, {:preprocessing_failed, error}}
+    end
+  end
+
+  @doc """
+  Creates a lazy evaluator for chart preprocessing.
+
+  Returns a function that, when called, will generate the chart. Useful for
+  complex multi-chart reports where charts should only be generated if needed.
+
+  ## Parameters
+
+    * `report` - The Report struct
+    * `data_context` - Runtime data context
+
+  ## Returns
+
+    * `{:ok, lazy_charts}` - Map of chart name to lazy evaluator functions
+
+  ## Examples
+
+      {:ok, lazy_charts} = ChartPreprocessor.preprocess_lazy(report, data)
+
+      # Generate only the charts you need
+      sales_chart = lazy_charts[:sales_chart].()
+  """
+  @spec preprocess_lazy(Report.t(), data_context()) ::
+          {:ok, %{atom() => (-> chart_data())}}
+  def preprocess_lazy(%Report{} = report, data_context) do
     charts = extract_chart_elements(report)
 
-    chart_data =
+    lazy_charts =
       charts
       |> Enum.map(fn chart ->
-        {chart.name, process_chart(chart, data_context)}
+        lazy_fn = fn -> process_chart(chart, data_context) end
+        {chart.name, lazy_fn}
       end)
       |> Map.new()
 
-    {:ok, chart_data}
-  rescue
-    error ->
-      Logger.debug(fn -> "Chart preprocessing failed: #{inspect(error, pretty: true)}" end)
-      Logger.error("Chart preprocessing failed")
-      {:error, {:preprocessing_failed, error}}
+    {:ok, lazy_charts}
   end
 
   @doc """
@@ -108,25 +201,50 @@ defmodule AshReports.Typst.ChartPreprocessor do
   """
   @spec process_chart(Chart.t(), data_context()) :: chart_data()
   def process_chart(%Chart{} = chart, data_context) do
-    with {:ok, chart_data} <- evaluate_data_source(chart.data_source, data_context),
-         {:ok, chart_config} <- evaluate_config(chart.config, data_context),
-         {:ok, svg} <- Charts.generate(chart.chart_type, chart_data, chart_config),
-         {:ok, embedded_code} <- embed_chart(svg, chart.embed_options) do
-      %{
-        name: chart.name,
-        svg: svg,
-        embedded_code: embedded_code,
-        chart_type: chart.chart_type,
-        error: nil
-      }
-    else
-      {:error, reason} ->
-        Logger.debug(fn -> "Chart #{chart.name} generation failed: #{inspect(reason)}" end)
-        Logger.warning("Chart #{chart.name} generation failed")
+    start_time = System.monotonic_time()
 
-        result = ChartHelpers.generate_error_placeholder(chart.name, reason, style: :compact)
-        Map.put(result, :chart_type, chart.chart_type)
-    end
+    metadata = %{
+      chart_name: chart.name,
+      chart_type: chart.chart_type
+    }
+
+    :telemetry.execute(
+      [:ash_reports, :chart_preprocessor, :process_chart, :start],
+      %{system_time: System.system_time()},
+      metadata
+    )
+
+    result =
+      with {:ok, chart_data} <- evaluate_data_source(chart.data_source, data_context),
+           {:ok, chart_config} <- evaluate_config(chart.config, data_context),
+           {:ok, svg} <- Charts.generate(chart.chart_type, chart_data, chart_config),
+           {:ok, embedded_code} <- embed_chart(svg, chart.embed_options) do
+        %{
+          name: chart.name,
+          svg: svg,
+          embedded_code: embedded_code,
+          chart_type: chart.chart_type,
+          error: nil
+        }
+      else
+        {:error, reason} ->
+          Logger.debug(fn -> "Chart #{chart.name} generation failed: #{inspect(reason)}" end)
+          Logger.warning("Chart #{chart.name} generation failed")
+
+          result = ChartHelpers.generate_error_placeholder(chart.name, reason, style: :compact)
+          Map.put(result, :chart_type, chart.chart_type)
+      end
+
+    duration = System.monotonic_time() - start_time
+    svg_size = if is_nil(result.error), do: byte_size(result.svg), else: 0
+
+    :telemetry.execute(
+      [:ash_reports, :chart_preprocessor, :process_chart, :stop],
+      %{duration: duration, svg_size: svg_size},
+      Map.merge(metadata, %{success: is_nil(result.error)})
+    )
+
+    result
   end
 
   defp embed_chart(svg, embed_options) when is_map(embed_options) do

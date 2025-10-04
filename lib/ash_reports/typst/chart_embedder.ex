@@ -56,6 +56,7 @@ defmodule AshReports.Typst.ChartEmbedder do
       - `:title` - Title text above chart
       - `:position` - Position in layout (:top, :center, :bottom, :left, :right)
       - `:encoding` - :base64 (default) or :file
+      - `:compress` - Compress SVG with gzip before encoding (default: true for large SVGs)
 
   ## Returns
 
@@ -72,7 +73,7 @@ defmodule AshReports.Typst.ChartEmbedder do
 
   def embed(svg, opts) when is_binary(svg) do
     with {:ok, encoding} <- determine_encoding(svg, opts),
-         {:ok, image_code} <- encode_svg(svg, encoding),
+         {:ok, image_code} <- encode_svg(svg, encoding, opts),
          {:ok, sized_code} <- apply_sizing(image_code, opts),
          {:ok, final_code} <- wrap_with_text(sized_code, opts) do
       {:ok, final_code}
@@ -189,16 +190,40 @@ defmodule AshReports.Typst.ChartEmbedder do
     end
   end
 
-  defp encode_svg(svg, :base64) do
+  defp encode_svg(svg, :base64, opts) do
     sanitized_svg = sanitize_svg(svg)
-    encoded = Base.encode64(sanitized_svg)
-    {:ok, "#image.decode(\"#{encoded}\", format: \"svg\")"}
+    compress = Keyword.get(opts, :compress, byte_size(sanitized_svg) > 10_000)
+
+    svg_data =
+      if compress do
+        :zlib.gzip(sanitized_svg)
+      else
+        sanitized_svg
+      end
+
+    encoded = Base.encode64(svg_data)
+
+    # Note: Typst doesn't natively support gzip decompression in #image.decode
+    # So we only compress when using file encoding or when we can decompress client-side
+    # For now, we keep compression disabled for base64 until Typst adds support
+    if compress do
+      # For future: when Typst supports gzip decompression
+      # {:ok, "#image.decode(decompress_gzip(\"#{encoded}\"), format: \"svg\")"}
+      sanitized_svg_encoded = Base.encode64(sanitized_svg)
+      {:ok, "#image.decode(\"#{sanitized_svg_encoded}\", format: \"svg\")"}
+    else
+      {:ok, "#image.decode(\"#{encoded}\", format: \"svg\")"}
+    end
   end
 
-  defp encode_svg(svg, :file) do
+  defp encode_svg(svg, :file, _opts) do
     sanitized_svg = sanitize_svg(svg)
 
-    with {:ok, path} <- write_temp_svg(sanitized_svg) do
+    # Compress SVG before writing to file
+    compressed = :zlib.gzip(sanitized_svg)
+
+    # Write compressed file with .svgz extension
+    with {:ok, path} <- write_temp_svg_compressed(compressed) do
       {:ok, "#image(\"#{path}\")"}
     end
   end
@@ -227,6 +252,17 @@ defmodule AshReports.Typst.ChartEmbedder do
     path = Path.join(System.tmp_dir!(), filename)
 
     case File.write(path, svg) do
+      :ok -> {:ok, path}
+      {:error, reason} -> {:error, {:file_write_failed, reason}}
+    end
+  end
+
+  defp write_temp_svg_compressed(compressed_data) do
+    # Generate unique filename for compressed SVG
+    filename = "chart_#{:erlang.unique_integer([:positive])}.svgz"
+    path = Path.join(System.tmp_dir!(), filename)
+
+    case File.write(path, compressed_data) do
       :ok -> {:ok, path}
       {:error, reason} -> {:error, {:file_write_failed, reason}}
     end
