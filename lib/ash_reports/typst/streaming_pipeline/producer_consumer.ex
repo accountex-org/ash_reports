@@ -388,6 +388,19 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   end
 
   @impl true
+  def handle_call(:get_aggregation_state, _from, state) do
+    # Return the current aggregation state
+    aggregation_data = %{
+      aggregations: state.aggregation_state,
+      grouped_aggregations: state.grouped_aggregation_state,
+      group_counts: state.group_counts,
+      total_transformed: state.total_transformed
+    }
+
+    {:reply, {:ok, aggregation_data}, [], state}
+  end
+
+  @impl true
   def handle_info(msg, state) do
     Logger.warning(
       "ProducerConsumer #{state.stream_id} received unexpected message: #{inspect(msg)}"

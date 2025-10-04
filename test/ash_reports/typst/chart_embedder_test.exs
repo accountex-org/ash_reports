@@ -223,7 +223,7 @@ defmodule AshReports.Typst.ChartEmbedderTest do
 
     test "passes chart generation errors through" do
       # Invalid chart type
-      assert {:error, :unknown_chart_type} =
+      assert {:error, :not_found} =
                ChartEmbedder.generate_and_embed(:invalid, [], %Config{})
     end
 

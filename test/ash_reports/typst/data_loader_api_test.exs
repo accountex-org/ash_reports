@@ -131,7 +131,7 @@ defmodule AshReports.Typst.DataLoaderAPITest do
 
   describe "API contract and type specs (Section 2.5.1)" do
     test "stream_for_typst has correct type spec" do
-      # Verify function exists with correct arity (opts has default, but function is arity 4)
+      # Verify function exists with correct arity (opts has default, exports as both 3 and 4)
       assert function_exported?(DataLoader, :stream_for_typst, 4)
 
       # The type spec should be @spec stream_for_typst(module(), atom(), map(), load_options()) ::
@@ -150,14 +150,12 @@ defmodule AshReports.Typst.DataLoaderAPITest do
 
   describe "backward compatibility (Section 2.5.1)" do
     test "stream_for_typst with no options still works" do
-      # The function should work with default options
-      # Function arity is 4, opts has default value []
+      # The function should work with arity 4
       assert function_exported?(DataLoader, :stream_for_typst, 4)
     end
 
     test "existing code using stream_for_typst continues to work" do
       # Verify that the enhanced version maintains the same basic interface
-      # This is a smoke test - actual functionality would need real domain/report
       assert function_exported?(DataLoader, :stream_for_typst, 4)
     end
   end
@@ -177,6 +175,70 @@ defmodule AshReports.Typst.DataLoaderAPITest do
 
       # Verify error cases are documented
       assert doc_string =~ "{:error, term()}"
+    end
+  end
+
+  describe "load_for_typst/4 - non-streaming API with chart preprocessing (Section 3.3.2)" do
+    test "function is exported with correct arity" do
+      # Arity 4 required (no default params to avoid conflict with stream_for_typst)
+      assert function_exported?(DataLoader, :load_for_typst, 4)
+    end
+
+    test "returns error for invalid inputs" do
+      fake_domain = FakeModule
+      fake_report = :nonexistent_report
+      params = %{}
+      opts = []
+
+      result = DataLoader.load_for_typst(fake_domain, fake_report, params, opts)
+
+      assert {:error, _} = result
+    end
+
+    test "accepts chart preprocessing options" do
+      fake_domain = FakeModule
+      fake_report = :test_report
+      params = %{}
+      opts = [preprocess_charts: false, limit: 100]
+
+      result = DataLoader.load_for_typst(fake_domain, fake_report, params, opts)
+
+      # Should return error for fake domain, but options are accepted
+      assert {:error, _} = result
+    end
+
+    test "has comprehensive documentation" do
+      {:docs_v1, _, :elixir, "text/markdown", _, _, functions} = Code.fetch_docs(DataLoader)
+
+      load_docs =
+        Enum.find(functions, fn {{:function, name, arity}, _, _, _, _} ->
+          name == :load_for_typst and arity == 4
+        end)
+
+      assert load_docs != nil
+
+      {{:function, :load_for_typst, 4}, _, _, doc_content, _} = load_docs
+      doc_string = doc_content["en"]
+
+      # Verify documentation mentions chart preprocessing
+      assert doc_string =~ "chart"
+      assert doc_string =~ "small to medium reports"
+    end
+
+    test "documentation describes chart preprocessing behavior" do
+      {:docs_v1, _, :elixir, "text/markdown", _, _, functions} = Code.fetch_docs(DataLoader)
+
+      load_docs =
+        Enum.find(functions, fn {{:function, name, arity}, _, _, _, _} ->
+          name == :load_for_typst and arity == 4
+        end)
+
+      {{:function, :load_for_typst, 4}, _, _, doc_content, _} = load_docs
+      doc_string = doc_content["en"]
+
+      # Verify chart preprocessing steps are documented
+      assert doc_string =~ "data source"
+      assert doc_string =~ "SVG"
     end
   end
 end

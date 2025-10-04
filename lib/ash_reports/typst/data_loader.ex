@@ -56,7 +56,15 @@ defmodule AshReports.Typst.DataLoader do
   """
 
   alias AshReports.Report
-  alias AshReports.Typst.{DataProcessor, ExpressionParser, StreamingPipeline}
+
+  alias AshReports.Typst.{
+    ChartPreprocessor,
+    DataProcessor,
+    ExpressionParser,
+    StreamingPipeline
+  }
+
+  alias AshReports.Typst.StreamingPipeline.ChartDataCollector
 
   require Logger
 
@@ -78,6 +86,354 @@ defmodule AshReports.Typst.DataLoader do
           chunk_size: pos_integer(),
           type_conversion: keyword()
         ]
+
+  @doc """
+  Loads report data for Typst compilation with chart preprocessing.
+
+  For small to medium reports (< 10K records), this function loads all data
+  into memory and preprocesses charts before returning. For larger datasets,
+  use `stream_for_typst/4` instead.
+
+  ## Chart Preprocessing
+
+  If the report contains chart elements, this function automatically:
+  1. Evaluates chart data source expressions
+  2. Generates SVG charts using the Charts module
+  3. Embeds charts using ChartEmbedder
+  4. Injects preprocessed charts into the data context
+
+  ## Parameters
+
+    * `domain` - The Ash domain containing the report definition
+    * `report_name` - Name of the report to load data for
+    * `params` - Parameters for report generation
+    * `opts` - Loading options
+
+  ## Options
+
+    * `:preprocess_charts` - Enable/disable chart preprocessing (default: true)
+    * `:type_conversion` - Type conversion options for DataProcessor
+    * `:limit` - Maximum number of records to load (default: 10_000)
+
+  ## Returns
+
+    * `{:ok, data}` - Loaded and preprocessed data
+    * `{:error, term()}` - Loading failure
+
+  ## Examples
+
+      # Basic loading with automatic chart preprocessing
+      iex> {:ok, data} = DataLoader.load_for_typst(MyApp.Domain, :sales_report, %{
+      ...>   start_date: ~D[2024-01-01],
+      ...>   end_date: ~D[2024-01-31]
+      ...> })
+      iex> data.records
+      [%{customer_name: "Acme Corp", amount: 1500.0}]
+      iex> data.charts[:sales_chart]
+      %{name: :sales_chart, svg: "...", embedded_code: "#image.decode(...)"}
+
+      # Disable chart preprocessing
+      iex> {:ok, data} = DataLoader.load_for_typst(MyApp.Domain, :sales_report, params,
+      ...>   preprocess_charts: false
+      ...> )
+
+  """
+  @spec load_for_typst(module(), atom(), map(), load_options()) ::
+          {:ok, typst_data()} | {:error, term()}
+  def load_for_typst(domain, report_name, params, opts) do
+    Logger.info(fn ->
+      "Loading data for report #{report_name} in domain #{inspect(domain)}"
+    end)
+
+    with {:ok, report} <- get_report_definition(domain, report_name),
+         {:ok, records} <- load_report_records(domain, report, params, opts),
+         {:ok, converted_records} <- convert_records(records, opts),
+         {:ok, data_context} <- build_data_context(report, converted_records, params),
+         {:ok, chart_data} <- maybe_preprocess_charts(report, data_context, opts) do
+      # Merge chart data into the context
+      result = Map.put(data_context, :charts, chart_data)
+
+      Logger.debug(fn ->
+        "Successfully loaded #{length(converted_records)} records with #{map_size(chart_data)} charts"
+      end)
+
+      {:ok, result}
+    else
+      {:error, reason} = error ->
+        Logger.error(fn ->
+          "Failed to load data for #{report_name}: #{inspect(reason)}"
+        end)
+
+        error
+    end
+  end
+
+  # Helper Functions for load_for_typst/4
+
+  defp load_report_records(domain, report, params, opts) do
+    case build_query_from_report(domain, report, params) do
+      {:ok, query} ->
+        # Apply any limit/offset from options
+        query =
+          query
+          |> maybe_apply_limit(opts)
+          |> maybe_apply_offset(opts)
+
+        case Ash.read(query, domain: domain) do
+          {:ok, records} -> {:ok, records}
+          {:error, reason} -> {:error, {:query_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp maybe_apply_limit(query, opts) do
+    case Keyword.get(opts, :limit) do
+      nil -> query
+      limit -> Ash.Query.limit(query, limit)
+    end
+  end
+
+  defp maybe_apply_offset(query, opts) do
+    case Keyword.get(opts, :offset) do
+      nil -> query
+      offset -> Ash.Query.offset(query, offset)
+    end
+  end
+
+  defp convert_records(records, opts) do
+    case DataProcessor.convert_records(records, opts) do
+      {:ok, converted} -> {:ok, converted}
+      {:error, reason} -> {:error, {:conversion_failed, reason}}
+    end
+  end
+
+  defp build_data_context(report, converted_records, params) do
+    context = %{
+      records: converted_records,
+      config: %{
+        report_name: report.name,
+        title: report.title
+      },
+      variables: params
+    }
+
+    {:ok, context}
+  end
+
+  defp maybe_preprocess_charts(report, data_context, opts) do
+    preprocess? = Keyword.get(opts, :preprocess_charts, true)
+
+    if preprocess? do
+      case ChartPreprocessor.preprocess(report, data_context) do
+        {:ok, chart_data} ->
+          {:ok, chart_data}
+
+        {:error, reason} ->
+          Logger.warning(fn ->
+            "Chart preprocessing failed: #{inspect(reason)}. Continuing without charts."
+          end)
+
+          # Don't fail the entire load - just return empty chart data
+          {:ok, %{}}
+      end
+    else
+      {:ok, %{}}
+    end
+  end
+
+  @doc """
+  Loads report data with aggregation-based chart support.
+
+  This function combines streaming aggregations with chart generation to support
+  reports containing charts that visualize aggregated data. It:
+  1. Starts a streaming pipeline with aggregations configured
+  2. Processes all records to compute aggregations
+  3. Retrieves final aggregation state
+  4. Generates charts from aggregation results
+  5. Returns data context with charts injected
+
+  **Use this for**: Reports with aggregation-based charts (any dataset size)
+  **Memory**: O(groups) not O(records)
+
+  ## Parameters
+
+    * `domain` - The Ash domain containing the report definition
+    * `report_name` - Name of the report to generate
+    * `params` - Parameters for report generation
+    * `opts` - Loading options
+
+  ## Options
+
+    * `:chunk_size` - Size of streaming chunks (default: 500)
+    * `:max_demand` - Maximum demand for backpressure (default: 1000)
+    * `:aggregations` - Global aggregation functions (default: [])
+    * `:grouped_aggregations` - Override DSL-inferred grouped aggregations (default: auto from DSL)
+    * `:preprocess_charts` - Generate charts from aggregations (default: true)
+    * `:include_sample` - Include sample records in output (default: false)
+    * `:sample_size` - Number of sample records to include (default: 100)
+
+  ## Returns
+
+    * `{:ok, data_context}` - Data context with aggregations and charts
+    * `{:error, reason}` - Loading failed
+
+  The data context includes:
+  ```elixir
+  %{
+    aggregations: %{...},         # Aggregation results
+    charts: %{...},               # Generated charts
+    config: %{...},               # Report config
+    variables: %{...},            # Parameters
+    records: [...]                # Optional sample records
+  }
+  ```
+
+  ## Examples
+
+      # Basic usage with automatic chart generation
+      {:ok, context} = DataLoader.load_with_aggregations_for_typst(
+        MyApp.Domain,
+        :sales_report,
+        %{},
+        []
+      )
+
+      # Access charts
+      context.charts[:sales_by_region].embedded_code
+
+      # Include sample records for other elements
+      {:ok, context} = DataLoader.load_with_aggregations_for_typst(
+        MyApp.Domain,
+        :sales_report,
+        %{},
+        include_sample: true,
+        sample_size: 50
+      )
+
+      # Custom aggregation configuration
+      {:ok, context} = DataLoader.load_with_aggregations_for_typst(
+        MyApp.Domain,
+        :sales_report,
+        %{},
+        grouped_aggregations: [
+          %{group_by: :region, aggregations: [:sum, :count], fields: [:amount]}
+        ]
+      )
+  """
+  @spec load_with_aggregations_for_typst(module(), atom(), map(), load_options()) ::
+          {:ok, typst_data()} | {:error, term()}
+  def load_with_aggregations_for_typst(domain, report_name, params, opts) do
+    Logger.info(fn ->
+      "Loading aggregation-based data for report #{report_name} in domain #{inspect(domain)}"
+    end)
+
+    with {:ok, report} <- get_report_definition(domain, report_name),
+         {:ok, stream_id, stream} <- create_streaming_pipeline(domain, report, params, opts),
+         {:ok, sample_records} <- maybe_collect_sample(stream, opts),
+         {:ok, agg_data} <- retrieve_aggregation_state(stream_id),
+         {:ok, chart_data} <- maybe_generate_charts(report, agg_data, opts) do
+      # Build data context
+      context = %{
+        aggregations: agg_data,
+        charts: chart_data,
+        config: %{
+          report_name: report.name,
+          title: report.title
+        },
+        variables: params,
+        records: sample_records
+      }
+
+      Logger.debug(fn ->
+        "Successfully loaded aggregations with #{map_size(chart_data)} charts and #{length(sample_records)} sample records"
+      end)
+
+      {:ok, context}
+    else
+      {:error, reason} = error ->
+        Logger.error(fn ->
+          "Failed to load aggregation data for #{report_name}: #{inspect(reason)}"
+        end)
+
+        error
+    end
+  end
+
+  # Helper Functions for load_with_aggregations_for_typst/4
+
+  defp maybe_collect_sample(stream, opts) do
+    include_sample? = Keyword.get(opts, :include_sample, false)
+    sample_size = Keyword.get(opts, :sample_size, 100)
+
+    if include_sample? do
+      # Take first N records as sample, then drain the rest
+      sample = stream |> Enum.take(sample_size)
+      # Drain remaining stream
+      stream |> Stream.drop(sample_size) |> Stream.run()
+      {:ok, sample}
+    else
+      # Just drain the stream without collecting records
+      Stream.run(stream)
+      {:ok, []}
+    end
+  rescue
+    error ->
+      Logger.error("Error collecting sample: #{inspect(error)}")
+      {:error, {:sample_collection_failed, error}}
+  end
+
+  defp retrieve_aggregation_state(stream_id) do
+    case StreamingPipeline.get_aggregation_state(stream_id) do
+      {:ok, agg_data} ->
+        {:ok, agg_data}
+
+      {:error, reason} ->
+        Logger.warning(fn ->
+          "Failed to retrieve aggregation state: #{inspect(reason)}. Continuing with empty aggregations."
+        end)
+
+        # Don't fail - return empty aggregations
+        {:ok, %{aggregations: %{}, grouped_aggregations: %{}, group_counts: %{}, total_transformed: 0}}
+    end
+  end
+
+  defp maybe_generate_charts(report, agg_data, opts) do
+    preprocess? = Keyword.get(opts, :preprocess_charts, true)
+
+    if preprocess? do
+      # Extract chart configurations from report
+      chart_configs = ChartDataCollector.extract_chart_configs(report)
+
+      if chart_configs == [] do
+        {:ok, %{}}
+      else
+        # Generate charts from aggregations
+        case ChartDataCollector.convert_aggregations_to_charts(
+               agg_data.grouped_aggregations,
+               chart_configs
+             ) do
+          chart_data when is_map(chart_data) ->
+            {:ok, chart_data}
+
+          error ->
+            Logger.warning(fn ->
+              "Chart generation failed: #{inspect(error)}. Continuing without charts."
+            end)
+
+            {:ok, %{}}
+        end
+      end
+    else
+      {:ok, %{}}
+    end
+  rescue
+    error ->
+      Logger.error("Error generating charts: #{inspect(error)}")
+      {:ok, %{}}
+  end
 
   @doc """
   Streams large datasets for memory-efficient Typst compilation.

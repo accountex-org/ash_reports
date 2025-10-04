@@ -292,7 +292,77 @@ defmodule AshReports.Typst.StreamingPipeline do
     Registry.count_by_status()
   end
 
+  @doc """
+  Retrieves the aggregation state from a streaming pipeline.
+
+  This function queries the ProducerConsumer to get the current aggregation state,
+  which can be used to generate charts from aggregated data without loading all
+  records into memory.
+
+  ## Parameters
+
+    * `stream_id` - The unique identifier for the pipeline
+
+  ## Returns
+
+    * `{:ok, aggregation_data}` - Map containing aggregation state
+    * `{:error, :not_found}` - Pipeline not found
+    * `{:error, :no_producer_consumer}` - ProducerConsumer not available
+    * `{:error, term()}` - Other errors
+
+  ## Aggregation Data Format
+
+  ```elixir
+  %{
+    aggregations: %{...},           # Global aggregations
+    grouped_aggregations: %{...},   # Grouped aggregations by key
+    group_counts: %{...},           # Count of unique groups
+    total_transformed: 12345        # Total records processed
+  }
+  ```
+
+  ## Examples
+
+      # After streaming completes
+      {:ok, stream_id, stream} = StreamingPipeline.start_pipeline(...)
+      Enum.to_list(stream)  # Drain the stream
+      {:ok, agg_data} = StreamingPipeline.get_aggregation_state(stream_id)
+
+      # Use for chart generation
+      ChartDataCollector.convert_aggregations_to_charts(
+        agg_data.grouped_aggregations,
+        chart_configs
+      )
+  """
+  @spec get_aggregation_state(stream_id()) ::
+          {:ok, map()} | {:error, :not_found | :no_producer_consumer | term()}
+  def get_aggregation_state(stream_id) do
+    with {:ok, pipeline_info} <- Registry.get_pipeline(stream_id),
+         {:ok, producer_consumer_pid} <- get_producer_consumer_pid(pipeline_info) do
+      # Call the ProducerConsumer to get aggregation state
+      try do
+        GenStage.call(producer_consumer_pid, :get_aggregation_state, 5000)
+      catch
+        :exit, {:noproc, _} ->
+          {:error, :producer_consumer_stopped}
+
+        :exit, {:timeout, _} ->
+          {:error, :timeout}
+      end
+    end
+  end
+
   # Private Functions
+
+  defp get_producer_consumer_pid(%{producer_consumer_pid: pid}) when is_pid(pid) do
+    if Process.alive?(pid) do
+      {:ok, pid}
+    else
+      {:error, :producer_consumer_stopped}
+    end
+  end
+
+  defp get_producer_consumer_pid(_), do: {:error, :no_producer_consumer}
 
   defp fetch_required(opts, key) do
     case Keyword.fetch(opts, key) do
