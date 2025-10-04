@@ -301,4 +301,117 @@ defmodule AshReports.Typst.ChartEmbedderTest do
       assert grid =~ "Line Chart"
     end
   end
+
+  describe "SVG sanitization" do
+    test "removes script tags from SVG" do
+      malicious_svg = """
+      <svg width="100" height="100">
+        <script>alert('XSS')</script>
+        <circle cx="50" cy="50" r="40"/>
+      </svg>
+      """
+
+      {:ok, typst} = ChartEmbedder.embed(malicious_svg)
+      decoded = Base.decode64!(extract_base64(typst))
+
+      refute decoded =~ "<script>"
+      refute decoded =~ "alert"
+      assert decoded =~ "<circle"
+    end
+
+    test "removes event handler attributes" do
+      malicious_svg = """
+      <svg width="100" height="100">
+        <circle cx="50" cy="50" r="40" onclick="alert('XSS')" onload="doEvil()"/>
+      </svg>
+      """
+
+      {:ok, typst} = ChartEmbedder.embed(malicious_svg)
+      decoded = Base.decode64!(extract_base64(typst))
+
+      refute decoded =~ "onclick"
+      refute decoded =~ "onload"
+      refute decoded =~ "alert"
+      assert decoded =~ "<circle"
+    end
+
+    test "removes javascript: protocol in hrefs" do
+      malicious_svg = """
+      <svg width="100" height="100">
+        <a href="javascript:alert('XSS')">
+          <circle cx="50" cy="50" r="40"/>
+        </a>
+      </svg>
+      """
+
+      {:ok, typst} = ChartEmbedder.embed(malicious_svg)
+      decoded = Base.decode64!(extract_base64(typst))
+
+      refute decoded =~ "javascript:"
+      assert decoded =~ "<circle"
+    end
+
+    test "removes data:text/html URIs" do
+      malicious_svg = """
+      <svg width="100" height="100">
+        <a href="data:text/html,<script>alert('XSS')</script>">
+          <circle cx="50" cy="50" r="40"/>
+        </a>
+      </svg>
+      """
+
+      {:ok, typst} = ChartEmbedder.embed(malicious_svg)
+      decoded = Base.decode64!(extract_base64(typst))
+
+      refute decoded =~ "data:text/html"
+      assert decoded =~ "<circle"
+    end
+
+    test "removes foreignObject elements" do
+      malicious_svg = """
+      <svg width="100" height="100">
+        <foreignObject>
+          <body xmlns="http://www.w3.org/1999/xhtml">
+            <script>alert('XSS')</script>
+          </body>
+        </foreignObject>
+        <circle cx="50" cy="50" r="40"/>
+      </svg>
+      """
+
+      {:ok, typst} = ChartEmbedder.embed(malicious_svg)
+      decoded = Base.decode64!(extract_base64(typst))
+
+      refute decoded =~ "foreignObject"
+      refute decoded =~ "alert"
+      assert decoded =~ "<circle"
+    end
+
+    test "preserves safe SVG content" do
+      safe_svg = """
+      <svg width="200" height="200">
+        <rect x="10" y="10" width="100" height="100" fill="blue"/>
+        <text x="50" y="150" font-size="20">Safe Text</text>
+        <path d="M 10 10 L 100 100" stroke="red"/>
+      </svg>
+      """
+
+      {:ok, typst} = ChartEmbedder.embed(safe_svg)
+      decoded = Base.decode64!(extract_base64(typst))
+
+      assert decoded =~ "<rect"
+      assert decoded =~ "<text"
+      assert decoded =~ "<path"
+      assert decoded =~ "Safe Text"
+    end
+  end
+
+  # Helper to extract base64 from Typst image.decode() call
+  defp extract_base64(typst) do
+    # Extract base64 string from: #image.decode("BASE64", format: "svg")
+    case Regex.run(~r/#image\.decode\("([^"]+)"/, typst) do
+      [_, base64] -> base64
+      _ -> raise "Could not extract base64 from: #{typst}"
+    end
+  end
 end

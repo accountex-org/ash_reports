@@ -190,15 +190,36 @@ defmodule AshReports.Typst.ChartEmbedder do
   end
 
   defp encode_svg(svg, :base64) do
-    encoded = Base.encode64(svg)
+    sanitized_svg = sanitize_svg(svg)
+    encoded = Base.encode64(sanitized_svg)
     {:ok, "#image.decode(\"#{encoded}\", format: \"svg\")"}
   end
 
   defp encode_svg(svg, :file) do
-    with {:ok, path} <- write_temp_svg(svg) do
+    sanitized_svg = sanitize_svg(svg)
+
+    with {:ok, path} <- write_temp_svg(sanitized_svg) do
       {:ok, "#image(\"#{path}\")"}
     end
   end
+
+  # Sanitize SVG to prevent XSS attacks
+  # Removes potentially dangerous elements and attributes
+  defp sanitize_svg(svg) when is_binary(svg) do
+    svg
+    # Remove script tags
+    |> String.replace(~r/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/i, "")
+    # Remove event handler attributes (onclick, onload, onerror, etc.)
+    |> String.replace(~r/\s+on\w+\s*=\s*["'][^"']*["']/i, "")
+    # Remove javascript: protocol in hrefs
+    |> String.replace(~r/href\s*=\s*["']javascript:[^"']*["']/i, "")
+    # Remove data: protocol URIs that could contain scripts
+    |> String.replace(~r/href\s*=\s*["']data:text\/html[^"']*["']/i, "")
+    # Remove foreign object elements which can embed HTML
+    |> String.replace(~r/<foreignObject\b[^<]*(?:(?!<\/foreignObject>)<[^<]*)*<\/foreignObject>/i, "")
+  end
+
+  defp sanitize_svg(svg), do: svg
 
   defp write_temp_svg(svg) do
     # Generate unique filename
