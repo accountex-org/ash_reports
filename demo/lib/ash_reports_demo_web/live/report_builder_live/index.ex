@@ -3,12 +3,12 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
   Interactive LiveView-based Report Builder interface.
 
   Provides a step-by-step wizard for creating and configuring reports without
-  writing DSL code. Users can select templates, configure data sources, add
-  visualizations, and generate reports with real-time progress tracking.
+  writing DSL code. Users can select templates, configure data sources, customize
+  appearance, and generate reports with real-time progress tracking.
 
   ## Features
 
-  - **4-Step Wizard**: Template → Data Source → Visualization → Generation
+  - **5-Step Wizard**: Template → Data → Customize → Preview → Generate
   - **Form Validation**: Step-by-step validation with inline error messages
   - **Real-time Progress**: Live progress tracking during report generation
   - **Contextual Help**: Hover tooltips on each step for guidance
@@ -18,8 +18,8 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
 
   The LiveView maintains the following assigns:
 
-  - `:config` - Report configuration map (template, data_source, visualizations)
-  - `:active_step` - Current wizard step (1-4)
+  - `:config` - Report configuration map (template, data_source, customization, visualizations)
+  - `:active_step` - Current wizard step (1-5)
   - `:generation_status` - Report generation status (:idle, :generating, :completed, etc.)
   - `:progress` - Generation progress percentage (0-100)
   - `:errors` - Validation errors map
@@ -74,7 +74,7 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
 
     case validate_step(current_step, config) do
       :ok ->
-        next_step = min(current_step + 1, 4)
+        next_step = min(current_step + 1, 5)
         {:noreply, socket |> assign(:active_step, next_step) |> assign(:errors, %{})}
 
       {:error, errors} ->
@@ -191,6 +191,18 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
 
   @impl true
   def handle_info(
+        {AshReportsDemoWeb.ReportBuilderLive.CustomizationConfig,
+         {:customization_updated, customization}},
+        socket
+      ) do
+    config = socket.assigns.config
+    updated_config = Map.put(config, :customization, customization)
+
+    {:noreply, assign(socket, :config, updated_config)}
+  end
+
+  @impl true
+  def handle_info(
         {AshReportsDemoWeb.ReportBuilderLive.VisualizationConfig,
          {:visualizations_updated, visualizations}},
         socket
@@ -270,11 +282,13 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
           <% 2 -> %>
             <.data_source_step config={@config} />
           <% 3 -> %>
+            <.customization_step config={@config} errors={@errors} />
+          <% 4 -> %>
             <.preview_step
               config={@config}
               preview_data={@preview_data}
             />
-          <% 4 -> %>
+          <% 5 -> %>
             <.generation_step
               status={@generation_status}
               progress={@progress}
@@ -293,7 +307,7 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
         </.button>
         <div></div>
         <.button
-          :if={@active_step < 4}
+          :if={@active_step < 5}
           phx-click="next_step"
           disabled={!can_proceed?(@active_step, @config, @errors)}
           class={
@@ -307,11 +321,11 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
           Next
         </.button>
         <.button
-          :if={@active_step == 4}
+          :if={@active_step == 5}
           phx-click="generate_report"
-          disabled={!can_proceed?(4, @config, @errors)}
+          disabled={!can_proceed?(5, @config, @errors)}
           class={
-            if !can_proceed?(4, @config, @errors) do
+            if !can_proceed?(5, @config, @errors) do
               "cursor-not-allowed opacity-50"
             else
               "bg-green-600 hover:bg-green-700"
@@ -454,6 +468,70 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
         <.live_component
           module={AshReportsDemoWeb.ReportBuilderLive.DataSourceConfig}
           id="data-source-config"
+          config={@config}
+        />
+      </div>
+    </div>
+    """
+  end
+
+  # Renders Step 3: Template Customization.
+  #
+  # Allows users to customize the appearance of their report by selecting themes
+  # and customizing brand colors. Uses the CustomizationConfig LiveComponent.
+  defp customization_step(assigns) do
+    ~H"""
+    <div>
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Customize Appearance</h2>
+          <p class="mt-1 text-sm text-gray-600">
+            Select a theme and customize colors to match your brand
+          </p>
+        </div>
+        <div class="group relative">
+          <svg
+            class="h-5 w-5 text-gray-400 hover:text-gray-600"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          <div class="invisible absolute right-0 top-6 z-10 w-64 rounded-md bg-gray-900 px-3 py-2 text-sm text-white opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100">
+            Choose a theme and customize colors to match your organization's branding.
+            Themes control typography, colors, and overall report appearance. You can
+            override theme colors with your own brand colors.
+          </div>
+        </div>
+      </div>
+
+      <%= if @errors[:customization] do %>
+        <div class="mt-4 rounded-md bg-red-50 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-red-800"><%= @errors[:customization] %></p>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="mt-6">
+        <.live_component
+          module={AshReportsDemoWeb.ReportBuilderLive.CustomizationConfig}
+          id="customization-config"
           config={@config}
         />
       </div>
@@ -792,8 +870,9 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
     Map.keys(first_row)
   end
 
-  defp steps do
-    ["Select Template", "Configure Data", "Preview", "Generate"]
+  # Public for testing
+  def steps do
+    ["Select Template", "Configure Data", "Customize", "Preview", "Generate"]
   end
 
   # Validation Functions
@@ -803,11 +882,13 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
   # Each step has specific validation requirements:
   # - Step 1: Template must be selected
   # - Step 2: Data source must be configured with a resource
-  # - Step 3: No validation (preview is optional)
-  # - Step 4: Full configuration validation via ReportBuilder
+  # - Step 3: Customization is optional (no validation required)
+  # - Step 4: Preview - no validation required
+  # - Step 5: Full configuration validation via ReportBuilder
   #
   # Returns `:ok` if valid, or `{:error, errors_map}` with validation errors.
-  defp validate_step(1, config) do
+  # Public for testing
+  def validate_step(1, config) do
     # Step 1: Template selection
     if config[:template] do
       :ok
@@ -816,7 +897,7 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
     end
   end
 
-  defp validate_step(2, config) do
+  def validate_step(2, config) do
     # Step 2: Data source configuration
     errors = %{}
 
@@ -834,26 +915,32 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
     end
   end
 
-  defp validate_step(3, _config) do
-    # Step 3: Preview - no validation required
+  def validate_step(3, _config) do
+    # Step 3: Customization - optional, no validation required
     :ok
   end
 
-  defp validate_step(4, config) do
-    # Step 4: Generation - validate complete config
+  def validate_step(4, _config) do
+    # Step 4: Preview - no validation required
+    :ok
+  end
+
+  def validate_step(5, config) do
+    # Step 5: Generation - validate complete config
     case ReportBuilder.validate_config(config) do
       {:ok, _} -> :ok
       {:error, errors} -> {:error, errors}
     end
   end
 
-  defp validate_step(_step, _config), do: :ok
+  def validate_step(_step, _config), do: :ok
 
   # Checks if navigation should proceed from the current step.
   #
   # Used to enable/disable the "Next" and "Generate Report" buttons.
   # Returns `true` if the step is valid and there are no pending errors.
-  defp can_proceed?(step, config, errors) do
+  # Public for testing
+  def can_proceed?(step, config, errors) do
     # Check if current step is valid
     case validate_step(step, config) do
       :ok -> map_size(errors) == 0
