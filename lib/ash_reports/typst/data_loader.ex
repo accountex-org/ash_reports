@@ -554,12 +554,10 @@ defmodule AshReports.Typst.DataLoader do
 
   defp create_streaming_pipeline(domain, report, params, opts) do
     # Get the query from report definition
-    with {:ok, query} <- QueryBuilder.build_query(domain, report, params, opts) do
+    with {:ok, query} <- QueryBuilder.build_query(domain, report, params, opts),
+         {:ok, grouped_aggregations} <- AggregationConfigurator.build_aggregations(report, opts) do
       # Build transformer function
       transformer = build_typst_transformer(report, opts)
-
-      # Build grouped aggregations from DSL
-      grouped_aggregations = AggregationConfigurator.build_aggregations(report)
 
       Logger.debug(fn ->
         """

@@ -14,10 +14,40 @@ defmodule AshReports.Typst.AggregationConfigurator do
   - Validate memory requirements
   - Estimate group cardinality
 
+  ## Cumulative Grouping and Memory Implications
+
+  By default, each grouping level includes all fields from previous levels:
+
+      # Level 1: :region → 10 groups
+      # Level 2: [:region, :city] → 500 groups
+      # Level 3: [:region, :city, :product] → 50,000 groups
+
+  **Memory grows exponentially** with nested grouping. Each group stores
+  aggregation state (~600 bytes), so:
+
+      - 10,000 groups ≈ 6 MB
+      - 50,000 groups ≈ 30 MB
+      - 100,000 groups ≈ 60 MB
+
+  ## Options
+
+  - `cumulative: false` - Disable cumulative grouping (each level only groups by its own field)
+  - `max_estimated_groups: N` - Fail if estimated groups exceed limit (default: 100,000)
+  - `max_estimated_memory: N` - Fail if estimated memory exceeds limit (default: 100 MB)
+
   ## Usage
 
+      # Default cumulative grouping
       iex> AggregationConfigurator.build_aggregations(report)
-      [%{group_by: :region, aggregations: [:sum, :count], level: 1}]
+      [%{group_by: :region, level: 1}, %{group_by: [:region, :city], level: 2}]
+
+      # Non-cumulative grouping
+      iex> AggregationConfigurator.build_aggregations(report, cumulative: false)
+      [%{group_by: :region, level: 1}, %{group_by: :city, level: 2}]
+
+      # Strict validation
+      iex> AggregationConfigurator.build_aggregations(report, max_estimated_groups: 10_000)
+      {:error, {:memory_limit_exceeded, ...}}
   """
 
   require Logger
@@ -25,92 +55,131 @@ defmodule AshReports.Typst.AggregationConfigurator do
   alias AshReports.Report
   alias AshReports.Typst.ExpressionParser
 
+  @default_max_estimated_groups 100_000
+  @default_max_estimated_memory 100_000_000
+  @bytes_per_group 600
+
   @doc """
   Builds grouped aggregation configurations from report DSL.
 
   Analyzes report groups and creates aggregation configurations with
-  cumulative grouping (each level includes fields from previous levels).
+  optional cumulative grouping (each level includes fields from previous levels).
 
   ## Parameters
 
     * `report` - The Report struct
+    * `opts` - Options (keyword list):
+      - `cumulative` - Enable cumulative grouping (default: true)
+      - `max_estimated_groups` - Maximum allowed estimated groups (default: 100,000)
+      - `max_estimated_memory` - Maximum allowed estimated memory in bytes (default: 100 MB)
+      - `enforce_limits` - Return error on limit violation (default: true)
 
   ## Returns
 
-    * List of aggregation configs
+    * `{:ok, [config]}` - List of aggregation configs
+    * `{:error, reason}` - Validation failed
 
   ## Examples
 
       iex> report = %Report{groups: [%{name: :region_group, level: 1, ...}]}
       iex> AggregationConfigurator.build_aggregations(report)
-      [%{group_by: :region, level: 1, aggregations: [:sum, :count], sort: :asc}]
+      {:ok, [%{group_by: :region, level: 1, aggregations: [:sum, :count], sort: :asc}]}
+
+      iex> AggregationConfigurator.build_aggregations(report, cumulative: false)
+      {:ok, [%{group_by: :region, level: 1}, %{group_by: :city, level: 2}]}
   """
-  @spec build_aggregations(Report.t()) :: [map()]
-  def build_aggregations(report) do
+  @spec build_aggregations(Report.t(), keyword()) ::
+          {:ok, [map()]} | {:error, term()}
+  def build_aggregations(report, opts \\ []) do
     groups = report.groups || []
+    cumulative = Keyword.get(opts, :cumulative, true)
 
     case groups do
       [] ->
         Logger.debug(fn -> "No groups defined in report, skipping aggregation configuration" end)
-        []
+        {:ok, []}
 
       group_list ->
         Logger.debug(fn ->
-          "Building aggregation configuration for #{length(group_list)} groups"
+          "Building aggregation configuration for #{length(group_list)} groups (cumulative: #{cumulative})"
         end)
 
-        # Use reduce to accumulate fields from previous levels for cumulative grouping
-        # Prepend to lists (O(1)) instead of append (O(n)), then reverse at the end
-        {configs, _accumulated_fields} =
-          group_list
-          |> Enum.sort_by(& &1.level)
-          |> Enum.reduce({[], []}, fn group, {configs, accumulated_fields} ->
-            # Extract field name for current group
-            field_name = extract_field_for_group(group)
+        configs =
+          if cumulative do
+            build_cumulative_configs(group_list, report)
+          else
+            build_non_cumulative_configs(group_list, report)
+          end
 
-            # Prepend to accumulated fields (O(1) instead of O(n))
-            new_accumulated_fields = [field_name | accumulated_fields]
+        configs = Enum.reject(configs, &is_nil/1)
 
-            # Build config with cumulative fields (reverse for correct order)
-            config =
-              build_aggregation_config_for_group_cumulative(
-                group,
-                report,
-                Enum.reverse(new_accumulated_fields)
-              )
-
-            # Prepend config (O(1) instead of O(n))
-            {[config | configs], new_accumulated_fields}
-          end)
-
-        configs = configs |> Enum.reverse() |> Enum.reject(&is_nil/1)
-
-        # Validate memory requirements for cumulative grouping
-        validate_aggregation_memory(configs, report)
-
-        configs
+        # Validate memory requirements
+        case validate_aggregation_memory(configs, report, opts) do
+          :ok -> {:ok, configs}
+          {:error, _reason} = error -> error
+        end
     end
   end
 
+  # Build cumulative configs (each level includes all previous fields)
+  defp build_cumulative_configs(group_list, report) do
+    {configs, _accumulated_fields} =
+      group_list
+      |> Enum.sort_by(& &1.level)
+      |> Enum.reduce({[], []}, fn group, {configs, accumulated_fields} ->
+        field_name = extract_field_for_group(group)
+        new_accumulated_fields = [field_name | accumulated_fields]
+
+        config =
+          build_aggregation_config_for_group(
+            group,
+            report,
+            Enum.reverse(new_accumulated_fields)
+          )
+
+        {[config | configs], new_accumulated_fields}
+      end)
+
+    Enum.reverse(configs)
+  end
+
+  # Build non-cumulative configs (each level only uses its own field)
+  defp build_non_cumulative_configs(group_list, report) do
+    group_list
+    |> Enum.sort_by(& &1.level)
+    |> Enum.map(fn group ->
+      field_name = extract_field_for_group(group)
+      build_aggregation_config_for_group(group, report, [field_name])
+    end)
+  end
+
   @doc """
-  Validates aggregation memory requirements and logs warnings if high.
+  Validates aggregation memory requirements and returns error if limits exceeded.
 
   ## Parameters
 
     * `configs` - List of aggregation configurations
     * `report` - The Report struct
+    * `opts` - Validation options:
+      - `max_estimated_groups` - Maximum allowed estimated groups (default: 100,000)
+      - `max_estimated_memory` - Maximum allowed estimated memory in bytes (default: 100 MB)
+      - `enforce_limits` - Return error on violation (default: true)
 
   ## Returns
 
-    * `:ok`
+    * `:ok` - Validation passed
+    * `{:error, reason}` - Validation failed
   """
-  @spec validate_aggregation_memory([map()], Report.t()) :: :ok
-  def validate_aggregation_memory(configs, report) do
+  @spec validate_aggregation_memory([map()], Report.t(), keyword()) ::
+          :ok | {:error, term()}
+  def validate_aggregation_memory(configs, report, opts \\ []) do
+    max_groups = Keyword.get(opts, :max_estimated_groups, @default_max_estimated_groups)
+    max_memory = Keyword.get(opts, :max_estimated_memory, @default_max_estimated_memory)
+    enforce = Keyword.get(opts, :enforce_limits, true)
+
     # Estimate total groups across all aggregation configs
     total_estimated_groups =
       Enum.reduce(configs, 0, fn config, acc ->
-        # Estimate groups for this config based on field count
-        # This is a heuristic - actual cardinality depends on data
         field_count =
           case config.group_by do
             list when is_list(list) -> length(list)
@@ -121,24 +190,62 @@ defmodule AshReports.Typst.AggregationConfigurator do
         acc + estimated_groups
       end)
 
-    # Estimate memory per group (aggregation state + overhead)
-    bytes_per_group = 600
-    estimated_memory = total_estimated_groups * bytes_per_group
+    estimated_memory = total_estimated_groups * @bytes_per_group
 
-    # Log warning if memory estimate is high
-    if estimated_memory > 50_000_000 do
-      # 50 MB threshold
-      Logger.warning("""
-      High memory usage estimated for aggregations in report #{report.name}:
-        - Total estimated groups: #{total_estimated_groups}
-        - Estimated memory: #{format_bytes(estimated_memory)}
-        - Consider reducing grouping levels or field cardinality
+    # Check limits
+    cond do
+      total_estimated_groups > max_groups and enforce ->
+        {:error,
+         {:memory_limit_exceeded,
+          %{
+            reason: :too_many_groups,
+            estimated_groups: total_estimated_groups,
+            max_groups: max_groups,
+            report: report.name,
+            message: """
+            Estimated group count (#{total_estimated_groups}) exceeds limit (#{max_groups}).
+            Consider:
+            - Using non-cumulative grouping: build_aggregations(report, cumulative: false)
+            - Reducing grouping levels
+            - Increasing max_estimated_groups option
+            """
+          }}}
 
-      This is based on heuristics and actual usage may vary.
-      """)
+      estimated_memory > max_memory and enforce ->
+        {:error,
+         {:memory_limit_exceeded,
+          %{
+            reason: :memory_too_high,
+            estimated_memory: estimated_memory,
+            estimated_memory_formatted: format_bytes(estimated_memory),
+            max_memory: max_memory,
+            max_memory_formatted: format_bytes(max_memory),
+            report: report.name,
+            message: """
+            Estimated memory (#{format_bytes(estimated_memory)}) exceeds limit (#{format_bytes(max_memory)}).
+            Consider:
+            - Using non-cumulative grouping: build_aggregations(report, cumulative: false)
+            - Reducing grouping levels
+            - Increasing max_estimated_memory option
+            """
+          }}}
+
+      estimated_memory > 50_000_000 ->
+        # 50 MB threshold for warnings
+        Logger.warning("""
+        High memory usage estimated for aggregations in report #{report.name}:
+          - Total estimated groups: #{total_estimated_groups}
+          - Estimated memory: #{format_bytes(estimated_memory)}
+          - Consider using non-cumulative grouping or reducing grouping levels
+
+        This is based on heuristics and actual usage may vary.
+        """)
+
+        :ok
+
+      true ->
+        :ok
     end
-
-    :ok
   end
 
   # Private Functions
@@ -161,8 +268,8 @@ defmodule AshReports.Typst.AggregationConfigurator do
     end
   end
 
-  # Build aggregation config with cumulative grouping (includes fields from all previous levels)
-  defp build_aggregation_config_for_group_cumulative(group, report, accumulated_fields) do
+  # Build aggregation config for a group with specified fields
+  defp build_aggregation_config_for_group(group, report, accumulated_fields) do
     # Derive aggregation types from variables
     aggregations = derive_aggregations_for_group(group.level, report)
 
