@@ -309,11 +309,82 @@ defmodule AshReports.Typst.StreamingPipeline do
   end
 
   @doc """
-  Retrieves the aggregation state from a streaming pipeline.
+  Gets a snapshot of current aggregation state while streaming is in progress.
 
-  This function queries the ProducerConsumer to get the current aggregation state,
-  which can be used to generate charts from aggregated data without loading all
-  records into memory.
+  This function can be called while streaming is still active to monitor progress.
+  The returned state may be incomplete if streaming is not yet finished.
+
+  ## Parameters
+
+    * `stream_id` - The unique identifier for the pipeline
+
+  ## Returns
+
+    * `{:ok, snapshot}` - Current state snapshot with:
+      - `:aggregations` - Current simple aggregations (may be incomplete)
+      - `:grouped_aggregations` - Current grouped aggregations (may be incomplete)
+      - `:progress` - Progress information:
+        - `:records_processed` - Number of records processed so far
+        - `:percent_complete` - Estimated completion (0-100), or nil if unknown
+        - `:status` - Pipeline status (:running, :paused, :completed, :failed)
+      - `:stable` - Boolean: true if final, false if still updating
+    * `{:error, reason}` - Failed to retrieve snapshot
+
+  ## Examples
+
+      {:ok, stream_id, stream} = StreamingPipeline.start_pipeline(...)
+
+      # Start async consumption
+      task = Task.async(fn -> Enum.to_list(stream) end)
+
+      # Monitor progress while streaming
+      {:ok, snapshot} = StreamingPipeline.get_aggregation_snapshot(stream_id)
+      IO.puts "Progress: \#{snapshot.progress.percent_complete}%"
+      IO.puts "Processed: \#{snapshot.progress.records_processed} records"
+      IO.puts "Stable: \#{snapshot.stable}"
+
+      # Wait for completion
+      Task.await(task)
+
+      # Get final stable results
+      {:ok, final} = StreamingPipeline.get_aggregation_state(stream_id)
+      final.stable  # => true
+  """
+  @spec get_aggregation_snapshot(stream_id()) ::
+          {:ok, map()} | {:error, :not_found | :no_producer_consumer | term()}
+  def get_aggregation_snapshot(stream_id) do
+    with {:ok, pipeline_info} <- Registry.get_pipeline(stream_id) do
+      # Get current aggregation state (may be incomplete)
+      aggregation_result = get_current_aggregation_state(stream_id, pipeline_info)
+
+      case aggregation_result do
+        {:ok, agg_state} ->
+          # Build snapshot with progress info
+          snapshot = %{
+            aggregations: agg_state.aggregations,
+            grouped_aggregations: agg_state.grouped_aggregations,
+            progress: %{
+              records_processed: Map.get(pipeline_info, :records_processed, 0),
+              percent_complete: calculate_progress_percentage(pipeline_info),
+              status: Map.get(pipeline_info, :status, :running)
+            },
+            stable: Map.get(pipeline_info, :status) == :completed
+          }
+
+          {:ok, snapshot}
+
+        error ->
+          error
+      end
+    end
+  end
+
+  @doc """
+  Retrieves the final aggregation state from a streaming pipeline.
+
+  This function queries the ProducerConsumer to get the aggregation state after
+  streaming completes. Use `get_aggregation_snapshot/1` to monitor progress
+  while streaming is in progress.
 
   ## Parameters
 
@@ -354,26 +425,53 @@ defmodule AshReports.Typst.StreamingPipeline do
           {:ok, map()} | {:error, :not_found | :no_producer_consumer | term()}
   def get_aggregation_state(stream_id) do
     with {:ok, pipeline_info} <- Registry.get_pipeline(stream_id) do
-      # Check if this is a partitioned pipeline
-      case Registry.get_partition_workers(stream_id) do
-        {:ok, [_ | _] = workers} ->
-          # Merge results from all partition workers
-          PartitionedProducerConsumer.merge_partitions(workers)
+      get_current_aggregation_state(stream_id, pipeline_info)
+    end
+  end
 
-        _ ->
-          # Single worker pipeline
-          with {:ok, producer_consumer_pid} <- get_producer_consumer_pid(pipeline_info) do
-            try do
-              GenStage.call(producer_consumer_pid, :get_aggregation_state, 5000)
-            catch
-              :exit, {:noproc, _} ->
-                {:error, :producer_consumer_stopped}
+  # Private helper to get current aggregation state (used by both functions)
+  defp get_current_aggregation_state(stream_id, pipeline_info) do
+    # Check if this is a partitioned pipeline
+    case Registry.get_partition_workers(stream_id) do
+      {:ok, [_ | _] = workers} ->
+        # Merge results from all partition workers
+        PartitionedProducerConsumer.merge_partitions(workers)
 
-              :exit, {:timeout, _} ->
-                {:error, :timeout}
-            end
+      _ ->
+        # Single worker pipeline
+        with {:ok, producer_consumer_pid} <- get_producer_consumer_pid(pipeline_info) do
+          try do
+            GenStage.call(producer_consumer_pid, :get_aggregation_state, 5000)
+          catch
+            :exit, {:noproc, _} ->
+              {:error, :producer_consumer_stopped}
+
+            :exit, {:timeout, _} ->
+              {:error, :timeout}
           end
-      end
+        end
+    end
+  end
+
+  # Calculate completion percentage for progress tracking
+  # Returns nil when total record count is unavailable
+  defp calculate_progress_percentage(pipeline_info) do
+    total_records = Map.get(pipeline_info.metadata, :total_records)
+    records_processed = Map.get(pipeline_info, :records_processed, 0)
+
+    cond do
+      # If completed, always 100%
+      Map.get(pipeline_info, :status) == :completed ->
+        100.0
+
+      # If we have total count, calculate percentage
+      is_integer(total_records) and total_records > 0 ->
+        min(100.0, records_processed / total_records * 100.0)
+
+      # Unknown total - return nil
+      # Enhancement: Could estimate from query COUNT(*) before streaming
+      true ->
+        nil
     end
   end
 
