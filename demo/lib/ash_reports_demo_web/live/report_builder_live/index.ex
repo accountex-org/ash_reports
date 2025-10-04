@@ -70,12 +70,16 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
   def handle_event("generate_report", _params, socket) do
     config = socket.assigns.config
 
-    case ReportBuilder.start_generation(config, async: true) do
-      {:ok, stream_id} ->
+    case ReportBuilder.start_generation(config, async: true, total_records: 1000) do
+      {:ok, tracker_id} ->
+        # Start polling for progress updates
+        Process.send_after(self(), :poll_progress, 500)
+
         {:noreply,
          socket
          |> assign(:generation_status, :generating)
-         |> assign(:stream_id, stream_id)
+         |> assign(:tracker_id, tracker_id)
+         |> assign(:progress, 0)
          |> put_flash(:info, "Report generation started")}
 
       {:error, reason} ->
@@ -87,6 +91,10 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
 
   @impl true
   def handle_event("cancel_generation", _params, socket) do
+    if tracker_id = socket.assigns[:tracker_id] do
+      AshReports.ReportBuilder.ProgressTracker.cancel(tracker_id)
+    end
+
     {:noreply,
      socket
      |> assign(:generation_status, :cancelled)
@@ -148,6 +156,29 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
     updated_config = Map.put(config, :visualizations, visualizations)
 
     {:noreply, assign(socket, :config, updated_config)}
+  end
+
+  @impl true
+  def handle_info(:poll_progress, socket) do
+    tracker_id = socket.assigns[:tracker_id]
+
+    case AshReports.ReportBuilder.ProgressTracker.get_status(tracker_id) do
+      {:ok, status} ->
+        updated_socket =
+          socket
+          |> assign(:progress, status.progress)
+          |> assign(:generation_status, status.status)
+
+        # Continue polling if still generating
+        if status.status == :running do
+          Process.send_after(self(), :poll_progress, 500)
+        end
+
+        {:noreply, updated_socket}
+
+      {:error, :not_found} ->
+        {:noreply, socket}
+    end
   end
 
   @impl true

@@ -289,10 +289,23 @@ defmodule AshReports.ReportBuilder do
   def start_generation(config, opts \\ []) do
     with {:ok, _} <- validate_config(config),
          {:ok, _query} <- build_query_from_config(config) do
-      # This would integrate with StreamingPipeline
-      # For now, return mock stream ID
-      stream_id = generate_stream_id()
-      {:ok, stream_id}
+      # Generate unique report ID
+      report_id = generate_report_id()
+
+      # Start progress tracking (if ProgressTracker is available)
+      tracker_id =
+        case start_progress_tracking(report_id, opts) do
+          {:ok, id} -> id
+          {:error, _} -> generate_stream_id()
+        end
+
+      # In MVP: simulate async report generation
+      # In production: integrate with StreamingPipeline
+      if Keyword.get(opts, :async, true) do
+        Task.start(fn -> simulate_report_generation(tracker_id) end)
+      end
+
+      {:ok, tracker_id}
     end
   end
 
@@ -364,5 +377,52 @@ defmodule AshReports.ReportBuilder do
 
   defp generate_stream_id do
     "stream_" <> (:crypto.strong_rand_bytes(8) |> Base.url_encode64(padding: false))
+  end
+
+  defp generate_report_id do
+    "report_" <> (:crypto.strong_rand_bytes(8) |> Base.url_encode64(padding: false))
+  end
+
+  defp start_progress_tracking(report_id, opts) do
+    try do
+      AshReports.ReportBuilder.ProgressTracker.start_tracking(report_id,
+        total_records: Keyword.get(opts, :total_records, 0)
+      )
+    catch
+      :exit, {:noproc, _} ->
+        # ProgressTracker not running (e.g., in tests)
+        {:error, :tracker_not_available}
+    end
+  end
+
+  # Simulates report generation with progress updates
+  # In production, this would be replaced with actual StreamingPipeline integration
+  defp simulate_report_generation(tracker_id) do
+    # Simulate processing in steps
+    total_steps = 10
+
+    Enum.each(1..total_steps, fn step ->
+      # Simulate processing time
+      Process.sleep(500)
+
+      # Update progress (silently fail if tracker not available)
+      progress = round(step / total_steps * 100)
+
+      try do
+        AshReports.ReportBuilder.ProgressTracker.update_progress(tracker_id,
+          progress: progress,
+          processed: step * 100
+        )
+      catch
+        :exit, {:noproc, _} -> :ok
+      end
+    end)
+
+    # Mark as completed
+    try do
+      AshReports.ReportBuilder.ProgressTracker.complete(tracker_id)
+    catch
+      :exit, {:noproc, _} -> :ok
+    end
   end
 end
