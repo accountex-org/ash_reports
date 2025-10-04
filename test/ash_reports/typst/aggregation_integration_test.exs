@@ -33,17 +33,17 @@ defmodule AshReports.Typst.AggregationIntegrationTest do
     end
   end
 
-  describe "DataLoader.load_with_aggregations_for_typst/4 integration" do
+  describe "DataLoader.load_for_typst/4 with aggregation strategy" do
     # Note: These tests verify the function exists and handles errors
     # Full integration tests would require mock Ash resources
 
     test "returns error when report not found" do
       result =
-        DataLoader.load_with_aggregations_for_typst(
+        DataLoader.load_for_typst(
           MockDomain,
           :nonexistent_report,
           %{},
-          []
+          [strategy: :aggregation]
         )
 
       assert {:error, _reason} = result
@@ -52,6 +52,7 @@ defmodule AshReports.Typst.AggregationIntegrationTest do
     test "handles empty options gracefully" do
       # Test that function accepts all valid option combinations
       opts = [
+        strategy: :aggregation,
         include_sample: false,
         sample_size: 100,
         preprocess_charts: true,
@@ -61,7 +62,7 @@ defmodule AshReports.Typst.AggregationIntegrationTest do
       ]
 
       result =
-        DataLoader.load_with_aggregations_for_typst(
+        DataLoader.load_for_typst(
           MockDomain,
           :test_report,
           %{},
@@ -69,6 +70,19 @@ defmodule AshReports.Typst.AggregationIntegrationTest do
         )
 
       # Will error due to missing report, but validates option parsing
+      assert {:error, _reason} = result
+    end
+
+    test "deprecated load_with_aggregations_for_typst still works" do
+      # Verify backward compatibility
+      result =
+        DataLoader.load_with_aggregations_for_typst(
+          MockDomain,
+          :nonexistent_report,
+          %{},
+          []
+        )
+
       assert {:error, _reason} = result
     end
   end
