@@ -202,13 +202,16 @@ defmodule AshReports.Typst.DataLoader do
 
   defp determine_strategy(domain, report_name, opts) do
     case Keyword.get(opts, :strategy) do
-      nil -> auto_select_strategy(domain, report_name, opts)
+      nil ->
+        auto_select_strategy(domain, report_name, opts)
+
       strategy when strategy in [:auto, :in_memory, :aggregation, :streaming] ->
         if strategy == :auto do
           auto_select_strategy(domain, report_name, opts)
         else
           strategy
         end
+
       invalid ->
         Logger.warning("Invalid strategy #{inspect(invalid)}, using :auto")
         auto_select_strategy(domain, report_name, opts)
@@ -444,7 +447,8 @@ defmodule AshReports.Typst.DataLoader do
         end)
 
         # Don't fail - return empty aggregations
-        {:ok, %{aggregations: %{}, grouped_aggregations: %{}, group_counts: %{}, total_transformed: 0}}
+        {:ok,
+         %{aggregations: %{}, grouped_aggregations: %{}, group_counts: %{}, total_transformed: 0}}
     end
   end
 
@@ -615,7 +619,6 @@ defmodule AshReports.Typst.DataLoader do
     ]
   end
 
-
   defp build_typst_transformer(_report, opts) do
     # Create a transformer function that processes records for Typst
     fn record ->
@@ -637,5 +640,4 @@ defmodule AshReports.Typst.DataLoader do
       variables: report.variables || []
     }
   end
-
 end

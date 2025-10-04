@@ -309,3 +309,4 @@ _
 - Never include a co-authored line in a git commit message
 - IMPORTANT You must always ask explicit permission for commit even if give permission to do so
 - NEVER ASK PERMISSION TO RUN BASH COMMANDS THAT INCLUDE "mix test" IN THEM
+- Do not put a "MIX_ENV=test" when using mix test

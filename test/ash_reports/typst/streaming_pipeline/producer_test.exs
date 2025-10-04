@@ -20,12 +20,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerTest do
       query = build_test_query(limit: 10)
 
       # Start producer with chunk_size: 5
-      {:ok, producer} = Producer.start_link(
-        query: query,
-        domain: TestDomain,
-        chunk_size: 5,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        Producer.start_link(
+          query: query,
+          domain: TestDomain,
+          chunk_size: 5,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       # Subscribe and demand 1 record
       {:ok, subscription_tag} = GenStage.ask(producer, 1)
@@ -41,12 +42,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerTest do
     test "handles demand of 100 records with chunking" do
       query = build_test_query(limit: 100)
 
-      {:ok, producer} = Producer.start_link(
-        query: query,
-        domain: TestDomain,
-        chunk_size: 10,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        Producer.start_link(
+          query: query,
+          domain: TestDomain,
+          chunk_size: 10,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       # Demand 100 records
       GenStage.ask(producer, 100)
@@ -61,13 +63,14 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerTest do
     test "respects max_demand limit" do
       query = build_test_query(limit: 1000)
 
-      {:ok, producer} = Producer.start_link(
-        query: query,
-        domain: TestDomain,
-        chunk_size: 50,
-        max_demand: 200,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        Producer.start_link(
+          query: query,
+          domain: TestDomain,
+          chunk_size: 50,
+          max_demand: 200,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       # Demand more than max_demand
       GenStage.ask(producer, 500)
@@ -82,12 +85,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerTest do
     test "handles zero demand gracefully" do
       query = build_test_query(limit: 10)
 
-      {:ok, producer} = Producer.start_link(
-        query: query,
-        domain: TestDomain,
-        chunk_size: 5,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        Producer.start_link(
+          query: query,
+          domain: TestDomain,
+          chunk_size: 5,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       # Don't ask for any demand - producer should not send events
       refute_receive {:"$gen_consumer", {^producer, _}, _}, 500
@@ -98,12 +102,14 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerTest do
     test "handles large demand with small chunks" do
       query = build_test_query(limit: 500)
 
-      {:ok, producer} = Producer.start_link(
-        query: query,
-        domain: TestDomain,
-        chunk_size: 10,  # Small chunks
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        Producer.start_link(
+          query: query,
+          domain: TestDomain,
+          # Small chunks
+          chunk_size: 10,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       # Large demand
       GenStage.ask(producer, 500)
@@ -120,13 +126,15 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerTest do
     test "pauses fetching when circuit breaker trips" do
       query = build_test_query(limit: 100)
 
-      {:ok, producer} = Producer.start_link(
-        query: query,
-        domain: TestDomain,
-        chunk_size: 10,
-        memory_limit: 1_000,  # Very low limit to trip circuit breaker
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        Producer.start_link(
+          query: query,
+          domain: TestDomain,
+          chunk_size: 10,
+          # Very low limit to trip circuit breaker
+          memory_limit: 1_000,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       # Subscribe and demand records
       GenStage.ask(producer, 100)
@@ -147,12 +155,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerTest do
       query = build_test_query(limit: 50)
       stream_id = "test-#{:rand.uniform(10000)}"
 
-      {:ok, producer} = Producer.start_link(
-        query: query,
-        domain: TestDomain,
-        chunk_size: 10,
-        stream_id: stream_id
-      )
+      {:ok, producer} =
+        Producer.start_link(
+          query: query,
+          domain: TestDomain,
+          chunk_size: 10,
+          stream_id: stream_id
+        )
 
       # Manually pause via registry (simulating circuit breaker)
       :ok = Registry.update_status(stream_id, :paused)
@@ -177,12 +186,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerTest do
     test "executes Ash query with offset pagination" do
       query = build_test_query(limit: 100)
 
-      {:ok, producer} = Producer.start_link(
-        query: query,
-        domain: TestDomain,
-        chunk_size: 20,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        Producer.start_link(
+          query: query,
+          domain: TestDomain,
+          chunk_size: 20,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       # Demand all records
       GenStage.ask(producer, 100)
@@ -198,12 +208,13 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerTest do
       # Query that returns no results
       query = build_test_query(limit: 0)
 
-      {:ok, producer} = Producer.start_link(
-        query: query,
-        domain: TestDomain,
-        chunk_size: 10,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        Producer.start_link(
+          query: query,
+          domain: TestDomain,
+          chunk_size: 10,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       GenStage.ask(producer, 10)
 
@@ -218,20 +229,22 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerTest do
       # Invalid query that will fail
       invalid_query = nil
 
-      log = capture_log(fn ->
-        # Producer should start but log errors when trying to fetch
-        {:ok, producer} = Producer.start_link(
-          query: invalid_query,
-          domain: TestDomain,
-          chunk_size: 10,
-          stream_id: "test-#{:rand.uniform(10000)}"
-        )
+      log =
+        capture_log(fn ->
+          # Producer should start but log errors when trying to fetch
+          {:ok, producer} =
+            Producer.start_link(
+              query: invalid_query,
+              domain: TestDomain,
+              chunk_size: 10,
+              stream_id: "test-#{:rand.uniform(10000)}"
+            )
 
-        GenStage.ask(producer, 10)
-        Process.sleep(500)
+          GenStage.ask(producer, 10)
+          Process.sleep(500)
 
-        GenStage.stop(producer)
-      end)
+          GenStage.stop(producer)
+        end)
 
       # Should log error
       assert log =~ "error" or log =~ "Error" or log =~ "ERROR"
@@ -256,18 +269,22 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerTest do
 
       query = build_test_query(limit: 10)
 
-      {:ok, producer} = Producer.start_link(
-        query: query,
-        domain: TestDomain,
-        chunk_size: 5,
-        enable_telemetry: true,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, producer} =
+        Producer.start_link(
+          query: query,
+          domain: TestDomain,
+          chunk_size: 5,
+          enable_telemetry: true,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       GenStage.ask(producer, 10)
 
       # Should receive telemetry event
-      assert_receive {:telemetry, [:ash_reports, :streaming, :producer, :chunk_fetched], measurements, metadata}, 2000
+      assert_receive {:telemetry, [:ash_reports, :streaming, :producer, :chunk_fetched],
+                      measurements, metadata},
+                     2000
+
       assert is_map(measurements)
       assert is_map(metadata)
 
@@ -283,26 +300,28 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerTest do
       cache_key = "test-cache-#{:rand.uniform(10000)}"
 
       # First fetch - should cache
-      {:ok, producer1} = Producer.start_link(
-        query: query,
-        domain: TestDomain,
-        chunk_size: 10,
-        cache_key: cache_key,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, producer1} =
+        Producer.start_link(
+          query: query,
+          domain: TestDomain,
+          chunk_size: 10,
+          cache_key: cache_key,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       GenStage.ask(producer1, 20)
       _total1 = receive_all_events(producer1, 20, 2000)
       GenStage.stop(producer1)
 
       # Second fetch with same cache key - should use cache
-      {:ok, producer2} = Producer.start_link(
-        query: query,
-        domain: TestDomain,
-        chunk_size: 10,
-        cache_key: cache_key,
-        stream_id: "test-#{:rand.uniform(10000)}"
-      )
+      {:ok, producer2} =
+        Producer.start_link(
+          query: query,
+          domain: TestDomain,
+          chunk_size: 10,
+          cache_key: cache_key,
+          stream_id: "test-#{:rand.uniform(10000)}"
+        )
 
       GenStage.ask(producer2, 20)
       total2 = receive_all_events(producer2, 20, 2000)

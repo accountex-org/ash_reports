@@ -456,7 +456,14 @@ defmodule AshReports.Typst.StreamingPipeline.LoadStressTest do
   # Collect events with a delay between receives to simulate slow consumption
   defp collect_events_with_delay(max_count, timeout, opts) do
     delay_ms = Keyword.get(opts, :delay_ms, 10)
-    collect_events_delayed_recursive(max_count, timeout, 0, System.monotonic_time(:millisecond), delay_ms)
+
+    collect_events_delayed_recursive(
+      max_count,
+      timeout,
+      0,
+      System.monotonic_time(:millisecond),
+      delay_ms
+    )
   end
 
   defp collect_events_delayed_recursive(max_count, timeout, acc, start_time, delay_ms) do
@@ -469,7 +476,14 @@ defmodule AshReports.Typst.StreamingPipeline.LoadStressTest do
       receive do
         {:events, events} when is_list(events) ->
           Process.sleep(delay_ms)
-          collect_events_delayed_recursive(max_count, timeout, acc + length(events), start_time, delay_ms)
+
+          collect_events_delayed_recursive(
+            max_count,
+            timeout,
+            acc + length(events),
+            start_time,
+            delay_ms
+          )
       after
         remaining -> acc
       end

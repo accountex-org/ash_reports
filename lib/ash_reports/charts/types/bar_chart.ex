@@ -89,14 +89,18 @@ defmodule AshReports.Charts.Types.BarChart do
   # Private functions
 
   defp valid_data_point?(%{category: _category, value: value}) when is_number(value), do: true
-  defp valid_data_point?(%{"category" => _category, "value" => value}) when is_number(value), do: true
+
+  defp valid_data_point?(%{"category" => _category, "value" => value}) when is_number(value),
+    do: true
+
   defp valid_data_point?(_), do: false
 
   defp determine_chart_type(data) do
     # Check if data has series field for grouped/stacked charts
-    has_series? = Enum.any?(data, fn item ->
-      Map.has_key?(item, :series) || Map.has_key?(item, "series")
-    end)
+    has_series? =
+      Enum.any?(data, fn item ->
+        Map.has_key?(item, :series) || Map.has_key?(item, "series")
+      end)
 
     if has_series?, do: :grouped, else: :simple
   end
