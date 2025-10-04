@@ -15,7 +15,8 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
      |> assign(:progress, 0)
      |> assign(:errors, %{})
      |> assign(:preview_data, [])
-     |> assign(:available_templates, list_templates())}
+     |> assign(:available_templates, list_templates())
+     |> assign(:steps, steps())}
   end
 
   @impl true
@@ -90,6 +91,51 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
      socket
      |> assign(:generation_status, :cancelled)
      |> put_flash(:info, "Report generation cancelled")}
+  end
+
+  @impl true
+  def handle_info(
+        {AshReportsDemoWeb.ReportBuilderLive.DataSourceConfig, {:resource_selected, resource}},
+        socket
+      ) do
+    config = socket.assigns.config
+
+    case ReportBuilder.configure_data_source(config, %{resource: resource}) do
+      {:ok, updated_config} ->
+        {:noreply,
+         socket
+         |> assign(:config, updated_config)
+         |> put_flash(:info, "Data source configured")}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to configure data source: #{inspect(reason)}")}
+    end
+  end
+
+  @impl true
+  def handle_info(
+        {AshReportsDemoWeb.ReportBuilderLive.DataSourceConfig, {:filters_updated, filters}},
+        socket
+      ) do
+    config = socket.assigns.config
+
+    # Update filters in data source config
+    updated_data_source = Map.put(config.data_source || %{}, :filters, filters)
+    updated_config = Map.put(config, :data_source, updated_data_source)
+
+    {:noreply, assign(socket, :config, updated_config)}
+  end
+
+  @impl true
+  def handle_info(
+        {AshReportsDemoWeb.ReportBuilderLive.DataSourceConfig,
+         {:relationship_toggled, _rel_name}},
+        socket
+      ) do
+    # Handle relationship toggle - for now just acknowledge
+    {:noreply, socket}
   end
 
   @impl true
@@ -215,9 +261,11 @@ defmodule AshReportsDemoWeb.ReportBuilderLive.Index do
       </p>
 
       <div class="mt-6">
-        <p class="text-sm text-gray-500">
-          Data source configuration will be implemented in the next iteration
-        </p>
+        <.live_component
+          module={AshReportsDemoWeb.ReportBuilderLive.DataSourceConfig}
+          id="data-source-config"
+          config={@config}
+        />
       </div>
     </div>
     """

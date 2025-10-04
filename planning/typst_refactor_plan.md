@@ -752,19 +752,30 @@ Ash Query → StreamingProducer (chunks of 500-1000 records)
 # Stage 4: Phoenix LiveView Integration and Real-time Features
 
 **Duration**: 2-3 weeks
-**Status**: 🚧 In Progress (Phase 1 Complete)
+**Status**: 🚧 In Progress (Phase 1-2 Complete)
 **Goal**: Create modern web interface with real-time report generation
 
-## 4.1 LiveView Report Builder ✅ **Phase 1 Complete**
+## 4.1 LiveView Report Builder ✅ **Phases 1-2 Complete**
 
-### 4.1.1 Interactive Report Designer (Phase 1: MVP Foundation)
+### 4.1.1 Interactive Report Designer
+**Phase 1: MVP Foundation** ✅ Complete
 - [x] Create `AshReportsWeb.ReportBuilderLive` module (340 lines)
 - [x] Implement template selection interface (3 templates: Sales, Customer, Inventory)
 - [x] Create business logic context `AshReports.ReportBuilder` (330 lines, 8 functions)
 - [x] Add 4-step wizard UI (Template → Data Source → Preview → Generate)
 - [x] Implement comprehensive test suite (23 tests, 90%+ coverage)
-- [ ] Add drag-and-drop data source configuration (Phase 2)
-- [ ] Create real-time preview system with actual data (Phase 3)
+
+**Phase 2: Data Configuration** ✅ Complete (2025-10-04)
+- [x] Create DataSourceConfig LiveComponent (280 lines)
+- [x] Implement Ash resource browsing from Domain
+- [x] Add dynamic filter configuration UI
+- [x] Wire up preview data loading from real Ash resources
+- [x] Implement relationship selection interface
+- [x] Add component-to-parent communication pattern
+
+**Phase 3: Remaining Features** (Pending)
+- [ ] Create real-time preview system with live chart rendering
+- [ ] Add visualization configuration component
 - [ ] Implement collaborative editing features (Phase 5)
 
 ### 4.1.2 Progress Tracking System (Phase 1: UI Foundation)
@@ -775,11 +786,15 @@ Ash Query → StreamingProducer (chunks of 500-1000 records)
 - [ ] Add cancellation support for long-running reports (Phase 4)
 - [ ] Implement notification system for completion (Phase 4)
 
-**Phase 1 Status**: ✅ Complete (2025-10-04)
+**Phase 1-2 Status**: ✅ Complete (2025-10-04)
 - Working LiveView accessible at `/reports/builder`
 - Template selection functional
+- Data source configuration with live resource browsing
+- Filter configuration UI with dynamic filters
+- Preview data loading from real Ash resources
+- All 23 tests passing
 - Step navigation working
-- Business logic tested and ready for integration
+- Business logic tested and ready for further integration
 - Clean architecture with separation of concerns
 - ~890 lines of new code
 

@@ -2,6 +2,7 @@ defmodule AshReports.ReportBuilderTest do
   use ExUnit.Case, async: true
 
   alias AshReports.ReportBuilder
+  alias AshReports.Test.Customer
 
   describe "validate_config/1" do
     test "validates a valid configuration" do
@@ -66,23 +67,23 @@ defmodule AshReports.ReportBuilderTest do
     end
 
     test "configures data source with valid resource", %{config: config} do
-      # Using AshReports.Report as a known Ash resource module
+      # Using AshReports.Test.Customer as a known Ash resource module
       data_source_params = %{
-        resource: AshReports.Report,
+        resource: Customer,
         filters: %{status: "active"}
       }
 
       assert {:ok, updated_config} =
                ReportBuilder.configure_data_source(config, data_source_params)
 
-      assert updated_config.data_source.resource == AshReports.Report
+      assert updated_config.data_source.resource == Customer
       assert updated_config.data_source.filters == %{status: "active"}
       assert updated_config.data_source.relationships == []
     end
 
     test "includes relationships when specified", %{config: config} do
       data_source_params = %{
-        resource: AshReports.Report,
+        resource: Customer,
         relationships: [:bands, :variables]
       }
 
@@ -107,7 +108,7 @@ defmodule AshReports.ReportBuilderTest do
     end
 
     test "defaults filters to empty map when not provided", %{config: config} do
-      data_source_params = %{resource: AshReports.Report}
+      data_source_params = %{resource: Customer}
 
       assert {:ok, updated_config} =
                ReportBuilder.configure_data_source(config, data_source_params)
@@ -120,7 +121,7 @@ defmodule AshReports.ReportBuilderTest do
     setup do
       config = %{
         template: :test_report,
-        data_source: %{resource: AshReports.Report}
+        data_source: %{resource: Customer}
       }
 
       {:ok, config: config}
@@ -156,7 +157,7 @@ defmodule AshReports.ReportBuilderTest do
     setup do
       config = %{
         template: :test_report,
-        data_source: %{resource: AshReports.Report}
+        data_source: %{resource: Customer}
       }
 
       {:ok, config: config}
@@ -190,7 +191,7 @@ defmodule AshReports.ReportBuilderTest do
     test "exports configuration as DSL code" do
       config = %{
         template: :sales_report,
-        data_source: %{resource: AshReports.Report}
+        data_source: %{resource: Customer}
       }
 
       assert {:ok, dsl_code} = ReportBuilder.export_as_dsl(config)
@@ -201,11 +202,11 @@ defmodule AshReports.ReportBuilderTest do
     test "includes resource information in DSL" do
       config = %{
         template: :test_report,
-        data_source: %{resource: AshReports.Report}
+        data_source: %{resource: Customer}
       }
 
       {:ok, dsl_code} = ReportBuilder.export_as_dsl(config)
-      assert String.contains?(dsl_code, "AshReports.Report")
+      assert String.contains?(dsl_code, "AshReports.Test.Customer")
     end
 
     test "returns error for invalid config" do

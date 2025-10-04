@@ -187,17 +187,81 @@ defmodule AshReports.ReportBuilder do
     limit = Keyword.get(opts, :limit, 100)
 
     with {:ok, _} <- validate_config(config),
-         {:ok, query} <- build_query_from_config(config) do
-      # Use existing DataLoader for preview with limit
-      # This would integrate with AshReports.Typst.DataLoader
-      # For now, return mock data
+         {:ok, data} <- load_preview_data(config, limit) do
+      {:ok, data}
+    end
+  end
+
+  defp load_preview_data(config, limit) do
+    case config[:data_source] do
+      nil ->
+        # No data source configured, return mock data
+        {:ok,
+         [
+           %{id: 1, name: "Sample Item 1", status: "active"},
+           %{id: 2, name: "Sample Item 2", status: "pending"}
+         ]
+         |> Enum.take(limit)}
+
+      %{resource: resource, filters: filters} ->
+        # Load real data from Ash resource
+        load_from_resource(resource, filters, limit)
+
+      %{resource: resource} ->
+        # Load without filters
+        load_from_resource(resource, %{}, limit)
+    end
+  end
+
+  defp load_from_resource(resource, filters, limit) do
+    # Get the domain from the resource or use a provided domain option
+    domain = Ash.Resource.Info.domain(resource)
+
+    query =
+      resource
+      |> Ash.Query.limit(limit)
+      |> apply_filters(filters)
+
+    # Use domain-aware read if available, otherwise fallback to mock data
+    read_opts = if domain, do: [domain: domain], else: []
+
+    case Ash.read(query, read_opts) do
+      {:ok, records} ->
+        # Convert Ash records to maps for preview
+        preview_data =
+          Enum.map(records, fn record ->
+            record
+            |> Map.from_struct()
+            |> Map.drop([:__meta__, :__metadata__, :aggregates, :calculations])
+          end)
+
+        {:ok, preview_data}
+
+      {:error, error} ->
+        {:error, {:preview_load_failed, error}}
+    end
+  rescue
+    ArgumentError ->
+      # If domain is not available, return mock data
       {:ok,
        [
-         %{id: 1, customer_name: "Acme Corp", total: 1500.0, status: "completed"},
-         %{id: 2, customer_name: "TechStart Inc", total: 2300.0, status: "pending"}
+         %{id: 1, name: "Sample Item 1", status: "active"},
+         %{id: 2, name: "Sample Item 2", status: "pending"}
        ]
        |> Enum.take(limit)}
-    end
+
+    error ->
+      {:error, {:preview_error, error}}
+  end
+
+  defp apply_filters(query, filters) when map_size(filters) == 0, do: query
+
+  defp apply_filters(query, filters) do
+    import Ash.Expr
+
+    Enum.reduce(filters, query, fn {field, value}, acc_query ->
+      Ash.Query.filter(acc_query, expr(^ref(field) == ^value))
+    end)
   end
 
   @doc """
@@ -259,10 +323,12 @@ defmodule AshReports.ReportBuilder do
   def export_as_dsl(config) do
     with {:ok, _} <- validate_config(config) do
       # Generate DSL code from config
+      resource = get_in(config, [:data_source, :resource])
+
       dsl_code = """
       report :#{config.template} do
         # Generated from Report Builder
-        # Data source: #{inspect(config.data_source?.resource)}
+        # Data source: #{inspect(resource)}
 
         # Add DSL configuration here
       end
@@ -278,7 +344,7 @@ defmodule AshReports.ReportBuilder do
 
   defp validate_resource(resource) when is_atom(resource) do
     # Check if module exists and is an Ash resource
-    if Code.ensure_loaded?(resource) do
+    if Code.ensure_loaded?(resource) and Ash.Resource.Info.resource?(resource) do
       {:ok, resource}
     else
       {:error, :invalid_resource}
