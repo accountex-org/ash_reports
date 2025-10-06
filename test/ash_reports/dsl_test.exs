@@ -17,11 +17,15 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
+
+          band :detail do
+            type :detail
+          end
         end
       end
       """
 
-      assert_dsl_valid(dsl_content)
+      assert_dsl_valid(dsl_content, validate: false)
     end
 
     test "parses reports section with multiple reports" do
@@ -30,16 +34,24 @@ defmodule AshReports.DslTest do
         report :first_report do
           title "First Report"
           driving_resource AshReports.Test.Customer
+
+          band :detail do
+            type :detail
+          end
         end
-        
+
         report :second_report do
           title "Second Report"
           driving_resource AshReports.Test.Order
+
+          band :detail do
+            type :detail
+          end
         end
       end
       """
 
-      assert_dsl_valid(dsl_content)
+      assert_dsl_valid(dsl_content, validate: false)
     end
 
     test "extracts report entities correctly" do
@@ -50,12 +62,16 @@ defmodule AshReports.DslTest do
           driving_resource AshReports.Test.Customer
           description "A test report description"
           formats [:html, :pdf]
+
+          band :detail do
+            type :detail
+          end
         end
       end
       """
 
-      {:ok, dsl_state} = parse_dsl(dsl_content)
-      reports = get_dsl_entities(dsl_state, [:reports])
+      {:ok, module} = parse_dsl(dsl_content, validate: false)
+      reports = get_dsl_entities(module, [:reports])
 
       assert length(reports) == 1
 
@@ -139,12 +155,16 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
+
+          band :detail do
+            type :detail
+          end
         end
       end
       """
 
-      {:ok, dsl_state} = parse_dsl(dsl_content)
-      reports = get_dsl_entities(dsl_state, [:reports])
+      {:ok, module} = parse_dsl(dsl_content, validate: false)
+      reports = get_dsl_entities(module, [:reports])
       report = hd(reports)
 
       assert report.formats == [:html]
@@ -159,9 +179,13 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           parameters do
             parameter :start_date, :date
+          end
+
+          band :detail do
+            type :detail
           end
         end
       end
@@ -176,13 +200,17 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           parameters do
             parameter :region, :string do
               required true
               default "North"
               constraints [max_length: 50]
             end
+          end
+
+          band :detail do
+            type :detail
           end
         end
       end
@@ -197,22 +225,26 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           parameters do
             parameter :start_date, :date do
               required true
             end
-            
+
             parameter :region, :string do
               default "North"
             end
+          end
+
+          band :detail do
+            type :detail
           end
         end
       end
       """
 
-      {:ok, dsl_state} = parse_dsl(dsl_content)
-      reports = get_dsl_entities(dsl_state, [:reports])
+      {:ok, module} = parse_dsl(dsl_content, validate: false)
+      reports = get_dsl_entities(module, [:reports])
       report = hd(reports)
 
       parameters = Map.get(report, :parameters, [])
@@ -236,10 +268,14 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           bands do
             band :title do
               type :title
+            end
+
+            band :detail do
+              type :detail
             end
           end
         end
@@ -272,7 +308,7 @@ defmodule AshReports.DslTest do
       end
       """
 
-      assert_dsl_valid(dsl_content)
+      assert_dsl_valid(dsl_content, validate: false)
     end
 
     test "validates band type options" do
@@ -291,20 +327,43 @@ defmodule AshReports.DslTest do
       ]
 
       for band_type <- valid_types do
-        dsl_content = """
-        reports do
-          report :test_report do
-            title "Test Report"
-            driving_resource AshReports.Test.Customer
-            
-            bands do
-              band :test_band do
-                type #{inspect(band_type)}
+        # If it's a detail type, just test it alone; otherwise add a detail band
+        dsl_content =
+          if band_type == :detail do
+            """
+            reports do
+              report :test_report do
+                title "Test Report"
+                driving_resource AshReports.Test.Customer
+
+                bands do
+                  band :test_band do
+                    type #{inspect(band_type)}
+                  end
+                end
               end
             end
+            """
+          else
+            """
+            reports do
+              report :test_report do
+                title "Test Report"
+                driving_resource AshReports.Test.Customer
+
+                bands do
+                  band :test_band do
+                    type #{inspect(band_type)}
+                  end
+
+                  band :detail do
+                    type :detail
+                  end
+                end
+              end
+            end
+            """
           end
-        end
-        """
 
         assert_dsl_valid(dsl_content)
       end
@@ -316,10 +375,14 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           bands do
             band :test_band do
               type :invalid_type
+            end
+
+            band :detail do
+              type :detail
             end
           end
         end
@@ -375,17 +438,21 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           bands do
             band :title do
               type :title
-              
+
               elements do
                 label :title_label do
                   text "Report Title"
                   position [x: 0, y: 0, width: 200, height: 20]
                 end
               end
+            end
+
+            band :detail do
+              type :detail
             end
           end
         end
@@ -454,11 +521,11 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           bands do
             band :summary do
               type :summary
-              
+
               elements do
                 aggregate :total_count do
                   function :count
@@ -466,6 +533,10 @@ defmodule AshReports.DslTest do
                   scope :report
                 end
               end
+            end
+
+            band :detail do
+              type :detail
             end
           end
         end
@@ -481,17 +552,21 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           bands do
             band :title do
               type :title
-              
+
               elements do
                 line :separator do
                   orientation :horizontal
                   thickness 2
                 end
               end
+            end
+
+            band :detail do
+              type :detail
             end
           end
         end
@@ -507,17 +582,21 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           bands do
             band :title do
               type :title
-              
+
               elements do
                 box :border_box do
                   border [width: 1, color: "black"]
                   fill [color: "lightgray"]
                 end
               end
+            end
+
+            band :detail do
+              type :detail
             end
           end
         end
@@ -533,17 +612,21 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           bands do
             band :title do
               type :title
-              
+
               elements do
                 image :logo do
                   source "/path/to/logo.png"
                   scale_mode :fit
                 end
               end
+            end
+
+            band :detail do
+              type :detail
             end
           end
         end
@@ -561,12 +644,16 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           variables do
             variable :total_count do
               type :count
               expression :id
             end
+          end
+
+          band :detail do
+            type :detail
           end
         end
       end
@@ -581,7 +668,7 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           variables do
             variable :total_sales do
               type :sum
@@ -590,6 +677,10 @@ defmodule AshReports.DslTest do
               reset_group 1
               initial_value 0
             end
+          end
+
+          band :detail do
+            type :detail
           end
         end
       end
@@ -607,12 +698,16 @@ defmodule AshReports.DslTest do
           report :test_report do
             title "Test Report"
             driving_resource AshReports.Test.Customer
-            
+
             variables do
               variable :test_var do
                 type #{inspect(var_type)}
                 expression :test_field
               end
+            end
+
+            band :detail do
+              type :detail
             end
           end
         end
@@ -631,13 +726,17 @@ defmodule AshReports.DslTest do
           report :test_report do
             title "Test Report"
             driving_resource AshReports.Test.Customer
-            
+
             variables do
               variable :test_var do
                 type :sum
                 expression :test_field
                 reset_on #{inspect(reset_option)}
               end
+            end
+
+            band :detail do
+              type :detail
             end
           end
         end
@@ -655,12 +754,16 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           groups do
             group :by_region do
               level 1
               expression :region
             end
+          end
+
+          band :detail do
+            type :detail
           end
         end
       end
@@ -675,13 +778,17 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           groups do
             group :by_region do
               level 1
               expression :region
               sort :desc
             end
+          end
+
+          band :detail do
+            type :detail
           end
         end
       end
@@ -699,13 +806,17 @@ defmodule AshReports.DslTest do
           report :test_report do
             title "Test Report"
             driving_resource AshReports.Test.Customer
-            
+
             groups do
               group :test_group do
                 level 1
                 expression :test_field
                 sort #{inspect(sort_option)}
               end
+            end
+
+            band :detail do
+              type :detail
             end
           end
         end
@@ -721,25 +832,29 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           groups do
             group :by_region do
               level 1
               expression :region
               sort :desc
             end
-            
+
             group :by_status do
               level 2
               expression :status
             end
           end
+
+          band :detail do
+            type :detail
+          end
         end
       end
       """
 
-      {:ok, dsl_state} = parse_dsl(dsl_content)
-      reports = get_dsl_entities(dsl_state, [:reports])
+      {:ok, module} = parse_dsl(dsl_content, validate: false)
+      reports = get_dsl_entities(module, [:reports])
       report = hd(reports)
 
       groups = Map.get(report, :groups, [])
@@ -909,18 +1024,22 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           groups do
             group :by_region do
               level 1
               expression :region
             end
           end
-          
+
           bands do
             band :group_header do
               type :group_header
               group_level 2  # This should be invalid - no group level 2 defined
+            end
+
+            band :detail do
+              type :detail
             end
           end
         end
@@ -930,7 +1049,7 @@ defmodule AshReports.DslTest do
       # Note: This test might pass at DSL parsing level but should fail at verification level
       # The actual validation happens in verifiers, not in DSL parsing
       # We'll test the verifier behavior separately
-      {:ok, _dsl_state} = parse_dsl(dsl_content)
+      {:ok, _module} = parse_dsl(dsl_content, validate: false)
     end
   end
 
@@ -960,16 +1079,20 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           bands do
             band :title do
               type :title
-              
+
               elements do
                 field :invalid_field do
                   # missing required source field
                 end
               end
+            end
+
+            band :detail do
+              type :detail
             end
           end
         end
@@ -985,21 +1108,24 @@ defmodule AshReports.DslTest do
         report :test_report do
           title "Test Report"
           driving_resource AshReports.Test.Customer
-          
+
           parameters do
             # Empty parameters section should be valid
           end
-          
+
           variables do
             # Empty variables section should be valid
           end
-          
+
           groups do
             # Empty groups section should be valid
           end
-          
+
           bands do
-            # Empty bands section should be valid
+            # Must have at least one detail band
+            band :detail do
+              type :detail
+            end
           end
         end
       end

@@ -158,19 +158,18 @@ defmodule AshReports.DataLoader.PipelineTest do
          }}
       ]
 
-      with_mock_stream(mock_stream) do
-        assert {:ok, result} = Pipeline.process_all(config)
+      _mock = with_mock_stream(mock_stream)
+      assert {:ok, result} = Pipeline.process_all(config)
 
-        assert %{
-                 records: records,
-                 summary: summary
-               } = result
+      assert %{
+               records: records,
+               summary: summary
+             } = result
 
-        assert length(records) == 2
-        assert summary.total_records == 2
-        assert is_integer(summary.processing_time)
-        assert summary.errors == []
-      end
+      assert length(records) == 2
+      assert summary.total_records == 2
+      assert is_integer(summary.processing_time)
+      assert summary.errors == []
     end
 
     test "handles processing errors gracefully" do
@@ -196,13 +195,12 @@ defmodule AshReports.DataLoader.PipelineTest do
          }}
       ]
 
-      with_mock_stream(mock_stream) do
-        assert {:ok, result} = Pipeline.process_all(config)
+      _mock = with_mock_stream(mock_stream)
+      assert {:ok, result} = Pipeline.process_all(config)
 
-        assert length(result.records) == 2
-        assert length(result.summary.errors) == 1
-        assert :processing_failed in result.summary.errors
-      end
+      assert length(result.records) == 2
+      assert length(result.summary.errors) == 1
+      assert :processing_failed in result.summary.errors
     end
 
     test "returns error on stream creation failure" do
@@ -295,15 +293,14 @@ defmodule AshReports.DataLoader.PipelineTest do
       # Mock data stream
       mock_data = [%{id: 1, amount: 100}, %{id: 2, amount: 200}]
 
-      with_mock_data_stream(mock_data) do
-        assert {:ok, stream} = Pipeline.process_stream(config)
+      _mock = with_mock_data_stream(mock_data)
+      assert {:ok, stream} = Pipeline.process_stream(config)
 
-        # Process a few items to test variable integration
-        results = stream |> Enum.take(2)
+      # Process a few items to test variable integration
+      results = stream |> Enum.take(2)
 
-        # Variables should be updated through the process
-        assert length(results) <= 2
-      end
+      # Variables should be updated through the process
+      assert length(results) <= 2
     end
 
     test "processes data through group processor" do
@@ -332,13 +329,12 @@ defmodule AshReports.DataLoader.PipelineTest do
         %{id: 3, category: "B", amount: 150}
       ]
 
-      with_mock_data_stream(mock_data) do
-        assert {:ok, stream} = Pipeline.process_stream(config)
+      _mock = with_mock_data_stream(mock_data)
+      assert {:ok, stream} = Pipeline.process_stream(config)
 
-        # Should process with group state
-        results = stream |> Enum.take(3)
-        assert length(results) <= 3
-      end
+      # Should process with group state
+      results = stream |> Enum.take(3)
+      assert length(results) <= 3
     end
   end
 

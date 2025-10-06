@@ -703,8 +703,8 @@ defmodule AshReports.DslCompilationIntegrationTest do
 
                   image("positioned_image",
                     source: "/assets/icon.png",
-                    position: [x: 500, y: 0],
-                    size: [width: 50, height: 50]
+                    position: %{x: 500, y: 0},
+                    size: %{width: 50, height: 50}
                   )
                 end
               end
