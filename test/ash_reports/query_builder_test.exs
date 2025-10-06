@@ -258,7 +258,7 @@ defmodule AshReports.QueryBuilderTest do
           name: :detail,
           type: :detail,
           elements: [
-            %Label{name: :name_label, text: "Name", position: [x: 0, y: 0]}
+            %Label{name: :name_label, text: "Name", position: %{x: 0, y: 0}}
           ]
         }
       ],
@@ -315,12 +315,12 @@ defmodule AshReports.QueryBuilderTest do
             %Field{
               name: :customer_name,
               source: {:field, :customer, :name},
-              position: [x: 0, y: 0]
+              position: %{x: 0, y: 0}
             },
             %Field{
               name: :order_count,
               source: {:field, :orders, :count},
-              position: [x: 100, y: 0]
+              position: %{x: 100, y: 0}
             }
           ]
         }
@@ -348,7 +348,7 @@ defmodule AshReports.QueryBuilderTest do
                 %Field{
                   name: :nested_field,
                   source: :name,
-                  position: [x: 0, y: 0]
+                  position: %{x: 0, y: 0}
                 }
               ]
             }
@@ -373,7 +373,7 @@ defmodule AshReports.QueryBuilderTest do
             %Field{
               name: :field1,
               source: {:field, :customer, :name},
-              position: [x: 0, y: 0]
+              position: %{x: 0, y: 0}
             }
           ]
         },
@@ -384,7 +384,7 @@ defmodule AshReports.QueryBuilderTest do
             %Field{
               name: :field2,
               source: {:field, :customer, :email},
-              position: [x: 0, y: 0]
+              position: %{x: 0, y: 0}
             }
           ]
         }
@@ -436,7 +436,7 @@ defmodule AshReports.QueryBuilderTest do
             %Field{
               name: :total_sales,
               source: :total_amount,
-              position: [x: 0, y: 0]
+              position: %{x: 0, y: 0}
             }
           ]
         }

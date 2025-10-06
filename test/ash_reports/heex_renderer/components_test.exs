@@ -119,7 +119,7 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
     end
 
     test "generates element classes correctly" do
-      element = %Label{name: :test_label, x: 10, y: 20}
+      element = %Label{name: :test_label, position: %{x: 10, y: 20}}
       classes = Components.element_classes(element)
 
       assert String.contains?(classes, "ash-element")
@@ -127,7 +127,7 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
     end
 
     test "generates element styles with positioning" do
-      element = %Label{name: :test, x: 100, y: 50, width: 200, height: 30}
+      element = %Label{name: :test, position: %{x: 100, y: 50}, style: %{width: 200, height: 30}}
       styles = Components.element_styles(element)
 
       assert String.contains?(styles, "position: absolute")
@@ -177,28 +177,28 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
 
   describe "field value formatting" do
     test "formats field values with format specification" do
-      field = %Field{name: :amount, field: :amount, format: :currency}
+      field = %Field{name: :amount, source: :amount, format: :currency}
       formatted = Components.format_field_value(123.45, field)
 
       assert formatted == "$123.45"
     end
 
     test "formats percentage values" do
-      field = %Field{name: :rate, field: :rate, format: :percentage}
+      field = %Field{name: :rate, source: :rate, format: :percentage}
       formatted = Components.format_field_value(0.15, field)
 
       assert formatted == "0.15%"
     end
 
     test "handles nil values gracefully" do
-      field = %Field{name: :test, field: :test}
+      field = %Field{name: :test, source: :test}
       formatted = Components.format_field_value(nil, field)
 
       assert formatted == ""
     end
 
     test "converts values to string when no format specified" do
-      field = %Field{name: :test, field: :test}
+      field = %Field{name: :test, source: :test}
       formatted = Components.format_field_value(42, field)
 
       assert formatted == "42"
@@ -207,14 +207,14 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
 
   describe "image styling" do
     test "generates image styles with scaling" do
-      element = %Image{name: :logo, x: 10, y: 10, scale: 1.5}
+      element = %Image{name: :logo, position: %{x: 10, y: 10}, style: %{scale: 1.5}}
       styles = Components.image_styles(element)
 
       assert String.contains?(styles, "transform: scale(1.5)")
     end
 
     test "handles images without scaling" do
-      element = %Image{name: :logo, x: 10, y: 10}
+      element = %Image{name: :logo, position: %{x: 10, y: 10}}
       styles = Components.image_styles(element)
 
       refute String.contains?(styles, "transform: scale")
@@ -226,8 +226,10 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
       element = %Line{
         name: :border,
         thickness: 2,
-        color: "#000000",
-        style: :solid
+        style: %{
+          color: "#000000",
+          border_style: :solid
+        }
       }
 
       styles = Components.line_styles(element)
@@ -249,9 +251,8 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
     test "generates box styles with border and background" do
       element = %Box{
         name: :container,
-        border_width: 1,
-        border_color: "#cccccc",
-        background_color: "#f9f9f9"
+        border: %{width: 1, color: "#cccccc"},
+        fill: %{color: "#f9f9f9"}
       }
 
       styles = Components.box_styles(element)
@@ -271,7 +272,7 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
     end
 
     test "resolves field element values from record" do
-      element = %Field{name: :customer, field: :customer_name}
+      element = %Field{name: :customer, source: :customer_name}
       record = %{customer_name: "John Doe"}
       value = Components.resolve_element_value(element, record, %{})
 
@@ -279,7 +280,7 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
     end
 
     test "handles missing field gracefully" do
-      element = %Field{name: :missing, field: :non_existent}
+      element = %Field{name: :missing, source: :non_existent}
       record = %{other_field: "value"}
       value = Components.resolve_element_value(element, record, %{})
 
@@ -287,7 +288,7 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
     end
 
     test "handles nil record gracefully" do
-      element = %Field{name: :test, field: :test_field}
+      element = %Field{name: :test, source: :test_field}
       value = Components.resolve_element_value(element, nil, %{})
 
       assert value == nil

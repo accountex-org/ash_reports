@@ -380,8 +380,8 @@ defmodule AshReports.HeexRendererTest do
           type: :detail,
           height: 30,
           elements: [
-            %Field{name: :name_field, field: :name},
-            %Field{name: :value_field, field: :value}
+            %Field{name: :name_field, source: :name},
+            %Field{name: :value_field, source: :value}
           ]
         }
       ]

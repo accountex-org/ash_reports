@@ -12,7 +12,11 @@ defmodule AshReports.LiveView.ChartLiveComponentTest do
   """
 
   use ExUnit.Case, async: true
-  import Phoenix.LiveViewTest
+
+  # Conditional import - only load if Phoenix.LiveView is available
+  if Code.ensure_loaded?(Phoenix.LiveViewTest) do
+    import Phoenix.LiveViewTest
+  end
 
   alias AshReports.LiveView.ChartLiveComponent
   alias AshReports.ChartEngine.ChartConfig
@@ -20,7 +24,7 @@ defmodule AshReports.LiveView.ChartLiveComponentTest do
 
   @moduletag :liveview
   @moduletag :integration
-  # Phase 6.2 implementation pending
+  # Phase 6.2 implementation pending - skip until LiveView dependency available
   @moduletag :skip
 
   # Note: This test suite is a placeholder for Phase 6.2 LiveView integration.

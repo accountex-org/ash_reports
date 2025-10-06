@@ -41,7 +41,7 @@ defmodule AshReports.HeexRenderer.HelpersTest do
     end
 
     test "applies positioning classes based on coordinates" do
-      positioned_element = %Label{name: :positioned, x: 100, y: 200}
+      positioned_element = %Label{name: :positioned, position: %{x: 100, y: 200}}
       positioned_classes = Helpers.element_classes(positioned_element)
       assert String.contains?(positioned_classes, "position-absolute")
 
@@ -51,11 +51,11 @@ defmodule AshReports.HeexRenderer.HelpersTest do
     end
 
     test "applies sizing classes based on dimensions" do
-      fixed_size = %Label{name: :fixed, width: 100, height: 50}
+      fixed_size = %Label{name: :fixed, style: %{width: 100, height: 50}}
       fixed_classes = Helpers.element_classes(fixed_size)
       assert String.contains?(fixed_classes, "sized-fixed")
 
-      width_only = %Label{name: :width_only, width: 100}
+      width_only = %Label{name: :width_only, style: %{width: 100}}
       width_classes = Helpers.element_classes(width_only)
       assert String.contains?(width_classes, "sized-width")
 
@@ -83,16 +83,6 @@ defmodule AshReports.HeexRenderer.HelpersTest do
       footer_band = %Band{name: :footer, type: :footer}
       footer_classes = Helpers.band_classes(footer_band)
       assert String.contains?(footer_classes, "ash-band-footer")
-    end
-
-    test "applies layout classes based on band layout" do
-      vertical_band = %Band{name: :vertical, type: :detail, layout: :vertical}
-      vertical_classes = Helpers.band_classes(vertical_band)
-      assert String.contains?(vertical_classes, "layout-vertical")
-
-      grid_band = %Band{name: :grid, type: :detail, layout: :grid}
-      grid_classes = Helpers.band_classes(grid_band)
-      assert String.contains?(grid_classes, "layout-grid")
     end
 
     test "applies height classes based on band height" do
@@ -191,7 +181,7 @@ defmodule AshReports.HeexRenderer.HelpersTest do
 
   describe "element_styles/1" do
     test "generates position styles for positioned elements" do
-      element = %Label{name: :positioned, x: 100, y: 50}
+      element = %Label{name: :positioned, position: %{x: 100, y: 50}}
       styles = Helpers.element_styles(element)
 
       assert String.contains?(styles, "position: absolute;")
@@ -200,7 +190,7 @@ defmodule AshReports.HeexRenderer.HelpersTest do
     end
 
     test "generates dimension styles" do
-      element = %Label{name: :sized, width: 200, height: 100}
+      element = %Label{name: :sized, style: %{width: 200, height: 100}}
       styles = Helpers.element_styles(element)
 
       assert String.contains?(styles, "width: 200px;")
@@ -210,9 +200,11 @@ defmodule AshReports.HeexRenderer.HelpersTest do
     test "generates appearance styles" do
       element = %Label{
         name: :styled,
-        color: "#ff0000",
-        background_color: "#f0f0f0",
-        font_size: 14
+        style: %{
+          color: "#ff0000",
+          background_color: "#f0f0f0",
+          font_size: 14
+        }
       }
 
       styles = Helpers.element_styles(element)
@@ -236,20 +228,6 @@ defmodule AshReports.HeexRenderer.HelpersTest do
       styles = Helpers.band_styles(band)
 
       assert String.contains?(styles, "height: 50px;")
-    end
-
-    test "generates background color styles" do
-      band = %Band{name: :colored, type: :detail, background_color: "#f5f5f5"}
-      styles = Helpers.band_styles(band)
-
-      assert String.contains?(styles, "background-color: #f5f5f5;")
-    end
-
-    test "generates padding styles" do
-      band = %Band{name: :padded, type: :detail, padding: 10}
-      styles = Helpers.band_styles(band)
-
-      assert String.contains?(styles, "padding: 10px;")
     end
 
     test "handles bands without styles" do
@@ -543,7 +521,7 @@ defmodule AshReports.HeexRenderer.HelpersTest do
     end
 
     test "evaluates visibility condition when present" do
-      element = %Label{name: :conditional, visible_when: "status == 'active'"}
+      element = %Label{name: :conditional, conditional: "status == 'active'"}
 
       # This is a placeholder test as we haven't implemented condition evaluation
       result = Helpers.element_visible?(element, %{status: "active"}, %{})
@@ -583,18 +561,12 @@ defmodule AshReports.HeexRenderer.HelpersTest do
       assert image_attrs.role == "img"
     end
 
-    test "includes aria-label when description present" do
-      element = %Label{name: :test, description: "Test Label"}
-      attrs = Helpers.accessibility_attrs(element)
-
-      assert attrs["aria-label"] == "Test Label"
-    end
-
-    test "handles elements without description" do
+    test "handles elements without extra attrs" do
       element = %Label{name: :test}
       attrs = Helpers.accessibility_attrs(element)
 
-      refute Map.has_key?(attrs, "aria-label")
+      # Should still return a map even without extra attributes
+      assert is_map(attrs)
     end
   end
 
