@@ -390,9 +390,7 @@ defmodule AshReports.Charts.Aggregator do
 
   defp group_key_name(field) when is_atom(field), do: field
 
-  defp group_key_name(field) when is_binary(field) do
-    String.to_existing_atom(field)
-  rescue
-    ArgumentError -> String.to_atom(field)
-  end
+  # Security: Keep field names as strings to prevent atom table exhaustion
+  # User-controlled field names should never be converted to atoms
+  defp group_key_name(field) when is_binary(field), do: field
 end

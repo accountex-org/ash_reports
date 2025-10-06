@@ -65,6 +65,7 @@ defmodule AshReports.JsonRenderer.ChartApi do
   alias AshReports.ChartEngine.{ChartConfig, ChartDataProcessor}
   alias AshReports.PdfRenderer.ChartImageGenerator
   alias AshReports.{InteractiveEngine, RenderContext}
+  alias AshReports.Security.AtomValidator
 
   plug(:match)
   plug(:dispatch)
@@ -220,9 +221,8 @@ defmodule AshReports.JsonRenderer.ChartApi do
   # Export Endpoints
 
   get "/api/charts/:chart_id/export/:format" do
-    export_format = String.to_atom(format)
-
-    with {:ok, chart_config} <- get_chart_config(chart_id),
+    with {:ok, export_format} <- AtomValidator.to_export_format(format),
+         {:ok, chart_config} <- get_chart_config(chart_id),
          {:ok, context} <- build_api_context(conn),
          {:ok, export_data} <- export_chart(chart_config, context, export_format) do
       content_type = get_export_content_type(export_format)
@@ -233,6 +233,9 @@ defmodule AshReports.JsonRenderer.ChartApi do
       |> put_resp_header("content-disposition", "attachment; filename=#{filename}")
       |> send_resp(200, export_data)
     else
+      {:error, :invalid_export_format} ->
+        send_error_response(conn, 400, "Invalid export format: #{format}")
+
       {:error, :unsupported_format} ->
         send_error_response(conn, 400, "Unsupported export format: #{format}")
 
@@ -372,29 +375,44 @@ defmodule AshReports.JsonRenderer.ChartApi do
   end
 
   defp update_chart_config(current_config, config_updates) do
-    updated_config = %{
-      current_config
-      | type: config_updates["type"] || current_config.type,
-        title: config_updates["title"] || current_config.title,
-        provider:
-          String.to_atom(config_updates["provider"] || to_string(current_config.provider)),
-        updated_at: DateTime.utc_now()
-    }
+    # Validate provider if it's being updated
+    provider_result =
+      if config_updates["provider"] do
+        AtomValidator.to_chart_provider(config_updates["provider"])
+      else
+        {:ok, current_config.provider}
+      end
 
-    {:ok, updated_config}
+    with {:ok, provider} <- provider_result do
+      updated_config = %{
+        current_config
+        | type: config_updates["type"] || current_config.type,
+          title: config_updates["title"] || current_config.title,
+          provider: provider,
+          updated_at: DateTime.utc_now()
+      }
+
+      {:ok, updated_config}
+    end
   end
 
   defp create_chart_config(chart_spec) do
-    chart_config = %ChartConfig{
-      type: String.to_atom(chart_spec["type"]),
-      title: chart_spec["title"],
-      data: chart_spec["data"] || [],
-      provider: String.to_atom(chart_spec["provider"] || "chartjs"),
-      interactive: chart_spec["interactive"] || false,
-      created_at: DateTime.utc_now()
-    }
+    with {:ok, chart_type} <- AtomValidator.to_chart_type(chart_spec["type"]),
+         {:ok, provider} <-
+           AtomValidator.to_chart_provider(chart_spec["provider"] || "chartjs") do
+      chart_config = %ChartConfig{
+        type: chart_type,
+        title: chart_spec["title"],
+        data: chart_spec["data"] || [],
+        provider: provider,
+        interactive: chart_spec["interactive"] || false,
+        created_at: DateTime.utc_now()
+      }
 
-    {:ok, chart_config}
+      {:ok, chart_config}
+    else
+      {:error, reason} -> {:error, reason}
+    end
   rescue
     _ -> {:error, :invalid_spec}
   end
@@ -428,14 +446,16 @@ defmodule AshReports.JsonRenderer.ChartApi do
 
   defp process_batch_export(export_spec) do
     chart_ids = export_spec["chart_ids"] || []
-    export_format = String.to_atom(export_spec["format"] || "json")
 
-    results =
-      chart_ids
-      |> Enum.map(&process_single_chart_export(&1, export_format))
-      |> Map.new()
+    with {:ok, export_format} <-
+           AtomValidator.to_export_format(export_spec["format"] || "json") do
+      results =
+        chart_ids
+        |> Enum.map(&process_single_chart_export(&1, export_format))
+        |> Map.new()
 
-    {:ok, results}
+      {:ok, results}
+    end
   end
 
   defp process_single_chart_export(chart_id, export_format) do
