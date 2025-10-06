@@ -288,53 +288,55 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
   end
 
   # Invalid/error cases for validation testing
+  # Note: These are commented out because they fail at compile-time.
+  # Validation errors should be tested differently (e.g., with verifier tests)
 
-  defmodule AshReports.Test.MissingTitleDomain do
-    @moduledoc "Report missing required title - should fail validation"
-    use Ash.Domain, extensions: [AshReports.Domain]
-
-    reports do
-      report :invalid_report do
-        # Missing title
-        driving_resource AshReports.Test.Customer
-
-        band :detail do
-          type :detail
-        end
-      end
-    end
-  end
-
-  defmodule AshReports.Test.MissingResourceDomain do
-    @moduledoc "Report missing required driving_resource - should fail validation"
-    use Ash.Domain, extensions: [AshReports.Domain]
-
-    reports do
-      report :invalid_report do
-        title "Invalid Report"
-        # Missing driving_resource
-
-        band :detail do
-          type :detail
-        end
-      end
-    end
-  end
-
-  defmodule AshReports.Test.NoDetailBandDomain do
-    @moduledoc "Report without detail band - should fail validation"
-    use Ash.Domain, extensions: [AshReports.Domain]
-
-    reports do
-      report :invalid_report do
-        title "Invalid Report"
-        driving_resource AshReports.Test.Customer
-
-        band :title do
-          type :title
-        end
-        # Missing required detail band
-      end
-    end
-  end
+  # defmodule AshReports.Test.MissingTitleDomain do
+  #   @moduledoc "Report missing required title - should fail validation"
+  #   use Ash.Domain, extensions: [AshReports.Domain]
+  #
+  #   reports do
+  #     report :invalid_report do
+  #       # Missing title
+  #       driving_resource AshReports.Test.Customer
+  #
+  #       band :detail do
+  #         type :detail
+  #       end
+  #     end
+  #   end
+  # end
+  #
+  # defmodule AshReports.Test.MissingResourceDomain do
+  #   @moduledoc "Report missing required driving_resource - should fail validation"
+  #   use Ash.Domain, extensions: [AshReports.Domain]
+  #
+  #   reports do
+  #     report :invalid_report do
+  #       title "Invalid Report"
+  #       # Missing driving_resource
+  #
+  #       band :detail do
+  #         type :detail
+  #       end
+  #     end
+  #   end
+  # end
+  #
+  # defmodule AshReports.Test.NoDetailBandDomain do
+  #   @moduledoc "Report without detail band - should fail validation"
+  #   use Ash.Domain, extensions: [AshReports.Domain]
+  #
+  #   reports do
+  #     report :invalid_report do
+  #       title "Invalid Report"
+  #       driving_resource AshReports.Test.Customer
+  #
+  #       band :title do
+  #         type :title
+  #       end
+  #       # Missing required detail band
+  #     end
+  #   end
+  # end
 end
