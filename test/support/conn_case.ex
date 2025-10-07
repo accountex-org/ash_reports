@@ -4,6 +4,7 @@ defmodule AshReports.ConnCase do
   tests that require setting up a connection.
 
   This is needed for phoenix_test compatibility in the main AshReports library.
+  Includes support for LiveView component testing.
   """
 
   use ExUnit.CaseTemplate
@@ -16,13 +17,27 @@ defmodule AshReports.ConnCase do
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
+      import Phoenix.LiveViewTest
       import PhoenixTest
       import AshReports.ConnCase
     end
   end
 
-  setup _tags do
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+  setup tags do
+    # Start the test endpoint if not already started
+    start_supervised!(AshReports.TestEndpoint)
+
+    conn = Phoenix.ConnTest.build_conn()
+
+    # Add session if needed for LiveView tests
+    conn = if tags[:with_session] do
+      conn
+      |> Plug.Test.init_test_session(%{})
+    else
+      conn
+    end
+
+    {:ok, conn: conn}
   end
 end
 
