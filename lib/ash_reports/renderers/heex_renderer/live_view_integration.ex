@@ -59,6 +59,7 @@ defmodule AshReports.HeexRenderer.LiveViewIntegration do
   """
 
   alias AshReports.{HeexRenderer, RenderContext}
+  alias AshReports.Security.AtomValidator
   alias Phoenix.LiveView.Socket
 
   @doc """
@@ -129,9 +130,16 @@ defmodule AshReports.HeexRenderer.LiveViewIntegration do
   """
   @spec handle_sort_event(Socket.t(), map()) :: Socket.t()
   def handle_sort_event(%Socket{} = socket, sort_params) do
+    # Validate sort direction to prevent atom exhaustion
+    direction =
+      case AtomValidator.to_sort_direction(Map.get(sort_params, "direction", "asc")) do
+        {:ok, dir} -> dir
+        {:error, _} -> :asc
+      end
+
     sort_config = %{
       field: Map.get(sort_params, "field"),
-      direction: String.to_atom(Map.get(sort_params, "direction", "asc"))
+      direction: direction
     }
 
     socket
@@ -360,7 +368,22 @@ defmodule AshReports.HeexRenderer.LiveViewIntegration do
     filtered_data =
       Enum.filter(data, fn record ->
         Enum.all?(filters, fn {field, value} ->
-          field_value = Map.get(record, String.to_atom(field))
+          # Keep field names as strings to prevent atom exhaustion
+          # Try both string and existing atom keys
+          field_value =
+            try do
+              case AtomValidator.to_field_name(field) do
+                {:ok, field_key} ->
+                  Map.get(record, field_key) ||
+                    (is_binary(field_key) && Map.get(record, String.to_existing_atom(field_key)))
+
+                _ ->
+                  nil
+              end
+            rescue
+              ArgumentError -> Map.get(record, field)
+            end
+
           matches_filter?(field_value, value)
         end)
       end)
@@ -374,10 +397,24 @@ defmodule AshReports.HeexRenderer.LiveViewIntegration do
 
     sorted_data =
       if sort && sort.field do
-        field = String.to_atom(sort.field)
+        # Keep field as string/atom, don't create new atoms
+        {:ok, field} = AtomValidator.to_field_name(sort.field)
         direction = sort.direction || :asc
 
-        Enum.sort_by(data, &Map.get(&1, field), direction)
+        # Try both string and atom keys
+        Enum.sort_by(
+          data,
+          fn record ->
+            Map.get(record, field) ||
+              (is_binary(field) &&
+                 (try do
+                    Map.get(record, String.to_existing_atom(field))
+                  rescue
+                    ArgumentError -> nil
+                  end))
+          end,
+          direction
+        )
       else
         data
       end
