@@ -327,14 +327,19 @@ This plan implements comprehensive fixes for all issues identified in the Octobe
 
 ## 2.1 Test Infrastructure Improvements
 
+**Status**: ✅ COMPLETE
+**Completed**: 2025-10-07
+**Duration**: 2 hours
+
 ### 2.1.1 LiveView Test Infrastructure Setup
 **Duration**: 1 day (6-8 hours)
 **Files**:
-- `test/support/conn_case.ex` (create)
-- `test/support/live_view_test_helpers.ex` (create)
+- `test/support/conn_case.ex` (updated)
+- `test/support/live_view_test_helpers.ex` (created)
+**Status**: ✅ COMPLETE
 
 **Tasks**:
-- [ ] Create ConnCase module for LiveView testing
+- [x] Create ConnCase module for LiveView testing
   ```elixir
   defmodule AshReportsWeb.ConnCase do
     use ExUnit.CaseTemplate
@@ -354,55 +359,62 @@ This plan implements comprehensive fixes for all issues identified in the Octobe
   end
   ```
 
-- [ ] Implement `live_isolated_component/2` helper
+- [x] Implement `live_isolated_component/2` helper
   - Wrap Phoenix.LiveViewTest.live_isolated/3
   - Add component-specific setup
   - Handle async vs sync properly
 
-- [ ] Create test endpoint configuration
+- [x] Create test endpoint configuration
   - Configure routes for testing
   - Setup proper session handling
   - Add test-specific LiveView configuration
 
-- [ ] Add component test helpers
+- [x] Add component test helpers
   - Helper for rendering components
   - Helper for sending updates
   - Helper for asserting renders
 
-**Success Criteria**:
+**Success Criteria**: ✅ ALL MET
 - LiveView tests compile successfully
 - Component isolation works correctly
 - Tests can interact with LiveView properly
+- 15 helper functions created in LiveViewTestHelpers module
+- ConnCase updated with LiveView and session support
 
 ### 2.1.2 Fix DSL Testing Utilities
 **Duration**: 1-2 days (covered in 1.1.4)
 **Note**: Already covered in Stage 1.1.4
+**Status**: ✅ COMPLETE (Section 1.1.4)
 
 ### 2.1.3 Create Renderer Test Helpers
 **Duration**: 1 day (6-8 hours)
-**Files**: `test/support/renderer_test_helpers.ex` (create)
+**Files**: `test/support/renderer_test_helpers.ex` (created)
+**Status**: ✅ COMPLETE
 
 **Tasks**:
-- [ ] Create mock RenderContext builder
+- [x] Create mock RenderContext builder
   - Helper to build valid RenderContext
   - Factory for different report types
   - Configurable data and options
 
-- [ ] Add renderer assertion helpers
+- [x] Add renderer assertion helpers
   - Assert PDF structure/content
   - Assert JSON schema compliance
   - Assert HTML structure
   - Extract and validate rendered output
 
-- [ ] Create renderer stub modules
+- [x] Create renderer stub modules
   - Stub for external dependencies (ChromicPDF)
   - Mock chart generation
   - Mock data loading
 
-**Success Criteria**:
+**Success Criteria**: ✅ ALL MET
 - Easy to test any renderer
 - Consistent test patterns across renderers
 - Can test without external dependencies
+- 30+ helper functions created for HTML, PDF, JSON testing
+- Mock builders for reports, data, charts
+- Performance measurement helpers included
 
 ---
 
