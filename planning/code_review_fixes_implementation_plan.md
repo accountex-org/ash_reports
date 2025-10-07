@@ -567,9 +567,172 @@ This plan implements comprehensive fixes for all issues identified in the Octobe
 
 ---
 
-## 2.4 Interactive Engine Test Coverage
+## 2.4 HTML/HEEX Renderer Test Coverage
 
-### 2.4.1 Interactive Engine Tests
+### 2.4.1 HTML Renderer Core Tests
+**Duration**: 2 days (12-16 hours)
+**Files**: Create `test/ash_reports/renderers/html_renderer/*_test.exs`
+
+**Untested Modules**:
+- `lib/ash_reports/renderers/html_renderer/html_renderer.ex`
+- `lib/ash_reports/renderers/html_renderer/element_builder.ex`
+- `lib/ash_reports/renderers/html_renderer/template_engine.ex`
+- `lib/ash_reports/renderers/html_renderer/css_generator.ex`
+- `lib/ash_reports/renderers/html_renderer/javascript_generator.ex`
+
+**Existing Test Coverage** (to be expanded):
+- `test/ash_reports/heex_renderer/helpers_test.exs` (has some tests but needs fixing)
+- `test/ash_reports/heex_renderer/components_test.exs`
+- `test/ash_reports/heex_renderer/live_view_integration_test.exs`
+
+**Tasks**:
+- [ ] Test HTML renderer core functionality
+  - Report structure to HTML conversion
+  - Band rendering in HTML
+  - Element rendering (Label, Field, Box, Line, Image)
+  - Nested band structure
+  - Page layout and structure
+
+- [ ] Test element builder
+  - Label elements → HTML
+  - Field elements → HTML with data binding
+  - Box elements → HTML divs with styling
+  - Line elements → HTML hr or SVG lines
+  - Image elements → HTML img tags
+  - Chart elements → SVG embedding
+
+- [ ] Test template engine
+  - Template loading and caching
+  - Variable substitution
+  - Expression evaluation in templates
+  - Conditional rendering (if/unless)
+  - Iteration (for loops)
+  - Partial templates
+
+- [ ] Test CSS generation
+  - Style attribute generation
+  - CSS class generation
+  - Responsive styles
+  - Print styles
+  - Theme support
+
+- [ ] Test JavaScript generation
+  - Interactive features
+  - Chart initialization scripts
+  - Event handlers
+  - AJAX calls for dynamic data
+
+**Success Criteria**:
+- 30+ HTML renderer tests
+- All element types render correctly
+- CSS and JavaScript generation validated
+- Template engine fully tested
+- >70% code coverage for HTML renderer modules
+
+### 2.4.2 HEEX Renderer and LiveView Tests
+**Duration**: 2 days (12-16 hours)
+**Files**: Expand existing HEEX test files
+
+**Untested Modules**:
+- `lib/ash_reports/renderers/heex_renderer/heex_renderer.ex`
+- `lib/ash_reports/renderers/heex_renderer/heex_renderer_enhanced.ex`
+- `lib/ash_reports/renderers/heex_renderer/template_optimizer.ex`
+- `lib/ash_reports/renderers/heex_renderer/chart_templates.ex`
+
+**Partially Tested** (needs expansion):
+- `lib/ash_reports/renderers/heex_renderer/helpers.ex` (test exists but needs fixing)
+- `lib/ash_reports/renderers/heex_renderer/components.ex` (test exists)
+- `lib/ash_reports/renderers/heex_renderer/live_view_integration.ex` (test exists but needs fixing)
+
+**Tasks**:
+- [ ] Fix existing HEEX renderer tests
+  - Update helpers_test.exs to use correct struct format
+  - Fix LiveView integration test compilation issues
+  - Update component tests for current API
+
+- [ ] Test HEEX renderer core
+  - Report to HEEX conversion
+  - LiveView component generation
+  - Reactive data binding
+  - Event handling
+
+- [ ] Test HEEX template optimizer
+  - Template compilation optimization
+  - Dead code elimination
+  - Inline optimization
+  - Caching strategies
+
+- [ ] Test chart templates
+  - Chart component rendering
+  - Interactive chart features
+  - Chart data updates
+  - Multiple chart types
+
+- [ ] Test LiveView integration
+  - Component lifecycle (mount, update, render)
+  - PubSub integration for live updates
+  - Handle_event callbacks
+  - Handle_info for async updates
+  - Session management
+
+**Success Criteria**:
+- All existing HEEX tests fixed and passing
+- 25+ HEEX renderer tests
+- LiveView integration fully tested
+- Component rendering validated
+- >70% code coverage for HEEX renderer modules
+
+### 2.4.3 HTML Renderer Integration Tests
+**Duration**: 1 day (6-8 hours)
+**Files**: Create `test/ash_reports/renderers/html_renderer/integration_test.exs`
+
+**Untested Modules**:
+- `lib/ash_reports/renderers/html_renderer/chart_integrator.ex`
+- `lib/ash_reports/renderers/html_renderer/asset_manager.ex`
+- `lib/ash_reports/renderers/html_renderer/responsive_layout.ex`
+
+**Tasks**:
+- [ ] Test chart integration
+  - SVG chart embedding
+  - Chart positioning and sizing
+  - Multiple charts in report
+  - Chart legends and labels
+  - Interactive chart features
+
+- [ ] Test asset management
+  - CSS asset loading
+  - JavaScript asset loading
+  - Image asset handling
+  - Font loading
+  - Asset caching and CDN support
+
+- [ ] Test responsive layout
+  - Mobile layout rendering
+  - Tablet layout
+  - Desktop layout
+  - Print layout
+  - Breakpoint handling
+  - Flexbox/Grid layout
+
+- [ ] Test end-to-end rendering
+  - Complete report → HTML
+  - Multi-page HTML reports
+  - Table of contents generation
+  - Cross-references
+  - Export to standalone HTML file
+
+**Success Criteria**:
+- Chart integration fully tested
+- Asset management validated
+- Responsive layouts work correctly
+- End-to-end HTML generation tested
+- Generated HTML is valid and accessible
+
+---
+
+## 2.5 Interactive Engine Test Coverage
+
+### 2.5.1 Interactive Engine Tests
 **Duration**: 1.5 days (10-12 hours)
 **Files**: Create test suite for interactive features
 
@@ -604,9 +767,9 @@ This plan implements comprehensive fixes for all issues identified in the Octobe
 
 ---
 
-## 2.5 Security Hardening (Process Dictionary Replacement)
+## 2.6 Security Hardening (Process Dictionary Replacement)
 
-### 2.5.1 Replace Format Spec Registry
+### 2.6.1 Replace Format Spec Registry
 **Duration**: 1 day (6-8 hours)
 **Files**: `lib/ash_reports/formatter.ex`
 
@@ -653,7 +816,7 @@ This plan implements comprehensive fixes for all issues identified in the Octobe
 - Registry accessible across processes
 - Tests pass
 
-### 2.5.2 Replace Locale Process Dictionary
+### 2.6.2 Replace Locale Process Dictionary
 **Duration**: 1 day (6-8 hours)
 **Files**: `lib/ash_reports/cldr.ex`
 
@@ -686,7 +849,7 @@ This plan implements comprehensive fixes for all issues identified in the Octobe
 - Web requests use conn/socket assigns
 - Concurrent requests work correctly
 
-### 2.5.3 Replace PDF Session Storage
+### 2.6.3 Replace PDF Session Storage
 **Duration**: 1 day (6-8 hours)
 **Files**: `lib/ash_reports/pdf_renderer/pdf_generator.ex`
 
