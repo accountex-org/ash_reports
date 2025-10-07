@@ -82,7 +82,8 @@ defmodule AshReports.Typst.ChartEmbedderTest do
       {:ok, typst} = ChartEmbedder.embed(@simple_svg, encoding: :file)
 
       assert typst =~ "#image(\""
-      assert typst =~ ".svg\")"
+      # File encoding uses compressed .svgz extension
+      assert typst =~ ".svgz\")"
       refute typst =~ "#image.decode("
     end
 
