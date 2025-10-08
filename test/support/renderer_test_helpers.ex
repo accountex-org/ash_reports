@@ -40,6 +40,9 @@ defmodule AshReports.RendererTestHelpers do
     locale = Keyword.get(opts, :locale, "en")
     variables = Keyword.get(opts, :variables, %{})
 
+    # Build layout_state from report bands
+    layout_state = build_mock_layout_state(report)
+
     %RenderContext{
       report: report,
       records: records,
@@ -48,7 +51,8 @@ defmodule AshReports.RendererTestHelpers do
       config: config,
       locale: locale,
       variables: variables,
-      text_direction: "ltr"
+      text_direction: "ltr",
+      layout_state: layout_state
     }
   end
 
@@ -122,6 +126,36 @@ defmodule AshReports.RendererTestHelpers do
         ]
       }
     ]
+  end
+
+  @doc """
+  Builds mock layout_state from report bands for testing.
+
+  Creates a layout_state structure with band layouts for CSS generation
+  and element positioning.
+  """
+  def build_mock_layout_state(report) do
+    bands =
+      report.bands
+      |> Enum.with_index()
+      |> Enum.map(fn {band, index} ->
+        {band.name,
+         %{
+           dimensions: %{width: 800, height: Map.get(band, :height, 50)},
+           position: %{x: 0, y: index * 50},
+           elements:
+             Enum.map(Map.get(band, :elements, []), fn element ->
+               %{
+                 element: element,
+                 position: Map.get(element, :position, %{x: 0, y: 0}),
+                 dimensions: %{width: 100, height: 20}
+               }
+             end)
+         }}
+      end)
+      |> Enum.into(%{})
+
+    %{bands: bands}
   end
 
   @doc """

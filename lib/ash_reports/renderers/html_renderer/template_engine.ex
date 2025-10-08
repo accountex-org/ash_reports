@@ -196,8 +196,15 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
   """
   @spec compile_template_string(String.t()) :: {:ok, compiled_template()} | {:error, term()}
   def compile_template_string(template_string) when is_binary(template_string) do
-    compiled = EEx.compile_string(template_string, trim: true)
-    {:ok, compiled}
+    compiled_ast = EEx.compile_string(template_string, trim: true)
+
+    # Wrap the compiled AST in a function that accepts assigns
+    compiled_function = fn assigns ->
+      {result, _} = Code.eval_quoted(compiled_ast, assigns: assigns)
+      result
+    end
+
+    {:ok, compiled_function}
   rescue
     error ->
       {:error, {:compilation_error, error}}
