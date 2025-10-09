@@ -30,12 +30,13 @@ defmodule AshReports.ConnCase do
     conn = Phoenix.ConnTest.build_conn()
 
     # Add session if needed for LiveView tests
-    conn = if tags[:with_session] do
-      conn
-      |> Plug.Test.init_test_session(%{})
-    else
-      conn
-    end
+    conn =
+      if tags[:with_session] do
+        conn
+        |> Plug.Test.init_test_session(%{})
+      else
+        conn
+      end
 
     {:ok, conn: conn}
   end

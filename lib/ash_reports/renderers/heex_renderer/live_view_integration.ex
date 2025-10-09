@@ -428,11 +428,11 @@ defmodule AshReports.HeexRenderer.LiveViewIntegration do
           fn record ->
             Map.get(record, field) ||
               (is_binary(field) &&
-                 (try do
-                    Map.get(record, String.to_existing_atom(field))
-                  rescue
-                    ArgumentError -> nil
-                  end))
+                 try do
+                   Map.get(record, String.to_existing_atom(field))
+                 rescue
+                   ArgumentError -> nil
+                 end)
           end,
           direction
         )

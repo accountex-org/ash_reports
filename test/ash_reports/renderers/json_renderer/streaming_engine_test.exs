@@ -6,9 +6,10 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
 
   describe "create_json_stream/2" do
     test "creates a basic record stream" do
-      context = RendererTestHelpers.build_render_context(
-        records: Enum.map(1..100, fn i -> %{id: i, value: i * 10} end)
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          records: Enum.map(1..100, fn i -> %{id: i, value: i * 10} end)
+        )
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         {:ok, stream} = StreamingEngine.create_json_stream(context, chunk_size: 10)
@@ -32,9 +33,8 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
     end
 
     test "respects chunk size option" do
-      context = RendererTestHelpers.build_render_context(
-        records: Enum.map(1..100, fn i -> %{id: i} end)
-      )
+      context =
+        RendererTestHelpers.build_render_context(records: Enum.map(1..100, fn i -> %{id: i} end))
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         {:ok, stream} = StreamingEngine.create_json_stream(context, chunk_size: 25)
@@ -62,9 +62,7 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
 
   describe "chunked JSON output" do
     test "produces valid JSON chunks" do
-      context = RendererTestHelpers.build_render_context(
-        records: [%{id: 1, name: "Test"}]
-      )
+      context = RendererTestHelpers.build_render_context(records: [%{id: 1, name: "Test"}])
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         {:ok, stream} = StreamingEngine.create_json_stream(context, chunk_size: 10)
@@ -79,9 +77,8 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
     end
 
     test "includes chunk metadata" do
-      context = RendererTestHelpers.build_render_context(
-        records: Enum.map(1..50, fn i -> %{id: i} end)
-      )
+      context =
+        RendererTestHelpers.build_render_context(records: Enum.map(1..50, fn i -> %{id: i} end))
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         {:ok, stream} = StreamingEngine.create_json_stream(context, chunk_size: 10)
@@ -103,9 +100,8 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
     end
 
     test "maintains chunk sequence" do
-      context = RendererTestHelpers.build_render_context(
-        records: Enum.map(1..100, fn i -> %{id: i} end)
-      )
+      context =
+        RendererTestHelpers.build_render_context(records: Enum.map(1..100, fn i -> %{id: i} end))
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         {:ok, stream} = StreamingEngine.create_json_stream(context, chunk_size: 10)
@@ -123,9 +119,10 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
   describe "memory efficiency" do
     test "processes large dataset without loading all into memory" do
       # Create 10,000 records
-      large_dataset = Enum.map(1..10_000, fn i ->
-        %{id: i, name: "Record #{i}", value: i * 100}
-      end)
+      large_dataset =
+        Enum.map(1..10_000, fn i ->
+          %{id: i, name: "Record #{i}", value: i * 100}
+        end)
 
       context = RendererTestHelpers.build_render_context(records: large_dataset)
 
@@ -141,9 +138,8 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
     end
 
     test "lazy evaluation only processes what's needed" do
-      context = RendererTestHelpers.build_render_context(
-        records: Enum.map(1..1000, fn i -> %{id: i} end)
-      )
+      context =
+        RendererTestHelpers.build_render_context(records: Enum.map(1..1000, fn i -> %{id: i} end))
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         {:ok, stream} = StreamingEngine.create_json_stream(context, chunk_size: 50)
@@ -159,9 +155,10 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
     test "handles very large individual records" do
       large_text = String.duplicate("Lorem ipsum dolor sit amet ", 1000)
 
-      large_records = Enum.map(1..100, fn i ->
-        %{id: i, description: large_text}
-      end)
+      large_records =
+        Enum.map(1..100, fn i ->
+          %{id: i, description: large_text}
+        end)
 
       context = RendererTestHelpers.build_render_context(records: large_records)
 
@@ -176,9 +173,8 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
 
   describe "backpressure handling" do
     test "stream respects downstream consumer speed" do
-      context = RendererTestHelpers.build_render_context(
-        records: Enum.map(1..1000, fn i -> %{id: i} end)
-      )
+      context =
+        RendererTestHelpers.build_render_context(records: Enum.map(1..1000, fn i -> %{id: i} end))
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         {:ok, stream} = StreamingEngine.create_json_stream(context, chunk_size: 50)
@@ -194,9 +190,8 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
     end
 
     test "handles consumer errors gracefully" do
-      context = RendererTestHelpers.build_render_context(
-        records: Enum.map(1..100, fn i -> %{id: i} end)
-      )
+      context =
+        RendererTestHelpers.build_render_context(records: Enum.map(1..100, fn i -> %{id: i} end))
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         {:ok, stream} = StreamingEngine.create_json_stream(context)
@@ -223,9 +218,7 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
 
   describe "streaming different content types" do
     test "streams records as individual JSON objects" do
-      context = RendererTestHelpers.build_render_context(
-        records: [%{id: 1}, %{id: 2}, %{id: 3}]
-      )
+      context = RendererTestHelpers.build_render_context(records: [%{id: 1}, %{id: 2}, %{id: 3}])
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         {:ok, stream} = StreamingEngine.create_json_stream(context, stream_type: :records)
@@ -236,12 +229,13 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
     end
 
     test "streams bands with their elements" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{name: :header, type: :report_header, height: 50, elements: []},
-          %{name: :detail, type: :detail, height: 30, elements: []}
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{name: :header, type: :report_header, height: 50, elements: []},
+            %{name: :detail, type: :detail, height: 30, elements: []}
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
 
@@ -253,9 +247,8 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
     end
 
     test "streams paginated output" do
-      context = RendererTestHelpers.build_render_context(
-        records: Enum.map(1..100, fn i -> %{id: i} end)
-      )
+      context =
+        RendererTestHelpers.build_render_context(records: Enum.map(1..100, fn i -> %{id: i} end))
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         result = StreamingEngine.create_json_stream(context, stream_type: :pages)
@@ -300,9 +293,7 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
 
   describe "NDJSON format" do
     test "generates newline-delimited JSON" do
-      context = RendererTestHelpers.build_render_context(
-        records: [%{id: 1}, %{id: 2}, %{id: 3}]
-      )
+      context = RendererTestHelpers.build_render_context(records: [%{id: 1}, %{id: 2}, %{id: 3}])
 
       if function_exported?(StreamingEngine, :create_ndjson_stream, 1) do
         {:ok, stream} = StreamingEngine.create_ndjson_stream(context)
@@ -318,9 +309,8 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
     end
 
     test "NDJSON format is streaming-friendly" do
-      context = RendererTestHelpers.build_render_context(
-        records: Enum.map(1..1000, fn i -> %{id: i} end)
-      )
+      context =
+        RendererTestHelpers.build_render_context(records: Enum.map(1..1000, fn i -> %{id: i} end))
 
       if function_exported?(StreamingEngine, :create_ndjson_stream, 1) do
         {:ok, stream} = StreamingEngine.create_ndjson_stream(context)
@@ -367,9 +357,10 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
 
   describe "stream composition" do
     test "streams can be composed with other streams" do
-      context = RendererTestHelpers.build_render_context(
-        records: Enum.map(1..100, fn i -> %{id: i, value: i * 10} end)
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          records: Enum.map(1..100, fn i -> %{id: i, value: i * 10} end)
+        )
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         {:ok, stream} = StreamingEngine.create_json_stream(context, chunk_size: 10)
@@ -385,9 +376,10 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
     end
 
     test "streams support filtering" do
-      context = RendererTestHelpers.build_render_context(
-        records: Enum.map(1..100, fn i -> %{id: i, value: i * 10} end)
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          records: Enum.map(1..100, fn i -> %{id: i, value: i * 10} end)
+        )
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         {:ok, stream} = StreamingEngine.create_json_stream(context)
@@ -424,9 +416,10 @@ defmodule AshReports.JsonRenderer.StreamingEngineTest do
     end
 
     test "memory usage remains constant during streaming" do
-      context = RendererTestHelpers.build_render_context(
-        records: Enum.map(1..5000, fn i -> %{id: i, data: "test"} end)
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          records: Enum.map(1..5000, fn i -> %{id: i, data: "test"} end)
+        )
 
       if function_exported?(StreamingEngine, :create_json_stream, 2) do
         {:ok, stream} = StreamingEngine.create_json_stream(context, chunk_size: 100)

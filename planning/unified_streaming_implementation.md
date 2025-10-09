@@ -39,6 +39,17 @@ entire AshReports system.
 - All Typst tests passing: 53/53
 - Branch: `feature/stage1-1-3-typst-dataloader-refactor`
 
+**Stage 1.2.1: Document StreamingPipeline Public API** (Section 1.2)
+- Enhanced `lib/ash_reports/typst/streaming_pipeline.ex` documentation
+- Added 14 @doc false annotations to internal functions
+- Added 5 comprehensive usage scenarios to moduledoc
+- Added Public API summary section categorizing 9 public functions
+- Enhanced documentation for key functions (start_pipeline, get_aggregation_snapshot, pause/resume)
+- All Typst tests passing: 53/53
+- ExDoc generates successfully
+- Branch: `feature/stage1-2-1-streaming-pipeline-docs`
+- Commit: (ready for commit after user permission)
+
 ### 🔄 In Progress
 
 None
@@ -115,23 +126,30 @@ See detailed stages below
 
 ### 1.2 StreamingPipeline Interface Cleanup
 
-#### 📋 1.2.1 Document StreamingPipeline Public API
+#### ✅ 1.2.1 Document StreamingPipeline Public API
 
-**Duration**: 4-6 hours
-**Files**: Update `lib/ash_reports/typst/streaming_pipeline.ex`
+**Duration**: 4-6 hours (Actual: ~4.5 hours)
+**Files**: Updated `lib/ash_reports/typst/streaming_pipeline.ex`
+**Branch**: `feature/stage1-2-1-streaming-pipeline-docs`
+**Completed**: 2025-10-09
 
 **Tasks**:
 
-- [ ] Add comprehensive moduledoc
-- [ ] Document all public functions
-- [ ] Add usage examples
-- [ ] Mark internal functions as @doc false
+- [x] Add comprehensive moduledoc
+- [x] Document all public functions
+- [x] Add usage examples
+- [x] Mark internal functions as @doc false
 
-**Success Criteria**:
+**Success Criteria**: ✅ All Met
 
-- Clear documentation for external consumers
-- Examples for common scenarios
-- Internal functions clearly marked
+- ✅ Clear documentation for external consumers
+- ✅ Examples for common scenarios
+- ✅ Internal functions clearly marked (14 functions with @doc false)
+- ✅ 5 usage scenarios added to moduledoc
+- ✅ Public API summary section added
+- ✅ Enhanced function documentation for start_pipeline/1, get_aggregation_snapshot/1, pause_pipeline/1, resume_pipeline/1
+- ✅ All Typst tests passing (53/53)
+- ✅ ExDoc generates successfully
 
 ## Stage 2: HTML Renderer Integration (Week 2)
 
@@ -514,10 +532,11 @@ See detailed stages below
 
 ## Next Steps
 
-**Current**: Stage 1.1 Complete (Shared DataLoader Interface)
-**Next**: Stage 1.2.1 - Document StreamingPipeline Public API
+**Current**: Stage 1.2.1 Complete (StreamingPipeline Public API Documentation)
+**Next**: Stage 2.1.1 - Implement HtmlRenderer.StreamingConsumer
 
 **Immediate Actions**:
-1. Add comprehensive moduledoc to StreamingPipeline
-2. Document all public functions with examples
-3. Mark internal functions as @doc false
+1. Create new git branch `feature/stage2-1-1-html-streaming-consumer`
+2. Implement StreamingConsumer behavior for HTML renderer
+3. Add consume_chunk/2 and finalize/1 callbacks
+4. Write comprehensive test suite for HTML streaming

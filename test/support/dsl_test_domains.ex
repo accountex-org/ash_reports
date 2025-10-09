@@ -8,8 +8,8 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
 
     reports do
       report :test_report do
-        title "Test Report"
-        driving_resource AshReports.Test.Customer
+        title("Test Report")
+        driving_resource(AshReports.Test.Customer)
 
         band :detail do
           type :detail
@@ -24,8 +24,8 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
 
     reports do
       report :first_report do
-        title "First Report"
-        driving_resource AshReports.Test.Customer
+        title("First Report")
+        driving_resource(AshReports.Test.Customer)
 
         band :detail do
           type :detail
@@ -33,8 +33,8 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
       end
 
       report :second_report do
-        title "Second Report"
-        driving_resource AshReports.Test.Customer
+        title("Second Report")
+        driving_resource(AshReports.Test.Customer)
 
         band :detail do
           type :detail
@@ -49,11 +49,11 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
 
     reports do
       report :complete_report do
-        title "Complete Report"
+        title("Complete Report")
         description "A complete report with all fields"
-        driving_resource AshReports.Test.Customer
-        formats [:html, :pdf, :json]
-        permissions [:view_reports, :export_data]
+        driving_resource(AshReports.Test.Customer)
+        formats([:html, :pdf, :json])
+        permissions([:view_reports, :export_data])
 
         band :detail do
           type :detail
@@ -68,15 +68,15 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
 
     reports do
       report :parameterized_report do
-        title "Parameterized Report"
-        driving_resource AshReports.Test.Customer
+        title("Parameterized Report")
+        driving_resource(AshReports.Test.Customer)
 
-        parameter :start_date, :date
+        parameter(:start_date, :date)
 
         parameter :region, :string do
-          required true
+          required(true)
           default "North"
-          constraints [max_length: 50]
+          constraints max_length: 50
         end
 
         band :detail do
@@ -92,8 +92,8 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
 
     reports do
       report :multi_band_report do
-        title "Multi-Band Report"
-        driving_resource AshReports.Test.Customer
+        title("Multi-Band Report")
+        driving_resource(AshReports.Test.Customer)
 
         band :title do
           type :title
@@ -124,18 +124,18 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
 
     reports do
       report :band_options_report do
-        title "Band Options Report"
-        driving_resource AshReports.Test.Customer
+        title("Band Options Report")
+        driving_resource(AshReports.Test.Customer)
 
         band :detail do
           type :detail
-          group_level 1
-          detail_number 1
-          height 100
-          can_grow true
-          can_shrink false
-          keep_together true
-          visible true
+          group_level(1)
+          detail_number(1)
+          height(100)
+          can_grow(true)
+          can_shrink(false)
+          keep_together(true)
+          visible(true)
         end
       end
     end
@@ -147,15 +147,15 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
 
     reports do
       report :elements_report do
-        title "Elements Report"
-        driving_resource AshReports.Test.Customer
+        title("Elements Report")
+        driving_resource(AshReports.Test.Customer)
 
         band :title do
           type :title
 
           label :title_label do
-            text "Report Title"
-            position [x: 0, y: 0, width: 200, height: 20]
+            text("Report Title")
+            position(x: 0, y: 0, width: 200, height: 20)
           end
         end
 
@@ -167,22 +167,22 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
           end
 
           expression :computed_value do
-            expression :id
+            expression(:id)
           end
 
           line :separator do
-            orientation :horizontal
-            thickness 2
+            orientation(:horizontal)
+            thickness(2)
           end
 
           box :border_box do
-            border [width: 1, color: "black"]
-            fill [color: "lightgray"]
+            border(width: 1, color: "black")
+            fill(color: "lightgray")
           end
 
           image :logo do
             source "/path/to/logo.png"
-            scale_mode :fit
+            scale_mode(:fit)
           end
         end
 
@@ -190,9 +190,9 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
           type :summary
 
           aggregate :total_count do
-            function :count
+            function(:count)
             source :id
-            scope :report
+            scope(:report)
           end
         end
       end
@@ -205,20 +205,20 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
 
     reports do
       report :variables_report do
-        title "Variables Report"
-        driving_resource AshReports.Test.Customer
+        title("Variables Report")
+        driving_resource(AshReports.Test.Customer)
 
         variable :total_count do
           type :count
-          expression :id
+          expression(:id)
         end
 
         variable :total_sales do
           type :sum
-          expression :total_amount
-          reset_on :group
-          reset_group 1
-          initial_value 0
+          expression(:total_amount)
+          reset_on(:group)
+          reset_group(1)
+          initial_value(0)
         end
 
         band :detail do
@@ -234,17 +234,17 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
 
     reports do
       report :grouped_report do
-        title "Grouped Report"
-        driving_resource AshReports.Test.Customer
+        title("Grouped Report")
+        driving_resource(AshReports.Test.Customer)
 
         group :by_region do
-          level 1
-          expression :region
+          level(1)
+          expression(:region)
         end
 
         group :by_status do
-          level 2
-          expression :status
+          level(2)
+          expression(:status)
           sort :desc
         end
 
@@ -261,17 +261,17 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
 
     reports do
       report :formatted_report do
-        title "Formatted Report"
-        driving_resource AshReports.Test.Customer
+        title("Formatted Report")
+        driving_resource(AshReports.Test.Customer)
 
         format_spec :currency_format do
-          pattern "¤ #,##0.00"
-          currency :USD
-          locale "en"
+          pattern("¤ #,##0.00")
+          currency(:USD)
+          locale("en")
         end
 
         format_spec :date_format do
-          pattern "MM/dd/yyyy"
+          pattern("MM/dd/yyyy")
           type :date
         end
 
@@ -280,7 +280,7 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
 
           field :amount do
             source :total_amount
-            format_spec :currency_format
+            format_spec(:currency_format)
           end
         end
       end

@@ -87,6 +87,193 @@ defmodule AshReports.Typst.StreamingPipeline do
   - `[:ash_reports, :streaming, :health_check]`
   - `[:ash_reports, :streaming, :producer, :chunk_fetched]`
   - `[:ash_reports, :streaming, :producer_consumer, :batch_transformed]`
+
+  ## Usage Scenarios
+
+  ### Scenario 1: Monitoring Long-Running Reports
+
+  When generating large reports, you may want to show progress to users:
+
+      # Start the pipeline
+      {:ok, stream_id, stream} = StreamingPipeline.start_pipeline(...)
+
+      # Start async consumption in a Task
+      task = Task.async(fn -> Enum.to_list(stream) end)
+
+      # Poll for progress (e.g., every 500ms)
+      defp poll_progress(stream_id) do
+        case StreamingPipeline.get_aggregation_snapshot(stream_id) do
+          {:ok, snapshot} ->
+            IO.puts "Progress: \#{snapshot.progress.percent_complete}%"
+            IO.puts "Records: \#{snapshot.progress.records_processed}"
+            IO.puts "Status: \#{snapshot.progress.status}"
+
+            unless snapshot.stable do
+              Process.sleep(500)
+              poll_progress(stream_id)
+            end
+          {:error, _} ->
+            :timer.sleep(100)
+            poll_progress(stream_id)
+        end
+      end
+
+      # Wait for completion
+      spawn(fn -> poll_progress(stream_id) end)
+      results = Task.await(task, :infinity)
+
+  ### Scenario 2: Phoenix LiveView Progress Updates
+
+  Integrate pipeline progress with LiveView for real-time updates:
+
+      # In your LiveView mount/3
+      def mount(_params, _session, socket) do
+        {:ok, stream_id, stream} = StreamingPipeline.start_pipeline(...)
+
+        # Schedule progress updates
+        if connected?(socket) do
+          :timer.send_interval(500, self(), :update_progress)
+        end
+
+        # Start async consumption
+        Task.async(fn -> Enum.to_list(stream) end)
+
+        {:ok, assign(socket, stream_id: stream_id, progress: 0)}
+      end
+
+      # Handle progress updates
+      def handle_info(:update_progress, socket) do
+        case StreamingPipeline.get_aggregation_snapshot(socket.assigns.stream_id) do
+          {:ok, snapshot} ->
+            progress = snapshot.progress.percent_complete || 0
+            {:noreply, assign(socket, progress: progress)}
+          {:error, _} ->
+            {:noreply, socket}
+        end
+      end
+
+  ### Scenario 3: Error Handling and Retry
+
+  Handle pipeline failures gracefully:
+
+      defp start_pipeline_with_retry(opts, max_retries \\\\ 3) do
+        case StreamingPipeline.start_pipeline(opts) do
+          {:ok, stream_id, stream} ->
+            # Monitor the pipeline
+            case consume_with_monitoring(stream_id, stream) do
+              {:ok, results} -> {:ok, results}
+              {:error, reason} -> retry_pipeline(opts, reason, max_retries)
+            end
+          {:error, reason} ->
+            retry_pipeline(opts, reason, max_retries)
+        end
+      end
+
+      defp consume_with_monitoring(stream_id, stream) do
+        try do
+          results = Enum.to_list(stream)
+
+          # Check final status
+          case StreamingPipeline.get_pipeline_info(stream_id) do
+            {:ok, %{status: :completed}} -> {:ok, results}
+            {:ok, %{status: :failed}} -> {:error, :pipeline_failed}
+            _ -> {:ok, results}
+          end
+        rescue
+          e -> {:error, e}
+        end
+      end
+
+      defp retry_pipeline(_opts, _reason, 0), do: {:error, :max_retries_exceeded}
+      defp retry_pipeline(opts, reason, retries_left) do
+        Logger.warn("Pipeline failed: \#{inspect(reason)}, retrying...")
+        :timer.sleep(1000)
+        start_pipeline_with_retry(opts, retries_left - 1)
+      end
+
+  ### Scenario 4: Optimal Partition Count Configuration
+
+  Configure partition_count based on workload characteristics:
+
+      # For aggregation-heavy reports, use CPU core count
+      defp determine_partition_count(report_config) do
+        aggregation_count = length(report_config[:grouped_aggregations] || [])
+
+        cond do
+          # No aggregations - single worker sufficient
+          aggregation_count == 0 -> 1
+
+          # Light aggregations - 2-4 workers
+          aggregation_count <= 5 -> min(4, System.schedulers_online())
+
+          # Heavy aggregations - scale to cores
+          aggregation_count > 5 -> System.schedulers_online()
+        end
+      end
+
+      # Example usage
+      {:ok, stream_id, stream} = StreamingPipeline.start_pipeline(
+        domain: MyApp.Reporting,
+        resource: Order,
+        query: query,
+        partition_count: determine_partition_count(report_config)
+      )
+
+  ### Scenario 5: Pipeline Dashboard
+
+  Build a monitoring dashboard for all active pipelines:
+
+      defmodule PipelineMonitor do
+        def get_dashboard_stats do
+          # Get overall counts
+          counts = StreamingPipeline.pipeline_counts()
+
+          # Get details for running pipelines
+          running = StreamingPipeline.list_pipelines(status: :running)
+          |> Enum.map(fn pipeline ->
+            {:ok, snapshot} = StreamingPipeline.get_aggregation_snapshot(pipeline.stream_id)
+
+            %{
+              stream_id: pipeline.stream_id,
+              report_name: pipeline.metadata.report_name,
+              started_at: pipeline.started_at,
+              progress: snapshot.progress.percent_complete,
+              records_processed: snapshot.progress.records_processed,
+              memory_usage: pipeline.memory_usage
+            }
+          end)
+
+          %{
+            counts: counts,
+            running_pipelines: running,
+            total_memory: Enum.sum(Enum.map(running, & &1.memory_usage))
+          }
+        end
+      end
+
+  ## Public API Summary
+
+  This module provides three categories of public functions:
+
+  **Pipeline Lifecycle** (for DataLoader and custom consumers):
+  - `start_pipeline/1` - Create and start a new pipeline
+  - `stop_pipeline/1` - Stop a pipeline early
+
+  **Pipeline Monitoring** (for dashboards and progress tracking):
+  - `get_pipeline_info/1` - Get status and progress for one pipeline
+  - `list_pipelines/1` - List all active pipelines (optionally filtered)
+  - `pipeline_counts/0` - Get counts by status (running, paused, completed, failed)
+
+  **Pipeline Control** (for circuit breakers and error recovery):
+  - `pause_pipeline/1` - Pause a running pipeline
+  - `resume_pipeline/1` - Resume a paused pipeline
+
+  **Aggregation Results** (for accessing streaming aggregations):
+  - `get_aggregation_snapshot/1` - Get current state while streaming (for progress)
+  - `get_aggregation_state/1` - Get final state after completion (for results)
+
+  **Internal Functions**: All functions starting with `defp` are internal implementation
+  details and should not be called directly. They are marked with `@doc false`.
   """
 
   require Logger
@@ -140,6 +327,17 @@ defmodule AshReports.Typst.StreamingPipeline do
       )
 
   Recommended: partition_count = number of CPU cores
+
+  ## Partition Count Best Practices
+
+  Choose partition_count based on your workload:
+
+  - **No aggregations**: Use 1 (default) - no benefit from parallelization
+  - **Light aggregations (1-5)**: Use 2-4 workers - moderate speedup
+  - **Heavy aggregations (5+)**: Use `System.schedulers_online()` - maximize throughput
+  - **Large datasets (millions)**: Start with 4, scale up if CPU underutilized
+
+  Rule of thumb: `partition_count = min(aggregation_count, System.schedulers_online())`
 
   ## Returns
 
@@ -244,6 +442,27 @@ defmodule AshReports.Typst.StreamingPipeline do
 
   The Producer will stop fetching data until resumed.
 
+  ## Circuit Breaker Pattern
+
+  Commonly used when:
+  - Memory usage exceeds threshold (automatic via HealthMonitor)
+  - Downstream system becomes unavailable
+  - Manual intervention needed for debugging
+
+  Example:
+
+      # Monitor memory and pause if threshold exceeded
+      case StreamingPipeline.get_pipeline_info(stream_id) do
+        {:ok, %{memory_usage: memory}} when memory > @max_memory ->
+          StreamingPipeline.pause_pipeline(stream_id)
+          # Trigger garbage collection, wait for memory to clear
+          :erlang.garbage_collect()
+          :timer.sleep(5000)
+          StreamingPipeline.resume_pipeline(stream_id)
+        _ ->
+          :ok
+      end
+
   ## Examples
 
       :ok = StreamingPipeline.pause_pipeline(stream_id)
@@ -256,6 +475,8 @@ defmodule AshReports.Typst.StreamingPipeline do
 
   @doc """
   Resumes a paused pipeline.
+
+  See `pause_pipeline/1` for the circuit breaker pattern and common use cases.
 
   ## Examples
 
@@ -329,6 +550,14 @@ defmodule AshReports.Typst.StreamingPipeline do
         - `:status` - Pipeline status (:running, :paused, :completed, :failed)
       - `:stable` - Boolean: true if final, false if still updating
     * `{:error, reason}` - Failed to retrieve snapshot
+
+  ## Polling Frequency Recommendations
+
+  - **LiveView updates**: Poll every 500-1000ms for smooth progress bars
+  - **Logs/metrics**: Poll every 5-10 seconds to reduce overhead
+  - **Dashboards**: Poll every 2-5 seconds for near-real-time updates
+
+  Avoid polling faster than 100ms as it may impact pipeline performance.
 
   ## Examples
 
@@ -430,6 +659,7 @@ defmodule AshReports.Typst.StreamingPipeline do
   end
 
   # Private helper to get current aggregation state (used by both functions)
+  @doc false
   defp get_current_aggregation_state(stream_id, pipeline_info) do
     # Check if this is a partitioned pipeline
     case Registry.get_partition_workers(stream_id) do
@@ -455,6 +685,7 @@ defmodule AshReports.Typst.StreamingPipeline do
 
   # Calculate completion percentage for progress tracking
   # Returns nil when total record count is unavailable
+  @doc false
   defp calculate_progress_percentage(pipeline_info) do
     total_records = Map.get(pipeline_info.metadata, :total_records)
     records_processed = Map.get(pipeline_info, :records_processed, 0)
@@ -477,6 +708,7 @@ defmodule AshReports.Typst.StreamingPipeline do
 
   # Private Functions
 
+  @doc false
   defp get_producer_consumer_pid(%{producer_consumer_pid: pid}) when is_pid(pid) do
     if Process.alive?(pid) do
       {:ok, pid}
@@ -487,6 +719,7 @@ defmodule AshReports.Typst.StreamingPipeline do
 
   defp get_producer_consumer_pid(_), do: {:error, :no_producer_consumer}
 
+  @doc false
   defp fetch_required(opts, key) do
     case Keyword.fetch(opts, key) do
       {:ok, value} -> {:ok, value}
@@ -494,6 +727,7 @@ defmodule AshReports.Typst.StreamingPipeline do
     end
   end
 
+  @doc false
   defp extract_metadata(opts) do
     # Extract relevant metadata from options
     %{
@@ -504,21 +738,25 @@ defmodule AshReports.Typst.StreamingPipeline do
     }
   end
 
+  @doc false
   defp create_stream(producer_consumer_pid, _stream_id) do
     # Create an Elixir Stream from the ProducerConsumer
     GenStage.stream([{producer_consumer_pid, []}])
   end
 
+  @doc false
   defp default_chunk_size do
     streaming_config = Application.get_env(:ash_reports, :streaming, [])
     Keyword.get(streaming_config, :chunk_size, 1000)
   end
 
+  @doc false
   defp default_max_demand do
     streaming_config = Application.get_env(:ash_reports, :streaming, [])
     Keyword.get(streaming_config, :producer_consumer_max_demand, 500)
   end
 
+  @doc false
   defp start_pipeline_stages(stream_id, producer_opts, max_demand, transformer, report_config) do
     partition_count = Keyword.get(producer_opts, :partition_count, 1)
 
@@ -539,6 +777,7 @@ defmodule AshReports.Typst.StreamingPipeline do
     end
   end
 
+  @doc false
   defp get_pipeline_supervisor(stream_id) do
     case Supervisor.pipeline_supervisor() do
       {:error, reason} ->
@@ -550,6 +789,7 @@ defmodule AshReports.Typst.StreamingPipeline do
     end
   end
 
+  @doc false
   defp start_producer_stage(pipeline_supervisor_pid, producer_opts, stream_id) do
     case DynamicSupervisor.start_child(pipeline_supervisor_pid, {Producer, producer_opts}) do
       {:ok, producer_pid} ->
@@ -563,6 +803,7 @@ defmodule AshReports.Typst.StreamingPipeline do
     end
   end
 
+  @doc false
   defp start_producer_consumer_stage(
          pipeline_supervisor_pid,
          stream_id,
@@ -597,6 +838,7 @@ defmodule AshReports.Typst.StreamingPipeline do
     end
   end
 
+  @doc false
   defp start_single_worker(
          pipeline_supervisor_pid,
          stream_id,
@@ -629,6 +871,7 @@ defmodule AshReports.Typst.StreamingPipeline do
     end
   end
 
+  @doc false
   defp start_partitioned_workers(
          stream_id,
          producer_pid,
