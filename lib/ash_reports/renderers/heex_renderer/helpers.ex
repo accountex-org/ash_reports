@@ -163,20 +163,6 @@ defmodule AshReports.HeexRenderer.Helpers do
         styles
       end
 
-    styles =
-      if band.background_color do
-        ["background-color: #{band.background_color}" | styles]
-      else
-        styles
-      end
-
-    styles =
-      if band.padding do
-        ["padding: #{band.padding}px" | styles]
-      else
-        styles
-      end
-
     build_style_string(styles)
   end
 
@@ -223,8 +209,11 @@ defmodule AshReports.HeexRenderer.Helpers do
   def format_currency(amount, symbol \\ "$")
 
   def format_currency(amount, symbol) when is_number(amount) do
+    # Convert to float if integer to ensure float_to_binary works
+    amount_float = if is_integer(amount), do: amount / 1, else: amount
+
     formatted =
-      amount
+      amount_float
       |> :erlang.float_to_binary([{:decimals, 2}])
       |> add_thousands_separator()
 
@@ -250,7 +239,9 @@ defmodule AshReports.HeexRenderer.Helpers do
 
   def format_percentage(value, precision) when is_number(value) do
     percentage = value * 100
-    formatted = :erlang.float_to_binary(percentage, [{:decimals, precision}])
+    # Convert to float if integer to ensure float_to_binary works
+    percentage_float = if is_integer(percentage), do: percentage / 1, else: percentage
+    formatted = :erlang.float_to_binary(percentage_float, [{:decimals, precision}])
     "#{formatted}%"
   end
 
@@ -303,12 +294,14 @@ defmodule AshReports.HeexRenderer.Helpers do
   def format_datetime(nil, _format), do: ""
 
   def format_datetime(%DateTime{} = datetime, format) do
-    case format do
-      :short -> Calendar.strftime(datetime, "%m/%d/%y %I:%M %p")
-      :medium -> Calendar.strftime(datetime, "%b %d, %Y %I:%M %p")
-      :long -> Calendar.strftime(datetime, "%B %d, %Y %I:%M:%S %p %Z")
+    result = case format do
+      :short -> Calendar.strftime(datetime, "%m/%d/%y %-I:%M %p")
+      :medium -> Calendar.strftime(datetime, "%b %d, %Y %-I:%M %p")
+      :long -> Calendar.strftime(datetime, "%B %d, %Y %-I:%M:%S %p %Z")
       _ -> Calendar.strftime(datetime, "%Y-%m-%d %H:%M:%S UTC")
     end
+    # strftime may not support %-I on all platforms, so manually remove leading zeros
+    String.replace(result, ~r/ 0(\d:\d\d)/, " \\1")
   end
 
   def format_datetime(_, _), do: ""
@@ -429,7 +422,7 @@ defmodule AshReports.HeexRenderer.Helpers do
   """
   @spec element_visible?(Element.t(), map(), map()) :: boolean()
   def element_visible?(element, record, variables) do
-    case element.visible_when do
+    case Map.get(element, :conditional) do
       nil -> true
       condition -> evaluate_visibility_condition(condition, record, variables)
     end
@@ -486,9 +479,11 @@ defmodule AshReports.HeexRenderer.Helpers do
         _ -> attrs
       end
 
+    # Add aria-label based on element name if available
     attrs =
-      if element.description do
-        Map.put(attrs, "aria-label", element.description)
+      if element.name do
+        label = element.name |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
+        Map.put(attrs, "aria-label", label)
       else
         attrs
       end
@@ -528,13 +523,9 @@ defmodule AshReports.HeexRenderer.Helpers do
     end
   end
 
-  defp layout_class(band) do
-    case band.layout || :horizontal do
-      :horizontal -> "layout-horizontal"
-      :vertical -> "layout-vertical"
-      :grid -> "layout-grid"
-      _ -> "layout-default"
-    end
+  defp layout_class(_band) do
+    # Band struct doesn't have layout field, defaulting to horizontal
+    "layout-horizontal"
   end
 
   defp height_class(band) do
@@ -627,13 +618,21 @@ defmodule AshReports.HeexRenderer.Helpers do
   end
 
   defp add_thousands_separator(number_string) do
-    case String.split(number_string, ".") do
+    # Handle negative sign separately
+    {sign, unsigned} = case String.starts_with?(number_string, "-") do
+      true -> {"-", String.trim_leading(number_string, "-")}
+      false -> {"", number_string}
+    end
+
+    result = case String.split(unsigned, ".") do
       [integer_part] ->
         add_commas_to_integer(integer_part)
 
       [integer_part, decimal_part] ->
         "#{add_commas_to_integer(integer_part)}.#{decimal_part}"
     end
+
+    "#{sign}#{result}"
   end
 
   defp add_commas_to_integer(integer_string) do

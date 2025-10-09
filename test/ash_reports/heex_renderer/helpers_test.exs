@@ -51,11 +51,11 @@ defmodule AshReports.HeexRenderer.HelpersTest do
     end
 
     test "applies sizing classes based on dimensions" do
-      fixed_size = %Label{name: :fixed, style: %{width: 100, height: 50}}
+      fixed_size = %Label{name: :fixed, position: %{width: 100, height: 50}}
       fixed_classes = Helpers.element_classes(fixed_size)
       assert String.contains?(fixed_classes, "sized-fixed")
 
-      width_only = %Label{name: :width_only, style: %{width: 100}}
+      width_only = %Label{name: :width_only, position: %{width: 100}}
       width_classes = Helpers.element_classes(width_only)
       assert String.contains?(width_classes, "sized-width")
 
@@ -190,7 +190,7 @@ defmodule AshReports.HeexRenderer.HelpersTest do
     end
 
     test "generates dimension styles" do
-      element = %Label{name: :sized, style: %{width: 200, height: 100}}
+      element = %Label{name: :sized, position: %{width: 200, height: 100}}
       styles = Helpers.element_styles(element)
 
       assert String.contains?(styles, "width: 200px;")
@@ -333,7 +333,7 @@ defmodule AshReports.HeexRenderer.HelpersTest do
   describe "format_date/2" do
     test "formats date with default format" do
       date = ~D[2023-12-25]
-      result = Helpers.format_date(date)
+      result = Helpers.format_date(date, :default)
 
       assert result == "2023-12-25"
     end
@@ -380,7 +380,7 @@ defmodule AshReports.HeexRenderer.HelpersTest do
   describe "format_datetime/2" do
     test "formats datetime with default format" do
       datetime = ~U[2023-12-25 15:30:00Z]
-      result = Helpers.format_datetime(datetime)
+      result = Helpers.format_datetime(datetime, :default)
 
       assert result == "2023-12-25 15:30:00 UTC"
     end
@@ -456,7 +456,7 @@ defmodule AshReports.HeexRenderer.HelpersTest do
         }
       }
 
-      result = Helpers.get_nested_field(record, [:customer, :address, :city])
+      result = Helpers.get_nested_field(record, [:customer, :address, :city], nil)
       assert result == "New York"
     end
 
