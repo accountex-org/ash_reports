@@ -429,7 +429,8 @@ defmodule AshReports.HtmlRenderer.JavaScriptGeneratorTest do
       result = JavaScriptGenerator.generate_chart_javascript(js_config, context)
 
       # JS generator may handle RTL differently or return error
-      assert match?({:ok, javascript} when is_binary(javascript), result) or match?({:error, _}, result)
+      assert match?({:ok, javascript} when is_binary(javascript), result) or
+               match?({:error, _}, result)
     end
 
     test "uses LTR for non-RTL locales" do

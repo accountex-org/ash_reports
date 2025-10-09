@@ -6,10 +6,11 @@ defmodule AshReports.HtmlRendererTest do
 
   describe "render_with_context/2" do
     test "renders complete HTML document from context" do
-      context = RendererTestHelpers.build_render_context(
-        records: [%{id: 1, name: "Test"}],
-        metadata: %{format: :html}
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          records: [%{id: 1, name: "Test"}],
+          metadata: %{format: :html}
+        )
 
       {:ok, result} = HtmlRenderer.render_with_context(context)
 
@@ -51,12 +52,13 @@ defmodule AshReports.HtmlRendererTest do
     end
 
     test "renders all bands" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{name: :header, type: :report_header, height: 50, elements: []},
-          %{name: :detail, type: :detail, height: 30, elements: []}
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{name: :header, type: :report_header, height: 50, elements: []},
+            %{name: :detail, type: :detail, height: 30, elements: []}
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
 
@@ -112,9 +114,7 @@ defmodule AshReports.HtmlRendererTest do
 
   describe "validate_context/1" do
     test "validates a valid context" do
-      context = RendererTestHelpers.build_render_context(
-        records: [%{id: 1}]
-      )
+      context = RendererTestHelpers.build_render_context(records: [%{id: 1}])
 
       assert HtmlRenderer.validate_context(context) == :ok
     end
@@ -317,18 +317,19 @@ defmodule AshReports.HtmlRendererTest do
     end
 
     test "uses ElementBuilder for element HTML" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{
-            name: :detail,
-            type: :detail,
-            height: 30,
-            elements: [
-              %{type: :label, name: :title, text: "Test Label", position: %{x: 0, y: 0}}
-            ]
-          }
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{
+              name: :detail,
+              type: :detail,
+              height: 30,
+              elements: [
+                %{type: :label, name: :title, text: "Test Label", position: %{x: 0, y: 0}}
+              ]
+            }
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
 

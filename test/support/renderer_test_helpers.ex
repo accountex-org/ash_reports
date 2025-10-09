@@ -44,10 +44,11 @@ defmodule AshReports.RendererTestHelpers do
     layout_state = build_mock_layout_state(report)
 
     # Set current_record to first record if records are provided
-    current_record = case records do
-      [first | _] -> first
-      _ -> nil
-    end
+    current_record =
+      case records do
+        [first | _] -> first
+        _ -> nil
+      end
 
     %RenderContext{
       report: report,
@@ -182,11 +183,13 @@ defmodule AshReports.RendererTestHelpers do
   """
   def build_mock_data(opts \\ []) do
     count = Keyword.get(opts, :count, 10)
-    fields = Keyword.get(opts, :fields, %{
-      id: fn i -> i end,
-      name: fn i -> "Record #{i}" end,
-      value: fn i -> i * 100 end
-    })
+
+    fields =
+      Keyword.get(opts, :fields, %{
+        id: fn i -> i end,
+        name: fn i -> "Record #{i}" end,
+        value: fn i -> i * 100 end
+      })
 
     Enum.map(1..count, fn i ->
       Enum.into(fields, %{}, fn {field, generator} ->
@@ -375,7 +378,8 @@ defmodule AshReports.RendererTestHelpers do
         assert typst_content =~ ~r/#image\(/, "Expected Typst template to contain #image"
 
       {:has_page_break, true} ->
-        assert typst_content =~ ~r/#pagebreak\(\)/, "Expected Typst template to contain #pagebreak()"
+        assert typst_content =~ ~r/#pagebreak\(\)/,
+               "Expected Typst template to contain #pagebreak()"
 
       {:has_chart, true} ->
         assert typst_content =~ ~r/#image\(.*(svg|png)/,
@@ -429,6 +433,7 @@ defmodule AshReports.RendererTestHelpers do
 
       {:array_length, {key, length}} ->
         array = Map.get(json, key)
+
         assert is_list(array) && Enum.count(array) == length,
                "Expected JSON key '#{key}' to be array of length #{length}"
     end)

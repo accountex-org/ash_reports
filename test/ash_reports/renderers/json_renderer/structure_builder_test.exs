@@ -6,10 +6,11 @@ defmodule AshReports.JsonRenderer.StructureBuilderTest do
 
   describe "build_report_structure/3" do
     test "builds complete JSON structure from context" do
-      context = RendererTestHelpers.build_render_context(
-        records: [%{id: 1, name: "Test"}],
-        metadata: %{format: :json}
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          records: [%{id: 1, name: "Test"}],
+          metadata: %{format: :json}
+        )
 
       serialized_data = %{
         records: [%{"id" => 1, "name" => "Test"}],
@@ -57,26 +58,27 @@ defmodule AshReports.JsonRenderer.StructureBuilderTest do
     end
 
     test "handles nested band structures" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{
-            name: :header,
-            type: :report_header,
-            height: 50,
-            elements: [
-              %{type: :label, name: :title, text: "Report", position: %{x: 0, y: 0}}
-            ]
-          },
-          %{
-            name: :detail,
-            type: :detail,
-            height: 30,
-            elements: [
-              %{type: :field, name: :field1, source: :name, position: %{x: 0, y: 0}}
-            ]
-          }
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{
+              name: :header,
+              type: :report_header,
+              height: 50,
+              elements: [
+                %{type: :label, name: :title, text: "Report", position: %{x: 0, y: 0}}
+              ]
+            },
+            %{
+              name: :detail,
+              type: :detail,
+              height: 30,
+              elements: [
+                %{type: :field, name: :field1, source: :name, position: %{x: 0, y: 0}}
+              ]
+            }
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
       serialized_data = %{records: [], variables: %{}, groups: %{}}
@@ -89,9 +91,7 @@ defmodule AshReports.JsonRenderer.StructureBuilderTest do
 
   describe "build_report_header/2" do
     test "builds report header with metadata" do
-      context = RendererTestHelpers.build_render_context(
-        metadata: %{generated_at: "2025-10-07"}
-      )
+      context = RendererTestHelpers.build_render_context(metadata: %{generated_at: "2025-10-07"})
 
       {:ok, header} = StructureBuilder.build_report_header(context)
 
@@ -108,9 +108,10 @@ defmodule AshReports.JsonRenderer.StructureBuilderTest do
     end
 
     test "includes report metadata when present" do
-      context = RendererTestHelpers.build_render_context(
-        metadata: %{record_count: 100, processing_time_ms: 250}
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          metadata: %{record_count: 100, processing_time_ms: 250}
+        )
 
       {:ok, header} = StructureBuilder.build_report_header(context)
 
@@ -229,10 +230,11 @@ defmodule AshReports.JsonRenderer.StructureBuilderTest do
 
   describe "metadata integration" do
     test "includes record count in structure" do
-      context = RendererTestHelpers.build_render_context(
-        records: [%{id: 1}, %{id: 2}, %{id: 3}],
-        metadata: %{record_count: 3}
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          records: [%{id: 1}, %{id: 2}, %{id: 3}],
+          metadata: %{record_count: 3}
+        )
 
       serialized_data = %{records: [%{"id" => 1}, %{"id" => 2}, %{"id" => 3}]}
 
@@ -242,9 +244,10 @@ defmodule AshReports.JsonRenderer.StructureBuilderTest do
     end
 
     test "includes variables in structure" do
-      context = RendererTestHelpers.build_render_context(
-        variables: %{report_date: "2025-10-07", region: "North"}
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          variables: %{report_date: "2025-10-07", region: "North"}
+        )
 
       serialized_data = %{records: [], variables: %{"report_date" => "2025-10-07"}}
 
@@ -254,9 +257,10 @@ defmodule AshReports.JsonRenderer.StructureBuilderTest do
     end
 
     test "includes groups in structure" do
-      context = RendererTestHelpers.build_render_context(
-        metadata: %{groups: %{region: ["North", "South"]}}
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          metadata: %{groups: %{region: ["North", "South"]}}
+        )
 
       serialized_data = %{records: [], groups: %{"region" => ["North", "South"]}}
 

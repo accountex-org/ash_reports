@@ -6,10 +6,11 @@ defmodule AshReports.JsonRenderer.SchemaManagerTest do
 
   describe "validate_context/1" do
     test "validates a valid render context" do
-      context = RendererTestHelpers.build_render_context(
-        records: [%{id: 1, name: "Test"}],
-        metadata: %{format: :json}
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          records: [%{id: 1, name: "Test"}],
+          metadata: %{format: :json}
+        )
 
       result = SchemaManager.validate_context(context)
 
@@ -23,12 +24,13 @@ defmodule AshReports.JsonRenderer.SchemaManagerTest do
     end
 
     test "validates context with all required fields" do
-      context = RendererTestHelpers.build_render_context(
-        report: RendererTestHelpers.build_mock_report(),
-        records: [],
-        metadata: %{},
-        variables: %{}
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          report: RendererTestHelpers.build_mock_report(),
+          records: [],
+          metadata: %{},
+          variables: %{}
+        )
 
       result = SchemaManager.validate_context(context)
 
@@ -350,7 +352,12 @@ defmodule AshReports.JsonRenderer.SchemaManagerTest do
       # If we can build a structure
       if function_exported?(AshReports.JsonRenderer.StructureBuilder, :build_report_structure, 2) do
         serialized_data = %{records: [], variables: %{}, groups: %{}}
-        {:ok, structure} = AshReports.JsonRenderer.StructureBuilder.build_report_structure(context, serialized_data)
+
+        {:ok, structure} =
+          AshReports.JsonRenderer.StructureBuilder.build_report_structure(
+            context,
+            serialized_data
+          )
 
         result = SchemaManager.validate_json_structure(structure)
 

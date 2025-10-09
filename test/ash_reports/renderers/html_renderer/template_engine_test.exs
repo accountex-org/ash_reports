@@ -40,13 +40,14 @@ defmodule AshReports.HtmlRenderer.TemplateEngineTest do
     end
 
     test "renders all bands" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{name: :header, type: :report_header, elements: []},
-          %{name: :detail, type: :detail, elements: []},
-          %{name: :footer, type: :report_footer, elements: []}
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{name: :header, type: :report_header, elements: []},
+            %{name: :detail, type: :detail, elements: []},
+            %{name: :footer, type: :report_footer, elements: []}
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
 
@@ -58,11 +59,12 @@ defmodule AshReports.HtmlRenderer.TemplateEngineTest do
     end
 
     test "includes elements in bands" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{name: :detail, type: :detail, elements: []}
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{name: :detail, type: :detail, elements: []}
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
 
@@ -319,15 +321,14 @@ defmodule AshReports.HtmlRenderer.TemplateEngineTest do
 
   describe "default templates" do
     test "master template includes DOCTYPE" do
-      {:ok, compiled} = TemplateEngine.compile_template_string(
-        """
+      {:ok, compiled} =
+        TemplateEngine.compile_template_string("""
         <!DOCTYPE html>
         <html lang="<%= @lang %>">
         <head><title><%= @report_title %></title></head>
         <body><%= @content %></body>
         </html>
-        """
-      )
+        """)
 
       assert is_function(compiled)
     end
@@ -426,12 +427,13 @@ defmodule AshReports.HtmlRenderer.TemplateEngineTest do
 
   describe "integration with context" do
     test "filters elements by band name" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{name: :band1, type: :detail, elements: []},
-          %{name: :band2, type: :detail, elements: []}
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{name: :band1, type: :detail, elements: []},
+            %{name: :band2, type: :detail, elements: []}
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
 
