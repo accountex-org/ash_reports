@@ -43,9 +43,16 @@ defmodule AshReports.RendererTestHelpers do
     # Build layout_state from report bands
     layout_state = build_mock_layout_state(report)
 
+    # Set current_record to first record if records are provided
+    current_record = case records do
+      [first | _] -> first
+      _ -> nil
+    end
+
     %RenderContext{
       report: report,
       records: records,
+      current_record: current_record,
       data_result: data_result,
       metadata: metadata,
       config: config,
@@ -74,7 +81,7 @@ defmodule AshReports.RendererTestHelpers do
   """
   def build_mock_report(opts \\ []) do
     name = Keyword.get(opts, :name, :test_report)
-    title = Keyword.get(opts, :title, "Test Report")
+    title = Keyword.get(opts, :title)
     resource = Keyword.get(opts, :resource)
     bands = Keyword.get(opts, :bands, build_mock_bands())
     parameters = Keyword.get(opts, :parameters, [])

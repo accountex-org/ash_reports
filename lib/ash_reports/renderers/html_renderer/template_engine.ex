@@ -341,8 +341,10 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
 
   defp render_report_content(%RenderContext{} = context, bands_content) do
     report_title =
-      context.report
-      |> Map.get(:title, context.report.name |> to_string() |> String.capitalize())
+      case Map.get(context.report, :title) do
+        nil -> context.report.name |> to_string() |> String.capitalize()
+        title -> title
+      end
 
     assigns = %{
       report_title: report_title,
@@ -354,8 +356,10 @@ defmodule AshReports.HtmlRenderer.TemplateEngine do
 
   defp render_master_layout(%RenderContext{} = context, css_content, report_content) do
     report_title =
-      context.report
-      |> Map.get(:title, context.report.name |> to_string() |> String.capitalize())
+      case Map.get(context.report, :title) do
+        nil -> context.report.name |> to_string() |> String.capitalize()
+        title -> title
+      end
 
     assigns = %{
       lang: get_config_value(context, :lang, "en"),

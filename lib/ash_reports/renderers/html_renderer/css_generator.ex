@@ -434,10 +434,19 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
     layout_state = context.layout_state
 
     rules =
-      layout_state.bands
-      |> Enum.flat_map(fn {band_name, band_layout} ->
-        generate_band_rules(band_name, band_layout, theme_config)
-      end)
+      case layout_state do
+        nil ->
+          []
+
+        %{bands: bands} when is_map(bands) ->
+          bands
+          |> Enum.flat_map(fn {band_name, band_layout} ->
+            generate_band_rules(band_name, band_layout, theme_config)
+          end)
+
+        _ ->
+          []
+      end
 
     {:ok, rules}
   end
@@ -709,21 +718,17 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
        ) do
     all_rules = base_rules ++ layout_rules ++ element_rules ++ responsive_rules ++ custom_rules
 
-    css_content = format_css_rules(all_rules, minify: minify)
-
-    {:ok, css_content}
+    format_css_rules(all_rules, minify: minify)
   end
 
   defp assemble_layout_css(positioning_rules, dimension_rules, options) do
     all_rules = positioning_rules ++ dimension_rules
-    css_content = format_css_rules(all_rules, options)
-    {:ok, css_content}
+    format_css_rules(all_rules, options)
   end
 
   defp assemble_responsive_css(mobile_rules, tablet_rules, desktop_rules, _breakpoints) do
     all_rules = mobile_rules ++ tablet_rules ++ desktop_rules
-    css_content = format_css_rules(all_rules, minify: false)
-    {:ok, css_content}
+    format_css_rules(all_rules, minify: false)
   end
 
   defp format_css_rules(rules, options) do
@@ -735,10 +740,9 @@ defmodule AshReports.HtmlRenderer.CssGenerator do
       |> Enum.join(if minify, do: "", else: "\n\n")
 
     if minify do
-      {:ok, minified} = minify_css(css_content)
-      minified
+      minify_css(css_content)
     else
-      css_content
+      {:ok, css_content}
     end
   end
 
