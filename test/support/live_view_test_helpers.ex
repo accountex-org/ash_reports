@@ -94,9 +94,10 @@ defmodule AshReports.LiveViewTestHelpers do
       assert_render_has_element(html, "table", class: "report-table")
   """
   def assert_render_has_element(html, element_type, attrs \\ []) do
-    attrs_pattern = attrs
-    |> Enum.map(fn {key, value} -> ~s(#{key}="#{value}") end)
-    |> Enum.join(".*")
+    attrs_pattern =
+      attrs
+      |> Enum.map(fn {key, value} -> ~s(#{key}="#{value}") end)
+      |> Enum.join(".*")
 
     pattern = ~r/<#{element_type}[^>]*#{attrs_pattern}[^>]*>/
 
@@ -143,12 +144,16 @@ defmodule AshReports.LiveViewTestHelpers do
       assert_component_state(view, report_id: "test", loading: false)
   """
   def assert_component_state(view, expected_assigns) do
-    actual_assigns = view |> element("body") |> render() |> then(fn _ ->
-      # Note: This is a simplified version. In real usage, you'd need to
-      # access the LiveView's internal state, which might require different approaches
-      # depending on Phoenix LiveView version
-      :ok
-    end)
+    actual_assigns =
+      view
+      |> element("body")
+      |> render()
+      |> then(fn _ ->
+        # Note: This is a simplified version. In real usage, you'd need to
+        # access the LiveView's internal state, which might require different approaches
+        # depending on Phoenix LiveView version
+        :ok
+      end)
 
     Enum.each(expected_assigns, fn {key, expected_value} ->
       # This would need actual implementation based on how you access LiveView state
@@ -177,7 +182,13 @@ defmodule AshReports.LiveViewTestHelpers do
     timeout = Keyword.get(opts, :timeout, 5000)
     interval = Keyword.get(opts, :interval, 100)
 
-    wait_for_render_loop(view, condition_fun, timeout, interval, System.monotonic_time(:millisecond))
+    wait_for_render_loop(
+      view,
+      condition_fun,
+      timeout,
+      interval,
+      System.monotonic_time(:millisecond)
+    )
   end
 
   defp wait_for_render_loop(view, condition_fun, timeout, interval, start_time) do

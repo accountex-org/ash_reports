@@ -6,11 +6,12 @@ defmodule AshReports.JsonRenderer.DataSerializerTest do
 
   describe "serialize_context/2" do
     test "serializes complete render context" do
-      context = RendererTestHelpers.build_render_context(
-        records: [%{id: 1, name: "Test Record"}],
-        variables: %{report_date: "2025-10-07"},
-        metadata: %{format: :json}
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          records: [%{id: 1, name: "Test Record"}],
+          variables: %{report_date: "2025-10-07"},
+          metadata: %{format: :json}
+        )
 
       {:ok, serialized} = DataSerializer.serialize_context(context)
 
@@ -21,11 +22,12 @@ defmodule AshReports.JsonRenderer.DataSerializerTest do
     end
 
     test "handles empty context" do
-      context = RendererTestHelpers.build_render_context(
-        records: [],
-        variables: %{},
-        metadata: %{}
-      )
+      context =
+        RendererTestHelpers.build_render_context(
+          records: [],
+          variables: %{},
+          metadata: %{}
+        )
 
       {:ok, serialized} = DataSerializer.serialize_context(context)
 
@@ -340,9 +342,10 @@ defmodule AshReports.JsonRenderer.DataSerializerTest do
   describe "large dataset serialization" do
     test "serializes large dataset efficiently" do
       # Create 1000 records
-      records = Enum.map(1..1000, fn i ->
-        %{id: i, name: "Record #{i}", value: i * 10}
-      end)
+      records =
+        Enum.map(1..1000, fn i ->
+          %{id: i, name: "Record #{i}", value: i * 10}
+        end)
 
       {:ok, serialized} = DataSerializer.serialize_records(records)
 
@@ -402,10 +405,11 @@ defmodule AshReports.JsonRenderer.DataSerializerTest do
 
   describe "serialize_report_info/2" do
     test "serializes report definition" do
-      report = RendererTestHelpers.build_mock_report(
-        name: :sales_report,
-        title: "Sales Report"
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          name: :sales_report,
+          title: "Sales Report"
+        )
 
       if function_exported?(DataSerializer, :serialize_report_info, 1) do
         {:ok, info} = DataSerializer.serialize_report_info(report)
@@ -415,9 +419,8 @@ defmodule AshReports.JsonRenderer.DataSerializerTest do
     end
 
     test "includes report metadata" do
-      report = RendererTestHelpers.build_mock_report(
-        parameters: [%{name: :start_date, type: :date}]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(parameters: [%{name: :start_date, type: :date}])
 
       if function_exported?(DataSerializer, :serialize_report_info, 1) do
         {:ok, info} = DataSerializer.serialize_report_info(report)

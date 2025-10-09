@@ -288,7 +288,10 @@ defmodule AshReports.Streaming.Consumer do
 
       {:ok, state} = safe_consume.(chunk, state)
   """
-  @spec with_error_handling((chunk(), consumer_state() -> consume_result()), error_handling_opts()) ::
+  @spec with_error_handling(
+          (chunk(), consumer_state() -> consume_result()),
+          error_handling_opts()
+        ) ::
           (chunk(), consumer_state() -> consume_result())
   def with_error_handling(consume_fn, opts \\ []) do
     on_error = Keyword.get(opts, :on_error, &default_error_handler/2)

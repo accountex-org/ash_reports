@@ -384,17 +384,18 @@ defmodule AshReports.HtmlRenderer.CssGeneratorTest do
     end
 
     test "includes element positioning rules" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{
-            name: :detail,
-            type: :detail,
-            elements: [
-              %{type: :label, position: %{x: 10, y: 20}}
-            ]
-          }
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{
+              name: :detail,
+              type: :detail,
+              elements: [
+                %{type: :label, position: %{x: 10, y: 20}}
+              ]
+            }
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
 
@@ -404,13 +405,14 @@ defmodule AshReports.HtmlRenderer.CssGeneratorTest do
     end
 
     test "handles nested band structures" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{name: :header, type: :report_header, elements: []},
-          %{name: :detail, type: :detail, elements: []},
-          %{name: :footer, type: :report_footer, elements: []}
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{name: :header, type: :report_header, elements: []},
+            %{name: :detail, type: :detail, elements: []},
+            %{name: :footer, type: :report_footer, elements: []}
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
 
@@ -543,19 +545,20 @@ defmodule AshReports.HtmlRenderer.CssGeneratorTest do
 
   describe "integration with context" do
     test "extracts element types from context" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{
-            name: :detail,
-            type: :detail,
-            elements: [
-              %{type: :label},
-              %{type: :field},
-              %{type: :line}
-            ]
-          }
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{
+              name: :detail,
+              type: :detail,
+              elements: [
+                %{type: :label},
+                %{type: :field},
+                %{type: :line}
+              ]
+            }
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
 

@@ -6,18 +6,19 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
 
   describe "build_all_elements/2" do
     test "builds HTML for all elements in context" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{
-            name: :detail,
-            type: :detail,
-            elements: [
-              %{type: :label, text: "Label 1", position: %{x: 0, y: 0}},
-              %{type: :field, field: :name, position: %{x: 100, y: 0}}
-            ]
-          }
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{
+              name: :detail,
+              type: :detail,
+              elements: [
+                %{type: :label, text: "Label 1", position: %{x: 0, y: 0}},
+                %{type: :field, field: :name, position: %{x: 100, y: 0}}
+              ]
+            }
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
 
@@ -28,19 +29,20 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
     end
 
     test "filters out failed element builds" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{
-            name: :detail,
-            type: :detail,
-            elements: [
-              %{type: :label, text: "Valid", position: %{x: 0, y: 0}},
-              %{type: :image, src: "", position: %{x: 0, y: 0}}
-              # Missing src will cause error
-            ]
-          }
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{
+              name: :detail,
+              type: :detail,
+              elements: [
+                %{type: :label, text: "Valid", position: %{x: 0, y: 0}},
+                %{type: :image, src: "", position: %{x: 0, y: 0}}
+                # Missing src will cause error
+              ]
+            }
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
 
@@ -50,17 +52,18 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
     end
 
     test "includes band name in element metadata" do
-      report = RendererTestHelpers.build_mock_report(
-        bands: [
-          %{
-            name: :header,
-            type: :report_header,
-            elements: [
-              %{type: :label, text: "Title", position: %{x: 0, y: 0}}
-            ]
-          }
-        ]
-      )
+      report =
+        RendererTestHelpers.build_mock_report(
+          bands: [
+            %{
+              name: :header,
+              type: :report_header,
+              elements: [
+                %{type: :label, text: "Title", position: %{x: 0, y: 0}}
+              ]
+            }
+          ]
+        )
 
       context = RendererTestHelpers.build_render_context(report: report)
 
@@ -85,9 +88,7 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
 
     test "builds HTML for a field element" do
       element = %{type: :field, field: :name, position: %{x: 10, y: 20}}
-      context = RendererTestHelpers.build_render_context(
-        records: [%{name: "John Doe"}]
-      )
+      context = RendererTestHelpers.build_render_context(records: [%{name: "John Doe"}])
 
       {:ok, result} = ElementBuilder.build_element(element, context)
 
@@ -210,9 +211,7 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
     test "renders field value from context" do
       element = %{type: :field, field: :name, position: %{x: 0, y: 0}}
 
-      context = RendererTestHelpers.build_render_context(
-        records: [%{name: "John Doe"}]
-      )
+      context = RendererTestHelpers.build_render_context(records: [%{name: "John Doe"}])
 
       {:ok, html} = ElementBuilder.build_field(element, context)
 
@@ -223,9 +222,7 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
     test "applies field formatting" do
       element = %{type: :field, field: :amount, format: :currency, position: %{x: 0, y: 0}}
 
-      context = RendererTestHelpers.build_render_context(
-        records: [%{amount: 1234.56}]
-      )
+      context = RendererTestHelpers.build_render_context(records: [%{amount: 1234.56}])
 
       {:ok, html} = ElementBuilder.build_field(element, context)
 
@@ -235,9 +232,7 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
     test "handles date formatting" do
       element = %{type: :field, field: :date, format: :date, position: %{x: 0, y: 0}}
 
-      context = RendererTestHelpers.build_render_context(
-        records: [%{date: ~D[2025-10-07]}]
-      )
+      context = RendererTestHelpers.build_render_context(records: [%{date: ~D[2025-10-07]}])
 
       {:ok, html} = ElementBuilder.build_field(element, context)
 
@@ -247,9 +242,7 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
     test "handles number formatting" do
       element = %{type: :field, field: :value, format: :number, position: %{x: 0, y: 0}}
 
-      context = RendererTestHelpers.build_render_context(
-        records: [%{value: 123.456}]
-      )
+      context = RendererTestHelpers.build_render_context(records: [%{value: 123.456}])
 
       {:ok, html} = ElementBuilder.build_field(element, context)
 
@@ -268,7 +261,14 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
 
   describe "build_line/3" do
     test "generates horizontal line HTML" do
-      element = %{type: :line, orientation: :horizontal, width: 2, length: 200, position: %{x: 0, y: 0}}
+      element = %{
+        type: :line,
+        orientation: :horizontal,
+        width: 2,
+        length: 200,
+        position: %{x: 0, y: 0}
+      }
+
       context = RendererTestHelpers.build_render_context()
 
       {:ok, html} = ElementBuilder.build_line(element, context)
@@ -278,7 +278,14 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
     end
 
     test "generates vertical line HTML" do
-      element = %{type: :line, orientation: :vertical, width: 2, length: 200, position: %{x: 0, y: 0}}
+      element = %{
+        type: :line,
+        orientation: :vertical,
+        width: 2,
+        length: 200,
+        position: %{x: 0, y: 0}
+      }
+
       context = RendererTestHelpers.build_render_context()
 
       {:ok, html} = ElementBuilder.build_line(element, context)
@@ -288,7 +295,13 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
     end
 
     test "applies line color" do
-      element = %{type: :line, orientation: :horizontal, color: "#ff0000", position: %{x: 0, y: 0}}
+      element = %{
+        type: :line,
+        orientation: :horizontal,
+        color: "#ff0000",
+        position: %{x: 0, y: 0}
+      }
+
       context = RendererTestHelpers.build_render_context()
 
       {:ok, html} = ElementBuilder.build_line(element, context)
@@ -461,7 +474,8 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
       element = %{type: :label, name: :customer_label, text: "Test", position: %{x: 0, y: 0}}
       context = RendererTestHelpers.build_render_context()
 
-      {:ok, result} = ElementBuilder.build_element(element, context, include_data_attributes: true)
+      {:ok, result} =
+        ElementBuilder.build_element(element, context, include_data_attributes: true)
 
       assert result.attributes["data-element"] == :customer_label
     end
@@ -479,7 +493,8 @@ defmodule AshReports.HtmlRenderer.ElementBuilderTest do
       element = %{type: :label, name: :label1, text: "Test", position: %{x: 0, y: 0}}
       context = RendererTestHelpers.build_render_context()
 
-      {:ok, result} = ElementBuilder.build_element(element, context, include_data_attributes: false)
+      {:ok, result} =
+        ElementBuilder.build_element(element, context, include_data_attributes: false)
 
       refute Map.has_key?(result.attributes, "data-element")
     end

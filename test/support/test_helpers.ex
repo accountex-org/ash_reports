@@ -35,49 +35,52 @@ unless Code.ensure_loaded?(AshReports.TestHelpers) do
         lines = String.split(dsl_content, "\n")
 
         # Find minimum indentation (ignoring empty lines)
-        min_indent = lines
-        |> Enum.reject(&(&1 == "" || String.trim(&1) == ""))
-        |> Enum.map(fn line ->
-          line
-          |> String.to_charlist()
-          |> Enum.take_while(&(&1 == ?\s))
-          |> length()
-        end)
-        |> Enum.min(fn -> 0 end)
+        min_indent =
+          lines
+          |> Enum.reject(&(&1 == "" || String.trim(&1) == ""))
+          |> Enum.map(fn line ->
+            line
+            |> String.to_charlist()
+            |> Enum.take_while(&(&1 == ?\s))
+            |> length()
+          end)
+          |> Enum.min(fn -> 0 end)
 
         # Remove that amount of leading spaces from each line
-        normalized_dsl = lines
-        |> Enum.map(fn line ->
-          if String.trim(line) == "" do
-            ""
-          else
-            String.slice(line, min_indent..-1//1)
-          end
-        end)
-        |> Enum.join("\n")
-        |> String.trim()
+        normalized_dsl =
+          lines
+          |> Enum.map(fn line ->
+            if String.trim(line) == "" do
+              ""
+            else
+              String.slice(line, min_indent..-1//1)
+            end
+          end)
+          |> Enum.join("\n")
+          |> String.trim()
 
         # Indent the normalized DSL by 2 spaces for placement inside the module
-        indented_dsl = normalized_dsl
-        |> String.split("\n")
-        |> Enum.map(fn line ->
-          if String.trim(line) == "" do
-            ""
-          else
-            "  #{line}"
-          end
-        end)
-        |> Enum.join("\n")
+        indented_dsl =
+          normalized_dsl
+          |> String.split("\n")
+          |> Enum.map(fn line ->
+            if String.trim(line) == "" do
+              ""
+            else
+              "  #{line}"
+            end
+          end)
+          |> Enum.join("\n")
 
         # Compile the module with DSL content using Code.eval_string
         # This is necessary for DSL macro expansion to work properly
         code_string = """
-defmodule #{module_name} do
-  use Ash.Domain, extensions: [#{inspect(extension)}]#{validate_option}
+        defmodule #{module_name} do
+          use Ash.Domain, extensions: [#{inspect(extension)}]#{validate_option}
 
-#{indented_dsl}
-end
-"""
+        #{indented_dsl}
+        end
+        """
 
         Code.eval_string(code_string)
 
