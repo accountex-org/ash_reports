@@ -173,7 +173,9 @@ defmodule AshReports.Charts.PerformanceMonitor do
     :ets.insert(@table_name, {:total_generation_time, 0})
     :ets.insert(@table_name, {:cache_hits, 0})
     :ets.insert(@table_name, {:cache_misses, 0})
-    :ets.insert(@table_name, {:total_compression_ratio, 0.0})
+    # Store compression ratio as integer (scaled by 10000) for atomic operations
+    # e.g., ratio 0.35 is stored as 3500
+    :ets.insert(@table_name, {:total_compression_ratio_scaled, 0})
     :ets.insert(@table_name, {:total_compressed_entries, 0})
     :ets.insert(@table_name, {:total_preprocessing_time, 0})
     :ets.insert(@table_name, {:total_preprocessing_count, 0})
@@ -243,7 +245,7 @@ defmodule AshReports.Charts.PerformanceMonitor do
     [{_, total_gen_time}] = :ets.lookup(@table_name, :total_generation_time)
     [{_, cache_hits}] = :ets.lookup(@table_name, :cache_hits)
     [{_, cache_misses}] = :ets.lookup(@table_name, :cache_misses)
-    [{_, total_comp_ratio}] = :ets.lookup(@table_name, :total_compression_ratio)
+    [{_, total_comp_ratio_scaled}] = :ets.lookup(@table_name, :total_compression_ratio_scaled)
     [{_, total_comp_entries}] = :ets.lookup(@table_name, :total_compressed_entries)
     [{_, total_prep_time}] = :ets.lookup(@table_name, :total_preprocessing_time)
     [{_, total_prep_count}] = :ets.lookup(@table_name, :total_preprocessing_count)
@@ -263,9 +265,10 @@ defmodule AshReports.Charts.PerformanceMonitor do
         0.0
       end
 
+    # Convert scaled integer back to float and calculate average
     avg_compression_ratio =
       if total_comp_entries > 0 do
-        Float.round(total_comp_ratio / total_comp_entries, 3)
+        Float.round(total_comp_ratio_scaled / total_comp_entries / 10_000, 3)
       else
         0.0
       end
@@ -330,10 +333,12 @@ defmodule AshReports.Charts.PerformanceMonitor do
   def handle_cache_put_compressed(_event, measurements, _metadata, _config) do
     :ets.update_counter(@table_name, :total_compressed_entries, {2, 1})
 
-    # Accumulate compression ratio for averaging
+    # Convert float ratio to scaled integer for atomic accumulation
+    # e.g., 0.35 -> 3500, 0.4 -> 4000
+    # This allows us to use atomic update_counter instead of read-modify-write
     ratio = Map.get(measurements, :ratio, 1.0)
-    current_ratio = :ets.lookup_element(@table_name, :total_compression_ratio, 2)
-    :ets.insert(@table_name, {:total_compression_ratio, current_ratio + ratio})
+    ratio_scaled = round(ratio * 10_000)
+    :ets.update_counter(@table_name, :total_compression_ratio_scaled, {2, ratio_scaled})
 
     :ok
   end

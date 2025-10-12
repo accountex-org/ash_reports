@@ -249,6 +249,75 @@ defmodule AshReports.Charts.CompressionTest do
     end
   end
 
+  describe "security and size limits" do
+    test "rejects compression of excessively large input" do
+      # Create data larger than default 50MB limit
+      huge_svg = :binary.copy(<<1>>, 51 * 1024 * 1024)
+
+      assert {:error, :input_too_large} = Compression.compress(huge_svg)
+    end
+
+    test "allows compression with custom max_input_size" do
+      # 100KB of data
+      large_svg = String.duplicate("<g>data</g>", 10_000)
+
+      # Reject with low limit
+      assert {:error, :input_too_large} =
+               Compression.compress(large_svg, max_input_size: 50_000)
+
+      # Accept with higher limit
+      assert {:ok, _compressed, _metadata} =
+               Compression.compress(large_svg, max_input_size: 200_000)
+    end
+
+    test "rejects decompression of excessively large compressed data" do
+      # Create compressed data larger than 10MB limit
+      huge_compressed = :binary.copy(<<1>>, 11 * 1024 * 1024)
+
+      assert {:error, :compressed_data_too_large} = Compression.decompress(huge_compressed)
+    end
+
+    test "detects and rejects decompression bombs" do
+      # Create a highly compressible payload that would expand beyond limits
+      # This simulates a decompression bomb attack
+      bomb_data = :binary.copy(<<0>>, 60 * 1024 * 1024)
+
+      {:ok, compressed, _meta} = Compression.compress(bomb_data, max_input_size: 100 * 1024 * 1024)
+
+      # Compressed data should be small due to high compressibility
+      assert byte_size(compressed) < 1 * 1024 * 1024
+
+      # Decompression should be rejected due to output size
+      assert {:error, :decompressed_data_too_large} = Compression.decompress(compressed)
+    end
+
+    test "allows decompression with custom size limits" do
+      # Create 5MB of compressible data
+      data = String.duplicate("<rect x='1' y='2'/>", 250_000)
+      {:ok, compressed, _meta} = Compression.compress(data)
+
+      # Reject with low decompressed size limit
+      assert {:error, :decompressed_data_too_large} =
+               Compression.decompress(compressed, max_decompressed_size: 1_000_000)
+
+      # Accept with higher limit
+      assert {:ok, decompressed} =
+               Compression.decompress(compressed, max_decompressed_size: 10_000_000)
+
+      assert decompressed == data
+    end
+
+    test "validates both compressed and decompressed sizes" do
+      # Normal data that passes all checks
+      normal_svg = String.duplicate("<rect/>", 1000)
+      {:ok, compressed, _meta} = Compression.compress(normal_svg)
+
+      # Should decompress successfully
+      assert {:ok, decompressed} = Compression.decompress(compressed)
+      assert decompressed == normal_svg
+    end
+  end
+
   describe "compression performance" do
     test "compression completes in reasonable time for typical chart SVG" do
       # Typical chart SVG: ~50KB

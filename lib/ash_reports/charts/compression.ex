@@ -39,6 +39,10 @@ defmodule AshReports.Charts.Compression do
 
   @default_threshold 10_000
   @default_compression_level 6
+  # Maximum compressed data size to accept for decompression (10MB)
+  @max_compressed_size 10 * 1024 * 1024
+  # Maximum decompressed output size to accept (50MB)
+  @max_decompressed_size 50 * 1024 * 1024
 
   @type compression_metadata :: %{
           original_size: non_neg_integer(),
@@ -55,6 +59,7 @@ defmodule AshReports.Charts.Compression do
   ## Options
 
     * `:compression_level` - Zlib compression level 0-9 (default: 6)
+    * `:max_input_size` - Maximum input size in bytes (default: 50MB)
 
   ## Examples
 
@@ -63,14 +68,28 @@ defmodule AshReports.Charts.Compression do
       iex> metadata.ratio < 1.0
       true
 
+  ## Errors
+
+    * `{:error, :input_too_large}` - Input exceeds maximum allowed size
+
   """
   @spec compress(binary(), keyword()) ::
           {:ok, binary(), compression_metadata()} | {:error, term()}
   def compress(svg_data, opts \\ []) when is_binary(svg_data) do
-    _compression_level = Keyword.get(opts, :compression_level, @default_compression_level)
-    start_time = System.monotonic_time(:millisecond)
+    max_input_size = Keyword.get(opts, :max_input_size, @max_decompressed_size)
 
-    try do
+    # Validate input size to prevent processing excessively large data
+    if byte_size(svg_data) > max_input_size do
+      Logger.warning(
+        "Compression rejected: input size #{byte_size(svg_data)} exceeds maximum #{max_input_size} bytes"
+      )
+
+      {:error, :input_too_large}
+    else
+      _compression_level = Keyword.get(opts, :compression_level, @default_compression_level)
+      start_time = System.monotonic_time(:millisecond)
+
+      try do
       # Use Erlang's zlib for gzip compression
       compressed = :zlib.gzip(svg_data)
       end_time = System.monotonic_time(:millisecond)
@@ -100,15 +119,21 @@ defmodule AshReports.Charts.Compression do
       )
 
       {:ok, compressed, metadata}
-    rescue
-      error ->
-        Logger.error("SVG compression failed: #{inspect(error)}")
-        {:error, {:compression_failed, error}}
+      rescue
+        error ->
+          Logger.error("SVG compression failed: #{inspect(error)}")
+          {:error, {:compression_failed, error}}
+      end
     end
   end
 
   @doc """
-  Decompresses gzip-compressed SVG data.
+  Decompresses gzip-compressed SVG data with size limits to prevent decompression bombs.
+
+  ## Options
+
+    * `:max_compressed_size` - Maximum compressed input size in bytes (default: 10MB)
+    * `:max_decompressed_size` - Maximum decompressed output size in bytes (default: 50MB)
 
   ## Examples
 
@@ -117,16 +142,47 @@ defmodule AshReports.Charts.Compression do
       iex> svg
       "<svg>test</svg>"
 
+  ## Errors
+
+    * `{:error, :compressed_data_too_large}` - Compressed input exceeds maximum allowed size
+    * `{:error, :decompressed_data_too_large}` - Decompressed output exceeds maximum allowed size
+    * `{:error, {:decompression_failed, reason}}` - Decompression failed
+
   """
-  @spec decompress(binary()) :: {:ok, binary()} | {:error, term()}
-  def decompress(compressed_data) when is_binary(compressed_data) do
-    try do
-      decompressed = :zlib.gunzip(compressed_data)
-      {:ok, decompressed}
-    rescue
-      error ->
-        Logger.error("SVG decompression failed: #{inspect(error)}")
-        {:error, {:decompression_failed, error}}
+  @spec decompress(binary(), keyword()) :: {:ok, binary()} | {:error, term()}
+  def decompress(compressed_data, opts \\ []) when is_binary(compressed_data) do
+    max_compressed_size = Keyword.get(opts, :max_compressed_size, @max_compressed_size)
+    max_decompressed_size = Keyword.get(opts, :max_decompressed_size, @max_decompressed_size)
+
+    # Validate compressed data size to prevent processing malicious payloads
+    compressed_size = byte_size(compressed_data)
+
+    if compressed_size > max_compressed_size do
+      Logger.warning(
+        "Decompression rejected: compressed data size #{compressed_size} exceeds maximum #{max_compressed_size} bytes"
+      )
+
+      {:error, :compressed_data_too_large}
+    else
+      try do
+        decompressed = :zlib.gunzip(compressed_data)
+        decompressed_size = byte_size(decompressed)
+
+        # Validate decompressed size to prevent decompression bombs
+        if decompressed_size > max_decompressed_size do
+          Logger.warning(
+            "Decompression bomb detected: decompressed size #{decompressed_size} exceeds maximum #{max_decompressed_size} bytes (ratio: #{Float.round(decompressed_size / compressed_size, 1)}x)"
+          )
+
+          {:error, :decompressed_data_too_large}
+        else
+          {:ok, decompressed}
+        end
+      rescue
+        error ->
+          Logger.error("SVG decompression failed: #{inspect(error)}")
+          {:error, {:decompression_failed, error}}
+      end
     end
   end
 

@@ -276,6 +276,74 @@ defmodule AshReports.Charts.PerformanceMonitorTest do
       assert metrics.total_charts_generated == 10
       assert metrics.avg_generation_time_ms > 0
     end
+
+    test "handles concurrent compression ratio updates without race conditions" do
+      # Reset metrics first
+      PerformanceMonitor.reset_metrics()
+      Process.sleep(10)
+
+      # Simulate 100 concurrent compression events with known ratios
+      tasks =
+        for i <- 1..100 do
+          Task.async(fn ->
+            # Each event has ratio 0.35 (35% of original size)
+            :telemetry.execute(
+              [:ash_reports, :charts, :cache, :put_compressed],
+              %{ratio: 0.35},
+              %{}
+            )
+          end)
+        end
+
+      Enum.each(tasks, &Task.await/1)
+
+      Process.sleep(50)
+
+      metrics = PerformanceMonitor.get_metrics()
+
+      # All 100 compressions should be counted
+      assert metrics.total_compressed_entries == 100
+
+      # Average should be exactly 0.35 (no lost updates from race conditions)
+      # If there were race conditions, we'd lose some updates and get incorrect average
+      assert_in_delta metrics.avg_compression_ratio, 0.35, 0.001
+    end
+
+    test "compression ratio calculation is accurate under concurrent load" do
+      PerformanceMonitor.reset_metrics()
+      Process.sleep(10)
+
+      # Mix of different compression ratios
+      ratios = [0.3, 0.4, 0.35, 0.25, 0.5]
+
+      tasks =
+        for ratio <- ratios do
+          # 20 concurrent events per ratio (100 total)
+          for _ <- 1..20 do
+            Task.async(fn ->
+              :telemetry.execute(
+                [:ash_reports, :charts, :cache, :put_compressed],
+                %{ratio: ratio},
+                %{}
+              )
+            end)
+          end
+        end
+        |> List.flatten()
+
+      Enum.each(tasks, &Task.await/1)
+
+      Process.sleep(50)
+
+      metrics = PerformanceMonitor.get_metrics()
+
+      # Should have all 100 entries
+      assert metrics.total_compressed_entries == 100
+
+      # Expected average: (0.3*20 + 0.4*20 + 0.35*20 + 0.25*20 + 0.5*20) / 100 = 0.36
+      expected_avg = (0.3 * 20 + 0.4 * 20 + 0.35 * 20 + 0.25 * 20 + 0.5 * 20) / 100
+      assert_in_delta metrics.avg_compression_ratio, expected_avg, 0.001
+    end
   end
 
   describe "metrics calculation" do
