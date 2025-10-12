@@ -67,10 +67,17 @@ defmodule AshReports.Typst.ChartPreprocessor do
   @doc """
   Preprocesses all chart elements in a report definition.
 
+  Uses parallel processing with bounded concurrency for optimal performance.
+
   ## Parameters
 
     * `report` - The Report struct containing band and element definitions
     * `data_context` - Runtime data context with records, config, and variables
+    * `opts` - Options (keyword list)
+      * `:parallel` - Enable parallel processing (default: `true`)
+      * `:max_concurrency` - Max concurrent chart generations (default: CPU cores × 2)
+      * `:timeout` - Timeout per chart in milliseconds (default: `10_000` / 10 seconds)
+      * `:on_timeout` - Timeout handling (`:kill_task` or `:error`, default: `:kill_task`)
 
   ## Returns
 
@@ -84,16 +91,26 @@ defmodule AshReports.Typst.ChartPreprocessor do
       iex> {:ok, charts} = ChartPreprocessor.preprocess(report, data)
       iex> charts[:sales_chart].embedded_code
       "#image.decode(...)"
+
+      # With custom concurrency
+      iex> {:ok, charts} = ChartPreprocessor.preprocess(report, data, max_concurrency: 4)
+
+      # Disable parallel processing
+      iex> {:ok, charts} = ChartPreprocessor.preprocess(report, data, parallel: false)
   """
   @spec preprocess(Report.t(), data_context(), keyword()) ::
           {:ok, %{atom() => chart_data()}} | {:error, term()}
   def preprocess(%Report{} = report, data_context, opts \\ []) do
     charts = extract_chart_elements(report)
     parallel = Keyword.get(opts, :parallel, true)
+    max_concurrency = Keyword.get(opts, :max_concurrency, default_concurrency())
+    timeout = Keyword.get(opts, :timeout, 10_000)
+    on_timeout = Keyword.get(opts, :on_timeout, :kill_task)
 
     metadata = %{
       chart_count: length(charts),
       parallel: parallel,
+      max_concurrency: max_concurrency,
       report_name: Map.get(report, :name)
     }
 
@@ -108,13 +125,30 @@ defmodule AshReports.Typst.ChartPreprocessor do
     try do
       chart_data =
         if parallel and length(charts) > 1 do
-          # Parallel processing for multiple charts
+          # Parallel processing with Task.async_stream for bounded concurrency
           charts
-          |> Enum.map(fn chart ->
-            Task.async(fn -> {chart.name, process_chart(chart, data_context)} end)
+          |> Task.async_stream(
+            fn chart -> {chart.name, process_chart(chart, data_context)} end,
+            max_concurrency: max_concurrency,
+            timeout: timeout,
+            on_timeout: on_timeout,
+            ordered: false
+          )
+          |> Enum.reduce_while({:ok, %{}}, fn
+            {:ok, {name, chart_data}}, {:ok, acc} ->
+              {:cont, {:ok, Map.put(acc, name, chart_data)}}
+
+            {:exit, reason}, {:ok, acc} ->
+              Logger.error("Chart task exited unexpectedly: #{inspect(reason)}")
+              {:cont, {:ok, acc}}
+
+            {:error, reason}, _acc ->
+              {:halt, {:error, {:task_error, reason}}}
           end)
-          |> Enum.map(&Task.await(&1, :infinity))
-          |> Map.new()
+          |> case do
+            {:ok, data} -> data
+            {:error, reason} -> raise reason
+          end
         else
           # Sequential processing for single chart or when parallel disabled
           charts
@@ -129,7 +163,10 @@ defmodule AshReports.Typst.ChartPreprocessor do
       :telemetry.execute(
         [:ash_reports, :chart_preprocessor, :preprocess, :stop],
         %{duration: duration},
-        Map.put(metadata, :success_count, map_size(chart_data))
+        Map.merge(metadata, %{
+          success_count: map_size(chart_data),
+          avg_chart_duration: div(duration, max(1, map_size(chart_data)))
+        })
       )
 
       {:ok, chart_data}
@@ -343,5 +380,10 @@ defmodule AshReports.Typst.ChartPreprocessor do
     Logger.debug(fn -> "Unsupported expression format for chart data: #{inspect(expr)}" end)
     Logger.warning("Unsupported expression format for chart data")
     {:error, {:unsupported_expression, expr}}
+  end
+
+  defp default_concurrency do
+    # Default to 2x CPU cores for optimal parallelism without overwhelming the system
+    System.schedulers_online() * 2
   end
 end
