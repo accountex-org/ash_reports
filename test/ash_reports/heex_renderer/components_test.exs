@@ -96,7 +96,8 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
     end
 
     test "handles bands without styles" do
-      band = %Band{name: :simple, type: :detail}
+      # Use a non-detail band type to avoid default background color
+      band = %Band{name: :simple, type: :header}
       styles = Components.band_styles(band)
 
       assert styles == ""
@@ -332,8 +333,8 @@ defmodule AshReports.HeexRenderer.ComponentsTest do
       # In a real Phoenix environment, this would return actual HEEX content
       result = Components.render_single_component(:report_container, assigns, context)
 
-      # For now, we just verify it doesn't crash
-      assert {:ok, _content} = result or match?({:error, _}, result)
+      # For now, we just verify it returns either success or error (doesn't crash)
+      assert match?({:ok, _}, result) or match?({:error, _}, result)
     end
 
     test "returns error for unknown component" do

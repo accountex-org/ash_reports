@@ -36,7 +36,7 @@ defmodule AshReports.Application do
 
   alias AshReports.PdfRenderer.{PdfSessionManager, TempFileCleanup}
   alias AshReports.Typst.StreamingPipeline
-  alias AshReports.Charts.{Registry, Cache}
+  alias AshReports.Charts.{Registry, Cache, PerformanceMonitor}
 
   @doc """
   Starts the AshReports application supervisor.
@@ -64,6 +64,7 @@ defmodule AshReports.Application do
       # Chart generation infrastructure (Stage 3)
       {Registry, []},
       {Cache, []},
+      {PerformanceMonitor, []},
 
       # PDF Session Manager for tracking active PDF generation sessions
       {PdfSessionManager, []},

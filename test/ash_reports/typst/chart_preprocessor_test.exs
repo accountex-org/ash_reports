@@ -395,4 +395,290 @@ defmodule AshReports.Typst.ChartPreprocessorTest do
       assert is_nil(result.error)
     end
   end
+
+  describe "preprocess_lazy/2" do
+    test "returns lazy evaluators for all charts" do
+      chart1 =
+        Chart.new(:chart1,
+          chart_type: :bar,
+          data_source: [%{category: "A", value: 10}],
+          config: %{width: 400, height: 300}
+        )
+
+      chart2 =
+        Chart.new(:chart2,
+          chart_type: :line,
+          data_source: [%{x: 1, y: 20}],
+          config: %{width: 500, height: 350}
+        )
+
+      report = %Report{
+        name: :lazy_report,
+        bands: [
+          %Band{
+            type: :header,
+            name: :header,
+            elements: [chart1, chart2]
+          }
+        ]
+      }
+
+      data_context = %{records: [], config: %{}, variables: %{}}
+
+      assert {:ok, lazy_charts} = ChartPreprocessor.preprocess_lazy(report, data_context)
+      assert map_size(lazy_charts) == 2
+      assert Map.has_key?(lazy_charts, :chart1)
+      assert Map.has_key?(lazy_charts, :chart2)
+
+      # Verify they are functions
+      assert is_function(lazy_charts[:chart1], 0)
+      assert is_function(lazy_charts[:chart2], 0)
+    end
+
+    test "lazy evaluators generate charts when called" do
+      chart =
+        Chart.new(:sales_chart,
+          chart_type: :bar,
+          data_source: [%{category: "Q1", value: 100}],
+          config: %{width: 600, height: 400}
+        )
+
+      report = %Report{
+        name: :lazy_report,
+        bands: [
+          %Band{
+            type: :header,
+            name: :header,
+            elements: [chart]
+          }
+        ]
+      }
+
+      data_context = %{records: [], config: %{}, variables: %{}}
+
+      {:ok, lazy_charts} = ChartPreprocessor.preprocess_lazy(report, data_context)
+
+      # Call the lazy evaluator
+      result = lazy_charts[:sales_chart].()
+
+      # Should return the same structure as process_chart
+      assert result.name == :sales_chart
+      assert result.chart_type == :bar
+      assert is_binary(result.svg)
+      assert is_binary(result.embedded_code)
+      assert is_nil(result.error)
+    end
+
+    test "lazy evaluators can be called multiple times" do
+      chart =
+        Chart.new(:reusable_chart,
+          chart_type: :pie,
+          data_source: [%{label: "A", value: 30}, %{label: "B", value: 70}],
+          config: %{width: 500, height: 500}
+        )
+
+      report = %Report{
+        name: :lazy_report,
+        bands: [
+          %Band{
+            type: :header,
+            name: :header,
+            elements: [chart]
+          }
+        ]
+      }
+
+      data_context = %{records: [], config: %{}, variables: %{}}
+
+      {:ok, lazy_charts} = ChartPreprocessor.preprocess_lazy(report, data_context)
+
+      # Call multiple times
+      result1 = lazy_charts[:reusable_chart].()
+      result2 = lazy_charts[:reusable_chart].()
+
+      # Both should produce valid results
+      assert is_binary(result1.svg)
+      assert is_binary(result2.svg)
+      assert is_nil(result1.error)
+      assert is_nil(result2.error)
+    end
+
+    test "lazy evaluators handle errors gracefully" do
+      chart =
+        Chart.new(:broken_chart,
+          chart_type: :bar,
+          data_source: nil,
+          config: %{width: 600, height: 400}
+        )
+
+      report = %Report{
+        name: :lazy_report,
+        bands: [
+          %Band{
+            type: :header,
+            name: :header,
+            elements: [chart]
+          }
+        ]
+      }
+
+      data_context = %{records: [], config: %{}, variables: %{}}
+
+      {:ok, lazy_charts} = ChartPreprocessor.preprocess_lazy(report, data_context)
+
+      # Call the lazy evaluator - should return error placeholder
+      result = lazy_charts[:broken_chart].()
+
+      assert result.error == :missing_data_source
+      assert is_binary(result.embedded_code)
+      assert result.embedded_code =~ "Chart Error"
+    end
+
+    test "lazy evaluation defers chart generation until called" do
+      chart =
+        Chart.new(:deferred_chart,
+          chart_type: :bar,
+          data_source: [%{category: "A", value: 10}],
+          config: %{width: 400, height: 300}
+        )
+
+      report = %Report{
+        name: :lazy_report,
+        bands: [
+          %Band{
+            type: :header,
+            name: :header,
+            elements: [chart]
+          }
+        ]
+      }
+
+      data_context = %{records: [], config: %{}, variables: %{}}
+
+      # Create lazy charts - this should be fast (no SVG generation)
+      {:ok, lazy_charts} = ChartPreprocessor.preprocess_lazy(report, data_context)
+
+      # Verify we got a function back, not generated data
+      assert is_function(lazy_charts[:deferred_chart], 0)
+
+      # Now call the evaluator - this is when SVG generation happens
+      result = lazy_charts[:deferred_chart].()
+
+      # Verify the chart was generated on-demand
+      assert is_binary(result.svg)
+      assert result.name == :deferred_chart
+      assert result.chart_type == :bar
+      assert is_nil(result.error)
+    end
+
+    test "returns empty map for report with no charts" do
+      report = %Report{
+        name: :empty_report,
+        bands: [
+          %Band{
+            type: :header,
+            name: :header,
+            elements: []
+          }
+        ]
+      }
+
+      data_context = %{records: [], config: %{}, variables: %{}}
+
+      assert {:ok, lazy_charts} = ChartPreprocessor.preprocess_lazy(report, data_context)
+      assert lazy_charts == %{}
+    end
+
+    test "supports selective chart generation" do
+      chart1 =
+        Chart.new(:needed_chart,
+          chart_type: :bar,
+          data_source: [%{category: "A", value: 10}],
+          config: %{width: 400, height: 300}
+        )
+
+      chart2 =
+        Chart.new(:unused_chart,
+          chart_type: :line,
+          data_source: [%{x: 1, y: 20}],
+          config: %{width: 500, height: 350}
+        )
+
+      chart3 =
+        Chart.new(:another_needed_chart,
+          chart_type: :pie,
+          data_source: [%{label: "A", value: 50}],
+          config: %{width: 400, height: 400}
+        )
+
+      report = %Report{
+        name: :selective_report,
+        bands: [
+          %Band{
+            type: :header,
+            name: :header,
+            elements: [chart1, chart2, chart3]
+          }
+        ]
+      }
+
+      data_context = %{records: [], config: %{}, variables: %{}}
+
+      {:ok, lazy_charts} = ChartPreprocessor.preprocess_lazy(report, data_context)
+
+      # Only generate the charts we need
+      result1 = lazy_charts[:needed_chart].()
+      result3 = lazy_charts[:another_needed_chart].()
+
+      # Verify the generated charts
+      assert result1.chart_type == :bar
+      assert is_binary(result1.svg)
+      assert result3.chart_type == :pie
+      assert is_binary(result3.svg)
+
+      # chart2 was never generated, saving resources
+      # We can still verify the lazy evaluator exists
+      assert is_function(lazy_charts[:unused_chart], 0)
+    end
+
+    test "lazy evaluators work with dynamic data sources" do
+      # Create an Ash.Expr-like struct for testing
+      expr_struct = %{__struct__: Ash.Expr, expression: :records}
+
+      chart =
+        Chart.new(:dynamic_chart,
+          chart_type: :bar,
+          data_source: expr_struct,
+          config: %{width: 600, height: 400}
+        )
+
+      report = %Report{
+        name: :dynamic_report,
+        bands: [
+          %Band{
+            type: :header,
+            name: :header,
+            elements: [chart]
+          }
+        ]
+      }
+
+      records = [
+        %{category: "Q1", value: 100},
+        %{category: "Q2", value: 200}
+      ]
+
+      data_context = %{records: records, config: %{}, variables: %{}}
+
+      {:ok, lazy_charts} = ChartPreprocessor.preprocess_lazy(report, data_context)
+
+      # Call the lazy evaluator
+      result = lazy_charts[:dynamic_chart].()
+
+      # Should successfully use the records from context
+      assert result.name == :dynamic_chart
+      assert is_binary(result.svg)
+      assert is_nil(result.error)
+    end
+  end
 end

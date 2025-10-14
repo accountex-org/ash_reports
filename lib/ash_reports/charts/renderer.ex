@@ -15,8 +15,9 @@ defmodule AshReports.Charts.Renderer do
 
   ## Caching
 
-  The renderer integrates with the cache module to store compiled SVG output
-  for improved performance on repeated requests.
+  This module does NOT handle caching. All caching logic is centralized in the
+  Charts module to avoid duplicate cache entries and maintain a single source
+  of truth. If you need cached rendering, use `AshReports.Charts.generate/4`.
 
   ## Error Handling
 
@@ -24,11 +25,15 @@ defmodule AshReports.Charts.Renderer do
   text-based chart or error message.
   """
 
-  alias AshReports.Charts.{Config, Cache}
+  alias AshReports.Charts.Config
   require Logger
 
   @doc """
   Renders a chart to SVG format.
+
+  Note: This function does NOT cache the result. Caching is handled by the
+  Charts module to avoid duplicate cache logic. Use this function when you
+  want direct rendering without caching overhead.
 
   ## Parameters
 
@@ -52,65 +57,9 @@ defmodule AshReports.Charts.Renderer do
   """
   @spec render(module(), list(map()), Config.t()) :: {:ok, String.t()} | {:error, term()}
   def render(chart_module, data, config) do
-    # Generate cache key
-    cache_key = generate_cache_key(chart_module, data, config)
-
-    # Check cache first
-    case Cache.get(cache_key) do
-      {:ok, svg} ->
-        Logger.debug("Chart cache hit for #{inspect(chart_module)}")
-
-        :telemetry.execute(
-          [:ash_reports, :charts, :cache, :hit],
-          %{count: 1},
-          %{chart_module: chart_module}
-        )
-
-        {:ok, svg}
-
-      {:error, :not_found} ->
-        Logger.debug("Chart cache miss for #{inspect(chart_module)}")
-
-        :telemetry.execute(
-          [:ash_reports, :charts, :cache, :miss],
-          %{count: 1},
-          %{chart_module: chart_module}
-        )
-
-        # Render and cache
-        case do_render(chart_module, data, config) do
-          {:ok, svg} = result ->
-            # Cache with 5 minute TTL
-            Cache.put(cache_key, svg, ttl: 300_000)
-            result
-
-          error ->
-            error
-        end
-    end
-  end
-
-  @doc """
-  Renders a chart without caching.
-
-  Useful for testing or when caching is not desired.
-
-  ## Parameters
-
-    - `chart_module` - Module implementing the chart behavior
-    - `data` - List of maps containing chart data
-    - `config` - Chart configuration struct
-
-  ## Returns
-
-    - `{:ok, svg}` - Successfully rendered SVG string
-    - `{:error, reason}` - Rendering failed
-  """
-  @spec render_without_cache(module(), list(map()), Config.t()) ::
-          {:ok, String.t()} | {:error, term()}
-  def render_without_cache(chart_module, data, config) do
     do_render(chart_module, data, config)
   end
+
 
   # Private functions
 
@@ -326,15 +275,4 @@ defmodule AshReports.Charts.Renderer do
     {:ok, String.trim(svg)}
   end
 
-  defp generate_cache_key(chart_module, data, config) do
-    # Generate hash-based cache key
-    key_data = %{
-      module: chart_module,
-      data_hash: :erlang.phash2(data),
-      config_hash: :erlang.phash2(config)
-    }
-
-    :erlang.phash2(key_data)
-    |> Integer.to_string(16)
-  end
 end

@@ -521,22 +521,28 @@ defmodule AshReports.HeexRenderer.Components do
     :ok
   end
 
-  # Private helper functions
+  # Helper functions (public for testing but marked as internal)
 
-  defp build_classes(class_list) do
+  @doc false
+  def build_css_classes(class_list) when is_list(class_list) do
     class_list
     |> Enum.reject(&is_nil/1)
     |> Enum.reject(&(&1 == ""))
     |> Enum.join(" ")
   end
 
-  defp band_classes(band) do
+  # Internal alias for template use
+  defp build_classes(class_list), do: build_css_classes(class_list)
+
+  @doc false
+  def band_classes(band) do
     base = "ash-band"
     type_class = "ash-band-#{band.type}"
-    [base, type_class]
+    Enum.join([base, type_class], " ")
   end
 
-  defp band_styles(band) do
+  @doc false
+  def band_styles(band) do
     styles = []
 
     styles =
@@ -546,23 +552,32 @@ defmodule AshReports.HeexRenderer.Components do
         styles
       end
 
+    # Band struct doesn't have background_color field, check map or use defaults
     styles =
-      if band.background_color do
-        ["background-color: #{band.background_color}" | styles]
-      else
-        styles
+      case Map.get(band, :background_color) do
+        nil ->
+          # Apply default background colors based on band type
+          case band.type do
+            :detail -> ["background-color: #f5f5f5" | styles]
+            _ -> styles
+          end
+
+        color ->
+          ["background-color: #{color}" | styles]
       end
 
     Enum.join(styles, "; ")
   end
 
-  defp element_classes(element) do
+  @doc false
+  def element_classes(element) do
     base = "ash-element"
     type_class = "ash-element-#{element_type(element)}"
-    [base, type_class]
+    Enum.join([base, type_class], " ")
   end
 
-  defp element_styles(element) do
+  @doc false
+  def element_styles(element) do
     position = element.position || %{}
     style = element.style || %{}
 
@@ -582,11 +597,15 @@ defmodule AshReports.HeexRenderer.Components do
   end
 
   defp add_dimension_styles(styles, position) do
+    # Check position map for dimensions (legacy/primary location)
     styles = if position[:width], do: ["width: #{position[:width]}px" | styles], else: styles
     if position[:height], do: ["height: #{position[:height]}px" | styles], else: styles
   end
 
   defp add_appearance_styles(styles, style) do
+    # Check style map for dimensions (alternative location)
+    styles = if style[:width], do: ["width: #{style[:width]}px" | styles], else: styles
+    styles = if style[:height], do: ["height: #{style[:height]}px" | styles], else: styles
     styles = if style[:color], do: ["color: #{style[:color]}" | styles], else: styles
 
     styles =
@@ -597,16 +616,18 @@ defmodule AshReports.HeexRenderer.Components do
     if style[:font_size], do: ["font-size: #{style[:font_size]}px" | styles], else: styles
   end
 
-  defp element_type(%Label{}), do: "label"
-  defp element_type(%Field{}), do: "field"
-  defp element_type(%Image{}), do: "image"
-  defp element_type(%Line{}), do: "line"
-  defp element_type(%Box{}), do: "box"
-  defp element_type(%Aggregate{}), do: "aggregate"
-  defp element_type(%Expression{}), do: "expression"
-  defp element_type(_), do: "unknown"
+  @doc false
+  def element_type(%Label{}), do: "label"
+  def element_type(%Field{}), do: "field"
+  def element_type(%Image{}), do: "image"
+  def element_type(%Line{}), do: "line"
+  def element_type(%Box{}), do: "box"
+  def element_type(%Aggregate{}), do: "aggregate"
+  def element_type(%Expression{}), do: "expression"
+  def element_type(_), do: "unknown"
 
-  defp resolve_element_value(element, record, variables) do
+  @doc false
+  def resolve_element_value(element, record, variables) do
     case element do
       %Label{text: text} -> text || element.name
       %Field{source: source} -> get_field_value(record, source)
@@ -643,13 +664,14 @@ defmodule AshReports.HeexRenderer.Components do
     end
   end
 
-  defp format_field_value(nil, _element), do: ""
+  @doc false
+  def format_field_value(nil, _element), do: ""
 
-  defp format_field_value(value, %Field{format: format}) when not is_nil(format) do
+  def format_field_value(value, %Field{format: format}) when not is_nil(format) do
     apply_field_format(value, format)
   end
 
-  defp format_field_value(value, _element), do: to_string(value)
+  def format_field_value(value, _element), do: to_string(value)
 
   defp apply_field_format(value, format) do
     # Placeholder for field formatting
@@ -664,7 +686,8 @@ defmodule AshReports.HeexRenderer.Components do
   defp format_aggregate_value(value, _element), do: to_string(value)
   defp format_expression_value(value, _element), do: to_string(value)
 
-  defp image_styles(element) do
+  @doc false
+  def image_styles(element) do
     styles = element_styles(element)
     style = element.style || %{}
 
@@ -680,7 +703,8 @@ defmodule AshReports.HeexRenderer.Components do
     |> Enum.join("; ")
   end
 
-  defp line_styles(element) do
+  @doc false
+  def line_styles(element) do
     styles = element_styles(element)
     style_map = element.style || %{}
 
@@ -712,7 +736,8 @@ defmodule AshReports.HeexRenderer.Components do
     |> Enum.join("; ")
   end
 
-  defp box_styles(element) do
+  @doc false
+  def box_styles(element) do
     styles = element_styles(element)
     border = element.border || %{}
     fill = element.fill || %{}
@@ -745,23 +770,43 @@ defmodule AshReports.HeexRenderer.Components do
     |> Enum.join("; ")
   end
 
-  defp format_datetime(%DateTime{} = dt) do
+  @doc false
+  def format_datetime(%DateTime{} = dt) do
     Calendar.strftime(dt, "%Y-%m-%d %H:%M:%S UTC")
   end
 
-  defp format_datetime(_), do: ""
+  def format_datetime(_), do: ""
 
-  defp format_date(%Date{} = date) do
+  @doc false
+  def format_date(%Date{} = date, :iso) do
     Calendar.strftime(date, "%Y-%m-%d")
   end
 
-  defp format_date(%DateTime{} = dt) do
-    Calendar.strftime(dt, "%Y-%m-%d")
+  def format_date(%Date{} = date, :short) do
+    Calendar.strftime(date, "%m/%d/%y")
   end
 
-  defp format_date(_), do: ""
+  def format_date(%Date{} = date, :medium) do
+    Calendar.strftime(date, "%b %d, %Y")
+  end
 
-  defp humanize_key(key) when is_atom(key) do
+  def format_date(%Date{} = date, :long) do
+    Calendar.strftime(date, "%B %d, %Y")
+  end
+
+  def format_date(%DateTime{} = dt, format) do
+    dt
+    |> DateTime.to_date()
+    |> format_date(format)
+  end
+
+  def format_date(_, _), do: ""
+
+  # 1-arity version for backwards compatibility
+  def format_date(date), do: format_date(date, :iso)
+
+  @doc false
+  def humanize_key(key) when is_atom(key) do
     key
     |> to_string()
     |> String.replace("_", " ")
@@ -770,13 +815,14 @@ defmodule AshReports.HeexRenderer.Components do
     |> Enum.join(" ")
   end
 
-  defp humanize_key(key), do: to_string(key)
+  def humanize_key(key), do: to_string(key)
 
-  defp format_metadata_value(value) when is_list(value) do
+  @doc false
+  def format_metadata_value(value) when is_list(value) do
     Enum.join(value, ", ")
   end
 
-  defp format_metadata_value(value), do: to_string(value)
+  def format_metadata_value(value), do: to_string(value)
 
   # Helper function for rendering components to string
   defp render_to_string(component_fun, assigns) do
