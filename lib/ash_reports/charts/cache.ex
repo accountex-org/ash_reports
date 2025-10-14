@@ -48,6 +48,8 @@ defmodule AshReports.Charts.Cache do
   @cleanup_interval 60_000
   # 5 minutes default TTL
   @default_ttl 300_000
+  # Maximum number of cache entries (LRU eviction after this limit)
+  @default_max_entries 1000
 
   # Client API
 
@@ -80,9 +82,14 @@ defmodule AshReports.Charts.Cache do
   @spec put(term(), String.t(), keyword()) :: :ok
   def put(key, svg, opts \\ []) when is_binary(svg) do
     ttl = Keyword.get(opts, :ttl, @default_ttl)
-    expires_at = System.monotonic_time(:millisecond) + ttl
+    now = System.monotonic_time(:millisecond)
+    expires_at = now + ttl
 
-    entry = {key, svg, expires_at}
+    # Check if we need to evict entries before inserting
+    evict_if_needed()
+
+    # Store with last_accessed_at timestamp for LRU
+    entry = {key, svg, expires_at, now}
     :ets.insert(@table_name, entry)
 
     :telemetry.execute(
@@ -120,12 +127,17 @@ defmodule AshReports.Charts.Cache do
           {:ok, Compression.compression_metadata()} | {:error, term()}
   def put_compressed(key, svg, opts \\ []) when is_binary(svg) do
     ttl = Keyword.get(opts, :ttl, @default_ttl)
+    now = System.monotonic_time(:millisecond)
 
     case Compression.compress_if_needed(svg, opts) do
       {:ok, :compressed, compressed, metadata} ->
-        expires_at = System.monotonic_time(:millisecond) + ttl
-        # Store with compression flag
-        entry = {key, compressed, expires_at, :compressed, metadata}
+        expires_at = now + ttl
+
+        # Check if we need to evict entries before inserting
+        evict_if_needed()
+
+        # Store with compression flag and last_accessed_at
+        entry = {key, compressed, expires_at, :compressed, metadata, now}
         :ets.insert(@table_name, entry)
 
         :telemetry.execute(
@@ -183,23 +195,45 @@ defmodule AshReports.Charts.Cache do
 
     result =
       case :ets.lookup(@table_name, key) do
-        # Old format (no compression) - 3-tuple
+        # Legacy format (no access time) - 3-tuple - migrate on access
         [{^key, svg, expires_at}] when expires_at > now ->
           increment_cache_hit()
+          # Migrate to new format with access time
+          :ets.insert(@table_name, {key, svg, expires_at, now})
           {:ok, svg}
 
-        # New format (with compression metadata) - 5-tuple
-        [{^key, svg, expires_at, :uncompressed, _metadata}] when expires_at > now ->
+        # Current format with access time - 4-tuple
+        [{^key, svg, expires_at, _last_accessed}] when expires_at > now ->
           increment_cache_hit()
+          # Update access time
+          :ets.insert(@table_name, {key, svg, expires_at, now})
           {:ok, svg}
 
-        [{^key, _svg, expires_at, _compression_flag, _metadata}] when expires_at > now ->
+        # Current format with compression and access time - 6-tuple (uncompressed)
+        [{^key, svg, expires_at, :uncompressed, metadata, _last_accessed}] when expires_at > now ->
+          increment_cache_hit()
+          # Update access time
+          :ets.insert(@table_name, {key, svg, expires_at, :uncompressed, metadata, now})
+          {:ok, svg}
+
+        # Current format with compression and access time - 6-tuple (compressed)
+        [{^key, _data, expires_at, :compressed, _metadata, _last_accessed}] when expires_at > now ->
           # Compressed data - can't return directly, use get_decompressed
           increment_cache_hit()
           {:error, :compressed_data}
 
-        # Expired entry
-        [{^key, _data, _expires_at} | _rest] ->
+        # Expired entries (all formats)
+        [{^key, _data, _expires_at, _flag, _metadata, _last_acc}] ->
+          :ets.delete(@table_name, key)
+          increment_cache_miss()
+          {:error, :not_found}
+
+        [{^key, _data, _expires_at, _last_acc}] ->
+          :ets.delete(@table_name, key)
+          increment_cache_miss()
+          {:error, :not_found}
+
+        [{^key, _data, _expires_at}] ->
           :ets.delete(@table_name, key)
           increment_cache_miss()
           {:error, :not_found}
@@ -239,27 +273,54 @@ defmodule AshReports.Charts.Cache do
 
     result =
       case :ets.lookup(@table_name, key) do
-        # Old format (no compression) - 3-tuple
+        # Legacy format (no compression, no access time) - 3-tuple - migrate on access
         [{^key, svg, expires_at}] when expires_at > now ->
           increment_cache_hit()
+          # Migrate to new format with access time
+          :ets.insert(@table_name, {key, svg, expires_at, now})
           {:ok, svg}
 
-        # New format with uncompressed data
-        [{^key, svg, expires_at, :uncompressed, _metadata}] when expires_at > now ->
+        # Current format with access time - 4-tuple
+        [{^key, svg, expires_at, _last_accessed}] when expires_at > now ->
           increment_cache_hit()
+          # Update access time
+          :ets.insert(@table_name, {key, svg, expires_at, now})
           {:ok, svg}
 
-        # New format with compressed data
-        [{^key, compressed, expires_at, :compressed, _metadata}] when expires_at > now ->
+        # Current format with uncompressed data - 6-tuple
+        [{^key, svg, expires_at, :uncompressed, metadata, _last_accessed}] when expires_at > now ->
+          increment_cache_hit()
+          # Update access time
+          :ets.insert(@table_name, {key, svg, expires_at, :uncompressed, metadata, now})
+          {:ok, svg}
+
+        # Current format with compressed data - 6-tuple
+        [{^key, compressed, expires_at, :compressed, metadata, _last_accessed}]
+        when expires_at > now ->
           increment_cache_hit()
 
           case Compression.decompress(compressed) do
-            {:ok, svg} -> {:ok, svg}
-            {:error, reason} -> {:error, reason}
+            {:ok, svg} ->
+              # Update access time
+              :ets.insert(@table_name, {key, compressed, expires_at, :compressed, metadata, now})
+              {:ok, svg}
+
+            {:error, reason} ->
+              {:error, reason}
           end
 
-        # Expired entry
-        [{^key, _data, _expires_at} | _rest] ->
+        # Expired entries (all formats)
+        [{^key, _data, _expires_at, _flag, _metadata, _last_acc}] ->
+          :ets.delete(@table_name, key)
+          increment_cache_miss()
+          {:error, :not_found}
+
+        [{^key, _data, _expires_at, _last_acc}] ->
+          :ets.delete(@table_name, key)
+          increment_cache_miss()
+          {:error, :not_found}
+
+        [{^key, _data, _expires_at}] ->
           :ets.delete(@table_name, key)
           increment_cache_miss()
           {:error, :not_found}
@@ -430,16 +491,22 @@ defmodule AshReports.Charts.Cache do
     {total_size, compressed_size, compressed_count} =
       Enum.reduce(all_entries, {0, 0, 0}, fn entry, {t_size, c_size, c_count} ->
         case entry do
-          # Old format (no compression metadata)
+          # Legacy format - 3-tuple
           {_key, svg, _expires} ->
             size = byte_size(svg)
             {t_size + size, c_size + size, c_count}
 
-          # New format with compression metadata
-          {_key, data, _expires, :compressed, metadata} ->
+          # Current format with access time - 4-tuple
+          {_key, svg, _expires, _last_accessed} ->
+            size = byte_size(svg)
+            {t_size + size, c_size + size, c_count}
+
+          # Current compressed format with access time - 6-tuple
+          {_key, data, _expires, :compressed, metadata, _last_accessed} ->
             {t_size + metadata.original_size, c_size + byte_size(data), c_count + 1}
 
-          {_key, data, _expires, :uncompressed, _metadata} ->
+          # Current uncompressed format with access time - 6-tuple
+          {_key, data, _expires, :uncompressed, _metadata, _last_accessed} ->
             size = byte_size(data)
             {t_size + size, c_size + size, c_count}
         end
@@ -456,7 +523,11 @@ defmodule AshReports.Charts.Cache do
       compressed_count: compressed_count,
       expired_count: Enum.count(all_entries, fn entry ->
         case entry do
-          {_key, _data, expires, _flag, _meta} -> expires <= now
+          # 6-tuple
+          {_key, _data, expires, _flag, _meta, _last_acc} -> expires <= now
+          # 4-tuple
+          {_key, _data, expires, _last_acc} -> expires <= now
+          # 3-tuple (legacy)
           {_key, _data, expires} -> expires <= now
         end
       end),
@@ -487,14 +558,22 @@ defmodule AshReports.Charts.Cache do
     expired_keys =
       :ets.tab2list(@table_name)
       |> Enum.filter(fn entry ->
-        case entry do
-          {_key, _data, expires_at, _flag, _meta} -> expires_at <= now
-          {_key, _data, expires_at} -> expires_at <= now
-        end
+        expires_at =
+          case entry do
+            # 6-tuple: {key, data, expires, flag, meta, last_accessed}
+            {_key, _data, exp, _flag, _meta, _last_acc} -> exp
+            # 4-tuple: {key, svg, expires, last_accessed}
+            {_key, _data, exp, _last_acc} -> exp
+            # 3-tuple: {key, svg, expires} (legacy)
+            {_key, _data, exp} -> exp
+          end
+
+        expires_at <= now
       end)
       |> Enum.map(fn entry ->
         case entry do
-          {key, _data, _expires_at, _flag, _meta} -> key
+          {key, _data, _expires_at, _flag, _meta, _last_acc} -> key
+          {key, _data, _expires_at, _last_acc} -> key
           {key, _data, _expires_at} -> key
         end
       end)
@@ -540,6 +619,72 @@ defmodule AshReports.Charts.Cache do
 
       _ ->
         :ok
+    end
+  end
+
+  defp evict_if_needed do
+    current_size = :ets.info(@table_name, :size)
+
+    if current_size >= @default_max_entries do
+      # Calculate how many entries to evict (10% of max)
+      evict_count = max(div(@default_max_entries, 10), 1)
+      evict_lru_entries(evict_count)
+    end
+  end
+
+  defp evict_lru_entries(count) do
+    # Get all entries with their access times
+    entries = :ets.tab2list(@table_name)
+
+    # Extract entries with last_accessed_at timestamp
+    entries_with_access =
+      Enum.map(entries, fn entry ->
+        last_accessed =
+          case entry do
+            # 4-tuple format: {key, svg, expires_at, last_accessed}
+            {_key, _data, _expires, last_acc} when is_integer(last_acc) ->
+              last_acc
+
+            # 6-tuple format: {key, data, expires_at, flag, metadata, last_accessed}
+            {_key, _data, _expires, _flag, _metadata, last_acc} when is_integer(last_acc) ->
+              last_acc
+
+            # Old formats without access time - use 0 (will be evicted first)
+            _ ->
+              0
+          end
+
+        {entry, last_accessed}
+      end)
+
+    # Sort by last_accessed (oldest first)
+    sorted_entries =
+      entries_with_access
+      |> Enum.sort_by(fn {_entry, last_accessed} -> last_accessed end)
+      |> Enum.take(count)
+
+    # Delete the LRU entries
+    evicted_keys =
+      Enum.map(sorted_entries, fn {entry, _last_accessed} ->
+        key =
+          case entry do
+            {k, _, _, _} -> k
+            {k, _, _, _, _, _} -> k
+            {k, _, _} -> k
+          end
+
+        :ets.delete(@table_name, key)
+        key
+      end)
+
+    if length(evicted_keys) > 0 do
+      Logger.debug("Evicted #{length(evicted_keys)} LRU entries from cache (limit: #{@default_max_entries})")
+
+      :telemetry.execute(
+        [:ash_reports, :charts, :cache, :eviction],
+        %{count: length(evicted_keys)},
+        %{reason: :lru, limit: @default_max_entries}
+      )
     end
   end
 end
