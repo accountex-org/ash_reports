@@ -430,7 +430,7 @@ defmodule AshReports.PdfRenderer.PageManager do
   end
 
   defp get_report_title(%RenderContext{} = context) do
-    context.report[:title] || "Report"
+    context.report.title || "Report"
   end
 
   defp format_current_date do

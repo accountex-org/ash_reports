@@ -655,7 +655,7 @@ defmodule AshReports.PdfRenderer.PrintOptimizer do
       footer_font: "sans-serif",
       footer_font_size: "10pt",
       first_page_margin_top: "30mm",
-      first_page_header: context.report[:title] || "Report",
+      first_page_header: context.report.title || "Report",
       title_font_size: "16pt"
     }
     |> Map.merge(pdf_config[:page] || %{})

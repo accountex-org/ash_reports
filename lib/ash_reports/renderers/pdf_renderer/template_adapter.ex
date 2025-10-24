@@ -471,7 +471,7 @@ defmodule AshReports.PdfRenderer.TemplateAdapter do
   end
 
   defp get_document_title(%RenderContext{} = context) do
-    context.report[:title] || "AshReports PDF Document"
+    context.report.title || "AshReports PDF Document"
   end
 
   defp cleanup_temp_template_files do
