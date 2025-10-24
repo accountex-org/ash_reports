@@ -72,3 +72,8 @@ if Code.ensure_loaded?(ChromicPDF) do
       margin_right: "0.5in"
     }
 end
+
+# Configure PhoenixTest endpoint (required at compile time)
+if Mix.env() == :test do
+  config :phoenix_test, :endpoint, AshReports.TestEndpoint
+end

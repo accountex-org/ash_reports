@@ -35,7 +35,8 @@ defmodule AshReports.Application do
   use Application
 
   alias AshReports.PdfRenderer.{PdfSessionManager, TempFileCleanup}
-  alias AshReports.Typst.TemplateManager
+  alias AshReports.Typst.StreamingPipeline
+  alias AshReports.Charts.{Registry, Cache, PerformanceMonitor}
 
   @doc """
   Starts the AshReports application supervisor.
@@ -57,8 +58,13 @@ defmodule AshReports.Application do
   """
   def build_supervision_tree do
     base_children = [
-      # Typst Template Manager for managing Typst templates and caching
-      {TemplateManager, []},
+      # StreamingPipeline infrastructure for large dataset processing
+      {StreamingPipeline.Supervisor, []},
+
+      # Chart generation infrastructure (Stage 3)
+      {Registry, []},
+      {Cache, []},
+      {PerformanceMonitor, []},
 
       # PDF Session Manager for tracking active PDF generation sessions
       {PdfSessionManager, []},
@@ -67,10 +73,18 @@ defmodule AshReports.Application do
       {TempFileCleanup, cleanup_config()}
     ]
 
-    if chromic_pdf_available?() do
-      [chromic_pdf_supervisor() | base_children]
+    children_with_pdf =
+      if chromic_pdf_available?() do
+        [chromic_pdf_supervisor() | base_children]
+      else
+        base_children
+      end
+
+    # Add test endpoint in test environment for phoenix_test compatibility
+    if Mix.env() == :test do
+      [AshReports.TestEndpoint | children_with_pdf]
     else
-      base_children
+      children_with_pdf
     end
   end
 

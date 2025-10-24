@@ -12,44 +12,93 @@ unless Code.ensure_loaded?(AshReports.TestHelpers) do
     alias Spark.Dsl.Extension
 
     @doc """
-    Parses DSL content and returns the DSL state.
+    Parses DSL content and returns the DSL module.
 
-    This helper simulates DSL parsing without full module compilation
-    to avoid deadlocks during testing.
+    This helper compiles a temporary module with the DSL content to verify
+    it's valid. The module is cleaned up after the test.
+
+    ## Options
+    - `:extension` - The extension module (default: AshReports)
+    - `:validate` - Whether to run config validation (default: false for testing)
     """
-    def parse_dsl(dsl_content, extension \\ AshReports) do
-      # Create a temporary module for DSL parsing
-      module_name = :"TestModule#{:rand.uniform(999_999)}"
+    def parse_dsl(dsl_content, opts \\ []) do
+      extension = Keyword.get(opts, :extension, AshReports)
+      validate = Keyword.get(opts, :validate, false)
+      validate_option = if validate, do: "", else: ", validate_config_inclusion?: false"
+
+      # Create a temporary module for DSL parsing with unique name
+      module_name = :"TestDomain#{System.unique_integer([:positive])}"
 
       try do
-        Code.eval_string("""
-        defmodule #{module_name} do
-          use Ash.Domain, extensions: [#{extension}]
-          
-          #{dsl_content}
-        end
-        """)
+        # Strip common leading whitespace from DSL content while preserving relative indentation
+        # This handles cases where test DSL strings have indentation from triple-quoted strings
+        lines = String.split(dsl_content, "\n")
 
-        # Extract DSL state using Spark APIs
-        dsl_state = Extension.get_persisted(module_name, :dsl_state)
-        {:ok, dsl_state}
+        # Find minimum indentation (ignoring empty lines)
+        min_indent =
+          lines
+          |> Enum.reject(&(&1 == "" || String.trim(&1) == ""))
+          |> Enum.map(fn line ->
+            line
+            |> String.to_charlist()
+            |> Enum.take_while(&(&1 == ?\s))
+            |> length()
+          end)
+          |> Enum.min(fn -> 0 end)
+
+        # Remove that amount of leading spaces from each line
+        normalized_dsl =
+          lines
+          |> Enum.map(fn line ->
+            if String.trim(line) == "" do
+              ""
+            else
+              String.slice(line, min_indent..-1//1)
+            end
+          end)
+          |> Enum.join("\n")
+          |> String.trim()
+
+        # Indent the normalized DSL by 2 spaces for placement inside the module
+        indented_dsl =
+          normalized_dsl
+          |> String.split("\n")
+          |> Enum.map(fn line ->
+            if String.trim(line) == "" do
+              ""
+            else
+              "  #{line}"
+            end
+          end)
+          |> Enum.join("\n")
+
+        # Compile the module with DSL content using Code.eval_string
+        # This is necessary for DSL macro expansion to work properly
+        code_string = """
+        defmodule #{module_name} do
+          use Ash.Domain, extensions: [#{inspect(extension)}]#{validate_option}
+
+        #{indented_dsl}
+        end
+        """
+
+        Code.eval_string(code_string)
+
+        # If we get here, compilation succeeded
+        {:ok, module_name}
       rescue
         error -> {:error, error}
-      after
-        # Clean up the temporary module
-        if Code.ensure_loaded?(module_name) do
-          :code.delete(module_name)
-          :code.purge(module_name)
-        end
+      catch
+        :error, value -> {:error, value}
       end
     end
 
     @doc """
     Asserts that DSL content is valid and parses correctly.
     """
-    def assert_dsl_valid(dsl_content, extension \\ AshReports) do
-      case parse_dsl(dsl_content, extension) do
-        {:ok, _dsl_state} -> :ok
+    def assert_dsl_valid(dsl_content, opts \\ []) do
+      case parse_dsl(dsl_content, opts) do
+        {:ok, _module} -> :ok
         {:error, error} -> flunk("Expected DSL to be valid, but got error: #{inspect(error)}")
       end
     end
@@ -57,9 +106,9 @@ unless Code.ensure_loaded?(AshReports.TestHelpers) do
     @doc """
     Asserts that DSL content produces a specific error.
     """
-    def assert_dsl_error(dsl_content, expected_error_message, extension \\ AshReports) do
-      case parse_dsl(dsl_content, extension) do
-        {:ok, _dsl_state} ->
+    def assert_dsl_error(dsl_content, expected_error_message, opts \\ []) do
+      case parse_dsl(dsl_content, opts) do
+        {:ok, _module} ->
           flunk("Expected DSL to produce error '#{expected_error_message}', but it was valid")
 
         {:error, error} ->
@@ -71,17 +120,17 @@ unless Code.ensure_loaded?(AshReports.TestHelpers) do
     end
 
     @doc """
-    Extracts entities from a DSL state for testing.
+    Extracts entities from a DSL module for testing.
     """
-    def get_dsl_entities(dsl_state, path) do
-      Extension.get_entities(dsl_state, path)
+    def get_dsl_entities(module, path) when is_atom(module) do
+      Spark.Dsl.Extension.get_entities(module, path)
     end
 
     @doc """
-    Extracts options from a DSL state for testing.
+    Extracts options from a DSL module for testing.
     """
-    def get_dsl_option(dsl_state, path, option_name, default \\ nil) do
-      Extension.get_opt(dsl_state, path, option_name, default)
+    def get_dsl_option(module, path, option_name, default \\ nil) when is_atom(module) do
+      Spark.Dsl.Extension.get_opt(module, path, option_name, default)
     end
 
     @doc """

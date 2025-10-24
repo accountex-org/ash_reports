@@ -69,8 +69,11 @@ defmodule AshReports.Typst.DSLGenerator do
       {:ok, "#let simple_report(data, config) = {\\n  // Title band\\n  = Simple Report\\n}"}
 
   """
-  @spec generate_template(Report.t(), Keyword.t()) :: {:ok, String.t()} | {:error, term()}
-  def generate_template(%Report{} = report, options \\ []) do
+  @spec generate_template(Report.t() | nil, Keyword.t()) :: {:ok, String.t()} | {:error, term()}
+  def generate_template(report, options \\ [])
+  def generate_template(nil, _options), do: {:error, {:generation_failed, :invalid_report}}
+
+  def generate_template(%Report{} = report, options) do
     context = build_generation_context(report, options)
 
     template =
@@ -90,7 +93,11 @@ defmodule AshReports.Typst.DSLGenerator do
     {:ok, template}
   rescue
     error ->
-      Logger.error("Template generation failed for report #{report.name}: #{inspect(error)}")
+      Logger.debug(fn ->
+        "Template generation failed for report #{report.name}: #{inspect(error)}"
+      end)
+
+      Logger.error("Template generation failed for report #{report.name}")
       {:error, {:generation_failed, error}}
   end
 
@@ -142,6 +149,9 @@ defmodule AshReports.Typst.DSLGenerator do
       "Image" ->
         generate_image_element(element, context)
 
+      "Chart" ->
+        generate_chart_element(element, context)
+
       _ ->
         Logger.warning("Unknown element type: #{element_type}")
         "// Unknown element: #{element_type}"
@@ -162,11 +172,25 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   defp generate_debug_info(report) do
+    driving_resource_name =
+      case report.driving_resource do
+        nil ->
+          "None"
+
+        module when is_atom(module) ->
+          module
+          |> Module.split()
+          |> List.last()
+
+        other ->
+          inspect(other)
+      end
+
     """
     // Report Debug Information
     // Name: #{report.name}
     // Title: #{report.title || "Untitled"}
-    // Driving Resource: #{report.driving_resource}
+    // Driving Resource: #{driving_resource_name}
     // Bands: #{length(report.bands || [])}
     // Parameters: #{length(report.parameters || [])}
     """
@@ -430,6 +454,78 @@ defmodule AshReports.Typst.DSLGenerator do
       end
 
     "[#image(\"#{source}\", width: 5cm, #{fit_param})]"
+  end
+
+  defp generate_chart_element(chart, context) do
+    # Check if preprocessed chart data is available
+    chart_data = get_in(context, [:charts, chart.name])
+
+    if chart_data do
+      # Use preprocessed chart
+      generate_preprocessed_chart(chart, chart_data, context)
+    else
+      # No preprocessed data - generate placeholder
+      generate_chart_placeholder(chart, context)
+    end
+  end
+
+  defp generate_preprocessed_chart(chart, chart_data, _context) do
+    lines = []
+
+    # Add title if present
+    lines =
+      case Map.get(chart, :title) do
+        nil -> lines
+        title when is_binary(title) -> lines ++ ["#text(size: 14pt, weight: \"bold\")[#{title}]"]
+        _ -> lines
+      end
+
+    # Add embedded chart code
+    lines = lines ++ [chart_data.embedded_code]
+
+    # Add caption if present
+    lines =
+      case Map.get(chart, :caption) do
+        nil ->
+          lines
+
+        caption when is_binary(caption) ->
+          lines ++ ["#text(size: 10pt, style: \"italic\")[#{caption}]"]
+
+        _ ->
+          lines
+      end
+
+    Enum.join(lines, "\n")
+  end
+
+  defp generate_chart_placeholder(chart, _context) do
+    chart_type = Map.get(chart, :chart_type, :bar)
+    caption = Map.get(chart, :caption)
+    title = Map.get(chart, :title)
+
+    lines = []
+
+    # Add title if present
+    lines =
+      if title do
+        lines ++ ["#text(size: 14pt, weight: \"bold\")[#{title}]"]
+      else
+        lines
+      end
+
+    # Add chart placeholder (will be replaced with actual chart generation)
+    lines = lines ++ ["// Chart: #{chart.name} (#{chart_type})"]
+
+    # Add caption if present
+    lines =
+      if caption do
+        lines ++ ["#text(size: 10pt, style: \"italic\")[#{caption}]"]
+      else
+        lines
+      end
+
+    Enum.join(lines, "\n")
   end
 
   # Private Functions - Expression Conversion

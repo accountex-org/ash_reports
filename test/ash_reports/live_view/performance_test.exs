@@ -10,7 +10,7 @@ defmodule AshReports.LiveView.PerformanceTest do
   """
 
   use ExUnit.Case, async: false
-  use Phoenix.LiveViewTest
+  import Phoenix.LiveViewTest
 
   alias AshReports.LiveView.{
     DistributedConnectionManager,
