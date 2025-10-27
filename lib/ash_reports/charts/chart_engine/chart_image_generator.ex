@@ -1,4 +1,4 @@
-defmodule AshReports.PdfRenderer.ChartImageGenerator do
+defmodule AshReports.ChartEngine.ChartImageGenerator do
   @moduledoc """
   Server-side chart image generation for PDF rendering in Phase 6.3.
 
@@ -10,7 +10,7 @@ defmodule AshReports.PdfRenderer.ChartImageGenerator do
 
   - **High-Quality Image Generation**: 300 DPI chart images for print quality
   - **Multi-Provider Support**: Chart.js, D3.js, Plotly rendering
-  - **Headless Browser Integration**: ChromicPDF/Puppeteer for image generation
+  - **Headless Browser Integration**: Placeholder for future image generation support
   - **Performance Optimization**: Image caching and parallel generation
   - **Format Support**: PNG, SVG, JPEG with configurable quality
   - **RTL and Locale Support**: International chart rendering
@@ -188,43 +188,13 @@ defmodule AshReports.PdfRenderer.ChartImageGenerator do
     """
   end
 
-  defp render_html_to_image(_html_content, image_options) do
-    # Use ChromicPDF for HTML to image conversion
-    _chromic_options = [
-      format: image_options.format,
-      capture_screenshot: %{
-        format: to_string(image_options.format),
-        quality: calculate_image_quality(image_options),
-        clip: %{
-          x: 0,
-          y: 0,
-          width: image_options.width,
-          height: image_options.height
-        }
-      },
-      evaluate: %{
-        await_selector: ".ash-chart-container canvas",
-        timeout: 10_000
-      }
-    ]
-
-    # For now, return a placeholder as ChromicPDF is not available in all environments
-    case Application.ensure_loaded(ChromicPDF) do
-      _ ->
-        {:error, "ChromicPDF not available"}
-    end
+  defp render_html_to_image(_html_content, _image_options) do
+    # Placeholder for future HTML to image conversion
+    # TODO: Implement chart image generation using a headless browser or similar tool
+    # This would be used to generate chart images for embedding in PDF reports
+    {:error, "Chart image generation not yet implemented"}
   rescue
     error -> {:error, "Image rendering failed: #{Exception.message(error)}"}
-  end
-
-  defp calculate_image_quality(image_options) do
-    case image_options.format do
-      :jpeg -> min(100, max(10, image_options.quality || 85))
-      # PNG is lossless
-      :png -> 100
-      :webp -> min(100, max(10, image_options.quality || 80))
-      _ -> 85
-    end
   end
 
   # Cache management

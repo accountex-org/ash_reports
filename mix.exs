@@ -61,7 +61,6 @@ defmodule AshReports.MixProject do
       {:gettext, "~> 0.24"},
 
       # Optional dependencies
-      {:chromic_pdf, "~> 1.17", optional: true},
       {:phoenix_live_view, "~> 0.20", optional: true},
 
       # Development and test dependencies

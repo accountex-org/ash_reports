@@ -63,7 +63,7 @@ defmodule AshReports.JsonRenderer.ChartApi do
   use Plug.Router
 
   alias AshReports.ChartEngine.{ChartConfig, ChartDataProcessor}
-  alias AshReports.PdfRenderer.ChartImageGenerator
+  alias AshReports.ChartEngine.ChartImageGenerator
   alias AshReports.{InteractiveEngine, RenderContext}
   alias AshReports.Security.AtomValidator
 

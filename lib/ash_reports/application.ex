@@ -1,32 +1,21 @@
 defmodule AshReports.Application do
   @moduledoc """
-  AshReports Application - Supervisor for PDF generation and other runtime services.
+  AshReports Application - Supervisor for runtime services.
 
-  This application module provides supervision for ChromicPDF processes and other
-  runtime services needed by AshReports, particularly for PDF generation capabilities.
+  This application module provides supervision for runtime services needed by
+  AshReports, including streaming pipeline infrastructure and chart generation.
 
   ## Services Supervised
 
-  - **ChromicPDF Supervisor**: Manages ChromicPDF browser processes for PDF generation
-  - **PDF Session Manager**: Tracks active PDF generation sessions and cleanup
-  - **Temporary File Cleanup**: Periodic cleanup of temporary PDF generation files
-
-  ## Configuration
-
-  The application can be configured through application environment:
-
-      config :ash_reports,
-        chromic_pdf: [
-          chrome_args: ["--no-sandbox", "--disable-gpu"],
-          session_pool_size: 2,
-          timeout: 60_000
-        ],
-        pdf_temp_cleanup_interval: 3_600_000  # 1 hour
+  - **Typst StreamingPipeline**: Manages large dataset processing with GenStage
+  - **Chart Registry**: Tracks active chart instances
+  - **Chart Cache**: Caches chart data for performance
+  - **Performance Monitor**: Monitors system performance metrics
 
   ## Usage
 
-  This application is automatically started when AshReports is used and PDF
-  generation is requested. It can also be started manually:
+  This application is automatically started when AshReports is used. It can also
+  be started manually:
 
       {:ok, pid} = AshReports.Application.start(:normal, [])
 
@@ -34,14 +23,13 @@ defmodule AshReports.Application do
 
   use Application
 
-  alias AshReports.PdfRenderer.{PdfSessionManager, TempFileCleanup}
   alias AshReports.Typst.StreamingPipeline
   alias AshReports.Charts.{Registry, Cache, PerformanceMonitor}
 
   @doc """
   Starts the AshReports application supervisor.
 
-  Starts supervision tree with ChromicPDF, session management, and cleanup services.
+  Starts supervision tree with streaming pipeline, chart infrastructure, and other services.
   """
   def start(_type, _args) do
     children = build_supervision_tree()
@@ -51,10 +39,9 @@ defmodule AshReports.Application do
   end
 
   @doc """
-  Builds the supervision tree based on configuration and available dependencies.
+  Builds the supervision tree for AshReports runtime services.
 
-  Only includes ChromicPDF supervision if the dependency is available and
-  PDF generation is configured.
+  Includes streaming pipeline, chart infrastructure, and test endpoint when applicable.
   """
   def build_supervision_tree do
     base_children = [
@@ -64,108 +51,15 @@ defmodule AshReports.Application do
       # Chart generation infrastructure (Stage 3)
       {Registry, []},
       {Cache, []},
-      {PerformanceMonitor, []},
-
-      # PDF Session Manager for tracking active PDF generation sessions
-      {PdfSessionManager, []},
-
-      # Periodic cleanup of temporary files
-      {TempFileCleanup, cleanup_config()}
+      {PerformanceMonitor, []}
     ]
-
-    children_with_pdf =
-      if chromic_pdf_available?() do
-        [chromic_pdf_supervisor() | base_children]
-      else
-        base_children
-      end
 
     # Add test endpoint in test environment for phoenix_test compatibility
     if Mix.env() == :test do
-      [AshReports.TestEndpoint | children_with_pdf]
+      [AshReports.TestEndpoint | base_children]
     else
-      children_with_pdf
+      base_children
     end
   end
 
-  @doc """
-  Checks if ChromicPDF is available and properly configured.
-  """
-  def chromic_pdf_available? do
-    # Check if PDF generation is explicitly disabled
-    case Application.get_env(:ash_reports, :enable_pdf, true) do
-      false ->
-        false
-
-      _ ->
-        with {:module, ChromicPDF} <- Code.ensure_loaded(ChromicPDF),
-             true <- chrome_executable_available?() do
-          true
-        else
-          _ -> false
-        end
-    end
-  end
-
-  @doc """
-  Checks if a Chrome executable is available on the system.
-  """
-  def chrome_executable_available? do
-    chrome_paths = [
-      "chromium-browser",
-      "chromium",
-      "google-chrome",
-      "chrome",
-      "chrome.exe",
-      "/usr/bin/chromium-browser",
-      "/usr/bin/chromium",
-      "/usr/bin/google-chrome",
-      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-      "/Applications/Chromium.app/Contents/MacOS/Chromium"
-    ]
-
-    Enum.any?(chrome_paths, fn path ->
-      case System.find_executable(path) do
-        nil -> false
-        _ -> true
-      end
-    end)
-  end
-
-  @doc """
-  Gets ChromicPDF configuration for supervision.
-  """
-  def chromic_pdf_config do
-    Application.get_env(:ash_reports, :chromic_pdf, default_chromic_config())
-  end
-
-  # Private functions
-
-  defp chromic_pdf_supervisor do
-    chromic_config = chromic_pdf_config()
-    {ChromicPDF, chromic_config}
-  end
-
-  defp cleanup_config do
-    %{
-      interval: Application.get_env(:ash_reports, :pdf_temp_cleanup_interval, 3_600_000),
-      temp_dir_patterns: [
-        "ash_reports_*.html",
-        "ash_reports_*.pdf",
-        "ash_reports_template_*.html"
-      ],
-      # 2 hours
-      max_age_seconds: 7200
-    }
-  end
-
-  defp default_chromic_config do
-    [
-      chrome_args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
-      session_pool_size: 2,
-      timeout: 60_000,
-      ignore_certificate_errors: false,
-      user_data_dir: Path.join(System.tmp_dir(), "ash_reports_chrome_data")
-    ]
-  end
 end

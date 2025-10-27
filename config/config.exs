@@ -60,19 +60,6 @@ config :ash_reports, :typst,
   max_cache_size: 100,
   timeout: :timer.seconds(30)
 
-# ChromicPDF configuration for PDF generation
-if Code.ensure_loaded?(ChromicPDF) do
-  config :chromic_pdf,
-    session_pool: [size: 2],
-    offline: true,
-    print_to_pdf: %{
-      margin_top: "0.5in",
-      margin_bottom: "0.5in",
-      margin_left: "0.5in",
-      margin_right: "0.5in"
-    }
-end
-
 # Configure PhoenixTest endpoint (required at compile time)
 if Mix.env() == :test do
   config :phoenix_test, :endpoint, AshReports.TestEndpoint
