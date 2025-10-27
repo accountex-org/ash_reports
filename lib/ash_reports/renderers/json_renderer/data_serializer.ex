@@ -327,7 +327,10 @@ defmodule AshReports.JsonRenderer.DataSerializer do
 
   defp serialize_key(key, _opts) when is_atom(key), do: to_string(key)
   defp serialize_key(key, _opts) when is_binary(key), do: key
-  defp serialize_key(key, _opts), do: to_string(key)
+  defp serialize_key(key, _opts) when is_integer(key), do: Integer.to_string(key)
+  defp serialize_key(key, _opts) when is_float(key), do: Float.to_string(key)
+  # For complex types (maps, tuples, lists, etc.), use inspect to get a string representation
+  defp serialize_key(key, _opts), do: inspect(key)
 
   defp serialize_list(list, opts) do
     list

@@ -34,7 +34,7 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
 
   """
 
-  alias AshReports.{JsonRenderer.SchemaManager, RenderContext}
+  alias AshReports.{JsonRenderer.DataSerializer, JsonRenderer.SchemaManager, RenderContext}
 
   @type build_options :: [
           include_navigation: boolean(),
@@ -272,11 +272,15 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   end
 
   defp build_report_metadata(%RenderContext{} = context, opts) do
+    # Serialize variables and groups to ensure JSON compatibility
+    {:ok, serialized_variables} = DataSerializer.serialize_variables(context.variables)
+    {:ok, serialized_groups} = DataSerializer.serialize_groups(context.groups)
+
     base_metadata = %{
       record_count: length(context.records),
       processing_time_ms: get_processing_time(context),
-      variables: context.variables,
-      groups: context.groups
+      variables: serialized_variables,
+      groups: serialized_groups
     }
 
     if Keyword.get(opts, :include_metadata, true) do
