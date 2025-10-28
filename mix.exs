@@ -70,6 +70,7 @@ defmodule AshReports.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
+      {:ex_check, "~> 0.12", only: [:dev, :test]},
 
       # Typst integration dependencies
       {:typst, "~> 0.1.7"},
