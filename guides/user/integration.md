@@ -1,22 +1,23 @@
 # Integration Guide
 
-This guide covers integrating AshReports with Phoenix, LiveView, external systems, APIs, and deployment scenarios.
+This guide covers integrating AshReports with Phoenix, LiveView, and basic deployment scenarios.
+
+> **Note**: This guide reflects current basic integration capabilities. For planned features like scheduled reports, webhook notifications, and advanced LiveView features, see [ROADMAP.md Phase 9](../../ROADMAP.md#phase-9-integration-enhancements).
 
 ## Table of Contents
 
 - [Phoenix Integration](#phoenix-integration)
 - [LiveView Integration](#liveview-integration)
-- [API Integration](#api-integration)
-- [External System Integration](#external-system-integration)
+- [API Endpoints](#api-endpoints)
 - [Authentication and Authorization](#authentication-and-authorization)
-- [Deployment and Production](#deployment-and-production)
+- [Deployment Considerations](#deployment-considerations)
 - [Troubleshooting](#troubleshooting)
 
 ## Phoenix Integration
 
 ### Basic Phoenix Setup
 
-First, add AshReports to your Phoenix application:
+Add AshReports to your Phoenix application:
 
 ```elixir
 # mix.exs
@@ -25,1606 +26,727 @@ def deps do
     {:ash_reports, "~> 0.1.0"},
     {:phoenix, "~> 1.7"},
     {:phoenix_html, "~> 4.0"},
-    {:phoenix_live_view, "~> 0.20"}
+    {:phoenix_live_view, "~> 0.20"}  # Optional, for LiveView integration
   ]
 end
-
-# config/config.exs
-config :ash_reports,
-  default_domain: MyAppWeb.Domain,
-  renderers: %{
-    html: AshReports.HtmlRenderer,
-    pdf: AshReports.PdfRenderer,
-    json: AshReports.JsonRenderer,
-    heex: AshReports.HeexRenderer
-  }
 ```
 
 ### Phoenix Controller Integration
 
+> **API Note**: AshReports provides two APIs for generating reports:
+> - `AshReports.generate(domain, report, params, format)` - Simple API for basic use
+> - `AshReports.Runner.run_report(domain, report, params, opts)` - Full API with additional options
+>
+> The examples below use `Runner.run_report` to show the full implementation pattern, but you can use the simpler `generate/4` function for basic cases.
+
+Create a controller to handle report generation:
+
 ```elixir
 defmodule MyAppWeb.ReportsController do
   use MyAppWeb, :controller
-  
+
   def index(conn, _params) do
     # List available reports
     reports = AshReports.Info.reports(MyApp.Domain)
-    render(conn, :index, reports: reports)
+
+    # Transform to displayable format
+    reports_list = Enum.map(reports, fn report ->
+      %{
+        name: report.name,
+        title: report.title,
+        description: report.description
+      }
+    end)
+
+    render(conn, :index, reports: reports_list)
   end
-  
+
   def show(conn, %{"id" => report_name} = params) do
-    report_name = String.to_existing_atom(report_name)
+    report_name_atom = String.to_existing_atom(report_name)
     format = Map.get(params, "format", "html") |> String.to_existing_atom()
-    
+
     # Extract report parameters from query string
-    report_params = extract_report_params(params)
-    
-    case AshReports.generate(MyApp.Domain, report_name, report_params, format) do
-      {:ok, content} ->
-        send_report_response(conn, content, format, report_name)
-      
+    report_params = extract_report_params(params, report_name_atom)
+
+    # Generate the report
+    case AshReports.Runner.run_report(
+      MyApp.Domain,
+      report_name_atom,
+      report_params,
+      format: format
+    ) do
+      {:ok, result} ->
+        send_report_response(conn, result, format, report_name)
+
       {:error, error} ->
         conn
-        |> put_status(:bad_request)
-        |> json(%{error: inspect(error)})
+        |> put_flash(:error, "Failed to generate report: #{inspect(error)}")
+        |> redirect(to: ~p"/reports")
     end
   end
-  
-  def preview(conn, %{"report" => report_params}) do
-    # Generate report preview with limited data
-    limited_params = Map.put(report_params, "limit", 10)
-    report_name = String.to_existing_atom(report_params["name"])
-    
-    case AshReports.generate(MyApp.Domain, report_name, limited_params, :html) do
-      {:ok, html_content} ->
-        json(conn, %{
-          success: true,
-          preview: html_content,
-          message: "Preview generated successfully"
-        })
-      
-      {:error, error} ->
-        json(conn, %{
-          success: false,
-          error: inspect(error)
-        })
+
+  defp extract_report_params(params, report_name) do
+    # Get report definition to know which parameters to extract
+    report = AshReports.Info.report(MyApp.Domain, report_name)
+
+    # Build parameter map from query string
+    Enum.reduce(report.parameters || [], %{}, fn param, acc ->
+      param_key = Atom.to_string(param.name)
+
+      if Map.has_key?(params, param_key) do
+        Map.put(acc, param.name, parse_param_value(params[param_key], param.type))
+      else
+        acc
+      end
+    end)
+  end
+
+  defp parse_param_value(value, :date) do
+    case Date.from_iso8601(value) do
+      {:ok, date} -> date
+      _ -> nil
     end
   end
-  
-  defp extract_report_params(params) do
-    # Extract parameters based on report definition
-    params
-    |> Map.drop(["id", "format", "_format"])
-    |> Enum.into(%{}, fn {k, v} -> {String.to_existing_atom(k), parse_param_value(v)} end)
-  end
-  
-  defp parse_param_value(value) when is_binary(value) do
-    cond do
-      Regex.match?(~r/^\d{4}-\d{2}-\d{2}$/, value) ->
-        Date.from_iso8601!(value)
-      
-      Regex.match?(~r/^\d+$/, value) ->
-        String.to_integer(value)
-      
-      Regex.match?(~r/^\d+\.\d+$/, value) ->
-        Decimal.new(value)
-      
-      value in ["true", "false"] ->
-        value == "true"
-      
-      true ->
-        value
+
+  defp parse_param_value(value, :integer) do
+    case Integer.parse(value) do
+      {int, _} -> int
+      _ -> nil
     end
   end
-  
-  defp parse_param_value(value), do: value
-  
-  defp send_report_response(conn, content, format, report_name) do
+
+  defp parse_param_value(value, :decimal) do
+    case Decimal.parse(value) do
+      {dec, _} -> dec
+      _ -> nil
+    end
+  end
+
+  defp parse_param_value(value, :boolean) do
+    value in ["true", "1", "yes"]
+  end
+
+  defp parse_param_value(value, _type), do: value
+
+  defp send_report_response(conn, result, format, report_name) do
     case format do
       :html ->
         conn
         |> put_resp_content_type("text/html")
-        |> send_resp(200, content)
-      
+        |> send_resp(200, result.content)
+
       :pdf ->
         filename = "#{report_name}_#{Date.utc_today()}.pdf"
         conn
         |> put_resp_content_type("application/pdf")
-        |> put_resp_header("content-disposition", "attachment; filename=\"#{filename}\"")
-        |> send_resp(200, content)
-      
+        |> put_resp_header("content-disposition", ~s(attachment; filename="#{filename}"))
+        |> send_resp(200, result.content)
+
       :json ->
+        json(conn, result.content)
+
+      :heex ->
+        # HEEX is typically used with LiveView, not direct download
         conn
-        |> put_resp_content_type("application/json")
-        |> send_resp(200, content)
-      
-      :csv ->
-        filename = "#{report_name}_#{Date.utc_today()}.csv"
-        conn
-        |> put_resp_content_type("text/csv")
-        |> put_resp_header("content-disposition", "attachment; filename=\"#{filename}\"")
-        |> send_resp(200, content)
+        |> put_resp_content_type("text/plain")
+        |> send_resp(200, result.content)
     end
   end
 end
 ```
 
-### Phoenix Router Configuration
+### Router Configuration
 
 ```elixir
 # lib/my_app_web/router.ex
 defmodule MyAppWeb.Router do
   use MyAppWeb, :router
-  
-  scope "/reports", MyAppWeb do
-    pipe_through :browser
-    
-    # Report management routes
-    get "/", ReportsController, :index
-    get "/preview", ReportsController, :preview
-    get "/:id", ReportsController, :show
-    
-    # Format-specific routes
-    get "/:id/pdf", ReportsController, :show, format: :pdf
-    get "/:id/csv", ReportsController, :show, format: :csv
-    
-    # Live report routes (see LiveView section)
-    live "/live/:report_name", ReportsLive.Show, :show
-    live "/dashboard", ReportsLive.Dashboard, :index
+
+  pipeline :browser do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {MyAppWeb.Layouts, :root}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
   end
-  
-  # API routes
-  scope "/api/reports", MyAppWeb do
-    pipe_through :api
-    
-    post "/generate", Api.ReportsController, :generate
-    get "/status/:job_id", Api.ReportsController, :status
-    post "/schedule", Api.ReportsController, :schedule
+
+  pipeline :api do
+    plug :accepts, ["json"]
+  end
+
+  scope "/", MyAppWeb do
+    pipe_through :browser
+
+    get "/", PageController, :home
+
+    # Report routes
+    get "/reports", ReportsController, :index
+    get "/reports/:id", ReportsController, :show
   end
 end
 ```
 
-### Phoenix Templates
+### Report Parameter Form
+
+Create a form for users to input report parameters:
 
 ```heex
-<!-- lib/my_app_web/controllers/reports_html/index.html.heex -->
-<div class="reports-index">
-  <h1>Available Reports</h1>
-  
-  <div class="reports-grid">
-    <%= for report <- @reports do %>
-      <div class="report-card">
-        <h3><%= report.title || report.name %></h3>
-        <p><%= report.description %></p>
-        
-        <div class="report-actions">
-          <%= link "View HTML", to: ~p"/reports/#{report.name}", class: "btn btn-primary" %>
-          <%= link "Download PDF", to: ~p"/reports/#{report.name}/pdf", class: "btn btn-secondary" %>
-          <%= link "Live View", to: ~p"/reports/live/#{report.name}", class: "btn btn-live" %>
-        </div>
-        
-        <!-- Parameter form if report has parameters -->
-        <%= if length(report.parameters) > 0 do %>
-          <form class="report-params" action={~p"/reports/#{report.name}"} method="get">
-            <%= for param <- report.parameters do %>
-              <div class="param-input">
-                <label for={"param_#{param.name}"}><%= humanize(param.name) %></label>
-                <%= render_param_input(param) %>
-              </div>
-            <% end %>
-            
-            <div class="format-selector">
-              <label for="format">Format:</label>
-              <select name="format" id="format">
-                <option value="html">HTML</option>
-                <option value="pdf">PDF</option>
-                <option value="json">JSON</option>
-                <option value="csv">CSV</option>
-              </select>
-            </div>
-            
-            <button type="submit" class="btn btn-primary">Generate Report</button>
-          </form>
+<%# lib/my_app_web/controllers/reports_html/show_form.html.heex %>
+<.header>
+  Generate Report: <%= @report.title %>
+</.header>
+
+<div class="mt-4">
+  <.form :let={f} for={%{}} action={~p"/reports/#{@report.name}"} method="get">
+    <%= for param <- @report.parameters do %>
+      <div class="mb-4">
+        <.label for={param.name}><%= humanize(param.name) %></.label>
+        <%= case param.type do %>
+          <% :date -> %>
+            <.input
+              type="date"
+              name={param.name}
+              required={param.required}
+            />
+          <% :integer -> %>
+            <.input
+              type="number"
+              name={param.name}
+              required={param.required}
+            />
+          <% :boolean -> %>
+            <.input
+              type="checkbox"
+              name={param.name}
+            />
+          <% _ -> %>
+            <.input
+              type="text"
+              name={param.name}
+              required={param.required}
+            />
         <% end %>
       </div>
     <% end %>
-  </div>
-</div>
 
-<script>
-  // Report parameter form handling
-  document.querySelectorAll('.report-params').forEach(form => {
-    form.addEventListener('submit', function(e) {
-      const submitBtn = form.querySelector('button[type="submit"]');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Generating...';
-    });
-  });
-</script>
+    <div class="mb-4">
+      <.label for="format">Output Format</.label>
+      <.input type="select" name="format" options={[
+        {"HTML", "html"},
+        {"PDF", "pdf"},
+        {"JSON", "json"}
+      ]} />
+    </div>
+
+    <.button type="submit">Generate Report</.button>
+  </.form>
+</div>
 ```
 
 ## LiveView Integration
 
-### Basic LiveView Report Display
+### Basic LiveView Report Viewer
+
+> **Note**: Full LiveView integration with real-time updates and interactive features is planned. See [ROADMAP.md Phase 9](../../ROADMAP.md#phase-9-integration-enhancements). Current implementation provides basic rendering.
 
 ```elixir
-defmodule MyAppWeb.ReportsLive.Show do
+defmodule MyAppWeb.ReportLive.Show do
   use MyAppWeb, :live_view
-  
+
+  @impl true
   def mount(%{"report_name" => report_name}, _session, socket) do
-    report_atom = String.to_existing_atom(report_name)
-    report_info = AshReports.Info.report(MyApp.Domain, report_atom)
-    
-    if connected?(socket) do
-      # Set up real-time updates if needed
-      :timer.send_interval(30_000, self(), :refresh_data)
-    end
-    
+    report_name_atom = String.to_existing_atom(report_name)
+    report = AshReports.Info.report(MyApp.Domain, report_name_atom)
+
     socket =
       socket
-      |> assign(:report_name, report_atom)
-      |> assign(:report_info, report_info)
-      |> assign(:parameters, initialize_parameters(report_info.parameters))
-      |> assign(:report_content, nil)
+      |> assign(:report, report)
+      |> assign(:report_name, report_name_atom)
+      |> assign(:params, %{})
+      |> assign(:result, nil)
       |> assign(:loading, false)
       |> assign(:error, nil)
-    
+
     {:ok, socket}
   end
-  
-  def handle_event("generate_report", %{"parameters" => params}, socket) do
+
+  @impl true
+  def handle_event("generate", params, socket) do
     socket = assign(socket, :loading, true)
-    
+
+    # Parse parameters
+    parsed_params = parse_report_params(params, socket.assigns.report)
+
     # Generate report asynchronously
-    Task.Supervisor.async_nolink(MyApp.TaskSupervisor, fn ->
-      AshReports.generate(
-        MyApp.Domain,
-        socket.assigns.report_name,
-        params,
-        :heex
-      )
-    end)
-    
-    {:noreply, socket}
-  end
-  
-  def handle_event("update_parameter", %{"name" => param_name, "value" => value}, socket) do
-    param_atom = String.to_existing_atom(param_name)
-    parsed_value = parse_parameter_value(value, param_atom, socket.assigns.report_info)
-    
-    updated_params = Map.put(socket.assigns.parameters, param_atom, parsed_value)
-    
-    {:noreply, assign(socket, :parameters, updated_params)}
-  end
-  
-  def handle_event("export_report", %{"format" => format}, socket) do
-    if socket.assigns.report_content do
-      format_atom = String.to_existing_atom(format)
-      
-      Task.Supervisor.async_nolink(MyApp.TaskSupervisor, fn ->
-        AshReports.generate(
-          MyApp.Domain,
-          socket.assigns.report_name,
-          socket.assigns.parameters,
-          format_atom
-        )
-      end)
-      
-      {:noreply, push_event(socket, "download_preparing", %{format: format})}
-    else
-      {:noreply, put_flash(socket, :error, "Please generate the report first")}
-    end
-  end
-  
-  def handle_info(:refresh_data, socket) do
-    # Auto-refresh report data if it's currently displayed
-    if socket.assigns.report_content && not socket.assigns.loading do
-      send(self(), {:generate_report, socket.assigns.parameters})
-    end
-    
-    {:noreply, socket}
-  end
-  
-  def handle_info({_task_ref, {:ok, report_content}}, socket) do
-    socket =
-      socket
-      |> assign(:report_content, report_content)
-      |> assign(:loading, false)
-      |> assign(:error, nil)
-    
-    {:noreply, socket}
-  end
-  
-  def handle_info({_task_ref, {:error, error}}, socket) do
-    socket =
-      socket
-      |> assign(:loading, false)
-      |> assign(:error, inspect(error))
-    
-    {:noreply, socket}
-  end
-  
-  def handle_info({:DOWN, _ref, :process, _pid, _reason}, socket) do
-    # Task completed or crashed
-    {:noreply, assign(socket, :loading, false)}
-  end
-  
-  defp initialize_parameters(param_definitions) do
-    Enum.into(param_definitions, %{}, fn param ->
-      {param.name, param.default}
-    end)
-  end
-  
-  defp parse_parameter_value(value, param_name, report_info) do
-    param_def = Enum.find(report_info.parameters, &(&1.name == param_name))
-    
-    case param_def.type do
-      :date -> Date.from_iso8601!(value)
-      :integer -> String.to_integer(value)
-      :decimal -> Decimal.new(value)
-      :boolean -> value == "true"
-      _ -> value
-    end
-  end
-end
-```
+    send(self(), {:generate_report, parsed_params})
 
-### LiveView Template
+    {:noreply, socket}
+  end
 
-```heex
-<!-- lib/my_app_web/live/reports_live/show.html.heex -->
-<div class="live-report-container">
-  <div class="report-header">
-    <h1><%= @report_info.title || @report_name %></h1>
-    <p class="report-description"><%= @report_info.description %></p>
-  </div>
-  
-  <!-- Parameter Controls -->
-  <div class="report-controls">
-    <h3>Report Parameters</h3>
-    
-    <form phx-change="update_parameter" phx-submit="generate_report">
-      <%= for param <- @report_info.parameters do %>
-        <div class="parameter-control">
-          <label for={"param_#{param.name}"}><%= humanize(param.name) %></label>
-          
-          <%= case param.type do %>
-            <% :date -> %>
-              <input 
-                type="date" 
-                id={"param_#{param.name}"}
-                name={"parameters[#{param.name}]"}
-                value={@parameters[param.name]}
-                phx-debounce="500"
-              />
-            
-            <% :integer -> %>
-              <input 
-                type="number" 
-                id={"param_#{param.name}"}
-                name={"parameters[#{param.name}]"}
-                value={@parameters[param.name]}
-                phx-debounce="500"
-              />
-            
-            <% :boolean -> %>
-              <input 
-                type="checkbox" 
-                id={"param_#{param.name}"}
-                name={"parameters[#{param.name}]"}
-                checked={@parameters[param.name]}
-              />
-            
-            <% _ -> %>
-              <input 
-                type="text" 
-                id={"param_#{param.name}"}
-                name={"parameters[#{param.name}]"}
-                value={@parameters[param.name]}
-                phx-debounce="500"
-              />
+  @impl true
+  def handle_info({:generate_report, params}, socket) do
+    case AshReports.Runner.run_report(
+      MyApp.Domain,
+      socket.assigns.report_name,
+      params,
+      format: :html
+    ) do
+      {:ok, result} ->
+        {:noreply,
+         socket
+         |> assign(:result, result)
+         |> assign(:loading, false)
+         |> assign(:error, nil)}
+
+      {:error, error} ->
+        {:noreply,
+         socket
+         |> assign(:loading, false)
+         |> assign(:error, inspect(error))}
+    end
+  end
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="report-viewer">
+      <.header>
+        <%= @report.title %>
+        <:subtitle><%= @report.description %></:subtitle>
+      </.header>
+
+      <div class="mt-4">
+        <.form for={%{}} phx-submit="generate">
+          <%= for param <- @report.parameters do %>
+            <div class="mb-4">
+              <.label><%= humanize(param.name) %></.label>
+              <%= render_param_input(param) %>
+            </div>
           <% end %>
+
+          <.button type="submit" disabled={@loading}>
+            <%= if @loading, do: "Generating...", else: "Generate Report" %>
+          </.button>
+        </.form>
+      </div>
+
+      <%= if @error do %>
+        <.error class="mt-4">
+          <%= @error %>
+        </.error>
+      <% end %>
+
+      <%= if @result do %>
+        <div class="mt-8 report-content">
+          <%= Phoenix.HTML.raw(@result.content) %>
+        </div>
+
+        <div class="mt-4 text-sm text-gray-600">
+          Generated in <%= @result.metadata.execution_time_ms %>ms
         </div>
       <% end %>
-      
-      <div class="control-actions">
-        <button 
-          type="submit" 
-          class="btn btn-primary"
-          disabled={@loading}
-        >
-          <%= if @loading, do: "Generating...", else: "Generate Report" %>
-        </button>
-        
-        <%= if @report_content do %>
-          <button 
-            type="button" 
-            phx-click="export_report"
-            phx-value-format="pdf"
-            class="btn btn-secondary"
-          >
-            Export PDF
-          </button>
-          
-          <button 
-            type="button" 
-            phx-click="export_report"
-            phx-value-format="csv"
-            class="btn btn-secondary"
-          >
-            Export CSV
-          </button>
-        <% end %>
-      </div>
-    </form>
-  </div>
-  
-  <!-- Loading Indicator -->
-  <%= if @loading do %>
-    <div class="loading-container">
-      <div class="spinner"></div>
-      <p>Generating report...</p>
     </div>
-  <% end %>
-  
-  <!-- Error Display -->
-  <%= if @error do %>
-    <div class="error-container">
-      <h3>Error Generating Report</h3>
-      <pre><%= @error %></pre>
-    </div>
-  <% end %>
-  
-  <!-- Report Content -->
-  <%= if @report_content do %>
-    <div class="report-content">
-      <%= raw(@report_content) %>
-    </div>
-  <% end %>
-</div>
+    """
+  end
 
-<style>
-  .live-report-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-  
-  .report-controls {
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-  }
-  
-  .parameter-control {
-    margin-bottom: 15px;
-  }
-  
-  .parameter-control label {
-    display: block;
-    font-weight: bold;
-    margin-bottom: 5px;
-  }
-  
-  .parameter-control input {
-    width: 100%;
-    max-width: 300px;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-  }
-  
-  .control-actions {
-    margin-top: 20px;
-  }
-  
-  .control-actions button {
-    margin-right: 10px;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  .btn-primary {
-    background: #007bff;
-    color: white;
-  }
-  
-  .btn-secondary {
-    background: #6c757d;
-    color: white;
-  }
-  
-  .loading-container {
-    text-align: center;
-    padding: 40px;
-  }
-  
-  .spinner {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 2s linear infinite;
-    margin: 0 auto 20px;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  .error-container {
-    background: #f8d7da;
-    color: #721c24;
-    padding: 20px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-  }
-  
-  .report-content {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    overflow-x: auto;
-  }
-</style>
-```
+  defp render_param_input(param) do
+    # Helper to render appropriate input for parameter type
+    # Implementation depends on your form component library
+  end
 
-### Interactive Dashboard LiveView
-
-```elixir
-defmodule MyAppWeb.ReportsLive.Dashboard do
-  use MyAppWeb, :live_view
-  
-  def mount(_params, _session, socket) do
-    if connected?(socket) do
-      :timer.send_interval(60_000, self(), :update_dashboard)  # Update every minute
-    end
-    
-    socket =
-      socket
-      |> assign(:selected_filters, %{})
-      |> assign(:dashboard_tiles, [])
-      |> assign(:real_time_data, %{})
-      |> load_dashboard_data()
-    
-    {:ok, socket}
-  end
-  
-  def handle_event("filter_change", %{"filter" => filter, "value" => value}, socket) do
-    updated_filters = Map.put(socket.assigns.selected_filters, filter, value)
-    
-    socket =
-      socket
-      |> assign(:selected_filters, updated_filters)
-      |> load_dashboard_data()
-    
-    {:noreply, socket}
-  end
-  
-  def handle_event("refresh_tile", %{"tile_id" => tile_id}, socket) do
-    # Refresh specific dashboard tile
-    Task.async(fn ->
-      refresh_dashboard_tile(tile_id, socket.assigns.selected_filters)
-    end)
-    
-    {:noreply, socket}
-  end
-  
-  def handle_event("drill_down", %{"report" => report_name, "filters" => filters}, socket) do
-    # Navigate to detailed report with filters
-    {:noreply, 
-     push_navigate(socket, 
-       to: ~p"/reports/live/#{report_name}?#{URI.encode_query(filters)}")
-    }
-  end
-  
-  def handle_info(:update_dashboard, socket) do
-    socket = load_dashboard_data(socket)
-    {:noreply, socket}
-  end
-  
-  def handle_info({_ref, {:tile_updated, tile_id, data}}, socket) do
-    updated_tiles = 
-      Enum.map(socket.assigns.dashboard_tiles, fn tile ->
-        if tile.id == tile_id, do: %{tile | data: data}, else: tile
-      end)
-    
-    {:noreply, assign(socket, :dashboard_tiles, updated_tiles)}
-  end
-  
-  defp load_dashboard_data(socket) do
-    # Generate multiple summary reports for dashboard tiles
-    tiles = [
-      generate_kpi_tile("revenue_summary", socket.assigns.selected_filters),
-      generate_chart_tile("monthly_trend", socket.assigns.selected_filters),
-      generate_table_tile("top_customers", socket.assigns.selected_filters),
-      generate_gauge_tile("performance_metrics", socket.assigns.selected_filters)
-    ]
-    
-    assign(socket, :dashboard_tiles, tiles)
-  end
-  
-  defp generate_kpi_tile(tile_id, filters) do
-    # Generate KPI summary report
-    {:ok, data} = AshReports.generate(
-      MyApp.Domain,
-      :kpi_summary,
-      filters,
-      :json
-    )
-    
-    %{
-      id: tile_id,
-      type: :kpi,
-      title: "Revenue Summary",
-      data: Jason.decode!(data),
-      last_updated: DateTime.utc_now()
-    }
-  end
-  
-  defp generate_chart_tile(tile_id, filters) do
-    {:ok, chart_data} = AshReports.generate(
-      MyApp.Domain,
-      :monthly_trend_chart,
-      filters,
-      :json
-    )
-    
-    %{
-      id: tile_id,
-      type: :chart,
-      title: "Monthly Trend",
-      data: Jason.decode!(chart_data),
-      chart_config: %{
-        type: :line,
-        responsive: true
-      },
-      last_updated: DateTime.utc_now()
-    }
+  defp parse_report_params(params, report) do
+    # Parse form params into appropriate types
+    # Similar to controller implementation
   end
 end
 ```
 
-## API Integration
+### LiveView Router
 
-### REST API for Reports
+```elixir
+# lib/my_app_web/router.ex
+scope "/", MyAppWeb do
+  pipe_through :browser
+
+  live "/reports/:report_name", ReportLive.Show
+  live "/reports/:report_name/interactive", ReportLive.Interactive  # Planned
+end
+```
+
+## API Endpoints
+
+### JSON API for Report Generation
 
 ```elixir
 defmodule MyAppWeb.Api.ReportsController do
   use MyAppWeb, :controller
-  
-  def generate(conn, params) do
-    with {:ok, validated_params} <- validate_generation_request(params),
-         {:ok, report_content} <- generate_report(validated_params) do
-      
-      json(conn, %{
-        success: true,
-        report: %{
-          name: validated_params.report_name,
-          format: validated_params.format,
-          generated_at: DateTime.utc_now(),
-          content: report_content
-        }
-      })
-    else
-      {:error, :validation_error, errors} ->
-        conn
-        |> put_status(:bad_request)
-        |> json(%{success: false, errors: errors})
-      
-      {:error, reason} ->
-        conn
-        |> put_status(:internal_server_error)
-        |> json(%{success: false, error: inspect(reason)})
-    end
-  end
-  
-  def generate_async(conn, params) do
-    with {:ok, validated_params} <- validate_generation_request(params) do
-      # Start background job
-      job_id = UUID.uuid4()
-      
-      Task.Supervisor.start_child(MyApp.TaskSupervisor, fn ->
-        result = generate_report(validated_params)
-        
-        # Store result in cache or database
-        MyApp.ReportCache.store(job_id, result)
-        
-        # Optionally notify via webhook
-        if webhook_url = validated_params[:webhook_url] do
-          notify_completion(webhook_url, job_id, result)
-        end
-      end)
-      
-      conn
-      |> put_status(:accepted)
-      |> json(%{
-        success: true,
-        job_id: job_id,
-        status: "processing",
-        status_url: Routes.api_reports_url(conn, :status, job_id)
-      })
-    else
-      {:error, :validation_error, errors} ->
-        conn
-        |> put_status(:bad_request)
-        |> json(%{success: false, errors: errors})
-    end
-  end
-  
-  def status(conn, %{"job_id" => job_id}) do
-    case MyApp.ReportCache.get(job_id) do
-      {:ok, {:completed, result}} ->
-        json(conn, %{
-          status: "completed",
-          result: result,
-          completed_at: DateTime.utc_now()
-        })
-      
-      {:ok, {:error, reason}} ->
-        json(conn, %{
-          status: "failed",
-          error: inspect(reason),
-          failed_at: DateTime.utc_now()
-        })
-      
-      {:error, :not_found} ->
-        # Check if job is still processing
-        if MyApp.TaskRegistry.job_exists?(job_id) do
-          json(conn, %{status: "processing"})
-        else
-          conn
-          |> put_status(:not_found)
-          |> json(%{error: "Job not found"})
-        end
-    end
-  end
-  
-  def schedule(conn, params) do
-    with {:ok, schedule_params} <- validate_schedule_request(params),
-         {:ok, scheduled_job} <- MyApp.ReportScheduler.schedule_report(schedule_params) do
-      
-      json(conn, %{
-        success: true,
-        scheduled_job: %{
-          id: scheduled_job.id,
-          report_name: scheduled_job.report_name,
-          schedule: scheduled_job.cron_expression,
-          next_run: scheduled_job.next_run_at
-        }
-      })
-    else
-      {:error, reason} ->
-        conn
-        |> put_status(:bad_request)
-        |> json(%{success: false, error: inspect(reason)})
-    end
-  end
-  
-  defp validate_generation_request(params) do
-    required_fields = [:report_name, :format]
-    
-    case validate_required_fields(params, required_fields) do
-      :ok ->
-        {:ok, %{
-          report_name: String.to_existing_atom(params["report_name"]),
-          format: String.to_existing_atom(params["format"]),
-          parameters: params["parameters"] || %{},
-          webhook_url: params["webhook_url"]
-        }}
-      
-      {:error, missing_fields} ->
-        {:error, :validation_error, %{missing_fields: missing_fields}}
-    end
-  rescue
-    ArgumentError ->
-      {:error, :validation_error, %{invalid_report_or_format: "Unknown report name or format"}}
-  end
-  
-  defp generate_report(%{report_name: report_name, format: format, parameters: parameters}) do
-    AshReports.generate(MyApp.Domain, report_name, parameters, format)
-  end
-  
-  defp notify_completion(webhook_url, job_id, result) do
-    payload = %{
-      job_id: job_id,
-      status: if(match?({:ok, _}, result), do: "completed", else: "failed"),
-      result: result,
-      timestamp: DateTime.utc_now()
-    }
-    
-    HTTPoison.post(webhook_url, Jason.encode!(payload), [
-      {"Content-Type", "application/json"}
-    ])
-  end
-end
-```
 
-### GraphQL Integration
-
-```elixir
-defmodule MyAppWeb.Schema.Reports do
-  use Absinthe.Schema.Notation
-  
-  object :report_info do
-    field :name, non_null(:string)
-    field :title, :string
-    field :description, :string
-    field :parameters, list_of(:parameter_info)
-    field :formats, list_of(:string)
-  end
-  
-  object :parameter_info do
-    field :name, non_null(:string)
-    field :type, non_null(:string)
-    field :required, non_null(:boolean)
-    field :default_value, :string
-  end
-  
-  object :report_result do
-    field :success, non_null(:boolean)
-    field :content, :string
-    field :format, non_null(:string)
-    field :generated_at, non_null(:datetime)
-    field :error, :string
-  end
-  
-  object :reports_queries do
-    field :reports, list_of(:report_info) do
-      description "List all available reports"
-      resolve &list_reports/3
-    end
-    
-    field :report, :report_info do
-      description "Get information about a specific report"
-      arg :name, non_null(:string)
-      resolve &get_report_info/3
-    end
-    
-    field :generate_report, :report_result do
-      description "Generate a report with given parameters"
-      arg :name, non_null(:string)
-      arg :format, non_null(:string), default_value: "json"
-      arg :parameters, :json
-      resolve &generate_report/3
-    end
-  end
-  
-  defp list_reports(_parent, _args, _resolution) do
+  def index(conn, _params) do
     reports = AshReports.Info.reports(MyApp.Domain)
-    
-    report_infos = 
-      Enum.map(reports, fn report ->
-        %{
-          name: to_string(report.name),
-          title: report.title,
-          description: report.description,
-          parameters: format_parameters(report.parameters),
-          formats: Enum.map(report.formats, &to_string/1)
-        }
-      end)
-    
-    {:ok, report_infos}
-  end
-  
-  defp get_report_info(_parent, %{name: report_name}, _resolution) do
-    try do
-      report_atom = String.to_existing_atom(report_name)
-      report = AshReports.Info.report(MyApp.Domain, report_atom)
-      
-      {:ok, %{
-        name: report_name,
+
+    reports_data = Enum.map(reports, fn report ->
+      %{
+        name: report.name,
         title: report.title,
         description: report.description,
-        parameters: format_parameters(report.parameters),
-        formats: Enum.map(report.formats, &to_string/1)
-      }}
-    rescue
-      ArgumentError ->
-        {:error, "Report not found: #{report_name}"}
-    end
-  end
-  
-  defp generate_report(_parent, args, _resolution) do
-    try do
-      report_atom = String.to_existing_atom(args.name)
-      format_atom = String.to_existing_atom(args.format)
-      parameters = args[:parameters] || %{}
-      
-      case AshReports.generate(MyApp.Domain, report_atom, parameters, format_atom) do
-        {:ok, content} ->
-          {:ok, %{
-            success: true,
-            content: content,
-            format: args.format,
-            generated_at: DateTime.utc_now()
-          }}
-        
-        {:error, error} ->
-          {:ok, %{
-            success: false,
-            error: inspect(error),
-            format: args.format,
-            generated_at: DateTime.utc_now()
-          }}
-      end
-    rescue
-      ArgumentError ->
-        {:error, "Invalid report name or format"}
-    end
-  end
-  
-  defp format_parameters(parameters) do
-    Enum.map(parameters, fn param ->
-      %{
-        name: to_string(param.name),
-        type: to_string(param.type),
-        required: param.required,
-        default_value: if(param.default, do: to_string(param.default))
-      }
-    end)
-  end
-end
-
-# Add to your main schema
-defmodule MyAppWeb.Schema do
-  use Absinthe.Schema
-  
-  import_types MyAppWeb.Schema.Reports
-  
-  query do
-    import_fields :reports_queries
-  end
-end
-```
-
-## External System Integration
-
-### Webhook Integration
-
-```elixir
-defmodule MyApp.Reports.WebhookIntegration do
-  @moduledoc "Integration with external systems via webhooks"
-  
-  def setup_webhook_handlers do
-    # Register webhook handlers for various events
-    AshReports.EventBus.subscribe(:report_generated, &handle_report_generated/1)
-    AshReports.EventBus.subscribe(:report_failed, &handle_report_failed/1)
-  end
-  
-  defp handle_report_generated(event) do
-    %{
-      report_name: report_name,
-      parameters: parameters,
-      format: format,
-      content: content,
-      user_id: user_id
-    } = event
-    
-    # Send to configured webhook endpoints
-    webhooks = get_webhooks_for_event(:report_generated, report_name)
-    
-    Enum.each(webhooks, fn webhook ->
-      payload = %{
-        event: "report.generated",
-        report: %{
-          name: report_name,
-          format: format,
-          parameters: parameters
-        },
-        user_id: user_id,
-        timestamp: DateTime.utc_now(),
-        content_url: generate_content_url(content)
-      }
-      
-      send_webhook(webhook.url, payload, webhook.secret)
-    end)
-  end
-  
-  defp handle_report_failed(event) do
-    %{
-      report_name: report_name,
-      error: error,
-      user_id: user_id
-    } = event
-    
-    webhooks = get_webhooks_for_event(:report_failed, report_name)
-    
-    Enum.each(webhooks, fn webhook ->
-      payload = %{
-        event: "report.failed",
-        report: %{name: report_name},
-        error: inspect(error),
-        user_id: user_id,
-        timestamp: DateTime.utc_now()
-      }
-      
-      send_webhook(webhook.url, payload, webhook.secret)
-    end)
-  end
-  
-  defp send_webhook(url, payload, secret) do
-    headers = [
-      {"Content-Type", "application/json"},
-      {"X-Webhook-Signature", generate_signature(payload, secret)}
-    ]
-    
-    Task.start(fn ->
-      case HTTPoison.post(url, Jason.encode!(payload), headers, [timeout: 10_000]) do
-        {:ok, %HTTPoison.Response{status_code: status}} when status in 200..299 ->
-          :ok
-        
-        {:ok, response} ->
-          Logger.warn("Webhook failed", url: url, status: response.status_code)
-        
-        {:error, error} ->
-          Logger.error("Webhook error", url: url, error: inspect(error))
-      end
-    end)
-  end
-  
-  defp generate_signature(payload, secret) do
-    :crypto.mac(:hmac, :sha256, secret, Jason.encode!(payload))
-    |> Base.encode16(case: :lower)
-  end
-end
-```
-
-### Slack Integration
-
-```elixir
-defmodule MyApp.Reports.SlackIntegration do
-  @slack_webhook_url System.get_env("SLACK_WEBHOOK_URL")
-  
-  def send_report_notification(report_name, status, details \\ %{}) do
-    message = build_slack_message(report_name, status, details)
-    send_to_slack(message)
-  end
-  
-  def send_report_summary(report_name, summary_data) do
-    blocks = [
-      %{
-        "type" => "header",
-        "text" => %{
-          "type" => "plain_text",
-          "text" => "📊 Report Summary: #{humanize_report_name(report_name)}"
-        }
-      },
-      %{
-        "type" => "section",
-        "fields" => format_summary_fields(summary_data)
-      },
-      %{
-        "type" => "actions",
-        "elements" => [
+        parameters: Enum.map(report.parameters || [], fn param ->
           %{
-            "type" => "button",
-            "text" => %{"type" => "plain_text", "text" => "View Full Report"},
-            "url" => "#{MyAppWeb.Endpoint.url()}/reports/#{report_name}"
+            name: param.name,
+            type: param.type,
+            required: param.required,
+            default: param.default
           }
-        ]
-      }
-    ]
-    
-    send_to_slack(%{"blocks" => blocks})
-  end
-  
-  defp build_slack_message(report_name, :completed, details) do
-    %{
-      "text" => "✅ Report Generated Successfully",
-      "attachments" => [
-        %{
-          "color" => "good",
-          "fields" => [
-            %{"title" => "Report", "value" => humanize_report_name(report_name), "short" => true},
-            %{"title" => "Generated At", "value" => DateTime.utc_now() |> DateTime.to_string(), "short" => true},
-            %{"title" => "Format", "value" => String.upcase(to_string(details[:format] || "HTML")), "short" => true},
-            %{"title" => "Records", "value" => to_string(details[:record_count] || "N/A"), "short" => true}
-          ],
-          "actions" => [
-            %{
-              "type" => "button",
-              "text" => "View Report",
-              "url" => "#{MyAppWeb.Endpoint.url()}/reports/#{report_name}"
-            }
-          ]
-        }
-      ]
-    }
-  end
-  
-  defp build_slack_message(report_name, :failed, details) do
-    %{
-      "text" => "❌ Report Generation Failed",
-      "attachments" => [
-        %{
-          "color" => "danger",
-          "fields" => [
-            %{"title" => "Report", "value" => humanize_report_name(report_name), "short" => true},
-            %{"title" => "Failed At", "value" => DateTime.utc_now() |> DateTime.to_string(), "short" => true},
-            %{"title" => "Error", "value" => to_string(details[:error]), "short" => false}
-          ]
-        }
-      ]
-    }
-  end
-  
-  defp send_to_slack(payload) when is_map(payload) do
-    if @slack_webhook_url do
-      HTTPoison.post(@slack_webhook_url, Jason.encode!(payload), [
-        {"Content-Type", "application/json"}
-      ])
-    else
-      Logger.warn("Slack webhook URL not configured")
-    end
-  end
-  
-  defp format_summary_fields(summary_data) do
-    summary_data
-    |> Enum.map(fn {key, value} ->
-      %{
-        "type" => "mrkdwn",
-        "text" => "*#{humanize_key(key)}:*\n#{format_value(value)}"
+        end),
+        formats: report.formats
       }
     end)
+
+    json(conn, %{reports: reports_data})
   end
-  
-  defp humanize_report_name(report_name) do
-    report_name
-    |> to_string()
-    |> String.replace("_", " ")
-    |> String.split(" ")
-    |> Enum.map(&String.capitalize/1)
-    |> Enum.join(" ")
+
+  def generate(conn, %{"report_name" => report_name, "parameters" => params} = req_params) do
+    report_name_atom = String.to_existing_atom(report_name)
+    format = Map.get(req_params, "format", "json") |> String.to_existing_atom()
+
+    # Parse parameters
+    parsed_params = parse_api_params(params)
+
+    case AshReports.Runner.run_report(
+      MyApp.Domain,
+      report_name_atom,
+      parsed_params,
+      format: format
+    ) do
+      {:ok, result} ->
+        case format do
+          :json ->
+            json(conn, %{
+              success: true,
+              data: result.content,
+              metadata: result.metadata
+            })
+
+          :pdf ->
+            conn
+            |> put_resp_content_type("application/pdf")
+            |> send_resp(200, result.content)
+
+          :html ->
+            conn
+            |> put_resp_content_type("text/html")
+            |> send_resp(200, result.content)
+        end
+
+      {:error, error} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{
+          success: false,
+          error: %{
+            message: "Failed to generate report",
+            details: inspect(error)
+          }
+        })
+    end
   end
-  
-  defp humanize_key(key) do
-    key
-    |> to_string()
-    |> String.replace("_", " ")
-    |> String.capitalize()
+
+  defp parse_api_params(params) do
+    # Convert string keys to atoms and parse values
+    Enum.reduce(params, %{}, fn {key, value}, acc ->
+      Map.put(acc, String.to_existing_atom(key), value)
+    end)
   end
-  
-  defp format_value(value) when is_number(value), do: Number.Delimit.number_to_delimited(value)
-  defp format_value(value), do: to_string(value)
 end
+```
+
+### API Router
+
+```elixir
+# lib/my_app_web/router.ex
+scope "/api", MyAppWeb.Api do
+  pipe_through :api
+
+  get "/reports", ReportsController, :index
+  post "/reports/generate", ReportsController, :generate
+end
+```
+
+### API Usage Examples
+
+```bash
+# List available reports
+curl http://localhost:4000/api/reports
+
+# Generate report
+curl -X POST http://localhost:4000/api/reports/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "report_name": "sales_report",
+    "parameters": {
+      "start_date": "2024-01-01",
+      "end_date": "2024-12-31",
+      "region": "North"
+    },
+    "format": "json"
+  }'
+
+# Generate PDF report
+curl -X POST http://localhost:4000/api/reports/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "report_name": "sales_report",
+    "parameters": {
+      "start_date": "2024-01-01",
+      "end_date": "2024-12-31"
+    },
+    "format": "pdf"
+  }' \
+  --output report.pdf
 ```
 
 ## Authentication and Authorization
 
-### Phoenix Authentication Integration
+### Using Ash Authentication
+
+If using `ash_authentication`, integrate report permissions:
 
 ```elixir
-defmodule MyApp.Reports.AuthPlug do
-  import Plug.Conn
-  import Phoenix.Controller
-  
-  def init(opts), do: opts
-  
-  def call(conn, _opts) do
-    case get_current_user(conn) do
-      %{} = user ->
-        conn
-        |> assign(:current_user, user)
-        |> assign(:report_permissions, get_user_report_permissions(user))
-      
-      nil ->
-        conn
-        |> put_status(:unauthorized)
-        |> json(%{error: "Authentication required"})
-        |> halt()
-    end
+defmodule MyApp.Accounts.User do
+  use Ash.Resource,
+    extensions: [AshAuthentication]
+
+  attributes do
+    uuid_primary_key :id
+    attribute :email, :string, allow_nil?: false
+    attribute :role, :atom, constraints: [one_of: [:admin, :manager, :viewer]]
   end
-  
-  defp get_current_user(conn) do
-    # Integration with your authentication system
-    case get_req_header(conn, "authorization") do
-      ["Bearer " <> token] ->
-        MyApp.Auth.verify_token(token)
-      
-      _ ->
-        # Try session-based auth
-        get_session(conn, :current_user_id)
-        |> case do
-          nil -> nil
-          user_id -> MyApp.Accounts.get_user!(user_id)
-        end
-    end
+
+  # Define permissions
+  def can_view_reports?(%__MODULE__{role: role}) do
+    role in [:admin, :manager, :viewer]
   end
-  
-  defp get_user_report_permissions(user) do
-    # Get user's report permissions from your authorization system
-    MyApp.Authorization.get_user_permissions(user, :reports)
+
+  def can_export_reports?(%__MODULE__{role: role}) do
+    role in [:admin, :manager]
   end
 end
+```
 
-# Authorization functions for use in reports
-defmodule MyApp.Reports.Authorization do
-  def can_view_report?(user, report_name) do
-    user_permissions = get_user_report_permissions(user)
-    
-    # Check specific report permission
-    "view_#{report_name}" in user_permissions or
-    # Or general report viewing permission
-    "view_all_reports" in user_permissions or
-    # Or admin permission
-    "admin" in user_permissions
-  end
-  
-  def can_export_report?(user, report_name, format) do
-    can_view_report?(user, report_name) and
-    ("export_reports" in get_user_report_permissions(user) or
-     "admin" in get_user_report_permissions(user))
-  end
-  
-  def filter_report_data_for_user(query, user, report_name) do
-    case get_data_access_level(user, report_name) do
-      :all -> query
-      :department -> filter_by_department(query, user.department_id)
-      :own -> filter_by_user(query, user.id)
-      :none -> exclude_all(query)
+### Controller Authorization
+
+```elixir
+defmodule MyAppWeb.ReportsController do
+  use MyAppWeb, :controller
+
+  plug :require_authenticated_user
+  plug :require_report_permission when action in [:show, :generate]
+
+  defp require_authenticated_user(conn, _opts) do
+    if conn.assigns[:current_user] do
+      conn
+    else
+      conn
+      |> put_flash(:error, "You must be logged in to access reports")
+      |> redirect(to: ~p"/login")
+      |> halt()
     end
   end
-  
-  defp get_data_access_level(user, report_name) do
-    permissions = get_user_report_permissions(user)
-    
-    cond do
-      "admin" in permissions -> :all
-      "view_department_#{report_name}" in permissions -> :department
-      "view_own_#{report_name}" in permissions -> :own
-      true -> :none
+
+  defp require_report_permission(conn, _opts) do
+    user = conn.assigns.current_user
+
+    if MyApp.Accounts.User.can_view_reports?(user) do
+      conn
+    else
+      conn
+      |> put_status(:forbidden)
+      |> put_flash(:error, "You don't have permission to view reports")
+      |> redirect(to: ~p"/")
+      |> halt()
     end
   end
 end
 ```
 
-## Deployment and Production
+### Report-Level Permissions
 
-### Production Configuration
+Check permissions in report definitions:
+
+```elixir
+report :financial_report do
+  title "Financial Report"
+  driving_resource MyApp.Financial.Transaction
+
+  # Define required permissions
+  permissions [:view_financial_reports, :view_sensitive_data]
+
+  # ... rest of report definition
+end
+```
+
+Then check in your controller:
+
+```elixir
+def show(conn, %{"id" => report_name} = params) do
+  report_name_atom = String.to_existing_atom(report_name)
+  report = AshReports.Info.report(MyApp.Domain, report_name_atom)
+  user = conn.assigns.current_user
+
+  # Check if user has required permissions
+  if has_required_permissions?(user, report.permissions) do
+    # Generate report...
+  else
+    conn
+    |> put_status(:forbidden)
+    |> put_flash(:error, "You don't have the required permissions for this report")
+    |> redirect(to: ~p"/reports")
+  end
+end
+
+defp has_required_permissions?(user, required_permissions) do
+  Enum.all?(required_permissions, fn perm ->
+    perm in user.permissions
+  end)
+end
+```
+
+## Deployment Considerations
+
+### Environment Configuration
+
+```elixir
+# config/runtime.exs
+import Config
+
+if config_env() == :prod do
+  config :ash_reports,
+    # PDF generation may require chrome/chromium in production
+    pdf_renderer: System.get_env("PDF_RENDERER", "typst"),
+
+    # Timeouts for report generation
+    generation_timeout: String.to_integer(System.get_env("REPORT_TIMEOUT", "60000")),
+
+    # Memory limits
+    max_memory_mb: String.to_integer(System.get_env("REPORT_MAX_MEMORY", "512"))
+end
+```
+
+### PDF Generation in Production
+
+> **Note**: AshReports has recently transitioned from ChromicPDF to Typst for PDF generation. Ensure Typst is available in your deployment environment.
+
+```dockerfile
+# Dockerfile example
+FROM elixir:1.16-alpine
+
+# Install Typst for PDF generation
+RUN apk add --no-cache typst
+
+# ... rest of Dockerfile
+```
+
+### Performance Optimization
 
 ```elixir
 # config/prod.exs
 config :ash_reports,
-  # Production renderer configuration
-  renderers: %{
-    html: AshReports.HtmlRenderer,
-    pdf: {AshReports.PdfRenderer, [chrome_path: "/usr/bin/chromium"]},
-    json: AshReports.JsonRenderer,
-    heex: AshReports.HeexRenderer
-  },
-  
-  # Performance settings
-  performance: [
-    max_concurrent_reports: 10,
-    report_timeout: :timer.minutes(10),
-    memory_limit: "2GB"
-  ],
-  
-  # Caching configuration
-  cache: [
-    compiled_reports: [
-      adapter: AshReports.Cache.ETS,
-      ttl: :timer.hours(24),
-      max_size: 1000
-    ],
-    generated_reports: [
-      adapter: AshReports.Cache.Redis,
-      url: System.get_env("REDIS_URL"),
-      ttl: :timer.minutes(30),
-      key_prefix: "ash_reports:"
-    ]
-  ],
-  
-  # Storage for large reports
-  storage: [
-    adapter: AshReports.Storage.S3,
-    bucket: System.get_env("S3_BUCKET"),
-    region: System.get_env("AWS_REGION"),
-    access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
-    secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY")
-  ],
-  
-  # Monitoring
-  telemetry: [
-    enabled: true,
-    metrics_reporter: MyApp.TelemetryReporter
-  ]
+  # Enable report caching (if implemented)
+  cache_enabled: true,
+  cache_ttl: :timer.minutes(15),
 
-# Supervisor configuration
-defmodule MyApp.Application do
-  def start(_type, _args) do
-    children = [
-      # ... other children
-      
-      # Report task supervisor
-      {Task.Supervisor, name: MyApp.ReportTaskSupervisor},
-      
-      # Report cache
-      {AshReports.Cache, name: MyApp.ReportCache},
-      
-      # Report scheduler
-      MyApp.ReportScheduler,
-      
-      # Webhook sender
-      MyApp.WebhookSender
-    ]
-    
-    Supervisor.start_link(children, strategy: :one_for_one)
+  # Async report generation
+  async_generation: true,
+  max_concurrent_reports: 5
+```
+
+### Monitoring
+
+Basic monitoring setup:
+
+```elixir
+defmodule MyApp.Reports.Telemetry do
+  def handle_event([:ash_reports, :generate, :start], measurements, metadata, _config) do
+    # Log report generation start
+    Logger.info("Starting report generation: #{metadata.report_name}")
+  end
+
+  def handle_event([:ash_reports, :generate, :stop], measurements, metadata, _config) do
+    # Log report generation completion
+    duration = measurements.duration
+    Logger.info("Completed report generation: #{metadata.report_name} in #{duration}ms")
+  end
+
+  def handle_event([:ash_reports, :generate, :exception], measurements, metadata, _config) do
+    # Log report generation errors
+    Logger.error("Report generation failed: #{metadata.report_name} - #{inspect(metadata.reason)}")
   end
 end
 ```
 
-### Docker Configuration
-
-```dockerfile
-# Dockerfile
-FROM elixir:1.15-alpine AS builder
-
-# Install build dependencies
-RUN apk add --no-cache \
-    build-base \
-    git \
-    npm \
-    nodejs \
-    python3
-
-WORKDIR /app
-
-# Install hex and rebar
-RUN mix local.hex --force && \
-    mix local.rebar --force
-
-# Copy dependency files
-COPY mix.exs mix.lock ./
-RUN mix deps.get --only prod
-RUN mix deps.compile
-
-# Copy application files
-COPY . .
-
-# Compile the application
-RUN mix compile
-RUN mix assets.deploy
-RUN mix phx.digest
-RUN mix release
-
-# Production image
-FROM alpine:3.18
-
-# Install runtime dependencies including Chrome for PDF generation
-RUN apk add --no-cache \
-    bash \
-    openssl \
-    ncurses-libs \
-    chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont
-
-# Create app user
-RUN adduser -D -s /bin/bash app
-USER app
-WORKDIR /home/app
-
-# Copy release from builder
-COPY --from=builder --chown=app:app /app/_build/prod/rel/myapp ./
-
-# Set environment
-ENV HOME=/home/app
-ENV CHROME_BIN=/usr/bin/chromium-browser
-
-EXPOSE 4000
-
-CMD ["./bin/myapp", "start"]
-```
-
-### Kubernetes Deployment
-
-```yaml
-# k8s/deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ash-reports-app
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: ash-reports-app
-  template:
-    metadata:
-      labels:
-        app: ash-reports-app
-    spec:
-      containers:
-      - name: app
-        image: myapp:latest
-        ports:
-        - containerPort: 4000
-        env:
-        - name: PORT
-          value: "4000"
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: database-url
-        - name: REDIS_URL
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: redis-url
-        - name: S3_BUCKET
-          value: "my-reports-bucket"
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "250m"
-          limits:
-            memory: "2Gi"
-            cpu: "1000m"
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 4000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 4000
-          initialDelaySeconds: 60
-          periodSeconds: 30
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ash-reports-service
-spec:
-  selector:
-    app: ash-reports-app
-  ports:
-  - port: 80
-    targetPort: 4000
-  type: LoadBalancer
-```
+> **Note**: Telemetry integration is basic. Advanced monitoring and performance tracking are planned - see [ROADMAP.md Phase 6](../../ROADMAP.md#phase-6-monitoring-and-telemetry).
 
 ## Troubleshooting
 
-### Common Issues and Solutions
+### Common Integration Issues
 
-#### Performance Issues
-```elixir
-# Monitor report generation performance
-defmodule MyApp.Reports.PerformanceMonitor do
-  def track_slow_reports do
-    :telemetry.attach(
-      "slow-report-tracker",
-      [:ash_reports, :report, :generation, :stop],
-      fn _name, measurements, metadata, _config ->
-        if measurements.duration > 30_000 do  # > 30 seconds
-          Logger.warn("Slow report detected",
-            report: metadata.report_name,
-            duration: measurements.duration,
-            parameters: metadata.parameters
-          )
-          
-          # Store for analysis
-          MyApp.Analytics.record_slow_report(metadata, measurements)
-        end
-      end,
-      nil
-    )
-  end
-end
+**Reports not generating in production:**
+- Check PDF renderer is properly installed (Typst)
+- Verify memory limits are sufficient
+- Check timeout settings
+- Review logs for specific errors
 
-# Optimize queries for better performance
-report :optimized_report do
-  # Use database-level aggregations
-  driving_resource MyApp.Invoice
-  
-  # Pre-filter data
-  scope expr(date >= ^Date.add(Date.utc_today(), -90))
-  
-  # Limit related data loading
-  preload [:customer]  # Only load what's needed
-  
-  # Use streaming for large datasets
-  streaming enabled: true, chunk_size: 1000
-end
-```
+**Slow report generation:**
+- Add database indexes on group/sort fields
+- Consider caching for frequently run reports
+- Use streaming for large datasets (when available)
+- Optimize queries and preloading
 
-#### Memory Issues
-```elixir
-# Monitor memory usage
-defmodule MyApp.Reports.MemoryMonitor do
-  def setup_memory_monitoring do
-    :timer.send_interval(30_000, self(), :check_memory)
-  end
-  
-  def handle_info(:check_memory, state) do
-    memory_mb = :erlang.memory(:total) / (1024 * 1024)
-    
-    if memory_mb > 1000 do  # > 1GB
-      Logger.warn("High memory usage detected", memory_mb: memory_mb)
-      :erlang.garbage_collect()
-    end
-    
-    {:noreply, state}
-  end
-end
+**LiveView disconnections:**
+- Increase timeout for long-running reports
+- Consider generating reports asynchronously
+- Show progress indicators to users
+- Handle disconnection gracefully
 
-# Memory-efficient report configuration
-report :memory_efficient_report do
-  # Use streaming
-  streaming enabled: true
-  
-  # Limit precision for numbers
-  format_specs do
-    format_spec :efficient_decimal do
-      precision 2  # Limit decimal places
-    end
-  end
-  
-  # Process in smaller batches
-  bands do
-    band :details do
-      type :detail
-      batch_size 500  # Process 500 records at a time
-    end
-  end
-end
-```
+**Parameter parsing errors:**
+- Validate parameter types match report definition
+- Handle nil/empty values appropriately
+- Provide clear error messages to users
+- Use form validation before submission
 
-#### PDF Generation Issues
-```elixir
-# Debug PDF generation
-defmodule MyApp.Reports.PdfDebug do
-  def debug_pdf_generation(report_name, params) do
-    # First generate HTML version
-    {:ok, html_content} = AshReports.generate(MyApp.Domain, report_name, params, :html)
-    
-    # Save HTML for debugging
-    File.write!("/tmp/debug_report.html", html_content)
-    
-    # Try PDF generation with detailed error logging
-    case AshReports.generate(MyApp.Domain, report_name, params, :pdf) do
-      {:ok, pdf_content} ->
-        Logger.info("PDF generation successful")
-        {:ok, pdf_content}
-      
-      {:error, error} ->
-        Logger.error("PDF generation failed", 
-          error: inspect(error),
-          html_file: "/tmp/debug_report.html"
-        )
-        {:error, error}
-    end
-  end
-end
+## Planned Integration Features
 
-# PDF renderer configuration for debugging
-config :ash_reports, AshReports.PdfRenderer,
-  chrome_args: [
-    "--no-sandbox",
-    "--disable-dev-shm-usage",
-    "--disable-gpu",
-    "--remote-debugging-port=9222",  # Enable debugging
-    "--enable-logging",
-    "--log-level=0"
-  ],
-  timeout: 30_000,  # Increase timeout
-  debug: true
-```
+The following features are planned for future releases:
 
-This integration guide provides comprehensive examples for integrating AshReports with Phoenix applications, external systems, and production deployments, along with troubleshooting guidance for common issues.
+### Scheduled Reports (Phase 9)
+- Cron-style report scheduling
+- Automated report delivery via email
+- Report result caching
+
+### Enhanced LiveView (Phase 9)
+- Real-time report updates
+- Interactive drill-down
+- Client-side filtering and sorting
+- Export from LiveView
+
+### External Integrations (Phase 9)
+- Webhook notifications
+- Slack integration
+- S3/cloud storage
+- GraphQL API
+
+See [ROADMAP.md Phase 9](../../ROADMAP.md#phase-9-integration-enhancements) for complete details.
+
+## Next Steps
+
+1. Review [Report Creation Guide](report-creation.md) to build reports
+2. Check out [Advanced Features](advanced-features.md) for formatting options
+3. Read [ROADMAP.md](../../ROADMAP.md) for upcoming integration features
+4. See [IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md) for current status
+
+## See Also
+
+- [Phoenix Framework](https://www.phoenixframework.org/)
+- [Phoenix LiveView](https://hexdocs.pm/phoenix_live_view/)
+- [Ash Authentication](https://hexdocs.pm/ash_authentication/)
+- [ROADMAP.md](../../ROADMAP.md) - Planned integration features

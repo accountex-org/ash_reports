@@ -88,45 +88,72 @@ defmodule MyApp.Reports.SalesReport do
 
   reports do
     report :monthly_sales do
+      title("Monthly Sales Report")
+      description("Sales report with totals")
+      driving_resource(MyApp.Sales.Order)
+
       # Define parameters
-      parameter :start_date, :date, allow_nil?: false
-      parameter :end_date, :date, allow_nil?: false
+      parameter :start_date, :date do
+        required(true)
+      end
 
-      # Define the data source
-      resource MyApp.Sales.Order
+      parameter :end_date, :date do
+        required(true)
+      end
 
-      # Define query
-      query fn report, params ->
-        Order
-        |> Ash.Query.filter(order_date >= ^params.start_date)
-        |> Ash.Query.filter(order_date <= ^params.end_date)
+      # Define variable for totals
+      variable :grand_total do
+        type :sum
+        expression :total_amount
+        reset_on :report
       end
 
       # Define report header
       band :report_header do
+        type :title
+
         label :title do
-          value "Monthly Sales Report"
-          style font_size: 24, font_weight: :bold
+          text("Monthly Sales Report")
+          style(font_size: 24, font_weight: :bold)
         end
       end
 
       # Define detail section
       band :detail do
-        field :order_id
-        field :customer_name
-        field :order_date, format: :date
-        field :total_amount, format: :currency
+        type :detail
+
+        field :order_id do
+          source :order_id
+        end
+
+        field :customer_name do
+          source :customer_name
+        end
+
+        field :order_date do
+          source :order_date
+          format :date
+        end
+
+        field :total_amount do
+          source :total_amount
+          format :currency
+        end
       end
 
       # Define report footer with totals
       band :report_footer do
-        variable :grand_total do
-          calculation :sum, field: :total_amount
+        type :summary
+
+        label :total_label do
+          text("Grand Total:")
+          style(font_weight: :bold)
         end
 
-        field :grand_total do
-          label "Grand Total:"
+        expression :grand_total_value do
+          expression :grand_total
           format :currency
+          style(font_weight: :bold)
         end
       end
     end
@@ -138,37 +165,34 @@ end
 
 ```elixir
 # Generate HTML report
-{:ok, html} = AshReports.generate(
+{:ok, result} = AshReports.generate(
   MyApp.Reports.SalesReport,
   :monthly_sales,
-  %{
-    start_date: ~D[2024-01-01],
-    end_date: ~D[2024-01-31]
-  },
+  %{start_date: ~D[2024-01-01], end_date: ~D[2024-01-31]},
   :html
 )
 
+html_content = result.content
+
 # Generate PDF report
-{:ok, pdf} = AshReports.generate(
+{:ok, result} = AshReports.generate(
   MyApp.Reports.SalesReport,
   :monthly_sales,
-  %{
-    start_date: ~D[2024-01-01],
-    end_date: ~D[2024-01-31]
-  },
+  %{start_date: ~D[2024-01-01], end_date: ~D[2024-01-31]},
   :pdf
 )
 
+pdf_content = result.content
+
 # Generate JSON export
-{:ok, json} = AshReports.generate(
+{:ok, result} = AshReports.generate(
   MyApp.Reports.SalesReport,
   :monthly_sales,
-  %{
-    start_date: ~D[2024-01-01],
-    end_date: ~D[2024-01-31]
-  },
+  %{start_date: ~D[2024-01-01], end_date: ~D[2024-01-31]},
   :json
 )
+
+json_content = result.content
 ```
 
 ---
@@ -177,16 +201,12 @@ end
 
 ### User Guides
 
-- **Getting Started** - `guides/user/01_getting_started.md`
-- **Report Structure** - `guides/user/02_report_structure.md`
-- **Band Types** - `guides/user/03_band_types.md`
-- **Elements** - `guides/user/04_elements.md`
-- **Charts** - `guides/user/05_charts.md`
-- **Parameters** - `guides/user/06_parameters.md`
-- **Variables** - `guides/user/07_variables.md`
-- **Formatting** - `guides/user/08_formatting.md`
-- **Internationalization** - `guides/user/09_internationalization.md`
-- **Streaming** - `guides/user/10_streaming.md`
+- **[Getting Started](guides/user/getting-started.md)** - Installation and first report
+- **[Report Creation](guides/user/report-creation.md)** - Parameters, grouping, variables, formatting
+- **[Graphs and Visualizations](guides/user/graphs-and-visualizations.md)** - Adding charts to reports
+- **[Integration](guides/user/integration.md)** - Phoenix and LiveView integration
+- **[Advanced Features](guides/user/advanced-features.md)** - Formatting and current advanced capabilities
+- **[ROADMAP.md](ROADMAP.md)** - Planned features and development timeline
 
 ### API Documentation
 
@@ -205,34 +225,67 @@ open doc/index.html
 
 ```elixir
 report :sales_by_category do
-  resource MyApp.Sales.Order
+  title("Sales by Category")
+  driving_resource(MyApp.Sales.Order)
 
-  # Group by category
-  group_by :category_name do
-    sort :category_name, :asc
+  # Define group
+  group :by_category do
+    level 1
+    expression :category_name
+    sort :asc
+  end
 
-    # Group header
-    band :group_header do
-      field :category_name
+  # Define variable for category totals
+  variable :category_total do
+    type :sum
+    expression :amount
+    reset_on :group
+    reset_group 1
+  end
+
+  # Group header
+  band :group_header do
+    type :group_header
+    group_level(1)
+
+    field :category_name do
+      source :category_name
+      style(font_weight: :bold)
+    end
+  end
+
+  # Detail records
+  band :detail do
+    type :detail
+
+    field :order_id do
+      source :order_id
     end
 
-    # Detail records
-    band :detail do
-      field :order_id
-      field :product_name
-      field :amount, format: :currency
+    field :product_name do
+      source :product_name
     end
 
-    # Group footer with subtotal
-    band :group_footer do
-      variable :category_total do
-        calculation :sum, field: :amount
-      end
+    field :amount do
+      source :amount
+      format :currency
+    end
+  end
 
-      field :category_total do
-        label "Category Total:"
-        format :currency
-      end
+  # Group footer with subtotal
+  band :group_footer do
+    type :group_footer
+    group_level(1)
+
+    label :total_label do
+      text("Category Total:")
+      style(font_weight: :bold)
+    end
+
+    expression :category_total_value do
+      expression :category_total
+      format :currency
+      style(font_weight: :bold)
     end
   end
 end
@@ -242,22 +295,23 @@ end
 
 ```elixir
 report :sales_chart do
-  resource MyApp.Sales.Order
+  title("Sales Chart")
+  driving_resource(MyApp.Sales.Order)
 
-  band :detail do
+  band :chart_band do
+    type :detail
+
     chart :sales_by_month do
-      type :bar
+      chart_type :bar
+      data_source :monthly_sales_data  # Pre-formatted chart data
       title "Monthly Sales"
 
-      data do
-        x_axis field: :month_name
-        y_axis field: :total_sales
-      end
+      position(x: 0, y: 0, width: 100, height: 40)
 
-      style do
-        width 800
-        height 400
-      end
+      embed_options %{
+        width: 800,
+        height: 400
+      }
     end
   end
 end
@@ -266,16 +320,20 @@ end
 ### Streaming Large Datasets
 
 ```elixir
-# AshReports automatically streams large datasets
+# AshReports has streaming infrastructure for large datasets
 # using a GenStage-based pipeline for memory efficiency
 
-{:ok, html} = AshReports.generate(
+{:ok, result} = AshReports.generate(
   MyApp.Reports.HugeReport,
   :all_transactions,  # Could be millions of records
   %{},
   :html
 )
-# Memory usage stays constant regardless of dataset size
+
+html_content = result.content
+
+# Note: Streaming configuration DSL is planned.
+# See ROADMAP.md Phase 4 for details.
 ```
 
 ---

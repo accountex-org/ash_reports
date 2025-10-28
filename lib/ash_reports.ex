@@ -62,6 +62,60 @@ defmodule AshReports do
   defdelegate report(domain_or_dsl_state, name), to: AshReports.Info
 
   @doc """
+  Generates a report in the specified format.
+
+  This is a convenience wrapper around `AshReports.Runner.run_report/4` that provides
+  a simpler API for the most common use case.
+
+  ## Parameters
+
+  - `domain` - The Ash domain containing the report definition
+  - `report_name` - The name of the report to generate (atom)
+  - `params` - Parameters to pass to the report (map)
+  - `format` - Output format (`:html`, `:pdf`, `:json`, or `:heex`)
+
+  ## Returns
+
+  `{:ok, result}` where result is a map containing:
+  - `:content` - The generated report content
+  - `:metadata` - Metadata about report generation
+  - `:format` - The output format used
+
+  Or `{:error, reason}` if generation fails.
+
+  ## Examples
+
+      # Generate HTML report
+      {:ok, result} = AshReports.generate(
+        MyApp.Domain,
+        :sales_report,
+        %{start_date: ~D[2024-01-01], end_date: ~D[2024-12-31]},
+        :html
+      )
+
+      html_content = result.content
+
+      # Generate PDF report
+      {:ok, result} = AshReports.generate(
+        MyApp.Domain,
+        :sales_report,
+        %{start_date: ~D[2024-01-01], end_date: ~D[2024-12-31]},
+        :pdf
+      )
+
+      pdf_content = result.content
+
+  ## Options
+
+  For more control over report generation, use `AshReports.Runner.run_report/4` which
+  accepts additional options like `:locale`, `:timezone`, `:streaming`, etc.
+  """
+  @spec generate(module(), atom(), map(), atom()) :: {:ok, map()} | {:error, term()}
+  def generate(domain, report_name, params \\ %{}, format) do
+    AshReports.Runner.run_report(domain, report_name, params, format: format)
+  end
+
+  @doc """
   List all available band types.
   """
   @spec band_types() :: [atom()]

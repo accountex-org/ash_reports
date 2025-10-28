@@ -2,6 +2,8 @@
 
 AshReports is a comprehensive reporting extension for the Ash Framework that provides declarative report definitions with hierarchical band structures, multiple output formats, and internationalization support.
 
+> **Note**: This guide reflects the current implementation. For planned features, see [ROADMAP.md](../../ROADMAP.md).
+
 ## Table of Contents
 
 - [Installation](#installation)
@@ -54,10 +56,11 @@ A **report** is the top-level container that defines:
 - **Expressions**: Calculated values
 - **Aggregates**: Sum, count, average, etc.
 - **Visual**: Lines, boxes, images
+- **Charts**: Basic chart visualizations
 
 ### Variables
 **Variables** accumulate values across report execution:
-- Sum totals, counts, averages
+- Sum totals, counts, averages, min/max
 - Reset at different scopes (detail, group, page, report)
 - Used in expressions and conditional logic
 
@@ -96,63 +99,58 @@ defmodule MyApp.MyDomain do
 
   reports do
     report :customer_list do
-      title "Customer Directory"
-      description "A simple list of all customers"
-      driving_resource MyApp.Customer
+      title("Customer Directory")
+      description("A simple list of all customers")
+      driving_resource(MyApp.Customer)
 
-      bands do
-        band :title do
-          type :title
-          elements do
-            label :report_title do
-              text "Customer Directory"
-              position x: 0, y: 0, width: 100, height: 20
-              style font_size: 18, font_weight: :bold, alignment: :center
-            end
-          end
+      band :title do
+        type :title
+
+        label :report_title do
+          text("Customer Directory")
+          position(x: 0, y: 0, width: 100, height: 20)
+          style(font_size: 18, font_weight: :bold)
+        end
+      end
+
+      band :column_header do
+        type :column_header
+
+        label :name_header do
+          text("Customer Name")
+          position(x: 0, y: 0, width: 40, height: 15)
+          style(font_weight: :bold)
         end
 
-        band :column_header do
-          type :column_header
-          elements do
-            label :name_header do
-              text "Customer Name"
-              position x: 0, y: 0, width: 40, height: 15
-              style font_weight: :bold
-            end
-            
-            label :email_header do
-              text "Email"
-              position x: 40, y: 0, width: 40, height: 15
-              style font_weight: :bold
-            end
-            
-            label :status_header do
-              text "Status"
-              position x: 80, y: 0, width: 20, height: 15
-              style font_weight: :bold
-            end
-          end
+        label :email_header do
+          text("Email")
+          position(x: 40, y: 0, width: 40, height: 15)
+          style(font_weight: :bold)
         end
 
-        band :details do
-          type :detail
-          elements do
-            field :customer_name do
-              source :name
-              position x: 0, y: 0, width: 40, height: 12
-            end
-            
-            field :customer_email do
-              source :email
-              position x: 40, y: 0, width: 40, height: 12
-            end
-            
-            field :customer_status do
-              source :status
-              position x: 80, y: 0, width: 20, height: 12
-            end
-          end
+        label :status_header do
+          text("Status")
+          position(x: 80, y: 0, width: 20, height: 15)
+          style(font_weight: :bold)
+        end
+      end
+
+      band :details do
+        type :detail
+
+        field :customer_name do
+          source :name
+          position(x: 0, y: 0, width: 40, height: 12)
+        end
+
+        field :customer_email do
+          source :email
+          position(x: 40, y: 0, width: 40, height: 12)
+        end
+
+        field :customer_status do
+          source :status
+          position(x: 80, y: 0, width: 20, height: 12)
         end
       end
     end
@@ -164,10 +162,34 @@ end
 
 ```elixir
 # Generate HTML output
-{:ok, html_content} = AshReports.generate(MyApp.MyDomain, :customer_list, %{}, :html)
+{:ok, result} = AshReports.generate(
+  MyApp.MyDomain,
+  :customer_list,
+  %{},
+  :html
+)
+
+html_content = result.content
 
 # Generate PDF output
-{:ok, pdf_content} = AshReports.generate(MyApp.MyDomain, :customer_list, %{}, :pdf)
+{:ok, result} = AshReports.generate(
+  MyApp.MyDomain,
+  :customer_list,
+  %{},
+  :pdf
+)
+
+pdf_content = result.content
+
+# Generate JSON export
+{:ok, result} = AshReports.generate(
+  MyApp.MyDomain,
+  :customer_list,
+  %{},
+  :json
+)
+
+json_content = result.content
 ```
 
 ## Understanding Band Types
@@ -196,35 +218,27 @@ AshReports supports 11 different band types, each serving a specific purpose:
 ```elixir
 band :page_header do
   type :page_header
-  elements do
-    label :page_title do
-      text "My Company - Customer Report"
-      position x: 0, y: 0, width: 80, height: 15
-    end
-    
-    expression :page_number do
-      expression expr("Page " <> page_number)
-      position x: 80, y: 0, width: 20, height: 15
-      style alignment: :right
-    end
+
+  label :page_title do
+    text("My Company - Customer Report")
+    position(x: 0, y: 0, width: 80, height: 15)
   end
 end
 
 band :group_header do
   type :group_header
-  group_level 1  # First level grouping
-  elements do
-    label :group_title do
-      text "Region: "
-      position x: 0, y: 0, width: 15, height: 15
-      style font_weight: :bold
-    end
-    
-    field :region_name do
-      source :region
-      position x: 15, y: 0, width: 25, height: 15
-      style font_weight: :bold
-    end
+  group_level(1)  # First level grouping
+
+  label :group_title do
+    text("Region: ")
+    position(x: 0, y: 0, width: 15, height: 15)
+    style(font_weight: :bold)
+  end
+
+  field :region_name do
+    source :region
+    position(x: 15, y: 0, width: 25, height: 15)
+    style(font_weight: :bold)
   end
 end
 ```
@@ -238,20 +252,19 @@ Display data from your Ash resource attributes:
 field :customer_name do
   source :name
   format :text
-  position x: 0, y: 0, width: 40, height: 12
+  position(x: 0, y: 0, width: 40, height: 12)
 end
 
 field :invoice_total do
   source :total
   format :currency
-  position x: 40, y: 0, width: 20, height: 12
+  position(x: 40, y: 0, width: 20, height: 12)
 end
 
 field :created_date do
   source :inserted_at
   format :date
-  custom_pattern "MM/dd/yyyy"
-  position x: 60, y: 0, width: 20, height: 12
+  position(x: 60, y: 0, width: 20, height: 12)
 end
 ```
 
@@ -260,9 +273,9 @@ Static text content:
 
 ```elixir
 label :section_title do
-  text "Customer Information"
-  position x: 0, y: 0, width: 100, height: 15
-  style font_size: 14, font_weight: :bold, color: "#333333"
+  text("Customer Information")
+  position(x: 0, y: 0, width: 100, height: 15)
+  style(font_size: 14, font_weight: :bold, color: "#333333")
 end
 ```
 
@@ -271,34 +284,30 @@ Calculated values using Ash expressions:
 
 ```elixir
 expression :full_name do
-  expression expr(first_name <> " " <> last_name)
-  position x: 0, y: 0, width: 40, height: 12
-end
-
-expression :days_since_created do
-  expression expr(date_diff(^Date.utc_today(), inserted_at, :day))
-  format :number
-  position x: 40, y: 0, width: 20, height: 12
+  expression(:first_name)  # Will be enhanced with actual expression support
+  position(x: 0, y: 0, width: 40, height: 12)
 end
 ```
+
+> **Note**: Full Ash expression support in expressions is a work in progress. See [ROADMAP.md Phase 4](../../ROADMAP.md#phase-4-performance-and-optimization).
 
 ### Aggregate Elements
 Statistical calculations:
 
 ```elixir
 aggregate :total_customers do
-  function :count
+  function(:count)
   source :id
   scope :report
-  position x: 0, y: 0, width: 20, height: 12
+  position(x: 0, y: 0, width: 20, height: 12)
 end
 
 aggregate :average_order_value do
-  function :average
+  function(:average)
   source :total
   scope :group
   format :currency
-  position x: 20, y: 0, width: 20, height: 12
+  position(x: 20, y: 0, width: 20, height: 12)
 end
 ```
 
@@ -307,19 +316,19 @@ end
 #### Lines
 ```elixir
 line :separator do
-  orientation :horizontal
-  thickness 2
-  position x: 0, y: 15, width: 100, height: 2
-  style color: "#cccccc"
+  orientation(:horizontal)
+  thickness(2)
+  position(x: 0, y: 15, width: 100, height: 2)
+  style(color: "#cccccc")
 end
 ```
 
 #### Boxes
 ```elixir
 box :section_box do
-  position x: 0, y: 0, width: 100, height: 50
-  border width: 1, color: "#000000", style: :solid
-  fill color: "#f5f5f5"
+  position(x: 0, y: 0, width: 100, height: 50)
+  border(width: 1, color: "#000000", style: :solid)
+  fill(color: "#f5f5f5")
 end
 ```
 
@@ -327,10 +336,22 @@ end
 ```elixir
 image :company_logo do
   source "/images/logo.png"
-  scale_mode :fit
-  position x: 0, y: 0, width: 20, height: 15
+  scale_mode(:fit)
+  position(x: 0, y: 0, width: 20, height: 15)
 end
 ```
+
+#### Charts (Basic)
+```elixir
+chart :sales_chart do
+  chart_type(:bar)
+  data_source(:sales_data)  # Expression that returns chart data
+  title("Sales by Month")
+  position(x: 0, y: 0, width: 100, height: 40)
+end
+```
+
+> **Note**: Currently supports basic chart types (:bar, :line, :pie, :area, :scatter) via Contex. Full chart engine with multiple providers planned - see [ROADMAP.md Phase 2](../../ROADMAP.md#phase-2-enhanced-chart-engine).
 
 ## Output Formats
 
@@ -339,63 +360,106 @@ AshReports supports multiple output formats:
 ### HTML
 Web-friendly output with CSS styling:
 ```elixir
-{:ok, html} = AshReports.generate(domain, :report_name, params, :html)
+{:ok, result} = AshReports.Runner.run_report(
+  domain,
+  :report_name,
+  params,
+  format: :html
+)
 ```
 
 ### PDF
 Print-ready documents:
 ```elixir
-{:ok, pdf} = AshReports.generate(domain, :report_name, params, :pdf)
+{:ok, result} = AshReports.Runner.run_report(
+  domain,
+  :report_name,
+  params,
+  format: :pdf
+)
 ```
 
 ### HEEX
 LiveView templates for interactive reports:
 ```elixir
-{:ok, heex} = AshReports.generate(domain, :report_name, params, :heex)
+{:ok, result} = AshReports.Runner.run_report(
+  domain,
+  :report_name,
+  params,
+  format: :heex
+)
 ```
 
 ### JSON
 Structured data for API consumption:
 ```elixir
-{:ok, json} = AshReports.generate(domain, :report_name, params, :json)
+{:ok, result} = AshReports.Runner.run_report(
+  domain,
+  :report_name,
+  params,
+  format: :json
+)
 ```
+
+> **Note**: Renderer implementations are currently in testing phase. See [IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md) for current status.
 
 ## Next Steps
 
-Now that you understand the basics, explore these advanced topics:
+Now that you understand the basics, explore these topics:
 
-1. **[Report Creation Guide](report-creation.md)** - Learn to build complex reports with parameters, grouping, and variables
-2. **[Graphs and Visualizations](graphs-and-visualizations.md)** - Add charts and interactive visualizations
-3. **[Advanced Features](advanced-features.md)** - Formatting, internationalization, and performance optimization
-4. **[Integration Guide](integration.md)** - Integrate AshReports with Phoenix, LiveView, and external systems
+1. **[Report Creation Guide](report-creation.md)** - Learn to build reports with parameters, grouping, and variables
+2. **[Graphs and Visualizations](graphs-and-visualizations.md)** - Add charts to your reports
+3. **[Advanced Features](advanced-features.md)** - Formatting and internationalization
+4. **[Integration Guide](integration.md)** - Integrate AshReports with Phoenix and LiveView
 
 ## Common Patterns
 
 ### Simple List Report
-Use for basic data listings with minimal formatting.
+Use for basic data listings with minimal formatting - exactly like the example above.
 
 ### Master-Detail Report
-Use grouping bands to show hierarchical data relationships.
+Use detail bands with relationship loading to show hierarchical data.
 
 ### Financial Report
 Use variables and aggregates for running totals and calculations.
 
-### Dashboard Report
-Combine multiple chart elements for visual data presentation.
+### Grouped Report
+Use group_header and group_footer bands with group definitions.
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Missing band elements**: Ensure all bands have at least one element
-2. **Positioning conflicts**: Check that element positions don't overlap
+1. **Missing band elements**: Ensure all bands have at least one element or are conditionally hidden
+2. **Positioning conflicts**: Check that element positions don't overlap unintentionally
 3. **Format errors**: Verify format specifications match data types
 4. **Resource permissions**: Ensure proper read permissions on driving resources
 
 ### Debug Mode
-Enable detailed logging:
+Monitor report generation:
 ```elixir
-config :ash_reports, debug: true
+{:ok, result} = AshReports.Runner.run_report(
+  domain,
+  :report_name,
+  params,
+  format: :html,
+  include_debug_data: true
+)
+
+# Result includes timing and metadata
+IO.inspect(result.metadata)
 ```
 
-This will help identify issues with report generation and data loading.
+## Implementation Status
+
+AshReports is under active development. Core DSL and band system are production-ready, but some features are still being tested:
+
+- ✅ Core DSL infrastructure
+- ✅ Band hierarchy system
+- ✅ Basic element types
+- ✅ Parameter and variable definitions
+- ⚠️ Renderer implementations (needs testing)
+- ⚠️ Full data loading pipeline (in progress)
+- 🔵 Advanced chart engine (planned)
+
+See [IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md) for complete details and [ROADMAP.md](../../ROADMAP.md) for planned features.
