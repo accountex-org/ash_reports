@@ -113,8 +113,18 @@ defmodule AshReports.JsonRenderer.DataSerializer do
   """
   @spec serialize_record(map(), serialization_options()) :: serialization_result()
   def serialize_record(record, opts \\ []) when is_map(record) do
+    # Convert Ash resource structs to clean maps first
+    clean_record =
+      if is_struct(record) && ash_resource?(record) do
+        record
+        |> Map.from_struct()
+        |> clean_ash_fields()
+      else
+        record
+      end
+
     serialized =
-      record
+      clean_record
       |> Enum.into(%{}, fn {key, value} ->
         serialized_key = serialize_key(key, opts)
         serialized_value = serialize_value(value, opts)
@@ -528,7 +538,17 @@ defmodule AshReports.JsonRenderer.DataSerializer do
     # For Ash resources, extract the data as a map and serialize
     resource
     |> Map.from_struct()
-    |> Map.drop([:__struct__, :__meta__, :aggregates, :calculations])
+    |> clean_ash_fields()
     |> serialize_map(opts)
   end
+
+  defp clean_ash_fields(map) when is_map(map) do
+    map
+    |> Map.drop([:__struct__, :__meta__, :aggregates, :calculations])
+    |> Enum.reject(fn {_key, value} -> is_ash_not_loaded?(value) end)
+    |> Enum.into(%{})
+  end
+
+  defp is_ash_not_loaded?(%{__struct__: Ash.NotLoaded}), do: true
+  defp is_ash_not_loaded?(_), do: false
 end
