@@ -245,7 +245,6 @@ defmodule AshReports.HeexRendererEnhanced do
     # Integrate chart components into HEEX template
     if chart_components.count > 0 do
       chart_section = """
-      <!-- Phase 6.2: LiveView Chart Components -->
       <section class="ash-liveview-charts #{if context.text_direction == "rtl", do: "rtl", else: "ltr"}">
         #{Enum.join(chart_components.components, "\n")}
       </section>
@@ -303,7 +302,6 @@ defmodule AshReports.HeexRendererEnhanced do
     hook_registration = ChartHooks.generate_hook_registration()
 
     assets_section = """
-    <!-- Phase 6.2: LiveView Chart Assets -->
     #{AssetManager.generate_css_links(context)}
 
     <style>

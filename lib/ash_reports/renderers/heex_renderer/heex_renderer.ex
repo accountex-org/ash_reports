@@ -641,14 +641,12 @@ defmodule AshReports.HeexRenderer do
          data-locale="#{component_assigns.locale}">
       
       <%= if @supports_charts do %>
-        <!-- Phase 6.2: Chart-enabled report -->
         <div class="ash-report-with-charts">
           <div class="ash-report-data">
             <%= render_report_bands(@reports) %>
           </div>
         </div>
       <% else %>
-        <!-- Standard report -->
         <div class="ash-report-standard">
           <%= render_report_bands(@reports) %>
         </div>
@@ -701,17 +699,14 @@ defmodule AshReports.HeexRenderer do
     chart_css = ChartHooks.generate_liveview_chart_css()
 
     """
-    <!-- Phase 6.2: Chart Assets -->
     #{asset_links}
 
     <style>
     #{chart_css}
     </style>
 
-    <!-- Report Content -->
     #{base_template}
 
-    <!-- Chart Components -->
     #{chart_section}
     """
   end
