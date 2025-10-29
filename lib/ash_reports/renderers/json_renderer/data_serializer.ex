@@ -474,8 +474,16 @@ defmodule AshReports.JsonRenderer.DataSerializer do
     Time.to_iso8601(time)
   end
 
-  defp serialize_report_info(report, opts) when is_map(report) do
-    {:ok, serialize_map(report, opts)}
+  defp serialize_report_info(report, _opts) when is_map(report) do
+    # Only include basic report metadata, not the entire structure
+    basic_info = %{
+      name: Map.get(report, :name, "unknown"),
+      title: Map.get(report, :title),
+      version: Map.get(report, :version, "1.0")
+    }
+    # Remove nil values
+    filtered_info = Map.reject(basic_info, fn {_k, v} -> is_nil(v) end)
+    {:ok, filtered_info}
   end
 
   defp serialize_report_info(report, _opts) when is_atom(report) do

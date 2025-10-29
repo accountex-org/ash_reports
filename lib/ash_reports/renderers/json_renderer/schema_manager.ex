@@ -9,11 +9,10 @@ defmodule AshReports.JsonRenderer.SchemaManager do
 
   ## Schema Components
 
-  - **Report Schema**: Defines the overall report structure
-  - **Band Schema**: Defines band-level structure and elements
-  - **Element Schema**: Defines individual element types and properties
-  - **Data Schema**: Defines data format and validation rules
+  - **Report Schema**: Defines the report metadata structure
+  - **Data Schema**: Defines data format with records, variables, and groups
   - **Metadata Schema**: Defines metadata structure and content
+  - **Schema Info**: Defines version and validation information
 
   ## Schema Validation
 
@@ -22,7 +21,7 @@ defmodule AshReports.JsonRenderer.SchemaManager do
   - Report structure compliance with defined schema
   - Data type consistency and format compliance
   - Required field presence and optional field handling
-  - Nested structure validation for complex reports
+  - Nested structure validation for complex data
 
   ## Usage
 
@@ -213,12 +212,18 @@ defmodule AshReports.JsonRenderer.SchemaManager do
     %{
       "type" => "object",
       "properties" => %{
-        "bands" => %{
+        "records" => %{
           "type" => "array",
-          "items" => band_schema()
+          "items" => %{"type" => "object"}
+        },
+        "variables" => %{
+          "type" => "object"
+        },
+        "groups" => %{
+          "type" => "object"
         }
       },
-      "required" => ["bands"],
+      "required" => ["records"],
       "additionalProperties" => false
     }
   end

@@ -57,7 +57,7 @@ defmodule AshReports.JsonRenderer do
 
   ## JSON Structure
 
-  Generated JSON follows a structured schema:
+  Generated JSON follows a structured schema focused on report data output:
 
   ```json
   {
@@ -68,29 +68,27 @@ defmodule AshReports.JsonRenderer do
       "metadata": {
         "record_count": 1500,
         "processing_time_ms": 250,
-        "variables": {},
+        "variables": {"report_date": "2024-01-15"},
         "groups": {}
       }
     },
     "data": {
-      "bands": [
+      "records": [
         {
-          "name": "header",
-          "type": "header",
-          "elements": [
-            {"type": "label", "value": "Sales Report", "position": {"x": 0, "y": 0}},
-            {"type": "field", "field": "report_date", "value": "2024-01-15"}
-          ]
+          "customer_name": "ABC Corp",
+          "amount": 15000.50,
+          "order_date": "2024-01-10",
+          "_index": 0
         },
         {
-          "name": "detail",
-          "type": "detail",
-          "elements": [
-            {"type": "field", "field": "customer_name", "value": "ABC Corp"},
-            {"type": "field", "field": "amount", "value": 15000.50}
-          ]
+          "customer_name": "XYZ Ltd",
+          "amount": 8500.00,
+          "order_date": "2024-01-12",
+          "_index": 1
         }
-      ]
+      ],
+      "variables": {"report_date": "2024-01-15"},
+      "groups": {}
     },
     "schema": {
       "version": "3.5.0",

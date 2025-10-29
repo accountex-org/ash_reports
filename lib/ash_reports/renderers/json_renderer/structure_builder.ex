@@ -2,26 +2,21 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   @moduledoc """
   Structure Builder for AshReports JSON Renderer.
 
-  The StructureBuilder provides hierarchical JSON assembly capabilities,
-  taking serialized data and assembling it into well-structured JSON
-  documents that follow the AshReports JSON schema. It handles complex
-  report structures, nested elements, and maintains consistency across
-  different report types.
+  The StructureBuilder provides JSON assembly capabilities for report data output,
+  taking serialized data and assembling it into well-structured JSON documents
+  suitable for API consumption and data exchange.
 
   ## Structure Assembly Features
 
-  - **Hierarchical Building**: Assembles nested JSON structures from flat data
+  - **Data-Focused Output**: Outputs report data (records, variables, groups)
   - **Schema Compliance**: Ensures output follows AshReports JSON schema
-  - **Element Positioning**: Maintains spatial relationships between elements
-  - **Band Organization**: Groups elements into logical bands
-  - **Metadata Integration**: Includes comprehensive metadata in output
+  - **Metadata Integration**: Includes report metadata and generation information
 
   ## JSON Structure Components
 
-  - **Report Header**: Contains report metadata and generation information
-  - **Data Section**: Contains bands with elements and their relationships
+  - **Report Header**: Contains report metadata (name, version, generated_at)
+  - **Data Section**: Contains records, variables, and groups from report execution
   - **Schema Section**: Contains schema version and validation information
-  - **Navigation**: Contains structure navigation aids for complex reports
 
   ## Usage
 
@@ -30,7 +25,7 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
 
       # Build specific components
       {:ok, header} = StructureBuilder.build_report_header(context)
-      {:ok, data_section} = StructureBuilder.build_data_section(serialized_data)
+      {:ok, data_section} = StructureBuilder.build_data_section(context, serialized_data)
 
   """
 
@@ -101,7 +96,7 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   end
 
   @doc """
-  Builds the data section with bands, elements, and their relationships.
+  Builds the data section with records, variables, and groups.
 
   ## Examples
 
@@ -109,12 +104,13 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
 
   """
   @spec build_data_section(RenderContext.t(), map(), build_options()) :: structure_result()
-  def build_data_section(%RenderContext{} = context, serialized_data, opts \\ []) do
-    with {:ok, bands} <- build_bands_structure(context, serialized_data, opts),
-         {:ok, variables_section} <- build_variables_section(serialized_data, opts),
+  def build_data_section(%RenderContext{} = _context, serialized_data, opts \\ []) do
+    with {:ok, variables_section} <- build_variables_section(serialized_data, opts),
          {:ok, groups_section} <- build_groups_section(serialized_data, opts) do
+      # Output only the actual data: records, variables, and groups
+      # Do NOT include report structure (bands, elements, etc.)
       data_section = %{
-        bands: bands
+        records: Map.get(serialized_data, :records, [])
       }
 
       final_section =
@@ -285,11 +281,8 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
 
     if Keyword.get(opts, :include_metadata, true) do
       Map.merge(base_metadata, %{
-        band_count: count_bands(context),
-        element_count: count_elements(context),
         error_count: length(context.errors),
         warning_count: length(context.warnings),
-        page_dimensions: context.page_dimensions,
         created_at: context.created_at,
         updated_at: context.updated_at
       })
