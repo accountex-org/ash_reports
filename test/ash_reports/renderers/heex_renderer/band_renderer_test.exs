@@ -1,7 +1,7 @@
 defmodule AshReports.HeexRenderer.BandRendererTest do
   use ExUnit.Case, async: true
 
-  alias AshReports.{Band, RenderContext, Report}
+  alias AshReports.{Band, Group, RenderContext, Report}
   alias AshReports.HeexRenderer.BandRenderer
 
   describe "render_report_bands/1" do
@@ -457,6 +457,268 @@ defmodule AshReports.HeexRenderer.BandRendererTest do
       # BandRenderer generates HEEX template strings, not rendered HTML
       # The HEEX engine will handle escaping when the template is compiled
       assert result =~ ~r/<script>/
+    end
+  end
+
+  describe "group handling" do
+    test "renders grouped report with single-level grouping" do
+      group = %Group{name: :region_group, level: 1, expression: :region}
+
+      group_header = Band.new(:group_header,
+        type: :group_header,
+        group_level: 1,
+        elements: [
+          %{name: :region_label, type: :label, text: "Region:", position: %{}, style: %{}}
+        ]
+      )
+
+      detail = Band.new(:detail,
+        type: :detail,
+        elements: [
+          %{name: :name, type: :field, source: :name, position: %{}, style: %{}}
+        ]
+      )
+
+      group_footer = Band.new(:group_footer,
+        type: :group_footer,
+        group_level: 1,
+        elements: [
+          %{name: :count, type: :aggregate, variable_name: :count, position: %{}, style: %{}}
+        ]
+      )
+
+      report = %Report{
+        name: :grouped_report,
+        bands: [group_header, detail, group_footer],
+        groups: [group]
+      }
+
+      records = [
+        %{region: "West", name: "Alice"},
+        %{region: "West", name: "Bob"},
+        %{region: "East", name: "Charlie"}
+      ]
+
+      context = %RenderContext{report: report, records: records}
+      result = BandRenderer.render_report_bands(context)
+
+      # Should have two group headers (West, East)
+      assert result =~ ~r/class="group-header-band".*data-group-level="1"/s
+      assert result =~ ~r/data-group-value="West"/
+      assert result =~ ~r/data-group-value="East"/
+
+      # Should have group footers with counts
+      assert result =~ ~r/class="group-footer-band"/
+      assert result =~ ~r/data-group-count="2"/ # West group has 2 records
+      assert result =~ ~r/data-group-count="1"/ # East group has 1 record
+
+      # Should have all detail records
+      assert result =~ ~r/Alice/
+      assert result =~ ~r/Bob/
+      assert result =~ ~r/Charlie/
+    end
+
+    test "calculates group aggregates correctly" do
+      group = %Group{name: :region_group, level: 1, expression: :region}
+
+      detail = Band.new(:detail,
+        type: :detail,
+        elements: [
+          %{name: :amount, type: :field, source: :amount, position: %{}, style: %{}}
+        ]
+      )
+
+      group_footer = Band.new(:group_footer,
+        type: :group_footer,
+        group_level: 1,
+        elements: [
+          %{name: :amount_sum, type: :aggregate, variable_name: "amount_sum", position: %{}, style: %{}}
+        ]
+      )
+
+      report = %Report{
+        name: :grouped_report,
+        bands: [detail, group_footer],
+        groups: [group]
+      }
+
+      records = [
+        %{region: "West", amount: 100},
+        %{region: "West", amount: 200},
+        %{region: "East", amount: 150}
+      ]
+
+      context = %RenderContext{report: report, records: records}
+      result = BandRenderer.render_report_bands(context)
+
+      # West group sum: 100 + 200 = 300
+      assert result =~ ~r/300/
+
+      # East group sum: 150
+      assert result =~ ~r/150/
+    end
+
+    test "handles multi-level grouping" do
+      region_group = %Group{name: :region_group, level: 1, expression: :region}
+      category_group = %Group{name: :category_group, level: 2, expression: :category}
+
+      group_header_1 = Band.new(:group_header_1,
+        type: :group_header,
+        group_level: 1,
+        elements: []
+      )
+
+      group_header_2 = Band.new(:group_header_2,
+        type: :group_header,
+        group_level: 2,
+        elements: []
+      )
+
+      detail = Band.new(:detail,
+        type: :detail,
+        elements: [
+          %{name: :name, type: :field, source: :name, position: %{}, style: %{}}
+        ]
+      )
+
+      report = %Report{
+        name: :multilevel_report,
+        bands: [group_header_1, group_header_2, detail],
+        groups: [region_group, category_group]
+      }
+
+      records = [
+        %{region: "West", category: "A", name: "Alice"},
+        %{region: "West", category: "A", name: "Bob"},
+        %{region: "West", category: "B", name: "Carol"},
+        %{region: "East", category: "A", name: "Dave"}
+      ]
+
+      context = %RenderContext{report: report, records: records}
+      result = BandRenderer.render_report_bands(context)
+
+      # Should have group headers for both levels
+      assert result =~ ~r/data-group-level="1"/
+      assert result =~ ~r/data-group-level="2"/
+
+      # Should have correct group values
+      assert result =~ ~r/data-group-value="West"/
+      assert result =~ ~r/data-group-value="East"/
+      assert result =~ ~r/data-group-value="A"/
+      assert result =~ ~r/data-group-value="B"/
+    end
+
+    test "renders without grouping when no groups configured" do
+      detail = Band.new(:detail,
+        type: :detail,
+        elements: [
+          %{name: :name, type: :field, source: :name, position: %{}, style: %{}}
+        ]
+      )
+
+      report = %Report{
+        name: :ungrouped_report,
+        bands: [detail],
+        groups: []
+      }
+
+      records = [
+        %{name: "Alice"},
+        %{name: "Bob"}
+      ]
+
+      context = %RenderContext{report: report, records: records}
+      result = BandRenderer.render_report_bands(context)
+
+      # Should render as regular detail band
+      assert result =~ ~r/class="detail-band"/
+      assert result =~ ~r/Alice/
+      assert result =~ ~r/Bob/
+
+      # Should not have group bands
+      refute result =~ ~r/class="group-header-band"/
+      refute result =~ ~r/class="group-footer-band"/
+    end
+
+    test "accesses group aggregates in footer elements" do
+      group = %Group{name: :dept_group, level: 1, expression: :department}
+
+      detail = Band.new(:detail, type: :detail, elements: [])
+
+      group_footer = Band.new(:group_footer,
+        type: :group_footer,
+        group_level: 1,
+        elements: [
+          %{name: :total_label, type: :label, text: "Total:", position: %{}, style: %{}},
+          %{name: :count_agg, type: :aggregate, variable_name: :count, position: %{}, style: %{}}
+        ]
+      )
+
+      report = %Report{
+        name: :dept_report,
+        bands: [detail, group_footer],
+        groups: [group]
+      }
+
+      records = [
+        %{department: "Sales", value: 1},
+        %{department: "Sales", value: 2},
+        %{department: "Sales", value: 3}
+      ]
+
+      context = %RenderContext{report: report, records: records}
+      result = BandRenderer.render_report_bands(context)
+
+      # Should show count of 3 in footer
+      assert result =~ ~r/Total:/
+      assert result =~ "3"
+      assert result =~ ~r/class="aggregate-element"/
+    end
+
+    test "renders title and summary bands alongside grouped bands" do
+      title = Band.new(:title,
+        type: :title,
+        elements: [
+          %{name: :title, type: :label, text: "Sales Report", position: %{}, style: %{}}
+        ]
+      )
+
+      group = %Group{name: :region_group, level: 1, expression: :region}
+
+      group_header = Band.new(:group_header, type: :group_header, group_level: 1, elements: [])
+      detail = Band.new(:detail, type: :detail, elements: [])
+
+      summary = Band.new(:summary,
+        type: :summary,
+        elements: [
+          %{name: :summary, type: :label, text: "End of Report", position: %{}, style: %{}}
+        ]
+      )
+
+      report = %Report{
+        name: :full_report,
+        bands: [title, group_header, detail, summary],
+        groups: [group]
+      }
+
+      records = [
+        %{region: "West", amount: 100},
+        %{region: "East", amount: 200}
+      ]
+
+      context = %RenderContext{report: report, records: records}
+      result = BandRenderer.render_report_bands(context)
+
+      # Should have title at top
+      assert result =~ ~r/class="title-band"/
+      assert result =~ ~r/Sales Report/
+
+      # Should have grouped content
+      assert result =~ ~r/class="group-header-band"/
+
+      # Should have summary at bottom
+      assert result =~ ~r/class="summary-band"/
+      assert result =~ ~r/End of Report/
     end
   end
 end

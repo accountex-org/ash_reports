@@ -45,7 +45,7 @@ defmodule AshReports.HeexRenderer.BandRenderer do
 
   """
 
-  alias AshReports.{Band, RenderContext}
+  alias AshReports.{Band, Group, RenderContext}
 
   @doc """
   Renders all report bands with their elements as HEEX template code.
@@ -87,9 +87,31 @@ defmodule AshReports.HeexRenderer.BandRenderer do
   defp get_report_bands(%RenderContext{report: report}), do: report.bands || []
 
   defp render_bands(bands, context) do
+    # Check if report has grouping configured
+    if has_groups?(context) do
+      render_bands_with_grouping(bands, context)
+    else
+      render_bands_without_grouping(bands, context)
+    end
+  end
+
+  defp render_bands_without_grouping(bands, context) do
     bands
     |> Enum.map(fn band -> render_band(band, context) end)
     |> Enum.join("\n")
+  end
+
+  defp render_bands_with_grouping(bands, context) do
+    # Separate bands into categories
+    {group_headers, detail_bands, group_footers, other_bands} = categorize_bands(bands)
+
+    # Render non-grouped bands (title, headers, footers)
+    other_html = render_bands_without_grouping(other_bands, context)
+
+    # Render grouped content
+    grouped_html = render_grouped_records(group_headers, detail_bands, group_footers, context)
+
+    other_html <> "\n" <> grouped_html
   end
 
   defp render_band(%Band{} = band, context) do
@@ -118,22 +140,28 @@ defmodule AshReports.HeexRenderer.BandRenderer do
   end
 
   # Detail Band - Renders once per record
+  # Note: When grouping is enabled, details are rendered via render_grouped_records
   defp render_detail_band(%Band{} = band, context) do
-    records = context.records || []
+    # If we have groups, this is handled by render_grouped_records
+    if has_groups?(context) do
+      ""
+    else
+      records = context.records || []
 
-    detail_html =
-      records
-      |> Enum.map(fn record ->
-        record_context = %{context | current_record: record}
-        render_detail_record(band, record_context)
-      end)
-      |> Enum.join("\n")
+      detail_html =
+        records
+        |> Enum.map(fn record ->
+          record_context = %{context | current_record: record}
+          render_detail_record(band, record_context)
+        end)
+        |> Enum.join("\n")
 
-    """
-    <div class="detail-band" data-band="#{band.name}">
-      #{detail_html}
-    </div>
-    """
+      """
+      <div class="detail-band" data-band="#{band.name}">
+        #{detail_html}
+      </div>
+      """
+    end
   end
 
   defp render_detail_record(%Band{} = band, context) do
@@ -154,9 +182,11 @@ defmodule AshReports.HeexRenderer.BandRenderer do
     nested_bands_html = render_nested_bands(band, context)
 
     group_level = band.group_level || 1
+    group_values = get_in(context.metadata, [:group_values]) || %{}
+    group_value = Map.get(group_values, group_level, "")
 
     """
-    <div class="group-header-band" data-band="#{band.name}" data-group-level="#{group_level}">
+    <div class="group-header-band" data-band="#{band.name}" data-group-level="#{group_level}" data-group-value="#{group_value}">
       #{elements_html}
       #{nested_bands_html}
     </div>
@@ -169,9 +199,11 @@ defmodule AshReports.HeexRenderer.BandRenderer do
     nested_bands_html = render_nested_bands(band, context)
 
     group_level = band.group_level || 1
+    group_aggregates = get_in(context.metadata, [:group_aggregates]) || %{}
+    group_count = Map.get(group_aggregates, :count, 0)
 
     """
-    <div class="group-footer-band" data-band="#{band.name}" data-group-level="#{group_level}">
+    <div class="group-footer-band" data-band="#{band.name}" data-group-level="#{group_level}" data-group-count="#{group_count}">
       #{elements_html}
       #{nested_bands_html}
     </div>
@@ -393,9 +425,25 @@ defmodule AshReports.HeexRenderer.BandRenderer do
   defp get_variable_value(element, context) do
     variable_name = Map.get(element, :variable_name) || Map.get(element, :name)
 
-    case Map.fetch(context.variables, variable_name) do
-      {:ok, value} -> value
-      :error -> error_placeholder("MISSING_VAR: #{variable_name}")
+    # Check group aggregates first (for group-scoped variables)
+    group_aggregates = get_in(context.metadata, [:group_aggregates]) || %{}
+
+    cond do
+      # Check if this is a group aggregate
+      Map.has_key?(group_aggregates, variable_name) ->
+        Map.get(group_aggregates, variable_name)
+
+      # Check if it's a string key in group aggregates (like "amount_sum")
+      Map.has_key?(group_aggregates, to_string(variable_name)) ->
+        Map.get(group_aggregates, to_string(variable_name))
+
+      # Check report-level variables
+      Map.has_key?(context.variables, variable_name) ->
+        Map.get(context.variables, variable_name)
+
+      # Variable not found
+      true ->
+        error_placeholder("MISSING_VAR: #{variable_name}")
     end
   end
 
@@ -598,4 +646,162 @@ defmodule AshReports.HeexRenderer.BandRenderer do
     </div>
     """
   end
+
+  # Private Functions - Group Handling
+
+  defp has_groups?(%RenderContext{report: nil}), do: false
+  defp has_groups?(%RenderContext{report: %{groups: nil}}), do: false
+  defp has_groups?(%RenderContext{report: %{groups: []}}), do: false
+  defp has_groups?(%RenderContext{report: %{groups: groups}}) when is_list(groups), do: true
+  defp has_groups?(_), do: false
+
+  defp categorize_bands(bands) do
+    group_headers = Enum.filter(bands, &(&1.type == :group_header))
+    group_footers = Enum.filter(bands, &(&1.type == :group_footer))
+    detail_bands = Enum.filter(bands, &(&1.type in [:detail_header, :detail, :detail_footer]))
+    other_bands = Enum.reject(bands, &(&1.type in [:group_header, :group_footer, :detail_header, :detail, :detail_footer]))
+
+    {group_headers, detail_bands, group_footers, other_bands}
+  end
+
+  defp render_grouped_records(group_headers, detail_bands, group_footers, context) do
+    groups = get_report_groups(context)
+    records = context.records || []
+
+    # Group records by their group values
+    grouped_records = group_records_by_values(records, groups)
+
+    # Render each group
+    grouped_records
+    |> Enum.map(fn {group_values, group_records} ->
+      render_single_group(group_headers, detail_bands, group_footers, group_values, group_records, context)
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp group_records_by_values(records, groups) do
+    records
+    |> Enum.chunk_by(fn record ->
+      # Build a tuple of group values for this record
+      Enum.map(groups, fn group ->
+        extract_group_value(record, group)
+      end)
+    end)
+    |> Enum.map(fn chunk ->
+      # Get group values from first record in chunk
+      first_record = List.first(chunk)
+      group_values = Enum.map(groups, fn group ->
+        {group.level, extract_group_value(first_record, group)}
+      end)
+      {group_values, chunk}
+    end)
+  end
+
+  defp extract_group_value(record, %Group{expression: expression}) when is_atom(expression) do
+    Map.get(record, expression)
+  end
+
+  defp extract_group_value(record, %Group{expression: expression}) when is_list(expression) do
+    get_in(record, expression)
+  end
+
+  defp extract_group_value(_record, %Group{expression: _expression}) do
+    # Complex expressions not yet supported in Phase 5
+    nil
+  end
+
+  defp render_single_group(group_headers, detail_bands, group_footers, group_values, group_records, context) do
+    # Calculate group aggregates
+    group_aggregates = calculate_group_aggregates(group_records)
+
+    # Build group context with values and aggregates
+    group_context = %{
+      context
+      | current_record: List.first(group_records),
+        metadata: Map.merge(context.metadata, %{
+          group_values: Map.new(group_values),
+          group_aggregates: group_aggregates,
+          group_record_count: length(group_records)
+        })
+    }
+
+    # Render group header
+    headers_html =
+      group_headers
+      |> Enum.map(fn header -> render_group_header_band(header, group_context) end)
+      |> Enum.join("\n")
+
+    # Render detail records
+    details_html =
+      detail_bands
+      |> Enum.map(fn detail_band ->
+        render_detail_records_for_group(detail_band, group_records, context)
+      end)
+      |> Enum.join("\n")
+
+    # Render group footer
+    footers_html =
+      group_footers
+      |> Enum.map(fn footer -> render_group_footer_band(footer, group_context) end)
+      |> Enum.join("\n")
+
+    headers_html <> "\n" <> details_html <> "\n" <> footers_html
+  end
+
+  defp render_detail_records_for_group(detail_band, records, context) do
+    case detail_band.type do
+      :detail ->
+        records
+        |> Enum.map(fn record ->
+          record_context = %{context | current_record: record}
+          render_detail_record(detail_band, record_context)
+        end)
+        |> Enum.join("\n")
+
+      :detail_header ->
+        render_standard_band(detail_band, context)
+
+      :detail_footer ->
+        render_standard_band(detail_band, context)
+
+      _ ->
+        ""
+    end
+  end
+
+  defp calculate_group_aggregates(records) do
+    # Calculate common aggregates for the group
+    count = length(records)
+
+    # Calculate sums for numeric fields
+    sums = calculate_numeric_sums(records)
+
+    Map.merge(%{count: count}, sums)
+  end
+
+  defp calculate_numeric_sums(records) do
+    if length(records) == 0 do
+      %{}
+    else
+      first_record = List.first(records)
+
+      first_record
+      |> Map.keys()
+      |> Enum.filter(fn key ->
+        value = Map.get(first_record, key)
+        is_number(value)
+      end)
+      |> Enum.into(%{}, fn key ->
+        sum = Enum.reduce(records, 0, fn record, acc ->
+          value = Map.get(record, key, 0)
+          if is_number(value), do: acc + value, else: acc
+        end)
+        {"#{key}_sum", sum}
+      end)
+    end
+  end
+
+  defp get_report_groups(%RenderContext{report: nil}), do: []
+  defp get_report_groups(%RenderContext{report: %{groups: nil}}), do: []
+  defp get_report_groups(%RenderContext{report: %{groups: groups}}), do: groups || []
 end
