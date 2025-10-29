@@ -292,7 +292,17 @@ defmodule AshReports.HeexRenderer.BandRenderer do
     """
   end
 
-  defp get_field_value(%{source: source}, context) when not is_nil(source) do
+  defp get_field_value(element, context) do
+    source = Map.get(element, :source)
+
+    if is_nil(source) do
+      error_placeholder("NO_SOURCE")
+    else
+      get_field_value_from_source(source, context)
+    end
+  end
+
+  defp get_field_value_from_source(source, context) when not is_nil(source) do
     record = context.current_record
 
     case record do
@@ -307,9 +317,6 @@ defmodule AshReports.HeexRenderer.BandRenderer do
     end
   end
 
-  defp get_field_value(_element, _context) do
-    error_placeholder("NO_SOURCE")
-  end
 
   defp get_field_from_record(record, source) when is_atom(source) do
     case Map.fetch(record, source) do
@@ -331,19 +338,19 @@ defmodule AshReports.HeexRenderer.BandRenderer do
 
   # Label Element
   defp render_label_element(element, _context) do
-    text = element.text || element.name || ""
+    text = Map.get(element, :text) || Map.get(element, :name) || ""
     style = element_style(element)
 
     """
     <span class="label-element" style="#{style}">
-      #{Phoenix.HTML.html_escape(text)}
+      #{text}
     </span>
     """
   end
 
   # Expression Element
   defp render_expression_element(element, context) do
-    value = evaluate_expression(element.expression, context)
+    value = evaluate_expression(Map.get(element, :expression), context)
     formatted_value = format_value(value, element)
     style = element_style(element)
 
@@ -384,7 +391,7 @@ defmodule AshReports.HeexRenderer.BandRenderer do
   end
 
   defp get_variable_value(element, context) do
-    variable_name = element.variable_name || element.name
+    variable_name = Map.get(element, :variable_name) || Map.get(element, :name)
 
     case Map.fetch(context.variables, variable_name) do
       {:ok, value} -> value
@@ -412,8 +419,8 @@ defmodule AshReports.HeexRenderer.BandRenderer do
 
   # Image Element
   defp render_image_element(element, _context) do
-    src = element.source || ""
-    alt = element.alt || element.name || ""
+    src = Map.get(element, :source) || ""
+    alt = Map.get(element, :alt) || Map.get(element, :name) || ""
     style = element_style(element)
 
     """
@@ -424,10 +431,10 @@ defmodule AshReports.HeexRenderer.BandRenderer do
   # Private Functions - Styling
 
   defp element_style(element) do
-    position_styles = position_style(element.position || %{})
-    text_styles = text_style(element.style || %{})
-    color_styles = color_style(element.style || %{})
-    border_styles = border_style(element.style || %{})
+    position_styles = position_style(Map.get(element, :position) || %{})
+    text_styles = text_style(Map.get(element, :style) || %{})
+    color_styles = color_style(Map.get(element, :style) || %{})
+    border_styles = border_style(Map.get(element, :style) || %{})
 
     [position_styles, text_styles, color_styles, border_styles]
     |> Enum.reject(&(&1 == ""))
@@ -505,7 +512,7 @@ defmodule AshReports.HeexRenderer.BandRenderer do
   end
 
   defp format_value(value, element) do
-    format = element.format || element[:format]
+    format = Map.get(element, :format)
 
     case format do
       nil -> format_default(value)
@@ -519,13 +526,22 @@ defmodule AshReports.HeexRenderer.BandRenderer do
   end
 
   defp format_default(value) when is_binary(value) do
-    Phoenix.HTML.html_escape(value)
+    # HEEX engine will handle escaping, just return the string
+    value
+  end
+
+  defp format_default(value) when is_float(value) do
+    # Format float without scientific notation
+    :erlang.float_to_binary(value, [:compact, decimals: 2])
+  end
+
+  defp format_default(value) when is_integer(value) do
+    Integer.to_string(value)
   end
 
   defp format_default(value) do
-    value
-    |> to_string()
-    |> Phoenix.HTML.html_escape()
+    # Convert to string, HEEX engine will handle escaping
+    to_string(value)
   end
 
   # TODO: Use actual CLDR formatting based on context locale
