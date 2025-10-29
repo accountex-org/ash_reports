@@ -113,14 +113,22 @@ defmodule AshReports.JsonRenderer.DataSerializer do
   """
   @spec serialize_record(map(), serialization_options()) :: serialization_result()
   def serialize_record(record, opts \\ []) when is_map(record) do
-    # Convert Ash resource structs to clean maps first
+    # Convert all structs to maps, with special cleaning for Ash resources
     clean_record =
-      if is_struct(record) && ash_resource?(record) do
-        record
-        |> Map.from_struct()
-        |> clean_ash_fields()
-      else
-        record
+      cond do
+        is_struct(record) && ash_resource?(record) ->
+          # Ash resource: convert to map and clean Ash-specific fields
+          record
+          |> Map.from_struct()
+          |> clean_ash_fields()
+
+        is_struct(record) ->
+          # Other struct: just convert to map
+          Map.from_struct(record)
+
+        true ->
+          # Already a plain map
+          record
       end
 
     serialized =
@@ -551,6 +559,8 @@ defmodule AshReports.JsonRenderer.DataSerializer do
     |> Enum.into(%{})
   end
 
+  # Check for various NotLoaded patterns and internal structs
   defp is_ash_not_loaded?(%{__struct__: Ash.NotLoaded}), do: true
+  defp is_ash_not_loaded?(%{__struct__: Ecto.Schema.Metadata}), do: true
   defp is_ash_not_loaded?(_), do: false
 end
