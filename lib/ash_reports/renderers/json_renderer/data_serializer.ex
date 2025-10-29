@@ -544,7 +544,16 @@ defmodule AshReports.JsonRenderer.DataSerializer do
 
   defp clean_ash_fields(map) when is_map(map) do
     map
-    |> Map.drop([:__struct__, :__meta__, :aggregates, :calculations])
+    # Drop all Ash internal metadata fields
+    |> Map.drop([
+      :__struct__,
+      :__meta__,
+      :__metadata__,
+      :__order__,
+      :__lateral_join_source__,
+      :aggregates,
+      :calculations
+    ])
     |> Enum.reject(fn {_key, value} -> is_ash_not_loaded?(value) end)
     |> Enum.into(%{})
   end
