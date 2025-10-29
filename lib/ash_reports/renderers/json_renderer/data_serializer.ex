@@ -113,9 +113,9 @@ defmodule AshReports.JsonRenderer.DataSerializer do
   """
   @spec serialize_record(map(), serialization_options()) :: serialization_result()
   def serialize_record(record, opts \\ []) when is_map(record) do
-    # Convert Ash resource structs to clean maps first
+    # Convert ALL structs to maps - structs don't implement Enumerable
     clean_record =
-      if is_struct(record) && ash_resource?(record) do
+      if is_struct(record) do
         record
         |> Map.from_struct()
         |> clean_ash_fields()
