@@ -544,7 +544,9 @@ defmodule AshReports.JsonRenderer.DataSerializer do
 
   defp clean_ash_fields(map) when is_map(map) do
     map
-    |> Map.drop([:__struct__, :__meta__, :aggregates, :calculations])
+    # Only drop internal Ash metadata fields, not data fields
+    |> Map.drop([:__struct__, :__meta__])
+    # Filter out any fields with Ash.NotLoaded values (unloaded aggregates/calculations)
     |> Enum.reject(fn {_key, value} -> is_ash_not_loaded?(value) end)
     |> Enum.into(%{})
   end
