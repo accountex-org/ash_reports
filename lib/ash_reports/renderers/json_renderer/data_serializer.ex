@@ -2,18 +2,17 @@ defmodule AshReports.JsonRenderer.DataSerializer do
   @moduledoc """
   Data Serializer for AshReports JSON Renderer.
 
-  The DataSerializer provides comprehensive data serialization capabilities,
-  converting processed report data into JSON-serializable formats. It handles
-  complex data types, custom encoders, and ensures proper format consistency
-  for JSON output.
+  The DataSerializer converts processed report data into clean JSON-serializable
+  formats. It handles complex data types and ensures records contain only raw
+  data values without metadata or formatting.
 
   ## Serialization Features
 
   - **Type-Safe Conversion**: Handles all common Elixir types safely
-  - **Custom Encoders**: Supports Jason.Encoder protocols for complex types
-  - **Date/Time Formatting**: Flexible date/time format options
-  - **Number Formatting**: Precision control and locale-aware formatting
+  - **Clean Output**: No metadata fields or formatted values
+  - **Date/Time Formatting**: ISO8601 format for timestamps
   - **Null Handling**: Configurable null value processing
+  - **Function Handling**: Converts non-serializable functions to metadata
 
   ## Data Types Supported
 
@@ -25,15 +24,11 @@ defmodule AshReports.JsonRenderer.DataSerializer do
 
   ## Usage
 
-      # Serialize complete render context
-      {:ok, serialized_data} = DataSerializer.serialize_context(context)
-
-      # Serialize specific data elements
+      # Serialize records (returns clean data only)
       {:ok, records} = DataSerializer.serialize_records(context.records)
-      {:ok, variables} = DataSerializer.serialize_variables(context.variables)
 
       # Custom serialization options
-      opts = [date_format: :iso8601, number_precision: 2, include_nulls: false]
+      opts = [date_format: :iso8601, include_nulls: false]
       {:ok, data} = DataSerializer.serialize_with_options(data, opts)
 
   """
@@ -95,8 +90,8 @@ defmodule AshReports.JsonRenderer.DataSerializer do
     |> Enum.reduce_while({:ok, []}, fn {record, index}, {:ok, acc} ->
       case serialize_record(record, opts) do
         {:ok, serialized_record} ->
-          serialized_with_index = Map.put(serialized_record, :_index, index)
-          {:cont, {:ok, [serialized_with_index | acc]}}
+          # Don't add _index metadata - keep records clean
+          {:cont, {:ok, [serialized_record | acc]}}
 
         {:error, reason} ->
           {:halt, {:error, {:record, index, reason}}}

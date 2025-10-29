@@ -2,30 +2,80 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   @moduledoc """
   Structure Builder for AshReports JSON Renderer.
 
-  The StructureBuilder provides JSON assembly capabilities for report data output,
-  taking serialized data and assembling it into well-structured JSON documents
-  suitable for API consumption and data exchange.
+  The StructureBuilder provides JSON assembly for report data output.
+  It returns either flat records or hierarchical grouped structures depending
+  on report configuration.
 
-  ## Structure Assembly Features
+  ## Flat Output (No Grouping)
 
-  - **Data-Focused Output**: Outputs report data (records, variables, groups)
-  - **Schema Compliance**: Ensures output follows AshReports JSON schema
-  - **Metadata Integration**: Includes report metadata and generation information
+  When the report has no grouping, returns a simple flat array:
 
-  ## JSON Structure Components
+  ```json
+  {
+    "records": [
+      {"customer": "ABC Corp", "region": "North", "amount": 100.00},
+      {"customer": "XYZ Ltd", "region": "North", "amount": 200.00},
+      {"customer": "DEF Inc", "region": "South", "amount": 150.00}
+    ]
+  }
+  ```
 
-  - **Report Header**: Contains report metadata (name, version, generated_at)
-  - **Data Section**: Contains records, variables, and groups from report execution
-  - **Schema Section**: Contains schema version and validation information
+  ## Hierarchical Output (With Grouping)
+
+  When the report has grouping, returns nested structure with aggregates:
+
+  ```json
+  {
+    "records": [
+      {
+        "group_value": "North",
+        "group_level": 1,
+        "aggregates": {"count": 2, "amount_sum": 300.00},
+        "records": [
+          {"customer": "ABC Corp", "amount": 100.00},
+          {"customer": "XYZ Ltd", "amount": 200.00}
+        ]
+      },
+      {
+        "group_value": "South",
+        "group_level": 1,
+        "aggregates": {"count": 1, "amount_sum": 150.00},
+        "records": [
+          {"customer": "DEF Inc", "amount": 150.00}
+        ]
+      }
+    ]
+  }
+  ```
+
+  ## Multi-Level Grouping
+
+  Supports nested grouping with multiple levels:
+
+  ```json
+  {
+    "records": [
+      {
+        "group_value": "North",
+        "group_level": 1,
+        "aggregates": {"count": 3, "amount_sum": 600.00},
+        "records": [
+          {
+            "group_value": "Electronics",
+            "group_level": 2,
+            "aggregates": {"count": 2, "amount_sum": 300.00},
+            "records": [...]
+          }
+        ]
+      }
+    ]
+  }
+  ```
 
   ## Usage
 
-      # Build complete report structure
+      # Build JSON structure (returns records only)
       {:ok, json_structure} = StructureBuilder.build_report_structure(context, serialized_data)
-
-      # Build specific components
-      {:ok, header} = StructureBuilder.build_report_header(context)
-      {:ok, data_section} = StructureBuilder.build_data_section(context, serialized_data)
 
   """
 
@@ -43,33 +93,25 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   @doc """
   Builds a complete report JSON structure from context and serialized data.
 
+  For JSON output, this returns records in either flat or hierarchical grouped structure.
+
   ## Examples
 
       {:ok, json_structure} = StructureBuilder.build_report_structure(context, serialized_data)
 
   """
   @spec build_report_structure(RenderContext.t(), map(), build_options()) :: structure_result()
-  def build_report_structure(%RenderContext{} = context, serialized_data, opts \\ []) do
-    with {:ok, report_header} <- build_report_header(context, opts),
-         {:ok, data_section} <- build_data_section(context, serialized_data, opts),
-         {:ok, schema_section} <- build_schema_section(context, opts),
-         {:ok, navigation_section} <- build_navigation_section(context, opts) do
-      structure = %{
-        report: report_header,
-        data: data_section,
-        schema: schema_section
-      }
+  def build_report_structure(%RenderContext{} = context, serialized_data, _opts \\ []) do
+    records = Map.get(serialized_data, :records, [])
 
-      final_structure =
-        if Keyword.get(opts, :include_navigation, false) do
-          Map.put(structure, :navigation, navigation_section)
-        else
-          structure
-        end
-
-      {:ok, final_structure}
+    # Check if report has grouping configured
+    if has_grouping?(context) do
+      # Build hierarchical grouped structure
+      grouped_records = build_grouped_structure(context, records)
+      {:ok, %{"records" => grouped_records}}
     else
-      {:error, _reason} = error -> error
+      # Return flat records
+      {:ok, %{"records" => records}}
     end
   end
 
@@ -484,5 +526,137 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
 
   defp get_schema_specification_url do
     "https://github.com/ash-project/ash_reports/blob/main/docs/json_schema_v3.5.0.json"
+  end
+
+  # Grouping support functions
+
+  defp has_grouping?(%RenderContext{} = context) do
+    # Check if report has groups defined
+    report_groups = get_report_groups(context)
+    length(report_groups) > 0
+  end
+
+  defp get_report_groups(%RenderContext{report: %{groups: groups}}) when is_list(groups),
+    do: groups
+
+  defp get_report_groups(_), do: []
+
+  defp build_grouped_structure(%RenderContext{} = context, records) do
+    groups = get_report_groups(context)
+    sorted_groups = Enum.sort_by(groups, & &1.level)
+
+    # Build hierarchical structure starting from level 1
+    case sorted_groups do
+      [] ->
+        records
+
+      [first_group | _rest] ->
+        build_groups_at_level(records, sorted_groups, first_group.level, context)
+    end
+  end
+
+  defp build_groups_at_level(records, groups, current_level, context) do
+    # Find the group configuration for this level
+    group_config = Enum.find(groups, fn g -> g.level == current_level end)
+
+    if group_config do
+      # Group records by the group field
+      grouped_records = group_records_by_field(records, group_config)
+
+      # Build group structures
+      Enum.map(grouped_records, fn {group_value, group_records} ->
+        # Calculate aggregates for this group
+        aggregates = calculate_group_aggregates(group_records, context)
+
+        # Check if there are more levels to nest
+        next_level = current_level + 1
+        next_group = Enum.find(groups, fn g -> g.level == next_level end)
+
+        nested_records =
+          if next_group do
+            # Recursively build nested groups
+            build_groups_at_level(group_records, groups, next_level, context)
+          else
+            # No more nesting - return detail records
+            group_records
+          end
+
+        %{
+          "group_value" => group_value,
+          "group_level" => current_level,
+          "aggregates" => aggregates,
+          "records" => nested_records
+        }
+      end)
+    else
+      records
+    end
+  end
+
+  defp group_records_by_field(records, group_config) do
+    # Get the group field name from the expression
+    field_name = extract_field_name_from_expression(group_config.expression)
+
+    # Group records by the field value
+    records
+    |> Enum.group_by(fn record ->
+      get_field_value(record, field_name)
+    end)
+    |> Enum.sort_by(fn {group_value, _} -> group_value end, group_config.sort || :asc)
+  end
+
+  defp extract_field_name_from_expression(expression) when is_atom(expression), do: expression
+
+  defp extract_field_name_from_expression(%{__struct__: _} = expression) do
+    # Handle Ash.Expr - try to extract field name
+    # This is a simplified approach - may need enhancement
+    case expression do
+      %{arguments: [field]} when is_atom(field) -> field
+      _ -> :unknown
+    end
+  end
+
+  defp extract_field_name_from_expression(_), do: :unknown
+
+  defp get_field_value(record, field_name) when is_atom(field_name) do
+    Map.get(record, field_name) || Map.get(record, to_string(field_name))
+  end
+
+  defp get_field_value(record, field_name) when is_binary(field_name) do
+    Map.get(record, field_name) || Map.get(record, String.to_atom(field_name))
+  end
+
+  defp get_field_value(_, _), do: nil
+
+  defp calculate_group_aggregates(group_records, _context) do
+    # Calculate common aggregates
+    count = length(group_records)
+
+    # Find numeric fields and calculate sums
+    sums = calculate_numeric_sums(group_records)
+
+    Map.merge(%{"count" => count}, sums)
+  end
+
+  defp calculate_numeric_sums(records) when length(records) == 0, do: %{}
+
+  defp calculate_numeric_sums([first_record | _rest] = records) do
+    # Get numeric fields from the first record
+    numeric_fields =
+      first_record
+      |> Enum.filter(fn {_key, value} -> is_number(value) end)
+      |> Enum.map(fn {key, _value} -> key end)
+
+    # Calculate sums for each numeric field
+    numeric_fields
+    |> Enum.map(fn field ->
+      sum =
+        records
+        |> Enum.map(fn record -> Map.get(record, field, 0) end)
+        |> Enum.sum()
+
+      {"#{field}_sum", sum}
+    end)
+    |> Enum.into(%{})
   end
 end

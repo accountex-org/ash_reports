@@ -57,45 +57,87 @@ defmodule AshReports.JsonRenderer do
 
   ## JSON Structure
 
-  Generated JSON follows a structured schema focused on report data output:
+  ### Flat Output (No Grouping)
+
+  For reports without grouping, returns a simple flat array:
 
   ```json
   {
-    "report": {
-      "name": "sales_report",
-      "version": "1.0",
-      "generated_at": "2024-01-15T10:30:00Z",
-      "metadata": {
-        "record_count": 1500,
-        "processing_time_ms": 250,
-        "variables": {"report_date": "2024-01-15"},
-        "groups": {}
+    "records": [
+      {
+        "customer_name": "ABC Corp",
+        "amount": 15000.50,
+        "order_date": "2024-01-10"
+      },
+      {
+        "customer_name": "XYZ Ltd",
+        "amount": 8500.00,
+        "order_date": "2024-01-12"
       }
-    },
-    "data": {
-      "records": [
-        {
-          "customer_name": "ABC Corp",
-          "amount": 15000.50,
-          "order_date": "2024-01-10",
-          "_index": 0
-        },
-        {
-          "customer_name": "XYZ Ltd",
-          "amount": 8500.00,
-          "order_date": "2024-01-12",
-          "_index": 1
-        }
-      ],
-      "variables": {"report_date": "2024-01-15"},
-      "groups": {}
-    },
-    "schema": {
-      "version": "3.5.0",
-      "format": "ash_reports_json",
-      "validation": "passed"
-    }
+    ]
   }
+  ```
+
+  ### Hierarchical Output (With Grouping)
+
+  For reports with grouping, returns nested structure with aggregates:
+
+  ```json
+  {
+    "records": [
+      {
+        "group_value": "North",
+        "group_level": 1,
+        "aggregates": {
+          "count": 2,
+          "amount_sum": 24000.50
+        },
+        "records": [
+          {
+            "customer_name": "ABC Corp",
+            "region": "North",
+            "amount": 15000.50,
+            "order_date": "2024-01-10"
+          },
+          {
+            "customer_name": "XYZ Ltd",
+            "region": "North",
+            "amount": 8500.00,
+            "order_date": "2024-01-12"
+          }
+        ]
+      },
+      {
+        "group_value": "South",
+        "group_level": 1,
+        "aggregates": {
+          "count": 1,
+          "amount_sum": 12000.00
+        },
+        "records": [
+          {
+            "customer_name": "DEF Inc",
+            "region": "South",
+            "amount": 12000.00,
+            "order_date": "2024-01-15"
+          }
+        ]
+      }
+    ]
+  }
+  ```
+
+  ## What Records Include
+
+  - Field values from the driving resource
+  - Computed variable values
+  - Group aggregation results (when grouped)
+
+  ## What Records Do NOT Include
+
+  - Internal metadata fields (like `_index`)
+  - Formatted values (only raw data)
+  - Report structure information (bands, elements, etc.)
   ```
 
   ## API Integration Features
@@ -305,46 +347,8 @@ defmodule AshReports.JsonRenderer do
   end
 
   defp apply_json_locale_formatting(%RenderContext{} = context) do
-    json_config = context.config[:json] || %{}
-
-    if json_config[:locale_formatting] do
-      locale = json_config[:locale]
-      dual_format = json_config[:dual_value_format]
-
-      # Format the records with locale-aware formatting for JSON output
-      # Ensure records is always a list
-      records_list =
-        case context.records do
-          records when is_list(records) -> records
-          # Wrap single record in a list
-          record -> [record]
-        end
-
-      formatted_records =
-        records_list
-        |> Enum.map(fn record ->
-          format_record_for_json(record, locale, dual_format)
-        end)
-
-      # Update context with formatted records
-      updated_context = %{context | records: formatted_records}
-
-      # Add locale metadata to the context metadata
-      locale_metadata = %{
-        locale_formatting_applied: true,
-        locale: locale,
-        text_direction: json_config[:text_direction],
-        dual_value_format: dual_format,
-        locale_metadata: RenderContext.get_locale_metadata(context)
-      }
-
-      updated_metadata = Map.put(context.metadata, :json_locale_formatting, locale_metadata)
-      final_context = %{updated_context | metadata: updated_metadata}
-
-      {:ok, final_context}
-    else
-      {:ok, context}
-    end
+    # Skip locale formatting for JSON - output raw data only
+    {:ok, context}
   end
 
   defp format_record_for_json(record, locale, dual_format) when is_map(record) do

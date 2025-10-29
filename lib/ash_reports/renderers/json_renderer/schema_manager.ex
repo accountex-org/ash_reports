@@ -97,13 +97,15 @@ defmodule AshReports.JsonRenderer.SchemaManager do
       "$schema" => "http://json-schema.org/draft-07/schema#",
       "type" => "object",
       "title" => "AshReports JSON Output Schema v3.5.0",
-      "description" => "Schema for JSON output from AshReports Phase 3.5",
+      "description" => "Schema for JSON output from AshReports - records only",
       "properties" => %{
-        "report" => report_schema(),
-        "data" => data_schema(),
-        "schema" => schema_info_schema()
+        "records" => %{
+          "type" => "array",
+          "items" => %{"type" => "object"},
+          "description" => "Array of record objects containing report data"
+        }
       },
-      "required" => ["report", "data", "schema"],
+      "required" => ["records"],
       "additionalProperties" => false
     }
   end
