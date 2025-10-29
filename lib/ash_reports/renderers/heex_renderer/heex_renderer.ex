@@ -99,6 +99,7 @@ defmodule AshReports.HeexRenderer do
   @behaviour AshReports.Renderer
 
   alias AshReports.{
+    HeexRenderer.BandRenderer,
     HeexRenderer.Components,
     HeexRenderer.LiveViewIntegration,
     RenderContext
@@ -564,7 +565,7 @@ defmodule AshReports.HeexRenderer do
     base_assigns = %{
       locale: context.locale,
       text_direction: context.text_direction,
-      reports: context.records,
+      context: context,
       charts: chart_components.chart_components,
       chart_count: chart_components.count,
       supports_charts: chart_components.count > 0,
@@ -634,24 +635,26 @@ defmodule AshReports.HeexRenderer do
     }
   end
 
-  defp generate_base_report_template(%RenderContext{} = _context, component_assigns) do
-    # Generate base HEEX template for report
+  defp generate_base_report_template(%RenderContext{} = context, component_assigns) do
+    # Generate base HEEX template for report using BandRenderer
+    band_content = BandRenderer.render_report_bands(context)
+
     """
-    <div class="ash-report #{if component_assigns.text_direction == "rtl", do: "rtl", else: "ltr"}" 
+    <div class="ash-report #{if component_assigns.text_direction == "rtl", do: "rtl", else: "ltr"}"
          data-locale="#{component_assigns.locale}">
-      
+
       <%= if @supports_charts do %>
         <div class="ash-report-with-charts">
           <div class="ash-report-data">
-            <%= render_report_bands(@reports) %>
+            #{band_content}
           </div>
         </div>
       <% else %>
         <div class="ash-report-standard">
-          <%= render_report_bands(@reports) %>
+          #{band_content}
         </div>
       <% end %>
-      
+
     </div>
     """
   end
