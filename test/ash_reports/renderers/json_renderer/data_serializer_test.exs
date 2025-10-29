@@ -97,6 +97,76 @@ defmodule AshReports.JsonRenderer.DataSerializerTest do
     end
   end
 
+  describe "serialize_records/2 with function references" do
+    test "handles records with function values" do
+      # This tests the fix for KeyError when serializing function references
+      my_func = fn x -> x * 2 end
+
+      records = [
+        %{id: 1, name: "Test", callback: my_func}
+      ]
+
+      {:ok, serialized} = DataSerializer.serialize_records(records)
+
+      assert is_list(serialized)
+      assert length(serialized) == 1
+
+      [first_record] = serialized
+      # Function should be serialized as metadata, not the function itself
+      assert is_map(first_record["callback"])
+      assert first_record["callback"]["_type"] == "function"
+      assert is_integer(first_record["callback"]["arity"])
+    end
+
+    test "handles maps with function keys" do
+      # This tests the fix for function keys in maps
+      my_func = fn x -> x * 2 end
+
+      records = [
+        %{
+          id: 1,
+          # Map with function as key should have that key filtered out
+          data: %{my_func => "should_be_filtered", "normal_key" => "should_remain"}
+        }
+      ]
+
+      {:ok, serialized} = DataSerializer.serialize_records(records)
+
+      assert is_list(serialized)
+      [first_record] = serialized
+
+      # The function key should be filtered out, only normal_key should remain
+      assert Map.has_key?(first_record["data"], "normal_key")
+      assert first_record["data"]["normal_key"] == "should_remain"
+      # Verify function key was filtered
+      refute Enum.any?(Map.keys(first_record["data"]), &is_function/1)
+    end
+
+    test "serializes nested functions" do
+      records = [
+        %{
+          id: 1,
+          callbacks: [
+            fn x -> x + 1 end,
+            fn x -> x * 2 end
+          ]
+        }
+      ]
+
+      {:ok, serialized} = DataSerializer.serialize_records(records)
+
+      assert is_list(serialized)
+      [first_record] = serialized
+
+      # All functions in the list should be serialized as metadata
+      assert is_list(first_record["callbacks"])
+      assert length(first_record["callbacks"]) == 2
+      assert Enum.all?(first_record["callbacks"], fn callback ->
+        is_map(callback) && callback["_type"] == "function"
+      end)
+    end
+  end
+
   describe "serialize_variables/2" do
     test "serializes variable map" do
       variables = %{

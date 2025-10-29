@@ -249,6 +249,7 @@ defmodule AshReports.JsonRenderer.DataSerializer do
   defp serialize_value(value, opts) do
     cond do
       is_nil(value) -> serialize_nil_value(opts)
+      is_function(value) -> serialize_function_value(value)
       primitive_type?(value) -> serialize_primitive_value(value, opts)
       is_atom(value) -> serialize_atom_value(value)
       special_type?(value) -> serialize_special_type(value, opts)
@@ -266,6 +267,18 @@ defmodule AshReports.JsonRenderer.DataSerializer do
 
   defp serialize_atom_value(value) do
     to_string(value)
+  end
+
+  defp serialize_function_value(value) when is_function(value) do
+    # Functions cannot be serialized to JSON, so we provide metadata instead
+    info = Function.info(value)
+    %{
+      "_type" => "function",
+      "arity" => Keyword.get(info, :arity),
+      "module" => inspect(Keyword.get(info, :module)),
+      "name" => inspect(Keyword.get(info, :name)),
+      "_note" => "Function references cannot be serialized to JSON"
+    }
   end
 
   defp serialize_special_type(value, opts) do
@@ -329,6 +342,8 @@ defmodule AshReports.JsonRenderer.DataSerializer do
   defp serialize_key(key, _opts) when is_binary(key), do: key
   defp serialize_key(key, _opts) when is_integer(key), do: Integer.to_string(key)
   defp serialize_key(key, _opts) when is_float(key), do: Float.to_string(key)
+  # Function keys should have been filtered out, but just in case...
+  defp serialize_key(key, _opts) when is_function(key), do: :skip_function_key
   # For complex types (maps, tuples, lists, etc.), use inspect to get a string representation
   defp serialize_key(key, _opts), do: inspect(key)
 
@@ -342,20 +357,43 @@ defmodule AshReports.JsonRenderer.DataSerializer do
     try do
       map
       |> Enum.into(%{}, fn {key, value} ->
-        serialized_value = serialize_value(value, opts)
-
-        if serialized_value == :skip_field do
+        # Skip function keys entirely
+        if is_function(key) do
           :skip_field
         else
-          {serialize_key(key, opts), serialized_value}
+          serialized_value = serialize_value(value, opts)
+
+          if serialized_value == :skip_field do
+            :skip_field
+          else
+            {serialize_key(key, opts), serialized_value}
+          end
         end
       end)
-      |> Map.reject(fn {_, value} -> value == :skip_field end)
+      |> Map.reject(fn entry -> entry == :skip_field end)
     rescue
+      ArgumentError ->
+        # Maps with function keys cause ArgumentError during Enum
+        # Fall back to filtering keys first
+        map
+        |> Map.keys()
+        |> Enum.reject(&is_function/1)
+        |> Enum.reduce(%{}, fn key, acc ->
+          value = Map.get(map, key)
+          serialized_value = serialize_value(value, opts)
+
+          if serialized_value == :skip_field do
+            acc
+          else
+            Map.put(acc, serialize_key(key, opts), serialized_value)
+          end
+        end)
+
       Protocol.UndefinedError ->
         # Fallback: handle maps with non-enumerable values
         map
         |> Map.keys()
+        |> Enum.reject(&is_function/1)
         |> Enum.reduce(%{}, fn key, acc ->
           value = Map.get(map, key)
           serialized_value = serialize_value(value, opts)
