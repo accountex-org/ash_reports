@@ -89,6 +89,39 @@ defmodule AshReports.Charts.ChartsTest do
       assert String.contains?(svg, "<svg")
     end
 
+    test "generates a sparkline with valid data" do
+      data = [1, 5, 10, 15, 12, 12, 15, 14, 20, 14, 10, 15, 15]
+
+      config = %Config{width: 100, height: 20}
+
+      assert {:ok, svg} = Charts.generate(:sparkline, data, config)
+      assert is_binary(svg)
+      assert String.contains?(svg, "<svg")
+    end
+
+    test "generates a gantt chart with valid datetime data" do
+      data = [
+        %{
+          category: "Phase 1",
+          task: "Design",
+          start_time: ~N[2024-01-01 00:00:00],
+          end_time: ~N[2024-01-15 00:00:00]
+        },
+        %{
+          category: "Phase 1",
+          task: "Development",
+          start_time: ~N[2024-01-10 00:00:00],
+          end_time: ~N[2024-02-01 00:00:00]
+        }
+      ]
+
+      config = %Config{title: "Project Timeline"}
+
+      assert {:ok, svg} = Charts.generate(:gantt, data, config)
+      assert is_binary(svg)
+      assert String.contains?(svg, "<svg")
+    end
+
     test "returns error for unknown chart type" do
       data = [%{x: 1, y: 2}]
       config = %Config{}
@@ -122,6 +155,8 @@ defmodule AshReports.Charts.ChartsTest do
       assert :pie in types
       assert :area in types
       assert :scatter in types
+      assert :sparkline in types
+      assert :gantt in types
     end
   end
 
@@ -132,6 +167,8 @@ defmodule AshReports.Charts.ChartsTest do
       assert Charts.type_available?(:pie) == true
       assert Charts.type_available?(:area) == true
       assert Charts.type_available?(:scatter) == true
+      assert Charts.type_available?(:sparkline) == true
+      assert Charts.type_available?(:gantt) == true
     end
 
     test "returns false for unregistered chart types" do

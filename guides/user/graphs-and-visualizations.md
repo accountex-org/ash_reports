@@ -18,7 +18,7 @@ This guide covers adding charts and visualizations to AshReports using the basic
 
 AshReports currently provides basic chart integration through the `chart` element type with support for:
 
-- **Chart Types**: Bar, Line, Pie, Area, Scatter
+- **Chart Types**: Bar, Line, Pie, Area, Scatter, Sparkline, Gantt
 - **Data Source**: Expression-based data sourcing
 - **Output**: SVG generation via Contex library
 - **Configuration**: Basic config via map or expression
@@ -59,7 +59,7 @@ The chart element supports the following options:
 ```elixir
 chart :chart_name do
   # Required
-  chart_type :bar  # :bar, :line, :pie, :area, :scatter
+  chart_type :bar  # :bar, :line, :pie, :area, :scatter, :sparkline, :gantt
   data_source :expression  # Expression returning chart data
 
   # Optional
@@ -183,6 +183,84 @@ end
   %{x: 25.5, y: 90}
 ]
 ```
+
+### Sparkline Charts
+
+**NEW** - Ultra-compact inline charts perfect for dashboards and tables:
+
+```elixir
+chart :trend_sparkline do
+  chart_type :sparkline
+  data_source :daily_metrics
+  position(x: 0, y: 0, width: 20, height: 5)
+end
+```
+
+**Data format:**
+```elixir
+# Simple array of numbers
+[1, 5, 10, 15, 12, 12, 15, 14, 20, 14, 10, 15, 15]
+
+# Or map format
+[
+  %{value: 10},
+  %{value: 15},
+  %{value: 12}
+]
+```
+
+**Use Cases:**
+- Dashboard metric trends
+- Inline table cell charts
+- Mobile-optimized visualizations
+- Quick trend indicators
+- Compact time-series displays
+
+**Default Size:** 100px wide × 20px high (customizable via config)
+
+### Gantt Charts
+
+**NEW** - Project timeline visualization with task scheduling:
+
+```elixir
+chart :project_timeline do
+  chart_type :gantt
+  data_source :project_tasks
+  title "Sprint Planning"
+  position(x: 0, y: 0, width: 100, height: 50)
+end
+```
+
+**Data format:**
+```elixir
+[
+  %{
+    category: "Phase 1",
+    task: "Design",
+    start_time: ~N[2024-01-01 00:00:00],
+    end_time: ~N[2024-01-15 00:00:00],
+    task_id: "task_1"  # Optional
+  },
+  %{
+    category: "Phase 1",
+    task: "Development",
+    start_time: ~N[2024-01-10 00:00:00],
+    end_time: ~N[2024-02-01 00:00:00]
+  }
+]
+```
+
+**Requirements:**
+- `start_time` and `end_time` **MUST** be `NaiveDateTime` or `DateTime` types
+- String dates will **NOT** be automatically converted
+- Use `NaiveDateTime.new!/2` or similar to create proper DateTime values
+
+**Use Cases:**
+- Project timeline visualization
+- Sprint planning and tracking
+- Resource allocation planning
+- Task dependency visualization
+- Milestone tracking
 
 ## Chart Data Format
 
