@@ -188,4 +188,283 @@ defmodule AshReports.RealisticTestHelpersTest do
       assert_in_delta(stats_1.total_records, stats_2.total_records, 50)
     end
   end
+
+  # Phase 3: Query Helpers Tests
+  describe "list_customers/1" do
+    setup do
+      RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+      on_exit(fn -> RealisticTestHelpers.cleanup_ets_tables() end)
+      :ok
+    end
+
+    test "lists all customers without options" do
+      customers = RealisticTestHelpers.list_customers()
+
+      assert is_list(customers)
+      assert length(customers) > 0
+      customer = List.first(customers)
+      assert customer.__struct__ == AshReportsDemo.Customer
+      assert is_binary(customer.name)
+      assert is_binary(customer.email)
+    end
+
+    test "respects limit option" do
+      customers = RealisticTestHelpers.list_customers(limit: 5)
+
+      assert is_list(customers)
+      assert length(customers) <= 5
+    end
+
+    test "respects offset option" do
+      all_customers = RealisticTestHelpers.list_customers()
+      offset_customers = RealisticTestHelpers.list_customers(offset: 2)
+
+      assert length(offset_customers) == length(all_customers) - 2
+    end
+
+    test "respects limit and offset together" do
+      customers = RealisticTestHelpers.list_customers(limit: 3, offset: 2)
+
+      assert is_list(customers)
+      assert length(customers) <= 3
+    end
+
+    test "filters by status" do
+      customers = RealisticTestHelpers.list_customers(filter: [status: :active])
+
+      assert is_list(customers)
+      assert Enum.all?(customers, fn c -> c.status == :active end)
+    end
+
+    test "loads relationships" do
+      customers = RealisticTestHelpers.list_customers(limit: 1, load: [:invoices])
+
+      assert is_list(customers)
+      customer = List.first(customers)
+      assert Ash.Resource.loaded?(customer, :invoices)
+    end
+
+    test "sorts by name ascending" do
+      customers = RealisticTestHelpers.list_customers(sort: [name: :asc], limit: 10)
+
+      names = Enum.map(customers, & &1.name)
+      assert names == Enum.sort(names)
+    end
+
+    test "sorts by name descending" do
+      customers = RealisticTestHelpers.list_customers(sort: [name: :desc], limit: 10)
+
+      names = Enum.map(customers, & &1.name)
+      assert names == Enum.sort(names, :desc)
+    end
+  end
+
+  describe "get_customer/2" do
+    setup do
+      RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+      on_exit(fn -> RealisticTestHelpers.cleanup_ets_tables() end)
+
+      # Get a customer ID to use in tests
+      customer = RealisticTestHelpers.list_customers(limit: 1) |> List.first()
+      {:ok, customer_id: customer.id}
+    end
+
+    test "gets customer by ID", %{customer_id: customer_id} do
+      customer = RealisticTestHelpers.get_customer(customer_id)
+
+      assert customer.__struct__ == AshReportsDemo.Customer
+      assert customer.id == customer_id
+      assert is_binary(customer.name)
+      assert is_binary(customer.email)
+    end
+
+    test "loads relationships", %{customer_id: customer_id} do
+      customer = RealisticTestHelpers.get_customer(customer_id, load: [:invoices, :addresses])
+
+      assert Ash.Resource.loaded?(customer, :invoices)
+      assert Ash.Resource.loaded?(customer, :addresses)
+    end
+  end
+
+  describe "count_customers/1" do
+    setup do
+      RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+      on_exit(fn -> RealisticTestHelpers.cleanup_ets_tables() end)
+      :ok
+    end
+
+    test "counts all customers" do
+      count = RealisticTestHelpers.count_customers()
+
+      assert is_integer(count)
+      assert count > 0
+
+      # Verify count matches list length
+      customers = RealisticTestHelpers.list_customers()
+      assert count == length(customers)
+    end
+
+    test "counts customers with filter" do
+      active_count = RealisticTestHelpers.count_customers(filter: [status: :active])
+
+      assert is_integer(active_count)
+
+      # Verify count matches filtered list length
+      active_customers = RealisticTestHelpers.list_customers(filter: [status: :active])
+      assert active_count == length(active_customers)
+    end
+  end
+
+  describe "list_invoices/1" do
+    setup do
+      RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+      on_exit(fn -> RealisticTestHelpers.cleanup_ets_tables() end)
+      :ok
+    end
+
+    test "lists all invoices without options" do
+      invoices = RealisticTestHelpers.list_invoices()
+
+      assert is_list(invoices)
+      assert length(invoices) > 0
+      invoice = List.first(invoices)
+      assert invoice.__struct__ == AshReportsDemo.Invoice
+      assert is_binary(invoice.invoice_number)
+    end
+
+    test "respects limit option" do
+      invoices = RealisticTestHelpers.list_invoices(limit: 5)
+
+      assert is_list(invoices)
+      assert length(invoices) <= 5
+    end
+
+    test "filters by status" do
+      # Get all statuses first
+      all_invoices = RealisticTestHelpers.list_invoices()
+      statuses = Enum.map(all_invoices, & &1.status) |> Enum.uniq()
+
+      # Pick the first status and filter by it
+      if length(statuses) > 0 do
+        status = List.first(statuses)
+        filtered = RealisticTestHelpers.list_invoices(filter: [status: status])
+        assert Enum.all?(filtered, fn i -> i.status == status end)
+      end
+    end
+
+    test "loads customer relationship" do
+      invoices = RealisticTestHelpers.list_invoices(limit: 1, load: [:customer])
+
+      assert is_list(invoices)
+      invoice = List.first(invoices)
+      assert Ash.Resource.loaded?(invoice, :customer)
+    end
+
+    test "sorts by date descending" do
+      invoices = RealisticTestHelpers.list_invoices(sort: [date: :desc], limit: 10)
+
+      dates = Enum.map(invoices, & &1.date)
+      assert dates == Enum.sort(dates, {:desc, Date})
+    end
+  end
+
+  describe "get_invoice/2" do
+    setup do
+      RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+      on_exit(fn -> RealisticTestHelpers.cleanup_ets_tables() end)
+
+      # Get an invoice ID to use in tests
+      invoice = RealisticTestHelpers.list_invoices(limit: 1) |> List.first()
+      {:ok, invoice_id: invoice.id}
+    end
+
+    test "gets invoice by ID", %{invoice_id: invoice_id} do
+      invoice = RealisticTestHelpers.get_invoice(invoice_id)
+
+      assert invoice.__struct__ == AshReportsDemo.Invoice
+      assert invoice.id == invoice_id
+      assert is_binary(invoice.invoice_number)
+    end
+
+    test "loads relationships", %{invoice_id: invoice_id} do
+      invoice = RealisticTestHelpers.get_invoice(invoice_id, load: [:customer, :line_items])
+
+      assert Ash.Resource.loaded?(invoice, :customer)
+      assert Ash.Resource.loaded?(invoice, :line_items)
+    end
+  end
+
+  describe "list_products/1" do
+    setup do
+      RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+      on_exit(fn -> RealisticTestHelpers.cleanup_ets_tables() end)
+      :ok
+    end
+
+    test "lists all products without options" do
+      products = RealisticTestHelpers.list_products()
+
+      assert is_list(products)
+      assert length(products) > 0
+      product = List.first(products)
+      assert product.__struct__ == AshReportsDemo.Product
+      assert is_binary(product.name)
+      assert is_binary(product.sku)
+    end
+
+    test "respects limit option" do
+      products = RealisticTestHelpers.list_products(limit: 5)
+
+      assert is_list(products)
+      assert length(products) <= 5
+    end
+
+    test "filters by active status" do
+      products = RealisticTestHelpers.list_products(filter: [active: true])
+
+      assert is_list(products)
+      assert Enum.all?(products, fn p -> p.active == true end)
+    end
+
+    test "loads category relationship" do
+      products = RealisticTestHelpers.list_products(limit: 1, load: [:category])
+
+      assert is_list(products)
+      product = List.first(products)
+      assert Ash.Resource.loaded?(product, :category)
+    end
+
+    test "sorts by name ascending" do
+      products = RealisticTestHelpers.list_products(sort: [name: :asc], limit: 10)
+
+      names = Enum.map(products, & &1.name)
+      assert names == Enum.sort(names)
+    end
+  end
+
+  describe "get_product/2" do
+    setup do
+      RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+      on_exit(fn -> RealisticTestHelpers.cleanup_ets_tables() end)
+
+      # Get a product ID to use in tests
+      product = RealisticTestHelpers.list_products(limit: 1) |> List.first()
+      {:ok, product_id: product.id}
+    end
+
+    test "gets product by ID", %{product_id: product_id} do
+      product = RealisticTestHelpers.get_product(product_id)
+
+      assert product.__struct__ == AshReportsDemo.Product
+      assert product.id == product_id
+      assert is_binary(product.name)
+      assert is_binary(product.sku)
+    end
+
+    test "loads relationships", %{product_id: product_id} do
+      product = RealisticTestHelpers.get_product(product_id, load: [:category])
+
+      assert Ash.Resource.loaded?(product, :category)
+    end
+  end
 end

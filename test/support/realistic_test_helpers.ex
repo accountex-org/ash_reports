@@ -138,6 +138,7 @@ defmodule AshReports.RealisticTestHelpers do
 
   # Import query helpers from Ash
   import Ash.Query
+  require Ash.Query
 
   @doc """
   Sets up ETS tables and generates realistic test data.
@@ -314,23 +315,29 @@ defmodule AshReports.RealisticTestHelpers do
 
   - `:limit` - Maximum number of records to return
   - `:offset` - Number of records to skip
-  - `:filter` - Keyword list of filters
-  - `:load` - List of relationships to load
-  - `:sort` - Sort order
+  - `:filter` - Keyword list of filters (e.g., [status: :active])
+  - `:load` - List of relationships to load (e.g., [:invoices, :addresses])
+  - `:sort` - Sort order (e.g., [name: :asc] or [:name])
 
   ## Examples
 
       customers = list_customers()
       customers = list_customers(limit: 10)
       customers = list_customers(filter: [status: :active], load: [:invoices])
+      customers = list_customers(sort: [name: :asc], limit: 5)
   """
   def list_customers(opts \\ []) do
-    # TODO: Implement in Phase 3
-    raise "Not yet implemented"
+    AshReportsDemo.Customer
+    |> build_query(opts)
+    |> Ash.read!(domain: Domain)
   end
 
   @doc """
   Gets a customer by ID.
+
+  ## Options
+
+  - `:load` - List of relationships to load
 
   ## Examples
 
@@ -338,12 +345,21 @@ defmodule AshReports.RealisticTestHelpers do
       customer = get_customer(customer_id, load: [:invoices, :addresses])
   """
   def get_customer(id, opts \\ []) do
-    # TODO: Implement in Phase 3
-    raise "Not yet implemented"
+    load = Keyword.get(opts, :load, [])
+
+    AshReportsDemo.Customer
+    |> Ash.Query.for_read(:read)
+    |> Ash.Query.filter(id == ^id)
+    |> Ash.Query.load(load)
+    |> Ash.read_one!(domain: Domain)
   end
 
   @doc """
   Counts total customers.
+
+  ## Options
+
+  - `:filter` - Keyword list of filters
 
   ## Examples
 
@@ -351,40 +367,107 @@ defmodule AshReports.RealisticTestHelpers do
       active_count = count_customers(filter: [status: :active])
   """
   def count_customers(opts \\ []) do
-    # TODO: Implement in Phase 3
-    raise "Not yet implemented"
+    query =
+      AshReportsDemo.Customer
+      |> Ash.Query.for_read(:read)
+
+    query =
+      case Keyword.get(opts, :filter) do
+        nil -> query
+        filters -> apply_filters(query, filters)
+      end
+
+    Ash.count!(query, domain: Domain)
   end
 
   @doc """
   Lists all invoices with optional filtering and pagination.
+
+  ## Options
+
+  - `:limit` - Maximum number of records to return
+  - `:offset` - Number of records to skip
+  - `:filter` - Keyword list of filters (e.g., [status: :paid])
+  - `:load` - List of relationships to load (e.g., [:customer, :line_items])
+  - `:sort` - Sort order (e.g., [date: :desc])
+
+  ## Examples
+
+      invoices = list_invoices()
+      invoices = list_invoices(limit: 10, sort: [date: :desc])
+      invoices = list_invoices(filter: [status: :paid], load: [:customer])
   """
   def list_invoices(opts \\ []) do
-    # TODO: Implement in Phase 3
-    raise "Not yet implemented"
+    AshReportsDemo.Invoice
+    |> build_query(opts)
+    |> Ash.read!(domain: Domain)
   end
 
   @doc """
   Gets an invoice by ID.
+
+  ## Options
+
+  - `:load` - List of relationships to load
+
+  ## Examples
+
+      invoice = get_invoice(invoice_id)
+      invoice = get_invoice(invoice_id, load: [:customer, :line_items])
   """
   def get_invoice(id, opts \\ []) do
-    # TODO: Implement in Phase 3
-    raise "Not yet implemented"
+    load = Keyword.get(opts, :load, [])
+
+    AshReportsDemo.Invoice
+    |> Ash.Query.for_read(:read)
+    |> Ash.Query.filter(id == ^id)
+    |> Ash.Query.load(load)
+    |> Ash.read_one!(domain: Domain)
   end
 
   @doc """
   Lists all products with optional filtering and pagination.
+
+  ## Options
+
+  - `:limit` - Maximum number of records to return
+  - `:offset` - Number of records to skip
+  - `:filter` - Keyword list of filters (e.g., [active: true])
+  - `:load` - List of relationships to load (e.g., [:category])
+  - `:sort` - Sort order (e.g., [name: :asc])
+
+  ## Examples
+
+      products = list_products()
+      products = list_products(limit: 10)
+      products = list_products(filter: [active: true], sort: [name: :asc])
   """
   def list_products(opts \\ []) do
-    # TODO: Implement in Phase 3
-    raise "Not yet implemented"
+    AshReportsDemo.Product
+    |> build_query(opts)
+    |> Ash.read!(domain: Domain)
   end
 
   @doc """
   Gets a product by ID.
+
+  ## Options
+
+  - `:load` - List of relationships to load
+
+  ## Examples
+
+      product = get_product(product_id)
+      product = get_product(product_id, load: [:category])
   """
   def get_product(id, opts \\ []) do
-    # TODO: Implement in Phase 3
-    raise "Not yet implemented"
+    load = Keyword.get(opts, :load, [])
+
+    AshReportsDemo.Product
+    |> Ash.Query.for_read(:read)
+    |> Ash.Query.filter(id == ^id)
+    |> Ash.Query.load(load)
+    |> Ash.read_one!(domain: Domain)
   end
 
   # Conversion Utilities - Phase 4
@@ -415,6 +498,42 @@ defmodule AshReports.RealisticTestHelpers do
   end
 
   # Private Helpers
+
+  # Query building helper
+  defp build_query(resource, opts) do
+    query = Ash.Query.for_read(resource, :read)
+
+    query
+    |> apply_filters(Keyword.get(opts, :filter))
+    |> apply_pagination(Keyword.get(opts, :limit), Keyword.get(opts, :offset))
+    |> apply_loads(Keyword.get(opts, :load))
+    |> apply_sort(Keyword.get(opts, :sort))
+  end
+
+  defp apply_filters(query, nil), do: query
+
+  defp apply_filters(query, filters) when is_list(filters) do
+    # Convert keyword list to map for Ash filter
+    filter_map = Enum.into(filters, %{})
+    Ash.Query.filter(query, ^filter_map)
+  end
+
+  defp apply_pagination(query, nil, nil), do: query
+  defp apply_pagination(query, limit, nil), do: Ash.Query.limit(query, limit)
+  defp apply_pagination(query, nil, offset), do: Ash.Query.offset(query, offset)
+  defp apply_pagination(query, limit, offset) do
+    query
+    |> Ash.Query.limit(limit)
+    |> Ash.Query.offset(offset)
+  end
+
+  defp apply_loads(query, nil), do: query
+  defp apply_loads(query, []), do: query
+  defp apply_loads(query, loads) when is_list(loads), do: Ash.Query.load(query, loads)
+
+  defp apply_sort(query, nil), do: query
+  defp apply_sort(query, []), do: query
+  defp apply_sort(query, sort) when is_list(sort), do: Ash.Query.sort(query, sort)
 
   defp get_scenario_counts(:empty), do: %{customers: 0, invoices: 0, products: 0}
   defp get_scenario_counts(:small), do: %{customers: 10, invoices: 20, products: 15}
