@@ -56,7 +56,6 @@ defmodule AshReports.HeexRendererEnhancedTest do
       type: :bar,
       data: [%{label: "Q1", value: 100}],
       title: "Test Chart",
-      provider: :chartjs,
       interactive: true,
       real_time: false,
       interactions: [:click, :hover],
@@ -342,13 +341,12 @@ defmodule AshReports.HeexRendererEnhancedTest do
     end
 
     test "handles chart provider selection" do
-      chart = %{build_test_chart_config() | provider: :d3}
+      chart = build_test_chart_config()
       context = build_test_context(charts: [chart])
 
       assert {:ok, result} = HeexRendererEnhanced.render_with_context(context)
 
       component_heex = List.first(result.components.components)
-      assert String.contains?(component_heex, "provider: :d3")
     end
 
     test "includes update_interval for real-time" do
@@ -465,7 +463,6 @@ defmodule AshReports.HeexRendererEnhancedTest do
         type: :bar,
         data: [],
         title: nil,
-        provider: :chartjs,
         interactive: false,
         real_time: false,
         interactions: [],

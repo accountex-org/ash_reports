@@ -459,7 +459,6 @@ defmodule AshReports.LiveView.ChartLiveComponentTest do
         type: :line,
         data: [[1, 10], [2, 20]],
         title: "Chart.js Test",
-        provider: :chartjs
       }
 
       {_view, html} =
@@ -478,7 +477,6 @@ defmodule AshReports.LiveView.ChartLiveComponentTest do
         type: :scatter,
         data: [[1, 10], [2, 20]],
         title: "D3.js Test",
-        provider: :d3
       }
 
       {_view, html} =
@@ -497,7 +495,6 @@ defmodule AshReports.LiveView.ChartLiveComponentTest do
         type: :histogram,
         data: for(_ <- 1..20, do: :rand.uniform(100)),
         title: "Plotly Test",
-        provider: :plotly
       }
 
       {_view, html} =
