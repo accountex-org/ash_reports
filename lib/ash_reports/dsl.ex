@@ -781,7 +781,7 @@ defmodule AshReports.Dsl do
     base_element_schema() ++
       [
         chart_type: [
-          type: {:in, [:bar, :line, :pie, :area, :scatter]},
+          type: {:in, [:bar, :line, :pie, :area, :scatter, :sparkline, :gantt]},
           required: true,
           doc: "The type of chart to generate."
         ],

@@ -2,7 +2,9 @@ defmodule AshReports.Element.Chart do
   @moduledoc """
   A chart element for embedding visualizations in reports.
 
-  Supports all chart types from the Charts module: bar, line, pie, area, scatter.
+  Supports all chart types from the Charts module: bar, line, pie, area, scatter,
+  sparkline, and gantt.
+
   Charts can bind data from report queries, use dynamic configuration via expressions,
   and support conditional rendering.
 
@@ -20,6 +22,18 @@ defmodule AshReports.Element.Chart do
         config %{width: 600, height: 400, title: "Sales by Region"}
         caption "Regional sales breakdown"
       end
+
+      chart :trend_sparkline do
+        chart_type :sparkline
+        data_source expr(daily_metrics)
+        config %{width: 100, height: 20}
+      end
+
+      chart :project_timeline do
+        chart_type :gantt
+        data_source expr(project_tasks)
+        config %{width: 1000, height: 600, title: "Sprint Planning"}
+      end
   """
 
   defstruct [
@@ -34,7 +48,7 @@ defmodule AshReports.Element.Chart do
     type: :chart
   ]
 
-  @type chart_type :: :bar | :line | :pie | :area | :scatter
+  @type chart_type :: :bar | :line | :pie | :area | :scatter | :sparkline | :gantt
 
   @type t :: %__MODULE__{
           name: atom(),
