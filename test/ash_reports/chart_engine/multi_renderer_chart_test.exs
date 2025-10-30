@@ -522,4 +522,128 @@ defmodule AshReports.ChartEngine.MultiRendererChartTest do
       end)
     end
   end
+
+  describe "realistic data integration" do
+    setup do
+      AshReports.RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+    end
+
+    test "generates invoice sales chart from realistic data" do
+      invoices = AshReports.RealisticTestHelpers.list_invoices(limit: 50)
+
+      # Transform invoice data into chart format
+      chart_data =
+        invoices
+        |> Enum.map(fn invoice ->
+          %{
+            x: Date.to_string(invoice.date),
+            y: Decimal.to_float(invoice.total)
+          }
+        end)
+
+      chart_config = %ChartConfig{
+        type: :bar,
+        data: chart_data,
+        title: "Invoice Totals",
+        provider: :chartjs,
+        interactive: true
+      }
+
+      context = %{@test_context | metadata: %{chart_configs: [chart_config]}}
+
+      {:ok, processed} = ChartDataProcessor.process_for_renderer(chart_config, context, :html)
+
+      assert Map.has_key?(processed, :metadata)
+      assert processed.metadata.title == "Invoice Totals"
+      assert length(chart_data) == length(invoices)
+    end
+
+    test "creates customer spend chart from realistic relationships" do
+      customers = AshReports.RealisticTestHelpers.list_customers(limit: 10, load: [:invoices])
+
+      # Calculate total spend per customer
+      chart_data =
+        customers
+        |> Enum.map(fn customer ->
+          total =
+            customer.invoices
+            |> Enum.map(& &1.total)
+            |> Enum.reduce(Decimal.new(0), &Decimal.add/2)
+            |> Decimal.to_float()
+
+          %{x: customer.name, y: total}
+        end)
+        |> Enum.sort_by(& &1.y, :desc)
+
+      chart_config = %ChartConfig{
+        type: :bar,
+        data: chart_data,
+        title: "Customer Total Spend",
+        provider: :chartjs
+      }
+
+      # Test with multiple renderers
+      results = [:html, :json]
+      |> Enum.map(fn renderer ->
+        {renderer, ChartDataProcessor.process_for_renderer(chart_config, @test_context, renderer)}
+      end)
+
+      successful = Enum.filter(results, fn {_, result} -> match?({:ok, _}, result) end)
+      assert length(successful) >= 2
+    end
+
+    test "generates product sales chart from realistic invoice line items" do
+      invoices = AshReports.RealisticTestHelpers.list_invoices(limit: 20, load: [:line_items])
+
+      # Get line items count (simplified chart)
+      chart_data =
+        invoices
+        |> Enum.map(fn invoice ->
+          %{
+            x: invoice.invoice_number,
+            y: length(invoice.line_items)
+          }
+        end)
+        |> Enum.take(10)  # Top 10 invoices
+
+      chart_config = %ChartConfig{
+        type: :line,
+        data: chart_data,
+        title: "Line Items per Invoice",
+        provider: :chartjs
+      }
+
+      context = %{@test_context | metadata: %{chart_configs: [chart_config]}}
+
+      {:ok, result} = HtmlRenderer.render_with_context(context)
+      assert is_binary(result.content)
+    end
+
+    test "handles large realistic dataset in charts" do
+      # Get all invoices to create a comprehensive sales chart
+      all_invoices = AshReports.RealisticTestHelpers.list_invoices()
+
+      chart_data =
+        all_invoices
+        |> Enum.map(fn inv ->
+          %{x: Date.to_string(inv.date), y: Decimal.to_float(inv.total)}
+        end)
+
+      chart_config = %ChartConfig{
+        type: :scatter,
+        data: chart_data,
+        title: "All Invoice Amounts",
+        provider: :chartjs
+      }
+
+      start_time = System.monotonic_time(:microsecond)
+
+      {:ok, processed} = ChartDataProcessor.process_for_renderer(chart_config, @test_context, :json)
+
+      processing_time = System.monotonic_time(:microsecond) - start_time
+
+      assert processing_time < 2_000_000
+      assert Map.has_key?(processed, :metadata)
+    end
+  end
 end

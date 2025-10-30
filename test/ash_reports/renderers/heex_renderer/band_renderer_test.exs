@@ -721,4 +721,81 @@ defmodule AshReports.HeexRenderer.BandRendererTest do
       assert result =~ ~r/End of Report/
     end
   end
+
+  describe "realistic data integration" do
+    setup do
+      AshReports.RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+    end
+
+    test "renders customer detail band with realistic data" do
+      customers = AshReports.RealisticTestHelpers.list_customers(limit: 5)
+      simple_customers = AshReports.RealisticTestHelpers.to_simple_maps(customers)
+
+      detail_band = Band.new(:detail,
+        type: :detail,
+        elements: [
+          %{name: :name_field, type: :field, source: :name, position: %{}, style: %{}}
+        ]
+      )
+
+      report = %Report{name: :customer_report, bands: [detail_band]}
+      context = %RenderContext{report: report, records: simple_customers}
+
+      result = BandRenderer.render_report_bands(context)
+
+      assert is_binary(result)
+      assert result =~ "detail-band"
+      # Should render all customers
+      Enum.each(simple_customers, fn customer ->
+        assert result =~ customer.name
+      end)
+    end
+
+    test "renders invoice list with multiple band types" do
+      invoices = AshReports.RealisticTestHelpers.list_invoices(limit: 10)
+      simple_invoices = AshReports.RealisticTestHelpers.to_simple_maps(invoices)
+
+      header_band = Band.new(:page_header, type: :page_header, elements: [
+        %{name: :title, type: :label, text: "Invoice Report", position: %{}, style: %{}}
+      ])
+
+      detail_band = Band.new(:detail, type: :detail, elements: [
+        %{name: :invoice_number, type: :field, source: :invoice_number, position: %{}, style: %{}}
+      ])
+
+      footer_band = Band.new(:page_footer, type: :page_footer, elements: [
+        %{name: :footer_text, type: :label, text: "End of Report", position: %{}, style: %{}}
+      ])
+
+      report = %Report{name: :invoice_report, bands: [header_band, detail_band, footer_band]}
+      context = %RenderContext{report: report, records: simple_invoices}
+
+      result = BandRenderer.render_report_bands(context)
+
+      assert result =~ "page-header-band"
+      assert result =~ "detail-band"
+      assert result =~ "page-footer-band"
+    end
+
+    test "handles large realistic dataset efficiently" do
+      customers = AshReports.RealisticTestHelpers.list_customers(limit: 25)
+      simple_customers = AshReports.RealisticTestHelpers.to_simple_maps(customers)
+
+      detail_band = Band.new(:detail, type: :detail, elements: [
+        %{name: :name, type: :field, source: :name, position: %{}, style: %{}}
+      ])
+
+      report = %Report{name: :large_report, bands: [detail_band]}
+      context = %RenderContext{report: report, records: simple_customers}
+
+      start_time = System.monotonic_time(:microsecond)
+      result = BandRenderer.render_report_bands(context)
+      processing_time = System.monotonic_time(:microsecond) - start_time
+
+      assert is_binary(result)
+      assert result =~ "detail-band"
+      # Should complete in reasonable time
+      assert processing_time < 1_000_000
+    end
+  end
 end

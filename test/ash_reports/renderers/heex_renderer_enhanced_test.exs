@@ -511,4 +511,48 @@ defmodule AshReports.HeexRendererEnhancedTest do
       assert HeexRendererEnhanced.supports_streaming?() == true
     end
   end
+
+  describe "realistic data integration" do
+    setup do
+      AshReports.RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+    end
+
+    test "renders customer data with LiveView integration" do
+      customers = AshReports.RealisticTestHelpers.list_customers(limit: 10)
+      simple_customers = AshReports.RealisticTestHelpers.to_simple_maps(customers)
+
+      context = build_test_context(%{records: simple_customers})
+
+      assert {:ok, result} = HeexRendererEnhanced.render_with_context(context)
+      assert is_binary(result.content)
+      assert String.contains?(result.content, "ash-report")
+    end
+
+    test "handles chart data from realistic invoices" do
+      invoices = AshReports.RealisticTestHelpers.list_invoices(limit: 15)
+
+      chart_data =
+        invoices
+        |> Enum.map(fn inv ->
+          %{x: Date.to_string(inv.date), y: Decimal.to_float(inv.total)}
+        end)
+
+      chart_config = build_test_chart_config(%{data: chart_data})
+      context = build_test_context(%{chart_configs: [chart_config]})
+
+      assert {:ok, result} = HeexRendererEnhanced.render_with_context(context)
+      assert result.metadata.chart_count > 0
+    end
+
+    test "renders product list with enhanced features" do
+      products = AshReports.RealisticTestHelpers.list_products(limit: 20, load: [:category])
+      simple_products = AshReports.RealisticTestHelpers.to_simple_maps(products)
+
+      context = build_test_context(%{records: simple_products})
+
+      assert {:ok, result} = HeexRendererEnhanced.render_with_context(context, [])
+      assert is_binary(result.content)
+      assert result.metadata.live_view_required == true
+    end
+  end
 end

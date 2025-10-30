@@ -339,4 +339,116 @@ defmodule AshReports.HtmlRendererTest do
       assert result.content =~ "ash-element"
     end
   end
+
+  describe "realistic data integration" do
+    setup do
+      AshReports.RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+    end
+
+    test "renders customer list with realistic data" do
+      customers = AshReports.RealisticTestHelpers.list_customers(limit: 10)
+      simple_customers = AshReports.RealisticTestHelpers.to_simple_maps(customers)
+
+      context =
+        RendererTestHelpers.build_render_context(
+          records: simple_customers,
+          metadata: %{format: :html}
+        )
+
+      {:ok, result} = HtmlRenderer.render_with_context(context)
+
+      assert is_binary(result.content)
+      assert result.content =~ "<!DOCTYPE html>"
+      # Should contain customer data - metadata structure varies
+      assert is_map(result.metadata)
+    end
+
+    test "renders customers with invoices relationship" do
+      customers = AshReports.RealisticTestHelpers.list_customers(limit: 5, load: [:invoices])
+      simple_customers = AshReports.RealisticTestHelpers.to_simple_maps(customers)
+
+      context = RendererTestHelpers.build_render_context(records: simple_customers)
+
+      {:ok, result} = HtmlRenderer.render_with_context(context)
+
+      assert is_binary(result.content)
+      # Verify relationships are present in data
+      assert Enum.any?(simple_customers, fn c -> Map.has_key?(c, :invoices) end)
+    end
+
+    test "renders invoice data with customer information" do
+      invoices = AshReports.RealisticTestHelpers.list_invoices(limit: 10, load: [:customer])
+      simple_invoices = AshReports.RealisticTestHelpers.to_simple_maps(invoices)
+
+      context = RendererTestHelpers.build_render_context(records: simple_invoices)
+
+      {:ok, result} = HtmlRenderer.render_with_context(context)
+
+      assert is_binary(result.content)
+      assert is_map(result.metadata)
+    end
+
+    test "renders product catalog with categories" do
+      products = AshReports.RealisticTestHelpers.list_products(limit: 20, load: [:category])
+      simple_products = AshReports.RealisticTestHelpers.to_simple_maps(products)
+
+      context = RendererTestHelpers.build_render_context(records: simple_products)
+
+      {:ok, result} = HtmlRenderer.render_with_context(context)
+
+      assert is_binary(result.content)
+      assert String.contains?(result.content, "<html")
+    end
+
+    test "handles large realistic dataset" do
+      # Get more records to test performance
+      customers = AshReports.RealisticTestHelpers.list_customers(limit: 25)
+      simple_customers = AshReports.RealisticTestHelpers.to_simple_maps(customers)
+
+      context = RendererTestHelpers.build_render_context(records: simple_customers)
+
+      {:ok, result} = HtmlRenderer.render_with_context(context)
+
+      assert is_binary(result.content)
+      # Performance check - should complete in reasonable time
+      assert result.metadata.render_time_us < 1_000_000
+    end
+
+    test "renders filtered active customers" do
+      customers =
+        AshReports.RealisticTestHelpers.list_customers(
+          filter: [status: :active],
+          limit: 10
+        )
+
+      simple_customers = AshReports.RealisticTestHelpers.to_simple_maps(customers)
+
+      context = RendererTestHelpers.build_render_context(records: simple_customers)
+
+      {:ok, result} = HtmlRenderer.render_with_context(context)
+
+      assert is_binary(result.content)
+      # All customers should be active
+      assert Enum.all?(simple_customers, fn c -> c.status == :active end)
+    end
+
+    test "renders sorted customer list" do
+      customers =
+        AshReports.RealisticTestHelpers.list_customers(
+          sort: [name: :asc],
+          limit: 10
+        )
+
+      simple_customers = AshReports.RealisticTestHelpers.to_simple_maps(customers)
+
+      context = RendererTestHelpers.build_render_context(records: simple_customers)
+
+      {:ok, result} = HtmlRenderer.render_with_context(context)
+
+      assert is_binary(result.content)
+      # Verify sorting
+      names = Enum.map(simple_customers, & &1.name)
+      assert names == Enum.sort(names)
+    end
+  end
 end

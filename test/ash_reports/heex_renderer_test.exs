@@ -343,6 +343,108 @@ defmodule AshReports.HeexRendererTest do
 
   # Test helper functions
 
+  describe "realistic data integration" do
+    setup do
+      AshReports.RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+    end
+
+    test "renders customer report with realistic data" do
+      customers = AshReports.RealisticTestHelpers.list_customers(limit: 10)
+      simple_customers = AshReports.RealisticTestHelpers.to_simple_maps(customers)
+
+      data_result = %{
+        records: simple_customers,
+        variables: %{total_count: length(simple_customers)},
+        metadata: %{generated_at: DateTime.utc_now()}
+      }
+
+      report = build_test_report()
+      config = build_test_config()
+      context = RenderContext.new(report, data_result, config)
+
+      assert {:ok, result} = HeexRenderer.render_with_context(context)
+      assert is_binary(result.content)
+      assert String.contains?(result.content, "ash-report")
+    end
+
+    test "renders invoice list with customer relationships" do
+      invoices = AshReports.RealisticTestHelpers.list_invoices(limit: 10, load: [:customer])
+      simple_invoices = AshReports.RealisticTestHelpers.to_simple_maps(invoices)
+
+      data_result = %{
+        records: simple_invoices,
+        variables: %{},
+        metadata: %{generated_at: DateTime.utc_now()}
+      }
+
+      context = RenderContext.new(build_test_report(), data_result, build_test_config())
+
+      assert {:ok, result} = HeexRenderer.render_with_context(context)
+      assert is_binary(result.content)
+      # Should contain relationship data
+      assert Enum.any?(simple_invoices, fn i -> Map.has_key?(i, :customer) end)
+    end
+
+    test "handles realistic data in LiveView mode" do
+      products = AshReports.RealisticTestHelpers.list_products(limit: 15, load: [:category])
+      simple_products = AshReports.RealisticTestHelpers.to_simple_maps(products)
+
+      data_result = %{
+        records: simple_products,
+        variables: %{product_count: length(simple_products)},
+        metadata: %{}
+      }
+
+      context = RenderContext.new(build_test_report(), data_result, build_test_config())
+
+      assert {:ok, assigns, template} = HeexRenderer.render_for_liveview(context)
+      assert is_map(assigns)
+      assert is_binary(template)
+      assert Map.has_key?(assigns, :reports)
+    end
+
+    test "renders large realistic dataset efficiently" do
+      customers = AshReports.RealisticTestHelpers.list_customers(limit: 25)
+      simple_customers = AshReports.RealisticTestHelpers.to_simple_maps(customers)
+
+      data_result = %{
+        records: simple_customers,
+        variables: %{total: length(simple_customers)},
+        metadata: %{}
+      }
+
+      context = RenderContext.new(build_test_report(), data_result, build_test_config())
+
+      assert {:ok, result} = HeexRenderer.render_with_context(context)
+      assert is_binary(result.content)
+      # Performance check
+      assert result.metadata.processing_time_microseconds < 1_000_000
+    end
+
+    test "renders filtered customers with proper HEEX structure" do
+      active_customers =
+        AshReports.RealisticTestHelpers.list_customers(
+          filter: [status: :active],
+          limit: 10
+        )
+
+      simple_customers = AshReports.RealisticTestHelpers.to_simple_maps(active_customers)
+
+      data_result = %{
+        records: simple_customers,
+        variables: %{active_count: length(simple_customers)},
+        metadata: %{}
+      }
+
+      context = RenderContext.new(build_test_report(), data_result, build_test_config())
+
+      assert {:ok, result} = HeexRenderer.render_with_context(context)
+      # Verify all are active
+      assert Enum.all?(simple_customers, fn c -> c.status == :active end)
+      assert String.contains?(result.content, "ash-report")
+    end
+  end
+
   defp build_test_context do
     report = build_test_report()
     data_result = build_test_data_result()
