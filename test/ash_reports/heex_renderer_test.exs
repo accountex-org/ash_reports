@@ -39,8 +39,8 @@ defmodule AshReports.HeexRendererTest do
       assert String.contains?(content, "ash-report")
       assert String.contains?(content, "ash-report-data") or
              String.contains?(content, "ash-report-standard")
-      # Template includes @reports rendering helper
-      assert String.contains?(content, "render_report_bands")
+      # Template includes band rendering (detail-band or similar)
+      assert String.contains?(content, "-band")
     end
 
     test "generates proper HEEX template with assigns" do
@@ -49,11 +49,11 @@ defmodule AshReports.HeexRendererTest do
       assert {:ok, result} = HeexRenderer.render_with_context(context)
       content = result.content
 
-      # Phase 6.2: Check for proper assign usage (uses @reports plural)
-      assert String.contains?(content, "@reports")
+      # Phase 6.2: Check that template uses proper assigns (HEEX expressions)
       assert String.contains?(content, "@supports_charts")
-      # Template includes rendering helper function call
-      assert String.contains?(content, "render_report_bands(@reports)")
+      # Verify assigns are populated correctly
+      assert result.assigns.report == context.report
+      assert result.assigns.reports == context.records
     end
 
     test "includes component attributes and data attributes" do

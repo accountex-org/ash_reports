@@ -563,6 +563,8 @@ defmodule AshReports.HeexRenderer do
   defp build_component_assigns(%RenderContext{} = context, chart_components) do
     # Enhanced component assigns with chart support
     base_assigns = %{
+      report: context.report,
+      reports: context.records,
       locale: context.locale,
       text_direction: context.text_direction,
       context: context,
