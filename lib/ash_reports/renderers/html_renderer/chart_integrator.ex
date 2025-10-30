@@ -287,18 +287,17 @@ defmodule AshReports.HtmlRenderer.ChartIntegrator do
     {:ok, base_css}
   end
 
-  defp determine_required_assets(%ChartConfig{provider: provider}) do
-    base_assets = AssetManager.get_provider_assets(provider)
-    interactive_assets = ["ash_reports_interactive.js", "ash_reports_charts.css"]
+  defp determine_required_assets(%ChartConfig{}) do
+    # SVG charts don't require external JavaScript libraries
+    interactive_assets = ["ash_reports_charts.css"]
 
-    {:ok, base_assets ++ interactive_assets}
+    {:ok, interactive_assets}
   end
 
   defp build_chart_metadata(chart_result, %ChartConfig{} = config, %RenderContext{} = context) do
     %{
       chart_id: chart_result.metadata.chart_id,
       chart_type: config.type,
-      provider: config.provider,
       interactive: config.interactive,
       real_time: config.real_time,
       locale: context.locale,
@@ -306,7 +305,7 @@ defmodule AshReports.HtmlRenderer.ChartIntegrator do
       generated_at: DateTime.utc_now(),
       render_context: %{
         renderer: :html,
-        format: :interactive_html
+        format: :svg_html
       }
     }
   end

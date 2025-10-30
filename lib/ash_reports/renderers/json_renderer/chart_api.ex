@@ -329,8 +329,7 @@ defmodule AshReports.JsonRenderer.ChartApi do
      %ChartConfig{
        type: :bar,
        data: [[1, 10], [2, 20], [3, 30]],
-       title: "API Chart #{chart_id}",
-       provider: :chartjs
+       title: "API Chart #{chart_id}"
      }}
   end
 
@@ -375,36 +374,22 @@ defmodule AshReports.JsonRenderer.ChartApi do
   end
 
   defp update_chart_config(current_config, config_updates) do
-    # Validate provider if it's being updated
-    provider_result =
-      if config_updates["provider"] do
-        AtomValidator.to_chart_provider(config_updates["provider"])
-      else
-        {:ok, current_config.provider}
-      end
+    updated_config = %{
+      current_config
+      | type: config_updates["type"] || current_config.type,
+        title: config_updates["title"] || current_config.title,
+        updated_at: DateTime.utc_now()
+    }
 
-    with {:ok, provider} <- provider_result do
-      updated_config = %{
-        current_config
-        | type: config_updates["type"] || current_config.type,
-          title: config_updates["title"] || current_config.title,
-          provider: provider,
-          updated_at: DateTime.utc_now()
-      }
-
-      {:ok, updated_config}
-    end
+    {:ok, updated_config}
   end
 
   defp create_chart_config(chart_spec) do
-    with {:ok, chart_type} <- AtomValidator.to_chart_type(chart_spec["type"]),
-         {:ok, provider} <-
-           AtomValidator.to_chart_provider(chart_spec["provider"] || "chartjs") do
+    with {:ok, chart_type} <- AtomValidator.to_chart_type(chart_spec["type"]) do
       chart_config = %ChartConfig{
         type: chart_type,
         title: chart_spec["title"],
         data: chart_spec["data"] || [],
-        provider: provider,
         interactive: chart_spec["interactive"] || false,
         created_at: DateTime.utc_now()
       }
@@ -529,7 +514,6 @@ defmodule AshReports.JsonRenderer.ChartApi do
       type: chart_config.type,
       title: chart_config.title,
       data: chart_config.data,
-      provider: chart_config.provider,
       interactive: chart_config.interactive,
       real_time: chart_config.real_time,
       options: chart_config.options || %{}

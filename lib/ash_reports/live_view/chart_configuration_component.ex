@@ -452,7 +452,6 @@ defmodule AshReports.LiveView.ChartConfigurationComponent do
       preview_config = %ChartConfig{
         type: socket.assigns.chart_config[:type] || :bar,
         title: socket.assigns.chart_config[:title],
-        provider: socket.assigns.chart_config[:provider] || :chartjs,
         data: generate_preview_data(socket.assigns.chart_config[:type]),
         # Disable interactions in preview
         interactive: false,
