@@ -42,25 +42,4 @@ defmodule AshReports.ConnCase do
   end
 end
 
-defmodule AshReports.TestEndpoint do
-  @moduledoc """
-  A test endpoint for AshReports library testing.
-  This satisfies phoenix_test dependency requirements.
-  """
-  use Phoenix.Endpoint, otp_app: :ash_reports
-
-  # Minimal endpoint configuration for testing
-  @session_options [
-    store: :cookie,
-    key: "_ash_reports_test_key",
-    signing_salt: "test_salt"
-  ]
-
-  socket("/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]])
-
-  plug(Plug.Session, @session_options)
-  plug(:fetch_session)
-
-  def init(opts), do: opts
-  def call(conn, _opts), do: conn
-end
+# Note: AshReports.TestEndpoint is defined in lib/ash_reports/test_endpoint.ex

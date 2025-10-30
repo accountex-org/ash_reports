@@ -148,7 +148,6 @@ defmodule AshReports.RealisticTestHelpers do
   ## Options
 
   - `:scenario` - Data scenario (`:empty`, `:small`, `:medium`, `:large`). Default: `:small`
-  - `:seed` - Random seed for reproducible data generation
   - `:resources` - List of resources to populate (default: all)
 
   ## Returns
@@ -165,7 +164,7 @@ defmodule AshReports.RealisticTestHelpers do
       end
 
       setup do
-        setup_realistic_test_data(scenario: :large, seed: 12345)
+        setup_realistic_test_data(scenario: :large)
       end
 
       setup do
@@ -174,8 +173,26 @@ defmodule AshReports.RealisticTestHelpers do
       end
   """
   def setup_realistic_test_data(opts \\ []) do
-    # TODO: Implement in Phase 2
-    raise "Not yet implemented"
+    scenario = Keyword.get(opts, :scenario, :small)
+
+    # Ensure ETS tables are clean
+    tables = setup_ets_tables()
+
+    # Generate test data based on scenario
+    data = generate_test_data(opts)
+
+    # Register cleanup callback
+    ExUnit.Callbacks.on_exit(fn ->
+      cleanup_ets_tables()
+    end)
+
+    # Return context with test data info
+    %{
+      scenario: scenario,
+      counts: get_record_counts(),
+      ets_tables: tables,
+      generated_data: data
+    }
   end
 
   @doc """
@@ -197,8 +214,20 @@ defmodule AshReports.RealisticTestHelpers do
       end
   """
   def setup_ets_tables do
-    # TODO: Implement in Phase 2
-    raise "Not yet implemented"
+    # Clear existing data from all tables
+    EtsDataLayer.clear_all_data()
+
+    # Return list of table names
+    [
+      :demo_customers,
+      :demo_customer_addresses,
+      :demo_customer_types,
+      :demo_products,
+      :demo_product_categories,
+      :demo_inventory,
+      :demo_invoices,
+      :demo_invoice_line_items
+    ]
   end
 
   @doc """
@@ -216,8 +245,9 @@ defmodule AshReports.RealisticTestHelpers do
       end
   """
   def cleanup_ets_tables do
-    # TODO: Implement in Phase 2
-    raise "Not yet implemented"
+    # Clear all data from ETS tables
+    EtsDataLayer.clear_all_data()
+    :ok
   end
 
   @doc """
@@ -226,7 +256,6 @@ defmodule AshReports.RealisticTestHelpers do
   ## Options
 
   - `:scenario` - Data scenario (`:empty`, `:small`, `:medium`, `:large`)
-  - `:seed` - Random seed for reproducibility
   - `:resources` - List of resources to populate
 
   ## Returns
@@ -241,8 +270,39 @@ defmodule AshReports.RealisticTestHelpers do
       data = generate_test_data(resources: [:customers], scenario: :large)
   """
   def generate_test_data(opts \\ []) do
-    # TODO: Implement in Phase 2
-    raise "Not yet implemented"
+    scenario = Keyword.get(opts, :scenario, :small)
+
+    # Handle empty scenario
+    if scenario == :empty do
+      %{
+        customers: [],
+        invoices: [],
+        products: [],
+        customer_addresses: [],
+        customer_types: [],
+        product_categories: [],
+        inventory: [],
+        invoice_line_items: []
+      }
+    else
+      # Start DataGenerator if not already running
+      ensure_data_generator_started()
+
+      # Generate data using DataGenerator
+      case DataGenerator.generate_sample_data(scenario) do
+        :ok ->
+          # Return empty maps - actual data is in ETS
+          # We could load and return it, but that would defeat the purpose of ETS
+          %{
+            scenario: scenario,
+            status: :generated,
+            message: "Data generated successfully in ETS tables"
+          }
+
+        {:error, reason} ->
+          raise "Failed to generate test data: #{inspect(reason)}"
+      end
+    end
   end
 
   # Query Helpers - Phase 3
@@ -373,4 +433,43 @@ defmodule AshReports.RealisticTestHelpers do
       :inventory
     ]
   end
+
+  defp ensure_data_generator_started do
+    # DataGenerator should already be started by the application
+    # But check if it's running and start if needed
+    case Process.whereis(DataGenerator) do
+      nil ->
+        {:ok, _pid} = DataGenerator.start_link()
+        :ok
+
+      _pid ->
+        :ok
+    end
+  end
+
+  defp get_record_counts do
+    # Get statistics from ETS data layer
+    case EtsDataLayer.table_stats() do
+      %{tables: tables} ->
+        tables
+        |> Enum.map(fn {table_name, stats} ->
+          resource_name = table_name_to_resource(table_name)
+          {resource_name, stats.size}
+        end)
+        |> Enum.into(%{})
+
+      _ ->
+        %{}
+    end
+  end
+
+  defp table_name_to_resource(:demo_customers), do: :customers
+  defp table_name_to_resource(:demo_customer_addresses), do: :customer_addresses
+  defp table_name_to_resource(:demo_customer_types), do: :customer_types
+  defp table_name_to_resource(:demo_products), do: :products
+  defp table_name_to_resource(:demo_product_categories), do: :product_categories
+  defp table_name_to_resource(:demo_inventory), do: :inventory
+  defp table_name_to_resource(:demo_invoices), do: :invoices
+  defp table_name_to_resource(:demo_invoice_line_items), do: :invoice_line_items
+  defp table_name_to_resource(_), do: :unknown
 end
