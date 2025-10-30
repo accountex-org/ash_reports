@@ -22,3 +22,6 @@ ash_reports-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 priv/plts/
+
+# Generated test data files
+test/data/*.csv
