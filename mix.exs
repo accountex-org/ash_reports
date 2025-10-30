@@ -40,7 +40,7 @@ defmodule AshReports.MixProject do
   end
 
   # Specifies which paths to compile per environment.
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(:test), do: ["lib", "test/support", "test/data"]
   defp elixirc_paths(_), do: ["lib"]
 
   # Run "mix help deps" to learn about dependencies.
@@ -90,6 +90,7 @@ defmodule AshReports.MixProject do
 
       # Test dependencies
       {:mox, "~> 1.1", only: :test},
+      {:faker, "~> 0.18", only: :test},
       {:benchee, "~> 1.3", only: [:dev, :test]},
       {:benchee_html, "~> 1.0", only: [:dev, :test]},
       {:stream_data, "~> 1.0"},
