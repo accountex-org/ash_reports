@@ -98,7 +98,6 @@ defmodule AshReports.HtmlRenderer do
     HtmlRenderer.ChartIntegrator,
     HtmlRenderer.CssGenerator,
     HtmlRenderer.ElementBuilder,
-    HtmlRenderer.JavaScriptGenerator,
     HtmlRenderer.ResponsiveLayout,
     HtmlRenderer.TemplateEngine,
     RenderContext,
@@ -710,55 +709,10 @@ defmodule AshReports.HtmlRenderer do
     end
   end
 
-  defp generate_charts_javascript(%RenderContext{} = context, chart_assets) do
-    chart_configs = extract_chart_configs_from_context(context)
-
-    case chart_configs do
-      [] -> {:ok, ""}
-      configs -> build_complete_javascript(configs, chart_assets, context)
-    end
-  end
-
-  defp build_complete_javascript(chart_configs, chart_assets, %RenderContext{} = context) do
-    asset_loading_js =
-      JavaScriptGenerator.generate_asset_loading_javascript(chart_assets.assets, context)
-
-    chart_javascript = generate_all_chart_javascript(chart_configs, context)
-
-    complete_javascript = """
-    <script>
-    #{asset_loading_js}
-
-    #{chart_javascript}
-    </script>
-    """
-
-    {:ok, complete_javascript}
-  end
-
-  defp generate_all_chart_javascript(chart_configs, %RenderContext{} = context) do
-    chart_configs
-    |> Enum.map(&build_chart_js_config(&1, context))
-    |> Enum.map(&generate_single_chart_javascript(&1, context))
-    |> Enum.filter(&(String.length(&1) > 0))
-    |> Enum.join("\n\n")
-  end
-
-  defp build_chart_js_config(chart_config, %RenderContext{} = _context) do
-    %{
-      chart_id: generate_chart_id(chart_config),
-      provider: chart_config.provider,
-      chart_config: chart_config,
-      interactive: chart_config.interactive,
-      events: chart_config.interactions || []
-    }
-  end
-
-  defp generate_single_chart_javascript(js_config, %RenderContext{} = context) do
-    case JavaScriptGenerator.generate_chart_javascript(js_config, context) do
-      {:ok, js_code} -> js_code
-      {:error, _reason} -> ""
-    end
+  defp generate_charts_javascript(%RenderContext{} = _context, _chart_assets) do
+    # Charts are now generated as server-side SVG using Contex
+    # No JavaScript libraries (Chart.js, D3, Plotly) are required
+    {:ok, ""}
   end
 
   defp assemble_html_with_charts(

@@ -28,11 +28,9 @@ AshReports currently provides basic chart integration through the `chart` elemen
 
 The following features are planned for future releases (see ROADMAP.md):
 
-- ❌ Multiple chart providers (Chart.js, D3.js, Plotly)
-- ❌ Interactive charts with zoom/pan
-- ❌ Real-time chart updates
+- ❌ Interactive charts with zoom/pan (client-side interactivity)
+- ❌ Real-time chart updates via WebSocket
 - ❌ Auto chart selection based on data
-- ❌ ChartEngine and ChartConfig modules
 - ❌ Advanced theming and styling
 - ❌ Chart data accumulation and aggregation
 - ❌ Drill-down navigation
@@ -569,57 +567,15 @@ end
 
 ### Planned Features (See ROADMAP.md)
 
-#### Phase 2: Enhanced Chart Engine
+#### Future Chart Enhancements
 
-- **Multiple Providers**: Chart.js, D3.js, Plotly support
 - **Auto Chart Selection**: Automatically suggest best chart type for data
-- **Interactive Charts**: Zoom, pan, click/hover events
-- **Real-time Updates**: Live data streaming to charts
+- **Interactive Charts**: Client-side zoom, pan, click/hover events via LiveView
+- **Real-time Updates**: Live data streaming to charts via Phoenix Channels
 - **Advanced Styling**: Themes, custom colors, fonts
 - **Chart Variables**: Accumulate data specifically for charts
 
-#### Example of Planned Features
-
-```elixir
-# THIS DOES NOT WORK YET - Planned for Phase 2
-
-# Auto-select best chart type
-chart :auto_chart do
-  data_source :sales_data
-  auto_select true  # Analyzes data and picks best chart type
-  providers [:chartjs, :d3js]  # Try multiple providers
-end
-
-# Interactive chart with drill-down
-chart :interactive_sales do
-  chart_type :bar
-  data_source :sales_by_category
-  provider :chartjs
-
-  interactions do
-    zoom true
-    pan true
-    click_handler &MyApp.Reports.drill_down_category/2
-  end
-
-  real_time true
-  update_interval :timer.seconds(30)
-end
-
-# Advanced theming
-chart :themed_chart do
-  chart_type :line
-  data_source :trend_data
-  theme :corporate
-
-  colors palette: :blue_gradient
-  fonts title: "Roboto", labels: "Open Sans"
-
-  animations entry: :fade, update: :morph
-end
-```
-
-See [ROADMAP.md Phase 2](../../ROADMAP.md#phase-2-enhanced-chart-engine) for complete details on planned chart enhancements.
+> **Note**: AshReports uses server-side SVG generation via Contex for all chart rendering. This ensures consistent output across all renderers (HTML, PDF, JSON) without requiring JavaScript dependencies.
 
 ## Best Practices
 

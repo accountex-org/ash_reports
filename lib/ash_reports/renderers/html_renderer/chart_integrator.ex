@@ -52,7 +52,6 @@ defmodule AshReports.HtmlRenderer.ChartIntegrator do
 
   alias AshReports.ChartEngine
   alias AshReports.ChartEngine.ChartConfig
-  alias AshReports.HtmlRenderer.AssetManager
   alias AshReports.RenderContext
 
   @type chart_output :: %{
@@ -326,7 +325,8 @@ defmodule AshReports.HtmlRenderer.ChartIntegrator do
         ["ash-chart-static"]
       end
 
-    provider_classes = ["ash-chart-provider-#{config.provider}"]
+    # Charts are generated server-side using Contex
+    provider_classes = ["ash-chart-provider-contex", "ash-chart-svg"]
 
     (base_classes ++ locale_classes ++ interactive_classes ++ provider_classes)
     |> Enum.join(" ")
