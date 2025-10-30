@@ -478,23 +478,115 @@ defmodule AshReports.RealisticTestHelpers do
   This bridges the gap between realistic Ash resources and the simple
   map format expected by some renderer tests.
 
+  ## Options
+
+  - `:exclude_fields` - List of fields to exclude from the map
+  - `:include_relationships` - Boolean, whether to include loaded relationships (default: true)
+
   ## Examples
 
       customers = list_customers(limit: 5)
       simple_maps = to_simple_maps(customers)
       context = build_render_context(records: simple_maps)
+
+      # Exclude certain fields
+      simple_maps = to_simple_maps(customers, exclude_fields: [:__meta__, :__metadata__])
+
+      # Don't include relationships
+      simple_maps = to_simple_maps(customers, include_relationships: false)
   """
-  def to_simple_maps(records) when is_list(records) do
-    # TODO: Implement in Phase 4
-    raise "Not yet implemented"
+  def to_simple_maps(records, opts \\ []) when is_list(records) do
+    Enum.map(records, fn record -> to_simple_map(record, opts) end)
   end
 
   @doc """
   Converts a single Ash resource record to a simple map.
+
+  ## Options
+
+  - `:exclude_fields` - List of fields to exclude from the map
+  - `:include_relationships` - Boolean, whether to include loaded relationships (default: true)
+
+  ## Examples
+
+      customer = get_customer(customer_id)
+      simple_map = to_simple_map(customer)
+
+      # Exclude metadata fields
+      simple_map = to_simple_map(customer, exclude_fields: [:__meta__, :__metadata__])
   """
-  def to_simple_map(record) do
-    # TODO: Implement in Phase 4
-    raise "Not yet implemented"
+  def to_simple_map(record, opts \\ [])
+
+  def to_simple_map(nil, _opts), do: nil
+
+  def to_simple_map(record, opts) when is_struct(record) do
+    exclude_fields = Keyword.get(opts, :exclude_fields, [:__meta__, :__metadata__, :aggregates, :calculations])
+    include_relationships = Keyword.get(opts, :include_relationships, true)
+
+    # Get list of relationship names for this resource
+    relationship_names = get_relationship_names(record.__struct__)
+
+    # Convert struct to map
+    record
+    |> Map.from_struct()
+    |> Enum.reduce(%{}, fn {key, value}, acc ->
+      cond do
+        # Skip excluded fields
+        key in exclude_fields ->
+          acc
+
+        # Skip unloaded relationships
+        is_struct(value, Ash.NotLoaded) ->
+          acc
+
+        # Skip relationships if include_relationships is false
+        key in relationship_names and not include_relationships ->
+          acc
+
+        # Handle loaded relationships
+        key in relationship_names and include_relationships ->
+          Map.put(acc, key, convert_relationship_value(value, opts))
+
+        # Include regular attributes
+        true ->
+          Map.put(acc, key, convert_value(value))
+      end
+    end)
+  end
+
+  def to_simple_map(value, _opts) when is_map(value) do
+    # Already a plain map
+    value
+  end
+
+  # Private helper to convert relationship values
+  defp convert_relationship_value(value, opts) when is_list(value) do
+    Enum.map(value, fn item -> to_simple_map(item, opts) end)
+  end
+
+  defp convert_relationship_value(value, opts) when is_struct(value) do
+    to_simple_map(value, opts)
+  end
+
+  defp convert_relationship_value(value, _opts), do: value
+
+  # Private helper to convert attribute values
+  defp convert_value(%Decimal{} = decimal), do: decimal
+  defp convert_value(%Date{} = date), do: date
+  defp convert_value(%DateTime{} = datetime), do: datetime
+  defp convert_value(%NaiveDateTime{} = datetime), do: datetime
+  defp convert_value(value) when is_struct(value), do: Map.from_struct(value)
+  defp convert_value(value), do: value
+
+  # Private helper to get relationship names from a module
+  defp get_relationship_names(module) do
+    try do
+      module
+      |> Ash.Resource.Info.relationships()
+      |> Enum.map(& &1.name)
+    rescue
+      _ -> []
+    end
   end
 
   # Private Helpers

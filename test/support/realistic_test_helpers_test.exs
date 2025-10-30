@@ -467,4 +467,162 @@ defmodule AshReports.RealisticTestHelpersTest do
       assert Ash.Resource.loaded?(product, :category)
     end
   end
+
+  # Phase 4: Conversion Utilities Tests
+  describe "to_simple_map/2" do
+    setup do
+      RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+      on_exit(fn -> RealisticTestHelpers.cleanup_ets_tables() end)
+      :ok
+    end
+
+    test "converts Ash resource to simple map" do
+      customer = RealisticTestHelpers.list_customers(limit: 1) |> List.first()
+      simple_map = RealisticTestHelpers.to_simple_map(customer)
+
+      # Should be a plain map, not a struct
+      refute is_struct(simple_map)
+      assert is_map(simple_map)
+
+      # Should have customer attributes
+      assert Map.has_key?(simple_map, :id)
+      assert Map.has_key?(simple_map, :name)
+      assert Map.has_key?(simple_map, :email)
+      assert Map.has_key?(simple_map, :status)
+
+      # Values should match
+      assert simple_map.id == customer.id
+      assert simple_map.name == customer.name
+      assert simple_map.email == customer.email
+    end
+
+    test "excludes metadata fields by default" do
+      customer = RealisticTestHelpers.list_customers(limit: 1) |> List.first()
+      simple_map = RealisticTestHelpers.to_simple_map(customer)
+
+      refute Map.has_key?(simple_map, :__meta__)
+      refute Map.has_key?(simple_map, :__metadata__)
+      refute Map.has_key?(simple_map, :aggregates)
+      refute Map.has_key?(simple_map, :calculations)
+    end
+
+    test "respects exclude_fields option" do
+      customer = RealisticTestHelpers.list_customers(limit: 1) |> List.first()
+      simple_map = RealisticTestHelpers.to_simple_map(customer, exclude_fields: [:email, :phone])
+
+      refute Map.has_key?(simple_map, :email)
+      refute Map.has_key?(simple_map, :phone)
+      assert Map.has_key?(simple_map, :name)
+      assert Map.has_key?(simple_map, :id)
+    end
+
+    test "handles loaded relationships" do
+      customer = RealisticTestHelpers.list_customers(limit: 1, load: [:invoices]) |> List.first()
+      simple_map = RealisticTestHelpers.to_simple_map(customer)
+
+      # Should include loaded invoices
+      assert Map.has_key?(simple_map, :invoices)
+      assert is_list(simple_map.invoices)
+
+      # Each invoice should also be a simple map
+      if length(simple_map.invoices) > 0 do
+        invoice = List.first(simple_map.invoices)
+        refute is_struct(invoice)
+        assert is_map(invoice)
+        assert Map.has_key?(invoice, :invoice_number)
+      end
+    end
+
+    test "excludes relationships with include_relationships: false" do
+      customer = RealisticTestHelpers.list_customers(limit: 1, load: [:invoices]) |> List.first()
+      simple_map = RealisticTestHelpers.to_simple_map(customer, include_relationships: false)
+
+      # Should not include invoices even though they're loaded
+      refute Map.has_key?(simple_map, :invoices)
+    end
+
+    test "skips unloaded relationships" do
+      customer = RealisticTestHelpers.list_customers(limit: 1) |> List.first()
+      simple_map = RealisticTestHelpers.to_simple_map(customer)
+
+      # Should not include unloaded invoices
+      refute Map.has_key?(simple_map, :invoices)
+    end
+
+    test "handles nil input" do
+      result = RealisticTestHelpers.to_simple_map(nil)
+      assert result == nil
+    end
+
+    test "handles plain map input" do
+      input_map = %{id: 1, name: "Test"}
+      result = RealisticTestHelpers.to_simple_map(input_map)
+      assert result == input_map
+    end
+
+    test "preserves Decimal values" do
+      product = RealisticTestHelpers.list_products(limit: 1) |> List.first()
+      simple_map = RealisticTestHelpers.to_simple_map(product)
+
+      assert %Decimal{} = simple_map.price
+      assert %Decimal{} = simple_map.cost
+    end
+
+    test "preserves Date and DateTime values" do
+      invoice = RealisticTestHelpers.list_invoices(limit: 1) |> List.first()
+      simple_map = RealisticTestHelpers.to_simple_map(invoice)
+
+      assert %Date{} = simple_map.date
+      assert %DateTime{} = simple_map.created_at
+    end
+  end
+
+  describe "to_simple_maps/2" do
+    setup do
+      RealisticTestHelpers.setup_realistic_test_data(scenario: :small)
+      on_exit(fn -> RealisticTestHelpers.cleanup_ets_tables() end)
+      :ok
+    end
+
+    test "converts list of Ash resources to simple maps" do
+      customers = RealisticTestHelpers.list_customers(limit: 5)
+      simple_maps = RealisticTestHelpers.to_simple_maps(customers)
+
+      assert is_list(simple_maps)
+      assert length(simple_maps) == length(customers)
+
+      # Each should be a plain map
+      Enum.each(simple_maps, fn map ->
+        refute is_struct(map)
+        assert is_map(map)
+        assert Map.has_key?(map, :id)
+        assert Map.has_key?(map, :name)
+      end)
+    end
+
+    test "handles empty list" do
+      result = RealisticTestHelpers.to_simple_maps([])
+      assert result == []
+    end
+
+    test "passes options to each conversion" do
+      customers = RealisticTestHelpers.list_customers(limit: 3)
+      simple_maps = RealisticTestHelpers.to_simple_maps(customers, exclude_fields: [:email])
+
+      Enum.each(simple_maps, fn map ->
+        refute Map.has_key?(map, :email)
+        assert Map.has_key?(map, :name)
+      end)
+    end
+
+    test "handles relationships in list conversion" do
+      customers = RealisticTestHelpers.list_customers(limit: 3, load: [:invoices])
+      simple_maps = RealisticTestHelpers.to_simple_maps(customers)
+
+      Enum.each(simple_maps, fn map ->
+        assert Map.has_key?(map, :invoices)
+        assert is_list(map.invoices)
+      end)
+    end
+  end
 end
