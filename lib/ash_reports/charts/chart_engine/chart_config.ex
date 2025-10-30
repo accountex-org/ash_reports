@@ -1,13 +1,12 @@
 defmodule AshReports.ChartEngine.ChartConfig do
   @moduledoc """
-  Configuration structure for chart generation in AshReports Phase 5.1.
+  Configuration structure for chart generation in AshReports.
 
   Defines the chart type, data, styling options, and behavioral configuration
-  for generating interactive and static charts across all renderers.
+  for generating server-side SVG charts using Contex across all renderers.
   """
 
   @type chart_type :: :line | :bar | :pie | :area | :scatter | :histogram | :boxplot | :heatmap
-  @type provider :: :chartjs | :d3 | :plotly
   @type interaction_type :: :none | :hover | :click | :drill_down | :filter | :zoom
 
   defstruct [
@@ -15,7 +14,6 @@ defmodule AshReports.ChartEngine.ChartConfig do
     type: :bar,
     title: nil,
     subtitle: nil,
-    provider: :chartjs,
 
     # Data configuration
     data: [],
@@ -50,7 +48,6 @@ defmodule AshReports.ChartEngine.ChartConfig do
     # Advanced options
     options: %{},
     custom_css: nil,
-    custom_js: nil,
 
     # AI and automation
     auto_type_selection: false,
@@ -66,7 +63,6 @@ defmodule AshReports.ChartEngine.ChartConfig do
           type: chart_type(),
           title: String.t() | nil,
           subtitle: String.t() | nil,
-          provider: provider(),
           data: list() | map(),
           labels: list(),
           datasets: list(),
@@ -87,7 +83,6 @@ defmodule AshReports.ChartEngine.ChartConfig do
           cache_enabled: boolean(),
           options: map(),
           custom_css: String.t() | nil,
-          custom_js: String.t() | nil,
           auto_type_selection: boolean(),
           confidence: float(),
           reasoning: String.t() | nil,
@@ -171,71 +166,12 @@ defmodule AshReports.ChartEngine.ChartConfig do
   def validate(%__MODULE__{} = config) do
     with :ok <- validate_chart_type(config.type),
          :ok <- validate_data_presence(config.data),
-         :ok <- validate_provider(config.provider),
          :ok <- validate_interactions(config.interactions),
          :ok <- validate_real_time_config(config) do
       {:ok, config}
     else
       {:error, reason} -> {:error, reason}
     end
-  end
-
-  @doc """
-  Convert configuration to JSON for client-side JavaScript usage.
-  """
-  @spec to_json(t()) :: {:ok, String.t()} | {:error, String.t()}
-  def to_json(%__MODULE__{} = config) do
-    json_data = %{
-      type: config.type,
-      data: config.data,
-      options: config.options,
-      interactive: config.interactive,
-      realTime: config.real_time,
-      updateInterval: config.update_interval
-    }
-
-    case Jason.encode(json_data) do
-      {:ok, json} -> {:ok, json}
-      {:error, reason} -> {:error, "Failed to encode chart config: #{inspect(reason)}"}
-    end
-  end
-
-  @doc """
-  Apply locale-specific formatting to chart configuration.
-  """
-  @spec apply_locale_formatting(t(), String.t()) :: t()
-  def apply_locale_formatting(%__MODULE__{} = config, locale) do
-    case locale do
-      "ar" -> apply_rtl_formatting(config, "ar")
-      "he" -> apply_rtl_formatting(config, "he")
-      "fa" -> apply_rtl_formatting(config, "fa")
-      "ur" -> apply_rtl_formatting(config, "ur")
-      _ -> config
-    end
-  end
-
-  defp apply_rtl_formatting(config, locale) do
-    rtl_options = %{
-      indexAxis: if(config.type == :bar, do: "y", else: nil),
-      scales: %{
-        x: %{reverse: true, position: "top"},
-        y: %{position: "right"}
-      },
-      plugins: %{
-        legend: %{
-          rtl: true,
-          textDirection: "rtl",
-          position: "right"
-        },
-        title: %{
-          textDirection: "rtl"
-        }
-      },
-      locale: locale
-    }
-
-    updated_options = Map.merge(config.options || %{}, rtl_options)
-    %{config | options: updated_options}
   end
 
   # Validation functions
@@ -253,9 +189,6 @@ defmodule AshReports.ChartEngine.ChartConfig do
     do: {:error, "Chart data cannot be empty"}
 
   defp validate_data_presence(_data), do: :ok
-
-  defp validate_provider(provider) when provider in [:chartjs, :d3, :plotly], do: :ok
-  defp validate_provider(provider), do: {:error, "Invalid chart provider: #{provider}"}
 
   defp validate_interactions(interactions) when is_list(interactions) do
     valid_interactions = [:none, :hover, :click, :drill_down, :filter, :zoom]

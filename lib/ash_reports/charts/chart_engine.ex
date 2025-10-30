@@ -1,19 +1,17 @@
 defmodule AshReports.ChartEngine do
   @moduledoc """
-  Core chart engine for AshReports Phase 5.1 Interactive Data Visualization.
+  Core chart engine for AshReports.
 
-  Provides a unified interface for generating charts and visualizations across
-  multiple chart providers (Chart.js, D3.js, Plotly) with automatic chart type
-  selection and server-side generation capabilities.
+  Provides a unified interface for generating server-side SVG charts and visualizations
+  using Contex with automatic chart type selection and caching capabilities.
 
   ## Features
 
-  - **Multi-Provider Support**: Pluggable chart providers with consistent API
+  - **Server-Side SVG Generation**: Pure Elixir chart generation using Contex
   - **Automatic Chart Selection**: Intelligent chart type selection based on data characteristics
-  - **Server-Side Generation**: SVG generation for PDF and static outputs
-  - **Client-Side Integration**: JavaScript generation for interactive HTML/HEEX renderers
-  - **Internationalization**: Integration with Phase 4 CLDR and translation systems
-  - **Performance Optimization**: Efficient chart data processing and caching
+  - **Multi-Renderer Support**: SVG output works across HTML, HEEX, PDF, and JSON renderers
+  - **Internationalization**: Integration with CLDR and translation systems
+  - **Performance Optimization**: Efficient chart data processing and ETS-based caching
 
   ## Supported Chart Types
 
@@ -29,25 +27,13 @@ defmodule AshReports.ChartEngine do
   - **Box Plots**: Statistical summaries, outlier detection
   - **Heatmaps**: Density visualization, correlation matrices
 
-  ## Chart Providers
+  ## Chart Generation
 
-  ### Chart.js Provider (Default)
-  - Lightweight and performant for basic chart types
-  - Excellent mobile responsiveness and accessibility
-  - Strong internationalization support
-  - Easy integration with existing HTML/HEEX renderers
-
-  ### D3.js Provider (Advanced)
-  - Maximum flexibility for custom visualizations
-  - Complex interactive capabilities
-  - Advanced statistical chart types
-  - Custom animation and transition support
-
-  ### Plotly Provider (Scientific)
-  - Scientific and engineering chart types
-  - 3D visualization capabilities
-  - Statistical analysis integration
-  - Publication-ready chart outputs
+  All charts are generated server-side using Contex, producing SVG output that can be:
+  - Embedded directly in HTML/HEEX templates
+  - Converted to images for PDF rendering
+  - Served as data through JSON APIs
+  - Cached for improved performance
 
   ## Usage Examples
 
@@ -56,10 +42,9 @@ defmodule AshReports.ChartEngine do
       chart_config = %ChartConfig{
         type: :line,
         data: time_series_data,
-        provider: :chartjs,
-        options: %{responsive: true}
+        title: "Sales Trend"
       }
-      
+
       {:ok, chart} = ChartEngine.generate(chart_config, context)
 
   ### Automatic Chart Selection
@@ -68,41 +53,32 @@ defmodule AshReports.ChartEngine do
         sales_by_month: monthly_sales_data,
         profit_margins: percentage_data
       }
-      
-      charts = ChartEngine.auto_select_charts(data, context)
-      
-  ### Interactive Chart with Real-time Updates
 
-      interactive_config = %ChartConfig{
+      charts = ChartEngine.auto_select_charts(data, context)
+
+  ### Real-time Chart Configuration
+
+      realtime_config = %ChartConfig{
         type: :bar,
         data: sales_data,
-        interactive: true,
         real_time: true,
         update_interval: 30_000  # 30 seconds
       }
-      
-      {:ok, chart} = ChartEngine.generate(interactive_config, context)
+
+      {:ok, chart} = ChartEngine.generate(realtime_config, context)
 
   """
 
   alias AshReports.ChartEngine.{ChartConfig, ChartData}
-  alias AshReports.ChartEngine.Providers.{ChartJsProvider, D3Provider, PlotlyProvider}
   alias AshReports.RenderContext
 
   @type chart_type :: :line | :bar | :pie | :area | :scatter | :histogram | :boxplot | :heatmap
-  @type provider :: :chartjs | :d3 | :plotly
   @type chart_result :: {:ok, ChartData.t()} | {:error, String.t()}
-
-  @providers %{
-    chartjs: ChartJsProvider,
-    d3: D3Provider,
-    plotly: PlotlyProvider
-  }
-
-  @default_provider :chartjs
 
   @doc """
   Generate a chart using the specified configuration and render context.
+
+  Uses Contex for server-side SVG generation.
 
   ## Examples
 
@@ -111,17 +87,15 @@ defmodule AshReports.ChartEngine do
         data: [[1, 10], [2, 20], [3, 15]],
         title: "Sales Trend"
       }
-      
+
       {:ok, chart} = ChartEngine.generate(config, context)
 
   """
   @spec generate(ChartConfig.t(), RenderContext.t()) :: chart_result()
   def generate(%ChartConfig{} = config, %RenderContext{} = context) do
-    provider = get_provider(config.provider || @default_provider)
-
     with {:ok, processed_data} <- process_chart_data(config.data, context),
          {:ok, chart_spec} <- build_chart_specification(config, processed_data, context),
-         {:ok, chart_output} <- provider.generate(chart_spec, context) do
+         {:ok, chart_output} <- generate_svg_chart(chart_spec, context) do
       {:ok, chart_output}
     else
       {:error, reason} -> {:error, "Chart generation failed: #{reason}"}
@@ -195,31 +169,12 @@ defmodule AshReports.ChartEngine do
   end
 
   @doc """
-  List all available chart providers and their capabilities.
-  """
-  @spec list_providers() :: map()
-  def list_providers do
-    @providers
-    |> Enum.map(fn {key, provider_module} ->
-      {key,
-       %{
-         module: provider_module,
-         chart_types: provider_module.supported_chart_types(),
-         features: provider_module.supported_features(),
-         performance: provider_module.performance_characteristics()
-       }}
-    end)
-    |> Map.new()
-  end
-
-  @doc """
   Get chart generation statistics and performance metrics.
   """
   @spec get_metrics() :: map()
   def get_metrics do
     %{
       total_charts_generated: get_chart_counter(),
-      provider_usage: get_provider_usage_stats(),
       average_generation_time: get_average_generation_time(),
       cache_hit_ratio: get_cache_hit_ratio()
     }
@@ -227,14 +182,16 @@ defmodule AshReports.ChartEngine do
 
   # Private Functions
 
-  defp get_provider(provider_key) do
-    case Map.get(@providers, provider_key) do
-      nil ->
-        raise ArgumentError,
-              "Unknown chart provider: #{provider_key}. Available: #{Map.keys(@providers) |> Enum.join(", ")}"
-
-      provider_module ->
-        provider_module
+  defp generate_svg_chart(chart_spec, _context) do
+    # Use Contex through AshReports.Charts module for SVG generation
+    AshReports.Charts.generate(
+      chart_spec.type,
+      chart_spec.data,
+      chart_spec.config
+    )
+    |> case do
+      {:ok, svg} -> {:ok, %ChartData{svg: svg, metadata: chart_spec.metadata}}
+      error -> error
     end
   end
 
@@ -534,15 +491,6 @@ defmodule AshReports.ChartEngine do
     :persistent_term.put(:ash_reports_chart_counter, current + 1)
   end
 
-  defp get_provider_usage_stats do
-    :persistent_term.get(:ash_reports_provider_stats, %{})
-  end
-
-  defp record_provider_usage(provider) do
-    stats = get_provider_usage_stats()
-    updated_stats = Map.update(stats, provider, 1, &(&1 + 1))
-    :persistent_term.put(:ash_reports_provider_stats, updated_stats)
-  end
 
   defp get_average_generation_time do
     times = :persistent_term.get(:ash_reports_generation_times, [])
@@ -572,9 +520,8 @@ defmodule AshReports.ChartEngine do
   end
 
   @doc false
-  def record_chart_generation(provider, generation_time_ms) do
+  def record_chart_generation(_chart_type, generation_time_ms) do
     increment_chart_counter()
-    record_provider_usage(provider)
     record_generation_time(generation_time_ms)
   end
 end

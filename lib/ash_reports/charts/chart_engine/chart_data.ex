@@ -18,6 +18,9 @@ defmodule AshReports.ChartEngine.ChartData do
     labels: [],
     datasets: [],
 
+    # Rendered output
+    svg: nil,
+
     # Data characteristics
     data_type: :numeric,
     format_type: :raw,
@@ -54,7 +57,10 @@ defmodule AshReports.ChartEngine.ChartData do
 
     # Validation
     errors: [],
-    warnings: []
+    warnings: [],
+
+    # Metadata
+    metadata: %{}
   ]
 
   @type t :: %__MODULE__{

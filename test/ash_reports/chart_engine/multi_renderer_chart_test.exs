@@ -34,7 +34,6 @@ defmodule AshReports.ChartEngine.MultiRendererChartTest do
       %{x: "Q4", y: 180}
     ],
     title: "Quarterly Sales",
-    provider: :chartjs,
     interactive: true
   }
 
@@ -360,8 +359,7 @@ defmodule AshReports.ChartEngine.MultiRendererChartTest do
       large_chart_config = %ChartConfig{
         type: :scatter,
         data: for(i <- 1..1000, do: %{x: i, y: :rand.uniform(100)}),
-        title: "Large Dataset Chart",
-        provider: :chartjs
+        title: "Large Dataset Chart"
       }
 
       renderer_types = [:html, :pdf, :json]
@@ -545,7 +543,6 @@ defmodule AshReports.ChartEngine.MultiRendererChartTest do
         type: :bar,
         data: chart_data,
         title: "Invoice Totals",
-        provider: :chartjs,
         interactive: true
       }
 
@@ -579,7 +576,6 @@ defmodule AshReports.ChartEngine.MultiRendererChartTest do
         type: :bar,
         data: chart_data,
         title: "Customer Total Spend",
-        provider: :chartjs
       }
 
       # Test with multiple renderers
@@ -610,7 +606,6 @@ defmodule AshReports.ChartEngine.MultiRendererChartTest do
         type: :line,
         data: chart_data,
         title: "Line Items per Invoice",
-        provider: :chartjs
       }
 
       context = %{@test_context | metadata: %{chart_configs: [chart_config]}}
@@ -633,7 +628,6 @@ defmodule AshReports.ChartEngine.MultiRendererChartTest do
         type: :scatter,
         data: chart_data,
         title: "All Invoice Amounts",
-        provider: :chartjs
       }
 
       start_time = System.monotonic_time(:microsecond)
