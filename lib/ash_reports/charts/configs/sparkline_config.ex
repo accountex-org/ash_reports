@@ -101,8 +101,24 @@ defmodule AshReports.Charts.SparklineConfig do
   """
   def changeset(config \\ %__MODULE__{}, attrs) do
     config
-    |> cast(attrs, [:width, :height, :spot_radius, :spot_colour, :line_width, :line_colour, :fill_colour])
-    |> validate_required([:width, :height, :spot_radius, :spot_colour, :line_width, :line_colour, :fill_colour])
+    |> cast(attrs, [
+      :width,
+      :height,
+      :spot_radius,
+      :spot_colour,
+      :line_width,
+      :line_colour,
+      :fill_colour
+    ])
+    |> validate_required([
+      :width,
+      :height,
+      :spot_radius,
+      :spot_colour,
+      :line_width,
+      :line_colour,
+      :fill_colour
+    ])
     |> validate_number(:width, greater_than: 0)
     |> validate_number(:height, greater_than: 0)
     |> validate_number(:spot_radius, greater_than_or_equal_to: 0)

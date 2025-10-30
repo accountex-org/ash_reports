@@ -101,7 +101,15 @@ defmodule AshReports.Charts.LineChartConfig do
   """
   def changeset(config \\ %__MODULE__{}, attrs) do
     config
-    |> cast(attrs, [:width, :height, :title, :smoothed, :stroke_width, :axis_label_rotation, :colours])
+    |> cast(attrs, [
+      :width,
+      :height,
+      :title,
+      :smoothed,
+      :stroke_width,
+      :axis_label_rotation,
+      :colours
+    ])
     |> validate_required([:width, :height, :stroke_width])
     |> validate_number(:width, greater_than: 0)
     |> validate_number(:height, greater_than: 0)

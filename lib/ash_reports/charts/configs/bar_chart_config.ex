@@ -100,7 +100,16 @@ defmodule AshReports.Charts.BarChartConfig do
   """
   def changeset(config \\ %__MODULE__{}, attrs) do
     config
-    |> cast(attrs, [:width, :height, :title, :type, :orientation, :data_labels, :padding, :colours])
+    |> cast(attrs, [
+      :width,
+      :height,
+      :title,
+      :type,
+      :orientation,
+      :data_labels,
+      :padding,
+      :colours
+    ])
     |> validate_required([:width, :height])
     |> validate_number(:width, greater_than: 0)
     |> validate_number(:height, greater_than: 0)
