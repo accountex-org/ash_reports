@@ -84,7 +84,8 @@ defmodule AshReports.Dsl do
         bar_chart_entity(),
         line_chart_entity(),
         pie_chart_entity(),
-        area_chart_entity()
+        area_chart_entity(),
+        scatter_chart_entity()
       ],
       schema: []
     }
@@ -517,6 +518,48 @@ defmodule AshReports.Dsl do
       describe: "Configuration for area chart rendering.",
       target: AshReports.Charts.AreaChartConfig,
       schema: area_chart_config_schema()
+    }
+  end
+
+  @doc """
+  Standalone scatter chart entity for reports section.
+  """
+  def scatter_chart_entity do
+    %Entity{
+      name: :scatter_chart,
+      describe: """
+      Defines a standalone scatter chart that can be referenced in report bands.
+
+      Scatter charts (point plots) show correlation between two variables.
+      """,
+      examples: [
+        """
+        scatter_chart :price_vs_quantity do
+          data_source expr(get_correlation_data())
+          config do
+            width 700
+            height 500
+            title "Price vs Quantity Analysis"
+            axis_label_rotation :auto
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.ScatterChart,
+      args: [:name],
+      schema: scatter_chart_schema(),
+      entities: [
+        config: [scatter_chart_config_entity()]
+      ]
+    }
+  end
+
+  defp scatter_chart_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for scatter chart rendering.",
+      target: AshReports.Charts.ScatterChartConfig,
+      schema: scatter_chart_config_schema()
     }
   end
 
@@ -1197,6 +1240,50 @@ defmodule AshReports.Dsl do
         type: {:list, :string},
         default: [],
         doc: "List of hex color codes (without #) for areas."
+      ]
+    ]
+  end
+
+  defp scatter_chart_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp scatter_chart_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 600,
+        doc: "Chart width in pixels."
+      ],
+      height: [
+        type: :integer,
+        default: 400,
+        doc: "Chart height in pixels."
+      ],
+      title: [
+        type: :string,
+        doc: "Chart title text."
+      ],
+      axis_label_rotation: [
+        type: {:in, [:auto, :"45", :"90"]},
+        default: :auto,
+        doc: "Axis label rotation: :auto, :\"45\", or :\"90\"."
+      ],
+      colours: [
+        type: {:list, :string},
+        default: [],
+        doc: "List of hex color codes (without #) for data points."
       ]
     ]
   end
