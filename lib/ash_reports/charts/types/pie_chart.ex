@@ -45,11 +45,11 @@ defmodule AshReports.Charts.Types.PieChart do
 
   @behaviour AshReports.Charts.Types.Behavior
 
-  alias AshReports.Charts.Config
+  alias AshReports.Charts.PieChartConfig
   alias Contex.{Dataset, PieChart}
 
   @impl true
-  def build(data, %Config{} = config) do
+  def build(data, %PieChartConfig{} = config) do
     # Convert data to Contex Dataset
     dataset = Dataset.new(data)
 
@@ -59,11 +59,11 @@ defmodule AshReports.Charts.Types.PieChart do
     # Get colors for the chart
     colors = get_colors(config)
 
-    # Build pie chart with mapping and colors
-    PieChart.new(dataset,
-      mapping: %{category_col: cat_col, value_col: val_col},
-      colour_palette: colors
-    )
+    # Build Contex options
+    contex_opts = build_contex_options(config, cat_col, val_col, colors)
+
+    # Build pie chart with all options
+    PieChart.new(dataset, contex_opts)
   end
 
   @impl true
@@ -131,16 +131,26 @@ defmodule AshReports.Charts.Types.PieChart do
     end
   end
 
-  defp get_colors(%Config{colors: colors}) when is_list(colors) and length(colors) > 0 do
+  defp build_contex_options(config, cat_col, val_col, colors) do
+    %{
+      mapping: %{category_col: cat_col, value_col: val_col},
+      colour_palette: colors
+    }
+    |> maybe_add_data_labels(config.data_labels)
+  end
+
+  defp maybe_add_data_labels(opts, true), do: Map.put(opts, :data_labels, true)
+  defp maybe_add_data_labels(opts, _), do: opts
+
+  defp get_colors(%PieChartConfig{colours: colours}) when is_list(colours) and length(colours) > 0 do
     # Contex expects hex colors without the # prefix
-    Enum.map(colors, fn color ->
+    Enum.map(colours, fn color ->
       String.trim_leading(color, "#")
     end)
   end
 
   defp get_colors(_config) do
-    # Use default colors, strip # prefix
-    Config.default_colors()
-    |> Enum.map(fn color -> String.trim_leading(color, "#") end)
+    # Use default Contex colors
+    :default
   end
 end
