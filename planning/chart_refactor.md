@@ -331,72 +331,95 @@ end
 - ✅ Consistent structure and comprehensive documentation
 - ✅ 7 atomic commits with clear messages
 - ✅ 50% faster than estimated (2hrs vs 4-5hrs)
-## Section 4: Type-Specific Chart Elements in Bands
+## Section 4: Type-Specific Chart Elements in Bands ✅ COMPLETE
 
-**Duration**: 3-4 hours
+**Duration**: 3-4 hours (Actual: 1 hour)
+**Completed**: 2025-10-31
+**Branch**: `feature/band-chart-elements`
+**Summary**: `notes/features/section4-band-chart-elements-summary.md`
 
 **Goal**: Replace the generic chart element with type-specific chart reference elements in bands.
 
-### Task 4.1: Remove old chart_element_entity
+### Task 4.1: Remove old chart_element_entity ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: d234e48
 - **Location**: `band_entity/0` function, entities list
 - **Subtasks**:
-  - [ ] Remove chart_element_entity() from elements list
-  - [ ] Verify no other references to chart_element_entity
+  - [x] Remove chart_element_entity() from elements list
+  - [x] Verify no other references to chart_element_entity
+  - [x] Delete chart_element_entity/0 function
+  - [x] Delete chart_element_schema/0 function
 
-### Task 4.2: Add bar_chart_element_entity to bands
+### Task 4.2: Add bar_chart_element_entity to bands ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define bar_chart_element_entity function
-  - [ ] Set name: :bar_chart
-  - [ ] Set target: AshReports.Element.BarChartElement
-  - [ ] Set args: [:chart_name]
-  - [ ] Add schema with chart_name field (references standalone chart)
-  - [ ] Include base_element_schema() for position, style, conditional
-  - [ ] Add to band_entity elements list
+  - [x] Define bar_chart_element_entity function
+  - [x] Set name: :bar_chart
+  - [x] Set target: AshReports.Element.BarChartElement
+  - [x] Set args: [:chart_name]
+  - [x] Add schema with chart_name field (references standalone chart)
+  - [x] Include base_element_schema() for position, style, conditional
+  - [x] Add to band_entity elements list
 
-### Task 4.3: Add line_chart_element_entity to bands
+### Task 4.3: Add line_chart_element_entity to bands ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define line_chart_element_entity
-  - [ ] Set target: AshReports.Element.LineChartElement
-  - [ ] Add schema with chart_name reference
-  - [ ] Add to band_entity elements list
+  - [x] Define line_chart_element_entity
+  - [x] Set target: AshReports.Element.LineChartElement
+  - [x] Add schema with chart_name reference
+  - [x] Add to band_entity elements list
 
-### Task 4.4: Add pie_chart_element_entity to bands
+### Task 4.4: Add pie_chart_element_entity to bands ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define pie_chart_element_entity
-  - [ ] Set target: AshReports.Element.PieChartElement
-  - [ ] Add to band_entity elements list
+  - [x] Define pie_chart_element_entity
+  - [x] Set target: AshReports.Element.PieChartElement
+  - [x] Add to band_entity elements list
 
-### Task 4.5: Add area_chart_element_entity to bands
+### Task 4.5: Add area_chart_element_entity to bands ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define area_chart_element_entity
-  - [ ] Set target: AshReports.Element.AreaChartElement
-  - [ ] Add to band_entity elements list
+  - [x] Define area_chart_element_entity
+  - [x] Set target: AshReports.Element.AreaChartElement
+  - [x] Add to band_entity elements list
 
-### Task 4.6: Add scatter_chart_element_entity to bands
+### Task 4.6: Add scatter_chart_element_entity to bands ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define scatter_chart_element_entity
-  - [ ] Set target: AshReports.Element.ScatterChartElement
-  - [ ] Add to band_entity elements list
+  - [x] Define scatter_chart_element_entity
+  - [x] Set target: AshReports.Element.ScatterChartElement
+  - [x] Add to band_entity elements list
 
-### Task 4.7: Add gantt_chart_element_entity to bands
+### Task 4.7: Add gantt_chart_element_entity to bands ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define gantt_chart_element_entity
-  - [ ] Set target: AshReports.Element.GanttChartElement
-  - [ ] Add to band_entity elements list
+  - [x] Define gantt_chart_element_entity
+  - [x] Set target: AshReports.Element.GanttChartElement
+  - [x] Add to band_entity elements list
 
-### Task 4.8: Add sparkline_element_entity to bands
+### Task 4.8: Add sparkline_element_entity to bands ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define sparkline_element_entity
-  - [ ] Set target: AshReports.Element.SparklineElement
-  - [ ] Add to band_entity elements list
+  - [x] Define sparkline_element_entity
+  - [x] Set target: AshReports.Element.SparklineElement
+  - [x] Add to band_entity elements list
+
+**Results**:
+- ✅ All 7 chart element entities added to band DSL (+137 lines)
+- ✅ All 7 element modules created (+526 lines)
+- ✅ Clean compilation with --warnings-as-errors
+- ✅ Removed deprecated chart_element_entity and schema
+- ✅ Comprehensive documentation with DSL examples
+- ✅ 1 atomic commit with clear message
+- ✅ 67% faster than estimated (1hr vs 3-4hrs)
+- ✅ Section 7 (Chart Element Modules) integrated and completed
 
 ---
 
@@ -512,62 +535,81 @@ end
 
 ---
 
-## Section 7: Chart Element Modules
+## Section 7: Chart Element Modules ✅ COMPLETE
 
-**Duration**: 1-2 hours
+**Duration**: 1-2 hours (Actual: Integrated into Section 4)
+**Completed**: 2025-10-31
+**Branch**: `feature/band-chart-elements`
+**Summary**: Integrated with Section 4 - see `notes/features/section4-band-chart-elements-summary.md`
 
 **Goal**: Create element module structs that reference standalone charts by name.
 
-### Task 7.1: Create BarChartElement module
-- **File**: `lib/ash_reports/reports/elements/bar_chart_element.ex`
-- **Subtasks**:
-  - [ ] Define defstruct with: name, chart_name, type, position, style, conditional
-  - [ ] Set type: :bar_chart_element
-  - [ ] Add @type spec
-  - [ ] Add moduledoc explaining chart reference
-  - [ ] Add new/2 constructor
+**Note**: This section was integrated into Section 4 implementation for efficiency. All element modules were created alongside the DSL entity definitions.
 
-### Task 7.2: Create LineChartElement module
-- **File**: `lib/ash_reports/reports/elements/line_chart_element.ex`
+### Task 7.1: Create BarChartElement module ✅
+- **File**: `lib/ash_reports/reports/element/bar_chart_element.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define defstruct with chart_name reference
-  - [ ] Set type: :line_chart_element
-  - [ ] Add @type spec and moduledoc
+  - [x] Define defstruct with: name, chart_name, type, position, style, conditional
+  - [x] Set type: :bar_chart_element
+  - [x] Add @type spec
+  - [x] Add moduledoc explaining chart reference
+  - [x] Add new/2 constructor
 
-### Task 7.3: Create PieChartElement module
-- **File**: `lib/ash_reports/reports/elements/pie_chart_element.ex`
+### Task 7.2: Create LineChartElement module ✅
+- **File**: `lib/ash_reports/reports/element/line_chart_element.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define defstruct with chart_name reference
-  - [ ] Set type: :pie_chart_element
-  - [ ] Add @type spec and moduledoc
+  - [x] Define defstruct with chart_name reference
+  - [x] Set type: :line_chart_element
+  - [x] Add @type spec and moduledoc
 
-### Task 7.4: Create AreaChartElement module
-- **File**: `lib/ash_reports/reports/elements/area_chart_element.ex`
+### Task 7.3: Create PieChartElement module ✅
+- **File**: `lib/ash_reports/reports/element/pie_chart_element.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define defstruct with chart_name reference
-  - [ ] Set type: :area_chart_element
-  - [ ] Add @type spec and moduledoc
+  - [x] Define defstruct with chart_name reference
+  - [x] Set type: :pie_chart_element
+  - [x] Add @type spec and moduledoc
 
-### Task 7.5: Create ScatterChartElement module
-- **File**: `lib/ash_reports/reports/elements/scatter_chart_element.ex`
+### Task 7.4: Create AreaChartElement module ✅
+- **File**: `lib/ash_reports/reports/element/area_chart_element.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define defstruct with chart_name reference
-  - [ ] Set type: :scatter_chart_element
-  - [ ] Add @type spec and moduledoc
+  - [x] Define defstruct with chart_name reference
+  - [x] Set type: :area_chart_element
+  - [x] Add @type spec and moduledoc
 
-### Task 7.6: Create GanttChartElement module
-- **File**: `lib/ash_reports/reports/elements/gantt_chart_element.ex`
+### Task 7.5: Create ScatterChartElement module ✅
+- **File**: `lib/ash_reports/reports/element/scatter_chart_element.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define defstruct with chart_name reference
-  - [ ] Set type: :gantt_chart_element
-  - [ ] Add @type spec and moduledoc
+  - [x] Define defstruct with chart_name reference
+  - [x] Set type: :scatter_chart_element
+  - [x] Add @type spec and moduledoc
 
-### Task 7.7: Create SparklineElement module
-- **File**: `lib/ash_reports/reports/elements/sparkline_element.ex`
+### Task 7.6: Create GanttChartElement module ✅
+- **File**: `lib/ash_reports/reports/element/gantt_chart_element.ex`
+- **Commit**: d234e48
 - **Subtasks**:
-  - [ ] Define defstruct with chart_name reference
-  - [ ] Set type: :sparkline_element
-  - [ ] Add @type spec and moduledoc
+  - [x] Define defstruct with chart_name reference
+  - [x] Set type: :gantt_chart_element
+  - [x] Add @type spec and moduledoc
+
+### Task 7.7: Create SparklineElement module ✅
+- **File**: `lib/ash_reports/reports/element/sparkline_element.ex`
+- **Commit**: d234e48
+- **Subtasks**:
+  - [x] Define defstruct with chart_name reference
+  - [x] Set type: :sparkline_element
+  - [x] Add @type spec and moduledoc
+
+**Results**:
+- ✅ All 7 element modules created (~75 lines each, 526 total)
+- ✅ Consistent structure with defstruct, @type, new/2, process_options/1
+- ✅ Comprehensive moduledocs with DSL examples
+- ✅ Clean compilation with --warnings-as-errors
+- ✅ Integrated into Section 4 commit (d234e48)
 
 ---
 
