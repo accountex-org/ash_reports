@@ -91,11 +91,11 @@ defmodule AshReports.Charts.Types.GanttChart do
 
   @behaviour AshReports.Charts.Types.Behavior
 
-  alias AshReports.Charts.Config
+  alias AshReports.Charts.GanttChartConfig
   alias Contex.{Dataset, GanttChart}
 
   @impl true
-  def build(data, %Config{} = config) do
+  def build(data, %GanttChartConfig{} = config) do
     # Convert data to Contex Dataset
     dataset = Dataset.new(data)
 
@@ -220,7 +220,7 @@ defmodule AshReports.Charts.Types.GanttChart do
     end
   end
 
-  defp build_options(%Config{} = config, colors, column_mapping) do
+  defp build_options(%GanttChartConfig{} = config, colors, column_mapping) do
     base_options = [
       mapping: filter_nil_values(column_mapping),
       colour_palette: colors
@@ -230,8 +230,8 @@ defmodule AshReports.Charts.Types.GanttChart do
     base_options
     |> maybe_add_option(:width, config.width)
     |> maybe_add_option(:height, config.height)
-    # Use Contex defaults for padding and show_task_labels
-    # Future enhancement: add these fields to Config struct
+    |> maybe_add_option(:padding, config.padding)
+    |> maybe_add_option(:show_task_labels, config.show_task_labels)
   end
 
   defp filter_nil_values(map) do
@@ -246,9 +246,9 @@ defmodule AshReports.Charts.Types.GanttChart do
     Keyword.put(options, key, value)
   end
 
-  defp get_colors(%Config{colors: colors}) when is_list(colors) and length(colors) > 0 do
+  defp get_colors(%GanttChartConfig{colours: colours}) when is_list(colours) and length(colours) > 0 do
     # Contex expects hex colors without the # prefix
-    Enum.map(colors, fn color ->
+    Enum.map(colours, fn color ->
       String.trim_leading(color, "#")
     end)
   end
