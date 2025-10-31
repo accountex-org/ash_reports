@@ -180,7 +180,13 @@ defmodule AshReports.Dsl do
           line_element_entity(),
           box_element_entity(),
           image_element_entity(),
-          chart_element_entity()
+          bar_chart_element_entity(),
+          line_chart_element_entity(),
+          pie_chart_element_entity(),
+          area_chart_element_entity(),
+          scatter_chart_element_entity(),
+          gantt_chart_element_entity(),
+          sparkline_element_entity()
         ]
       ],
       recursive_as: :bands
@@ -340,13 +346,101 @@ defmodule AshReports.Dsl do
     }
   end
 
-  defp chart_element_entity do
+  defp bar_chart_element_entity do
     %Entity{
-      name: :chart,
-      describe: "A chart visualization element.",
-      target: AshReports.Element.Chart,
-      args: [:name],
-      schema: chart_element_schema()
+      name: :bar_chart,
+      describe: """
+      References a standalone bar chart definition in a report band.
+
+      The chart_name must match a bar_chart defined at the reports level.
+      """,
+      target: AshReports.Element.BarChartElement,
+      args: [:chart_name],
+      schema: bar_chart_element_schema()
+    }
+  end
+
+  defp line_chart_element_entity do
+    %Entity{
+      name: :line_chart,
+      describe: """
+      References a standalone line chart definition in a report band.
+
+      The chart_name must match a line_chart defined at the reports level.
+      """,
+      target: AshReports.Element.LineChartElement,
+      args: [:chart_name],
+      schema: line_chart_element_schema()
+    }
+  end
+
+  defp pie_chart_element_entity do
+    %Entity{
+      name: :pie_chart,
+      describe: """
+      References a standalone pie chart definition in a report band.
+
+      The chart_name must match a pie_chart defined at the reports level.
+      """,
+      target: AshReports.Element.PieChartElement,
+      args: [:chart_name],
+      schema: pie_chart_element_schema()
+    }
+  end
+
+  defp area_chart_element_entity do
+    %Entity{
+      name: :area_chart,
+      describe: """
+      References a standalone area chart definition in a report band.
+
+      The chart_name must match an area_chart defined at the reports level.
+      """,
+      target: AshReports.Element.AreaChartElement,
+      args: [:chart_name],
+      schema: area_chart_element_schema()
+    }
+  end
+
+  defp scatter_chart_element_entity do
+    %Entity{
+      name: :scatter_chart,
+      describe: """
+      References a standalone scatter chart definition in a report band.
+
+      The chart_name must match a scatter_chart defined at the reports level.
+      """,
+      target: AshReports.Element.ScatterChartElement,
+      args: [:chart_name],
+      schema: scatter_chart_element_schema()
+    }
+  end
+
+  defp gantt_chart_element_entity do
+    %Entity{
+      name: :gantt_chart,
+      describe: """
+      References a standalone gantt chart definition in a report band.
+
+      The chart_name must match a gantt_chart defined at the reports level.
+      """,
+      target: AshReports.Element.GanttChartElement,
+      args: [:chart_name],
+      schema: gantt_chart_element_schema()
+    }
+  end
+
+  defp sparkline_element_entity do
+    %Entity{
+      name: :sparkline,
+      describe: """
+      References a standalone sparkline definition in a report band.
+
+      The chart_name must match a sparkline defined at the reports level.
+      """,
+      target: AshReports.Element.SparklineElement,
+      args: [:chart_name],
+      schema: sparkline_element_schema()
     }
   end
 
@@ -1086,36 +1180,79 @@ defmodule AshReports.Dsl do
       ]
   end
 
-  defp chart_element_schema do
+  defp bar_chart_element_schema do
     base_element_schema() ++
       [
-        chart_type: [
-          type: {:in, [:bar, :line, :pie, :area, :scatter, :sparkline, :gantt]},
+        chart_name: [
+          type: :atom,
           required: true,
-          doc: "The type of chart to generate."
-        ],
-        data_source: [
-          type: :any,
+          doc: "The name of the bar_chart definition to reference."
+        ]
+      ]
+  end
+
+  defp line_chart_element_schema do
+    base_element_schema() ++
+      [
+        chart_name: [
+          type: :atom,
           required: true,
-          doc: "Expression that evaluates to chart data (list of maps)."
-        ],
-        config: [
-          type: {:or, [:map, :any]},
-          default: %{},
-          doc: "Chart configuration (map or expression that returns a map)."
-        ],
-        embed_options: [
-          type: :map,
-          default: %{},
-          doc: "Options for ChartEmbedder (width, height, etc.)."
-        ],
-        caption: [
-          type: {:or, [:string, :any]},
-          doc: "Caption text below chart (string or expression)."
-        ],
-        title: [
-          type: {:or, [:string, :any]},
-          doc: "Title text above chart (string or expression)."
+          doc: "The name of the line_chart definition to reference."
+        ]
+      ]
+  end
+
+  defp pie_chart_element_schema do
+    base_element_schema() ++
+      [
+        chart_name: [
+          type: :atom,
+          required: true,
+          doc: "The name of the pie_chart definition to reference."
+        ]
+      ]
+  end
+
+  defp area_chart_element_schema do
+    base_element_schema() ++
+      [
+        chart_name: [
+          type: :atom,
+          required: true,
+          doc: "The name of the area_chart definition to reference."
+        ]
+      ]
+  end
+
+  defp scatter_chart_element_schema do
+    base_element_schema() ++
+      [
+        chart_name: [
+          type: :atom,
+          required: true,
+          doc: "The name of the scatter_chart definition to reference."
+        ]
+      ]
+  end
+
+  defp gantt_chart_element_schema do
+    base_element_schema() ++
+      [
+        chart_name: [
+          type: :atom,
+          required: true,
+          doc: "The name of the gantt_chart definition to reference."
+        ]
+      ]
+  end
+
+  defp sparkline_element_schema do
+    base_element_schema() ++
+      [
+        chart_name: [
+          type: :atom,
+          required: true,
+          doc: "The name of the sparkline definition to reference."
         ]
       ]
   end
