@@ -511,48 +511,70 @@ end
 
 ---
 
-## Section 6: Update Renderers
+## Section 6: Update Renderers ✅ COMPLETE
 
-**Duration**: 3-4 hours
+**Duration**: 3-4 hours (Actual: 1 hour)
+**Completed**: 2025-10-31
+**Branch**: `feature/renderer-updates`
+**Summary**: `notes/features/section6-renderer-updates-summary.md`
 
 **Goal**: Update renderers to look up standalone chart definitions and handle type-specific configs.
 
-### Task 6.1: Add chart lookup to HeexRenderer
-- **File**: `lib/ash_reports/renderers/heex_renderer/heex_renderer.ex`
+### Task 6.1: Add chart lookup to HeexRenderer ✅
+- **Files**: `lib/ash_reports/info.ex`, `lib/ash_reports/renderers/heex_renderer/band_renderer.ex`
+- **Commit**: 6fbedfb
 - **Subtasks**:
-  - [ ] Add resolve_chart_element/2 function
-  - [ ] Lookup chart definition from report's chart definitions
-  - [ ] Handle BarChart, LineChart, PieChart, AreaChart, ScatterChart, GanttChart, Sparkline
-  - [ ] Evaluate data_source expression with proper context
-  - [ ] Pass type-specific config to chart generation
+  - [x] Add charts/1, chart/2 functions to AshReports.Info
+  - [x] Add resolve_chart_definition/2 function
+  - [x] Lookup chart definition from domain via AshReports.Info
+  - [x] Handle BarChart, LineChart, PieChart, AreaChart, ScatterChart, GanttChart, Sparkline
+  - [x] Evaluate data_source expression with context
+  - [x] Pass type-specific config to chart generation
 
-### Task 6.2: Update chart element rendering in HeexRenderer
-- **File**: `lib/ash_reports/renderers/heex_renderer/heex_renderer.ex`
+### Task 6.2: Update chart element rendering in HeexRenderer ✅
+- **File**: `lib/ash_reports/renderers/heex_renderer/band_renderer.ex`
+- **Commit**: 6fbedfb
 - **Subtasks**:
-  - [ ] Update render_element for BarChartElement
-  - [ ] Update render_element for LineChartElement
-  - [ ] Update render_element for PieChartElement
-  - [ ] Update render_element for AreaChartElement
-  - [ ] Update render_element for ScatterChartElement
-  - [ ] Update render_element for GanttChartElement
-  - [ ] Update render_element for SparklineElement
-  - [ ] Remove old generic chart element rendering
+  - [x] Add render_element for BarChartElement
+  - [x] Add render_element for LineChartElement
+  - [x] Add render_element for PieChartElement
+  - [x] Add render_element for AreaChartElement
+  - [x] Add render_element for ScatterChartElement
+  - [x] Add render_element for GanttChartElement
+  - [x] Add render_element for SparklineElement
+  - [x] Implement render_chart_element/3 with chart lookup
+  - [x] Add get_chart_type_module/1 and get_config_module/1 mappings
 
-### Task 6.3: Add chart lookup to ChartPreprocessor
+### Task 6.3: Add chart lookup to ChartPreprocessor ✅
 - **File**: `lib/ash_reports/typst/chart_preprocessor.ex`
+- **Commit**: 615b1b0
 - **Subtasks**:
-  - [ ] Add resolve_chart_definition/2 function
-  - [ ] Lookup chart from report definitions
-  - [ ] Handle type-specific chart structs
-  - [ ] Evaluate data_source expression
+  - [x] Add resolve_chart_definition/2 function
+  - [x] Lookup chart from domain via AshReports.Info
+  - [x] Handle type-specific chart structs
+  - [x] Update extract_chart_elements for type-specific elements
+  - [x] Add recursive band extraction
+  - [x] Add is_chart_element?/1 guards for all 7 types
 
-### Task 6.4: Update chart preprocessing in ChartPreprocessor
+### Task 6.4: Update chart preprocessing in ChartPreprocessor ✅
 - **File**: `lib/ash_reports/typst/chart_preprocessor.ex`
+- **Commit**: 615b1b0
 - **Subtasks**:
-  - [ ] Update preprocess_chart for each chart type
-  - [ ] Handle type-specific config structs
-  - [ ] Update evaluate_config for new structs
-  - [ ] Remove old generic chart processing
+  - [x] Update process_chart/2 for type-specific chart elements
+  - [x] Handle type-specific config structs from chart definitions
+  - [x] Add generate_chart_svg/2 and build_chart_with_module/3
+  - [x] Add get_chart_type_module/1 and get_config_module/1 mappings
+  - [x] Remove old generic chart processing (evaluate_config/2)
+
+**Results**:
+- ✅ Both renderers updated (+384, -44 lines)
+- ✅ Clean compilation with --warnings-as-errors
+- ✅ Chart lookup via AshReports.Info module
+- ✅ Type-specific config structs passed to chart implementations
+- ✅ All 7 chart types supported in both renderers
+- ✅ Consistent pattern between HeexRenderer and ChartPreprocessor
+- ✅ 2 atomic commits with clear messages
+- ✅ 75% faster than estimated (1hr vs 3-4hrs)
 
 ---
 
