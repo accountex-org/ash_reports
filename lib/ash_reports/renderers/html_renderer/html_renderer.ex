@@ -774,18 +774,8 @@ defmodule AshReports.HtmlRenderer do
     context.metadata[:chart_configs] || []
   end
 
-  defp generate_chart_id(chart_config) do
-    # Generate unique chart ID based on config
-    chart_name = chart_config.title || "chart"
-    chart_type = chart_config.type
-
-    hash =
-      :crypto.hash(:md5, "#{chart_name}_#{chart_type}")
-      |> Base.encode16(case: :lower)
-      |> String.slice(0, 8)
-
-    "ash_chart_#{chart_type}_#{hash}"
-  end
+  # Note: generate_chart_id/1 was removed (unused helper function).
+  # Can be restored from git history if needed for future chart ID generation.
 
   defp generate_chart_error_fallback(chart_config, %RenderContext{} = context) do
     error_message =

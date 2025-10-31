@@ -276,28 +276,10 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   end
 
   # Private implementation functions
-
-  defp build_bands_structure(%RenderContext{} = context, serialized_data, opts) do
-    report_bands = get_report_bands(context)
-
-    report_bands
-    |> Enum.with_index()
-    |> Enum.reduce_while({:ok, []}, fn {band, index}, {:ok, acc} ->
-      elements = get_band_elements(band, serialized_data, index)
-
-      case build_band_structure(band, elements, context, opts) do
-        {:ok, band_structure} ->
-          {:cont, {:ok, [band_structure | acc]}}
-
-        {:error, reason} ->
-          {:halt, {:error, {:bands_structure_build_failed, band, reason}}}
-      end
-    end)
-    |> case do
-      {:ok, reversed_bands} -> {:ok, Enum.reverse(reversed_bands)}
-      {:error, _reason} = error -> error
-    end
-  end
+  #
+  # Note: build_bands_structure/3 was removed as part of JSON renderer simplification.
+  # The function built detailed band/element structures but is no longer needed since
+  # the JSON renderer now outputs only records. Can be restored from git history if needed.
 
   defp build_variables_section(serialized_data, _opts) do
     variables = Map.get(serialized_data, :variables, %{})
@@ -463,9 +445,7 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   defp get_band_type(band) when is_map(band), do: Map.get(band, :type, "unknown")
   defp get_band_type(_), do: "unknown"
 
-  defp get_band_elements(band, _serialized_data, _index) do
-    Map.get(band, :elements, [])
-  end
+  # Note: get_band_elements/3 was removed (unused after JSON renderer simplification)
 
   defp get_band_position(band, _context) do
     Map.get(band, :position, %{x: 0, y: 0})
@@ -485,9 +465,7 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
     end
   end
 
-  defp count_bands(%RenderContext{} = context) do
-    context |> get_report_bands() |> length()
-  end
+  # Note: count_bands/1 was removed (unused after JSON renderer simplification)
 
   defp count_elements(%RenderContext{} = context) do
     context
