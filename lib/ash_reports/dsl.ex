@@ -85,7 +85,8 @@ defmodule AshReports.Dsl do
         line_chart_entity(),
         pie_chart_entity(),
         area_chart_entity(),
-        scatter_chart_entity()
+        scatter_chart_entity(),
+        gantt_chart_entity()
       ],
       schema: []
     }
@@ -560,6 +561,49 @@ defmodule AshReports.Dsl do
       describe: "Configuration for scatter chart rendering.",
       target: AshReports.Charts.ScatterChartConfig,
       schema: scatter_chart_config_schema()
+    }
+  end
+
+  @doc """
+  Standalone Gantt chart entity for reports section.
+  """
+  def gantt_chart_entity do
+    %Entity{
+      name: :gantt_chart,
+      describe: """
+      Defines a standalone Gantt chart that can be referenced in report bands.
+
+      Gantt charts visualize project timelines and task schedules.
+      """,
+      examples: [
+        """
+        gantt_chart :project_timeline do
+          data_source expr(get_project_tasks())
+          config do
+            width 900
+            height 400
+            title "Project Timeline"
+            show_task_labels true
+            padding 2
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.GanttChart,
+      args: [:name],
+      schema: gantt_chart_schema(),
+      entities: [
+        config: [gantt_chart_config_entity()]
+      ]
+    }
+  end
+
+  defp gantt_chart_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for Gantt chart rendering.",
+      target: AshReports.Charts.GanttChartConfig,
+      schema: gantt_chart_config_schema()
     }
   end
 
@@ -1284,6 +1328,55 @@ defmodule AshReports.Dsl do
         type: {:list, :string},
         default: [],
         doc: "List of hex color codes (without #) for data points."
+      ]
+    ]
+  end
+
+  defp gantt_chart_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp gantt_chart_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 600,
+        doc: "Chart width in pixels."
+      ],
+      height: [
+        type: :integer,
+        default: 400,
+        doc: "Chart height in pixels."
+      ],
+      title: [
+        type: :string,
+        doc: "Chart title text."
+      ],
+      show_task_labels: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to show task labels."
+      ],
+      padding: [
+        type: :integer,
+        default: 2,
+        doc: "Padding between tasks in pixels."
+      ],
+      colours: [
+        type: {:list, :string},
+        default: [],
+        doc: "List of hex color codes (without #) for tasks."
       ]
     ]
   end
