@@ -18,16 +18,16 @@ defmodule AshReports.Charts.Theme do
       theme_config = Theme.get(:corporate)
 
       # Apply theme to existing config
-      config = %Config{title: "Sales"}
+      config = %BarChartConfig{title: "Sales"}
       themed_config = Theme.apply(config, :corporate)
 
       # Merge theme with custom overrides
       config = Theme.apply(base_config, :corporate, %{
-        colors: ["#custom", "#colors"]
+        colours: ["#custom", "#colors"]
       })
   """
 
-  alias AshReports.Charts.Config
+  # Type-specific config structs are used instead of generic Config
 
   @type theme_name :: :default | :corporate | :minimal | :vibrant
 
@@ -48,7 +48,7 @@ defmodule AshReports.Charts.Theme do
 
       Theme.get(:corporate)
       # => %{
-      #   colors: ["#2C3E50", "#34495E", "#7F8C8D", ...],
+      #   colours: ["#2C3E50", "#34495E", "#7F8C8D", ...],
       #   font_family: "Arial, sans-serif",
       #   font_size: 12,
       #   show_grid: true
@@ -57,7 +57,7 @@ defmodule AshReports.Charts.Theme do
   @spec get(theme_name()) :: map()
   def get(:default) do
     %{
-      colors: Config.default_colors(),
+      colours: ["#4285F4", "#EA4335", "#FBBC04", "#34A853", "#FF6D01", "#46BDC6"],
       font_family: "sans-serif",
       font_size: 12,
       show_grid: true,
@@ -68,7 +68,7 @@ defmodule AshReports.Charts.Theme do
 
   def get(:corporate) do
     %{
-      colors: [
+      colours: [
         "#2C3E50",
         "#34495E",
         "#7F8C8D",
@@ -89,7 +89,7 @@ defmodule AshReports.Charts.Theme do
 
   def get(:minimal) do
     %{
-      colors: [
+      colours: [
         "#000000",
         "#333333",
         "#666666",
@@ -106,7 +106,7 @@ defmodule AshReports.Charts.Theme do
 
   def get(:vibrant) do
     %{
-      colors: [
+      colours: [
         "#E74C3C",
         "#9B59B6",
         "#3498DB",
@@ -146,33 +146,26 @@ defmodule AshReports.Charts.Theme do
       Theme.apply(config, :corporate)
 
       # With overrides
-      Theme.apply(config, :corporate, %{colors: ["#FF0000"]})
+      Theme.apply(config, :corporate, %{colours: ["#FF0000"]})
   """
-  @spec apply(Config.t(), theme_name(), map()) :: Config.t()
+  @spec apply(map(), theme_name(), map()) :: map()
   def apply(config, theme_name, overrides \\ %{}) do
     theme_config = get(theme_name)
 
-    # Get default config to know what values are defaults
-    default_config = %Config{} |> Map.from_struct()
-    config_map = config |> Map.from_struct()
-
-    # Only keep config values that differ from defaults (user explicitly set)
-    user_set_values =
-      config_map
-      |> Enum.reject(fn {k, v} ->
-        default_val = Map.get(default_config, k)
-        v == default_val || is_nil(v)
-      end)
-      |> Map.new()
+    config_map = if is_struct(config), do: Map.from_struct(config), else: config
 
     # Merge: theme defaults < user-set config < overrides
     merged_attrs =
       theme_config
-      |> Map.merge(user_set_values)
+      |> Map.merge(config_map)
       |> Map.merge(overrides)
 
-    # Update config struct
-    struct(config, merged_attrs)
+    # Return merged config (as map or reconstruct struct if original was struct)
+    if is_struct(config) do
+      struct(config, merged_attrs)
+    else
+      merged_attrs
+    end
   end
 
   @doc """

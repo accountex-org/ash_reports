@@ -15,7 +15,7 @@ defmodule AshReports.Charts do
         %{category: "Mar", value: 120}
       ]
 
-      config = %AshReports.Charts.Config{
+      config = %AshReports.Charts.BarChartConfig{
         title: "Monthly Sales",
         width: 600,
         height: 400
@@ -45,7 +45,7 @@ defmodule AshReports.Charts do
   - `[:ash_reports, :charts, :generate, :exception]` - Chart generation failed
   """
 
-  alias AshReports.Charts.{Cache, Config, Registry, Renderer, Theme}
+  alias AshReports.Charts.{Cache, Registry, Renderer, Theme}
 
   @doc """
   Generates a chart and returns SVG string.
@@ -57,7 +57,7 @@ defmodule AshReports.Charts do
 
     - `type` - Chart type atom (e.g., `:bar`, `:line`, `:pie`)
     - `data` - List of maps containing chart data
-    - `config` - Chart configuration (AshReports.Charts.Config struct or map)
+    - `config` - Chart configuration (type-specific config struct or map)
     - `opts` - Options (keyword list)
       - `:cache` - Enable/disable caching (default: `true`)
       - `:cache_ttl` - Cache time-to-live in milliseconds (default: `300_000` / 5 minutes)
@@ -72,15 +72,15 @@ defmodule AshReports.Charts do
 
       # Generate a simple bar chart (with caching)
       data = [%{x: "A", y: 10}, %{x: "B", y: 20}]
-      config = %Config{title: "Test Chart"}
+      config = %AshReports.Charts.BarChartConfig{title: "Test Chart"}
       {:ok, svg} = AshReports.Charts.generate(:bar, data, config)
 
       # With custom configuration
-      config = %Config{
+      config = %AshReports.Charts.LineChartConfig{
         title: "Sales Report",
         width: 800,
         height: 600,
-        colors: ["#FF6B6B", "#4ECDC4", "#45B7D1"]
+        colours: ["#FF6B6B", "#4ECDC4", "#45B7D1"]
       }
       {:ok, svg} = AshReports.Charts.generate(:line, data, config)
 
@@ -93,7 +93,7 @@ defmodule AshReports.Charts do
       # Custom compression threshold (20KB)
       {:ok, svg} = AshReports.Charts.generate(:bar, data, config, compression_threshold: 20_000)
   """
-  @spec generate(atom(), list(map()), Config.t() | map(), keyword()) ::
+  @spec generate(atom(), list(map()), map(), keyword()) ::
           {:ok, String.t()} | {:error, term()}
   def generate(type, data, config \\ %{}, opts \\ []) do
     start_time = System.monotonic_time()
@@ -253,17 +253,11 @@ defmodule AshReports.Charts do
     end
   end
 
-  defp normalize_config(%Config{} = config), do: {:ok, config}
-
-  defp normalize_config(config) when is_map(config) do
-    {:ok, struct(Config, config)}
-  rescue
-    e -> {:error, {:invalid_config, e}}
-  end
+  defp normalize_config(config) when is_map(config), do: {:ok, config}
 
   defp normalize_config(_), do: {:error, :invalid_config}
 
-  defp apply_theme(%Config{theme_name: theme_name} = config) when theme_name != :default do
+  defp apply_theme(%{theme_name: theme_name} = config) when theme_name != :default do
     # Apply theme if it's not the default
     if Theme.exists?(theme_name) do
       themed_config = Theme.apply(config, theme_name)
@@ -276,7 +270,7 @@ defmodule AshReports.Charts do
 
   defp apply_theme(config), do: {:ok, config}
 
-  defp check_min_data_points(data, %Config{min_data_points: min}) when is_integer(min) do
+  defp check_min_data_points(data, %{min_data_points: min}) when is_integer(min) do
     if length(data) >= min do
       :ok
     else

@@ -11,8 +11,6 @@ defmodule AshReports.Charts.Types.Behavior do
       defmodule MyApp.CustomChart do
         @behaviour AshReports.Charts.Types.Behavior
 
-        alias AshReports.Charts.Config
-
         @impl true
         def build(data, config) do
           # Build chart using Contex or custom logic
@@ -36,15 +34,13 @@ defmodule AshReports.Charts.Types.Behavior do
     - `validate/1` - Validates the data format for this chart type
   """
 
-  alias AshReports.Charts.Config
-
   @doc """
   Builds a chart structure from data and configuration.
 
   ## Parameters
 
     - `data` - List of maps containing chart data
-    - `config` - AshReports.Charts.Config struct
+    - `config` - Type-specific config struct (e.g., BarChartConfig, LineChartConfig)
 
   ## Returns
 
@@ -58,10 +54,10 @@ defmodule AshReports.Charts.Types.Behavior do
 
         Contex.BarChart.new(dataset)
         |> Contex.BarChart.set_val_col_names(["value"])
-        |> Contex.BarChart.colours(config.colors || Config.default_colors())
+        |> Contex.BarChart.colours(config.colours || [])
       end
   """
-  @callback build(data :: list(map()), config :: Config.t()) :: term()
+  @callback build(data :: list(map()), config :: map()) :: term()
 
   @doc """
   Validates data format for the chart type.
