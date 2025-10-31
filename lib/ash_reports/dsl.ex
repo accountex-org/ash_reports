@@ -82,7 +82,8 @@ defmodule AshReports.Dsl do
       entities: [
         report_entity(),
         bar_chart_entity(),
-        line_chart_entity()
+        line_chart_entity(),
+        pie_chart_entity()
       ],
       schema: []
     }
@@ -430,6 +431,48 @@ defmodule AshReports.Dsl do
       describe: "Configuration for line chart rendering.",
       target: AshReports.Charts.LineChartConfig,
       schema: line_chart_config_schema()
+    }
+  end
+
+  @doc """
+  Standalone pie chart entity for reports section.
+  """
+  def pie_chart_entity do
+    %Entity{
+      name: :pie_chart,
+      describe: """
+      Defines a standalone pie chart that can be referenced in report bands.
+
+      Pie charts are ideal for showing proportions and percentage breakdowns.
+      """,
+      examples: [
+        """
+        pie_chart :market_share do
+          data_source expr(get_market_distribution())
+          config do
+            width 500
+            height 500
+            title "Market Share by Region"
+            data_labels true
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.PieChart,
+      args: [:name],
+      schema: pie_chart_schema(),
+      entities: [
+        config: [pie_chart_config_entity()]
+      ]
+    }
+  end
+
+  defp pie_chart_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for pie chart rendering.",
+      target: AshReports.Charts.PieChartConfig,
+      schema: pie_chart_config_schema()
     }
   end
 
@@ -1012,6 +1055,50 @@ defmodule AshReports.Dsl do
         type: {:list, :string},
         default: [],
         doc: "List of hex color codes (without #) for lines."
+      ]
+    ]
+  end
+
+  defp pie_chart_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp pie_chart_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 600,
+        doc: "Chart width in pixels."
+      ],
+      height: [
+        type: :integer,
+        default: 400,
+        doc: "Chart height in pixels."
+      ],
+      title: [
+        type: :string,
+        doc: "Chart title text."
+      ],
+      data_labels: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to show data labels on slices."
+      ],
+      colours: [
+        type: {:list, :string},
+        default: [],
+        doc: "List of hex color codes (without #) for slices."
       ]
     ]
   end
