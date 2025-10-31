@@ -30,11 +30,11 @@ defmodule AshReports.Charts.Types.ScatterPlot do
 
   @behaviour AshReports.Charts.Types.Behavior
 
-  alias AshReports.Charts.Config
+  alias AshReports.Charts.ScatterChartConfig
   alias Contex.{Dataset, PointPlot}
 
   @impl true
-  def build(data, %Config{} = config) do
+  def build(data, %ScatterChartConfig{} = config) do
     # Convert to Contex Dataset
     dataset = Dataset.new(data)
 
@@ -44,11 +44,11 @@ defmodule AshReports.Charts.Types.ScatterPlot do
     # Get colors
     colors = get_colors(config)
 
-    # Build point plot with mapping and colors
-    PointPlot.new(dataset,
-      mapping: %{x_col: x_col, y_cols: [y_col]},
-      colour_palette: colors
-    )
+    # Build Contex options
+    contex_opts = build_contex_options(config, x_col, y_col, colors)
+
+    # Build point plot with all options
+    PointPlot.new(dataset, contex_opts)
   end
 
   @impl true
@@ -86,16 +86,32 @@ defmodule AshReports.Charts.Types.ScatterPlot do
     end
   end
 
-  defp get_colors(%Config{colors: colors}) when is_list(colors) and length(colors) > 0 do
+  defp build_contex_options(config, x_col, y_col, colors) do
+    %{
+      mapping: %{x_col: x_col, y_cols: [y_col]},
+      colour_palette: colors
+    }
+    |> maybe_add_axis_label_rotation(config.axis_label_rotation)
+  end
+
+  defp maybe_add_axis_label_rotation(opts, :auto), do: opts
+  defp maybe_add_axis_label_rotation(opts, nil), do: opts
+
+  defp maybe_add_axis_label_rotation(opts, rotation) when rotation in [:"45", :"90"] do
+    Map.put(opts, :axis_label_rotation, rotation)
+  end
+
+  defp maybe_add_axis_label_rotation(opts, _), do: opts
+
+  defp get_colors(%ScatterChartConfig{colours: colours}) when is_list(colours) and length(colours) > 0 do
     # Contex expects hex colors without the # prefix
-    Enum.map(colors, fn color ->
+    Enum.map(colours, fn color ->
       String.trim_leading(color, "#")
     end)
   end
 
   defp get_colors(_config) do
-    # Use default colors, strip # prefix
-    Config.default_colors()
-    |> Enum.map(fn color -> String.trim_leading(color, "#") end)
+    # Use default Contex colors
+    :default
   end
 end
