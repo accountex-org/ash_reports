@@ -86,7 +86,8 @@ defmodule AshReports.Dsl do
         pie_chart_entity(),
         area_chart_entity(),
         scatter_chart_entity(),
-        gantt_chart_entity()
+        gantt_chart_entity(),
+        sparkline_entity()
       ],
       schema: []
     }
@@ -604,6 +605,48 @@ defmodule AshReports.Dsl do
       describe: "Configuration for Gantt chart rendering.",
       target: AshReports.Charts.GanttChartConfig,
       schema: gantt_chart_config_schema()
+    }
+  end
+
+  @doc """
+  Standalone sparkline entity for reports section.
+  """
+  def sparkline_entity do
+    %Entity{
+      name: :sparkline,
+      describe: """
+      Defines a standalone sparkline that can be referenced in report bands.
+
+      Sparklines are compact inline charts showing trends at a glance.
+      """,
+      examples: [
+        """
+        sparkline :weekly_trend do
+          data_source expr(get_last_7_days())
+          config do
+            width 100
+            height 20
+            spot_radius 2
+            line_colour "rgba(0, 200, 50, 0.7)"
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.Sparkline,
+      args: [:name],
+      schema: sparkline_schema(),
+      entities: [
+        config: [sparkline_config_entity()]
+      ]
+    }
+  end
+
+  defp sparkline_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for sparkline rendering.",
+      target: AshReports.Charts.SparklineConfig,
+      schema: sparkline_config_schema()
     }
   end
 
@@ -1377,6 +1420,61 @@ defmodule AshReports.Dsl do
         type: {:list, :string},
         default: [],
         doc: "List of hex color codes (without #) for tasks."
+      ]
+    ]
+  end
+
+  defp sparkline_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp sparkline_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 100,
+        doc: "Chart width in pixels (compact default)."
+      ],
+      height: [
+        type: :integer,
+        default: 20,
+        doc: "Chart height in pixels (compact default)."
+      ],
+      spot_radius: [
+        type: :integer,
+        default: 2,
+        doc: "Radius of the spot marker."
+      ],
+      spot_colour: [
+        type: :string,
+        default: "red",
+        doc: "Color of the spot marker."
+      ],
+      line_width: [
+        type: :integer,
+        default: 1,
+        doc: "Width of the trend line."
+      ],
+      line_colour: [
+        type: :string,
+        default: "rgba(0, 200, 50, 0.7)",
+        doc: "Color of the trend line."
+      ],
+      fill_colour: [
+        type: :string,
+        default: "rgba(0, 200, 50, 0.2)",
+        doc: "Fill color beneath the line."
       ]
     ]
   end
