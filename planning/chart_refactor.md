@@ -39,93 +39,110 @@ end
 
 ---
 
-## Section 1: Type-Specific Config Structs
+## Section 1: Type-Specific Config Structs ✅ COMPLETE
 
-**Duration**: 2-3 hours
+**Duration**: 2-3 hours (Actual: 2.5 hours)
+**Completed**: 2025-10-30
+**Branch**: `feature/chart-config-structs`
+**Summary**: `notes/features/section1-chart-config-structs-summary.md`
 
 **Goal**: Create individual config structs for each chart type with Contex-validated options, replacing the generic `AshReports.Charts.Config`.
 
-### Task 1.1: Create BarChartConfig struct
+### Task 1.1: Create BarChartConfig struct ✅
 - **File**: `lib/ash_reports/charts/configs/bar_chart_config.ex`
+- **Commit**: b4b772b
 - **Subtasks**:
-  - [ ] Define Ecto embedded schema
-  - [ ] Add fields: width (default: 600), height (default: 400)
-  - [ ] Add field: title (string, optional)
-  - [ ] Add field: type (enum: :simple, :grouped, :stacked, default: :simple)
-  - [ ] Add field: orientation (enum: :vertical, :horizontal, default: :vertical)
-  - [ ] Add field: data_labels (boolean, default: true)
-  - [ ] Add field: padding (integer, default: 2)
-  - [ ] Add field: colours (array of strings, default: [])
-  - [ ] Add moduledoc with Contex mapping documentation
-  - [ ] Add changeset function with validation
+  - [x] Define Ecto embedded schema
+  - [x] Add fields: width (default: 600), height (default: 400)
+  - [x] Add field: title (string, optional)
+  - [x] Add field: type (enum: :simple, :grouped, :stacked, default: :simple)
+  - [x] Add field: orientation (enum: :vertical, :horizontal, default: :vertical)
+  - [x] Add field: data_labels (boolean, default: true)
+  - [x] Add field: padding (integer, default: 2)
+  - [x] Add field: colours (array of strings, default: [])
+  - [x] Add moduledoc with Contex mapping documentation
+  - [x] Add changeset function with validation
 
-### Task 1.2: Create LineChartConfig struct
+### Task 1.2: Create LineChartConfig struct ✅
 - **File**: `lib/ash_reports/charts/configs/line_chart_config.ex`
+- **Commit**: e8c9e01
 - **Subtasks**:
-  - [ ] Define Ecto embedded schema
-  - [ ] Add common fields: width, height, title, colours
-  - [ ] Add field: smoothed (boolean, default: true)
-  - [ ] Add field: stroke_width (string, default: "2")
-  - [ ] Add field: axis_label_rotation (enum: :auto, :"45", :"90", default: :auto)
-  - [ ] Add moduledoc with Contex LinePlot documentation
-  - [ ] Add changeset function
+  - [x] Define Ecto embedded schema
+  - [x] Add common fields: width, height, title, colours
+  - [x] Add field: smoothed (boolean, default: true)
+  - [x] Add field: stroke_width (string, default: "2")
+  - [x] Add field: axis_label_rotation (enum: :auto, :"45", :"90", default: :auto)
+  - [x] Add moduledoc with Contex LinePlot documentation
+  - [x] Add changeset function
 
-### Task 1.3: Create PieChartConfig struct
+### Task 1.3: Create PieChartConfig struct ✅
 - **File**: `lib/ash_reports/charts/configs/pie_chart_config.ex`
+- **Commit**: 61daa97
 - **Subtasks**:
-  - [ ] Define Ecto embedded schema
-  - [ ] Add fields: width (default: 600), height (default: 400)
-  - [ ] Add field: title (string, optional)
-  - [ ] Add field: data_labels (boolean, default: true)
-  - [ ] Add field: colours (array of strings, default: [])
-  - [ ] Add moduledoc with Contex PieChart documentation
-  - [ ] Add changeset function
+  - [x] Define Ecto embedded schema
+  - [x] Add fields: width (default: 600), height (default: 400)
+  - [x] Add field: title (string, optional)
+  - [x] Add field: data_labels (boolean, default: true)
+  - [x] Add field: colours (array of strings, default: [])
+  - [x] Add moduledoc with Contex PieChart documentation
+  - [x] Add changeset function
 
-### Task 1.4: Create AreaChartConfig struct
+### Task 1.4: Create AreaChartConfig struct ✅
 - **File**: `lib/ash_reports/charts/configs/area_chart_config.ex`
+- **Commit**: 1cb5438
 - **Subtasks**:
-  - [ ] Define Ecto embedded schema
-  - [ ] Add all LineChartConfig fields (inherits behavior)
-  - [ ] Add field: mode (enum: :simple, :stacked, default: :simple)
-  - [ ] Add field: opacity (float 0.0-1.0, default: 0.7)
-  - [ ] Add field: smooth_lines (boolean, default: true)
-  - [ ] Add moduledoc explaining LinePlot + area fill
-  - [ ] Add changeset function
+  - [x] Define Ecto embedded schema
+  - [x] Add all LineChartConfig fields (inherits behavior)
+  - [x] Add field: mode (enum: :simple, :stacked, default: :simple)
+  - [x] Add field: opacity (float 0.0-1.0, default: 0.7)
+  - [x] Add field: smooth_lines (boolean, default: true)
+  - [x] Add moduledoc explaining LinePlot + area fill
+  - [x] Add changeset function
 
-### Task 1.5: Create ScatterChartConfig struct
+### Task 1.5: Create ScatterChartConfig struct ✅
 - **File**: `lib/ash_reports/charts/configs/scatter_chart_config.ex`
+- **Commit**: e68a7e5
 - **Subtasks**:
-  - [ ] Define Ecto embedded schema
-  - [ ] Add fields: width, height, title, colours
-  - [ ] Add field: axis_label_rotation (enum, default: :auto)
-  - [ ] Add moduledoc with Contex PointPlot documentation
-  - [ ] Add changeset function
+  - [x] Define Ecto embedded schema
+  - [x] Add fields: width, height, title, colours
+  - [x] Add field: axis_label_rotation (enum, default: :auto)
+  - [x] Add moduledoc with Contex PointPlot documentation
+  - [x] Add changeset function
 
-### Task 1.6: Create GanttChartConfig struct
+### Task 1.6: Create GanttChartConfig struct ✅
 - **File**: `lib/ash_reports/charts/configs/gantt_chart_config.ex`
+- **Commit**: feb1628
 - **Subtasks**:
-  - [ ] Define Ecto embedded schema
-  - [ ] Add fields: width (default: 600), height (default: 400)
-  - [ ] Add field: title (string, optional)
-  - [ ] Add field: show_task_labels (boolean, default: true)
-  - [ ] Add field: padding (integer, default: 2)
-  - [ ] Add field: colours (array of strings, default: [])
-  - [ ] Add moduledoc with DateTime requirements warning
-  - [ ] Add changeset function
+  - [x] Define Ecto embedded schema
+  - [x] Add fields: width (default: 600), height (default: 400)
+  - [x] Add field: title (string, optional)
+  - [x] Add field: show_task_labels (boolean, default: true)
+  - [x] Add field: padding (integer, default: 2)
+  - [x] Add field: colours (array of strings, default: [])
+  - [x] Add moduledoc with DateTime requirements warning
+  - [x] Add changeset function
 
-### Task 1.7: Create SparklineConfig struct
+### Task 1.7: Create SparklineConfig struct ✅
 - **File**: `lib/ash_reports/charts/configs/sparkline_config.ex`
+- **Commit**: 768000d
 - **Subtasks**:
-  - [ ] Define Ecto embedded schema
-  - [ ] Add field: width (integer, default: 100)
-  - [ ] Add field: height (integer, default: 20)
-  - [ ] Add field: spot_radius (integer, default: 2)
-  - [ ] Add field: spot_colour (string, default: "red")
-  - [ ] Add field: line_width (integer, default: 1)
-  - [ ] Add field: line_colour (string, default: "rgba(0, 200, 50, 0.7)")
-  - [ ] Add field: fill_colour (string, default: "rgba(0, 200, 50, 0.2)")
-  - [ ] Add moduledoc noting compact size defaults
-  - [ ] Add changeset function
+  - [x] Define Ecto embedded schema
+  - [x] Add field: width (integer, default: 100)
+  - [x] Add field: height (integer, default: 20)
+  - [x] Add field: spot_radius (integer, default: 2)
+  - [x] Add field: spot_colour (string, default: "red")
+  - [x] Add field: line_width (integer, default: 1)
+  - [x] Add field: line_colour (string, default: "rgba(0, 200, 50, 0.7)")
+  - [x] Add field: fill_colour (string, default: "rgba(0, 200, 50, 0.2)")
+  - [x] Add moduledoc noting compact size defaults
+  - [x] Add changeset function
+
+**Results**:
+- ✅ All 7 config structs created (763 lines of code)
+- ✅ Clean compilation of new files
+- ✅ All 201 chart tests passing
+- ✅ 7 atomic commits with clear messages
+- ✅ Comprehensive documentation with DSL examples
 
 ---
 
