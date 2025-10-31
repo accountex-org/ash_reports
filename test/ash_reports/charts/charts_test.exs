@@ -2,7 +2,6 @@ defmodule AshReports.Charts.ChartsTest do
   use ExUnit.Case, async: false
 
   alias AshReports.Charts
-  alias AshReports.Charts.Config
 
   describe "generate/3" do
     test "generates a bar chart with valid data" do
@@ -12,7 +11,7 @@ defmodule AshReports.Charts.ChartsTest do
         %{category: "C", value: 15}
       ]
 
-      config = %Config{title: "Test Bar Chart", width: 600, height: 400}
+      config = %{title: "Test Bar Chart", width: 600, height: 400}
 
       assert {:ok, svg} = Charts.generate(:bar, data, config)
       assert is_binary(svg)
@@ -27,7 +26,7 @@ defmodule AshReports.Charts.ChartsTest do
         %{x: 3, y: 15}
       ]
 
-      config = %Config{title: "Test Line Chart"}
+      config = %{title: "Test Line Chart"}
 
       assert {:ok, svg} = Charts.generate(:line, data, config)
       assert is_binary(svg)
@@ -40,7 +39,7 @@ defmodule AshReports.Charts.ChartsTest do
         %{category: "B", value: 70}
       ]
 
-      config = %Config{title: "Test Pie Chart"}
+      config = %{title: "Test Pie Chart"}
 
       assert {:ok, svg} = Charts.generate(:pie, data, config)
       assert is_binary(svg)
@@ -54,7 +53,7 @@ defmodule AshReports.Charts.ChartsTest do
         %{x: 3, y: 12}
       ]
 
-      config = %Config{title: "Test Area Chart"}
+      config = %{title: "Test Area Chart"}
 
       assert {:ok, svg} = Charts.generate(:area, data, config)
       assert is_binary(svg)
@@ -68,7 +67,7 @@ defmodule AshReports.Charts.ChartsTest do
         %{date: ~D[2024-01-03], value: 120}
       ]
 
-      config = %Config{title: "Time Series Area"}
+      config = %{title: "Time Series Area"}
 
       assert {:ok, svg} = Charts.generate(:area, data, config)
       assert is_binary(svg)
@@ -82,7 +81,7 @@ defmodule AshReports.Charts.ChartsTest do
         %{x: 3.1, y: 12.5}
       ]
 
-      config = %Config{title: "Scatter Plot"}
+      config = %{title: "Scatter Plot"}
 
       assert {:ok, svg} = Charts.generate(:scatter, data, config)
       assert is_binary(svg)
@@ -92,7 +91,7 @@ defmodule AshReports.Charts.ChartsTest do
     test "generates a sparkline with valid data" do
       data = [1, 5, 10, 15, 12, 12, 15, 14, 20, 14, 10, 15, 15]
 
-      config = %Config{width: 100, height: 20}
+      config = %{width: 100, height: 20}
 
       assert {:ok, svg} = Charts.generate(:sparkline, data, config)
       assert is_binary(svg)
@@ -115,7 +114,7 @@ defmodule AshReports.Charts.ChartsTest do
         }
       ]
 
-      config = %Config{title: "Project Timeline"}
+      config = %{title: "Project Timeline"}
 
       assert {:ok, svg} = Charts.generate(:gantt, data, config)
       assert is_binary(svg)
@@ -124,7 +123,7 @@ defmodule AshReports.Charts.ChartsTest do
 
     test "returns error for unknown chart type" do
       data = [%{x: 1, y: 2}]
-      config = %Config{}
+      config = %{}
 
       assert {:error, :not_found} = Charts.generate(:unknown, data, config)
     end
@@ -180,7 +179,7 @@ defmodule AshReports.Charts.ChartsTest do
   describe "theme support" do
     test "applies corporate theme to chart" do
       data = [%{category: "A", value: 10}]
-      config = %Config{title: "Test", theme_name: :corporate}
+      config = %{title: "Test", theme_name: :corporate}
 
       assert {:ok, svg} = Charts.generate(:bar, data, config)
       assert is_binary(svg)
@@ -189,7 +188,7 @@ defmodule AshReports.Charts.ChartsTest do
 
     test "applies minimal theme to chart" do
       data = [%{x: 1, y: 10}]
-      config = %Config{theme_name: :minimal}
+      config = %{theme_name: :minimal}
 
       assert {:ok, svg} = Charts.generate(:line, data, config)
       assert is_binary(svg)
@@ -197,7 +196,7 @@ defmodule AshReports.Charts.ChartsTest do
 
     test "uses default theme when theme_name is :default" do
       data = [%{category: "A", value: 10}]
-      config = %Config{theme_name: :default}
+      config = %{theme_name: :default}
 
       assert {:ok, svg} = Charts.generate(:bar, data, config)
       assert is_binary(svg)
@@ -207,7 +206,7 @@ defmodule AshReports.Charts.ChartsTest do
   describe "conditional rendering" do
     test "renders chart when data meets min_data_points requirement" do
       data = [%{x: 1, y: 10}, %{x: 2, y: 20}, %{x: 3, y: 30}]
-      config = %Config{min_data_points: 3}
+      config = %{min_data_points: 3}
 
       assert {:ok, svg} = Charts.generate(:line, data, config)
       assert is_binary(svg)
@@ -215,7 +214,7 @@ defmodule AshReports.Charts.ChartsTest do
 
     test "returns error when data doesn't meet min_data_points" do
       data = [%{x: 1, y: 10}]
-      config = %Config{min_data_points: 3}
+      config = %{min_data_points: 3}
 
       assert {:error, {:insufficient_data, message}} = Charts.generate(:line, data, config)
       assert message =~ "requires at least 3 data points"
@@ -224,7 +223,7 @@ defmodule AshReports.Charts.ChartsTest do
 
     test "renders chart when min_data_points is nil" do
       data = [%{category: "A", value: 10}]
-      config = %Config{min_data_points: nil}
+      config = %{min_data_points: nil}
 
       assert {:ok, svg} = Charts.generate(:bar, data, config)
       assert is_binary(svg)

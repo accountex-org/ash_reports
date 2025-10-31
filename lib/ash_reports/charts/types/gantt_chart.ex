@@ -96,6 +96,17 @@ defmodule AshReports.Charts.Types.GanttChart do
 
   @impl true
   def build(data, %GanttChartConfig{} = config) do
+    do_build(data, config)
+  end
+
+  def build(data, config) when is_map(config) do
+    struct_keys = Map.keys(%GanttChartConfig{})
+    filtered_config = Map.take(config, struct_keys)
+    config_struct = struct!(GanttChartConfig, filtered_config)
+    do_build(data, config_struct)
+  end
+
+  defp do_build(data, config) do
     # Convert data to Contex Dataset
     dataset = Dataset.new(data)
 
@@ -106,7 +117,10 @@ defmodule AshReports.Charts.Types.GanttChart do
     colors = get_colors(config)
 
     # Build options map
-    options = build_options(config, colors, column_mapping)
+    options =
+      config
+      |> build_options(colors, column_mapping)
+      |> Map.to_list()
 
     # Build Gantt chart
     GanttChart.new(dataset, options)

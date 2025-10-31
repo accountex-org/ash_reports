@@ -56,6 +56,18 @@ defmodule AshReports.Charts.Types.BarChart do
 
   @impl true
   def build(data, %BarChartConfig{} = config) do
+    do_build(data, config)
+  end
+
+  def build(data, config) when is_map(config) do
+    # Filter to only include keys defined in BarChartConfig
+    struct_keys = Map.keys(%BarChartConfig{})
+    filtered_config = Map.take(config, struct_keys)
+    config_struct = struct!(BarChartConfig, filtered_config)
+    do_build(data, config_struct)
+  end
+
+  defp do_build(data, config) do
     # Convert data to Contex Dataset
     dataset = Dataset.new(data)
 
@@ -138,6 +150,7 @@ defmodule AshReports.Charts.Types.BarChart do
         },
         contex_opts
       )
+      |> Map.to_list()
 
     BarChart.new(dataset, opts)
   end
@@ -176,6 +189,7 @@ defmodule AshReports.Charts.Types.BarChart do
           contex_opts
         )
       end
+      |> Map.to_list()
 
     BarChart.new(dataset, opts)
   end
@@ -196,6 +210,7 @@ defmodule AshReports.Charts.Types.BarChart do
         },
         contex_opts
       )
+      |> Map.to_list()
 
     BarChart.new(dataset, opts)
   end

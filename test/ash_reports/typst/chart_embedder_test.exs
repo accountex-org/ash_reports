@@ -2,7 +2,6 @@ defmodule AshReports.Typst.ChartEmbedderTest do
   use ExUnit.Case, async: false
 
   alias AshReports.Charts
-  alias AshReports.Charts.Config
   alias AshReports.Typst.ChartEmbedder
 
   @simple_svg "<svg width=\"100\" height=\"100\"><circle cx=\"50\" cy=\"50\" r=\"40\"/></svg>"
@@ -214,7 +213,7 @@ defmodule AshReports.Typst.ChartEmbedderTest do
   describe "generate_and_embed/4" do
     test "generates chart and embeds in one operation" do
       data = [%{category: "A", value: 10}, %{category: "B", value: 20}]
-      config = %Config{title: "Test Chart", width: 600, height: 400}
+      config = %{title: "Test Chart", width: 600, height: 400}
 
       {:ok, typst} =
         ChartEmbedder.generate_and_embed(:bar, data, config, width: "100%", caption: "Sales Data")
@@ -227,12 +226,12 @@ defmodule AshReports.Typst.ChartEmbedderTest do
     test "passes chart generation errors through" do
       # Invalid chart type
       assert {:error, :not_found} =
-               ChartEmbedder.generate_and_embed(:invalid, [], %Config{})
+               ChartEmbedder.generate_and_embed(:invalid, [], %{})
     end
 
     test "works with different chart types" do
       data = [%{x: 1, y: 10}, %{x: 2, y: 20}]
-      config = %Config{width: 400, height: 300}
+      config = %{width: 400, height: 300}
 
       {:ok, typst} = ChartEmbedder.generate_and_embed(:line, data, config, width: "80%")
 
@@ -259,7 +258,7 @@ defmodule AshReports.Typst.ChartEmbedderTest do
         %{category: "Q3", value: 1200}
       ]
 
-      config = %Config{
+      config = %{
         title: "Quarterly Sales",
         width: 600,
         height: 400,
@@ -287,7 +286,7 @@ defmodule AshReports.Typst.ChartEmbedderTest do
     test "multi-chart grid with different chart types" do
       bar_data = [%{category: "A", value: 10}]
       line_data = [%{x: 1, y: 10}, %{x: 2, y: 20}]
-      config = %Config{width: 400, height: 300}
+      config = %{width: 400, height: 300}
 
       {:ok, bar_svg} = Charts.generate(:bar, bar_data, config)
       {:ok, line_svg} = Charts.generate(:line, line_data, config)

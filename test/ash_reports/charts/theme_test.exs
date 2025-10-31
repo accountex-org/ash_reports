@@ -1,7 +1,7 @@
 defmodule AshReports.Charts.ThemeTest do
   use ExUnit.Case, async: true
 
-  alias AshReports.Charts.{Config, Theme}
+  alias AshReports.Charts.Theme
 
   describe "get/1" do
     test "returns default theme configuration" do
@@ -11,7 +11,7 @@ defmodule AshReports.Charts.ThemeTest do
       assert theme.font_family == "sans-serif"
       assert theme.font_size == 12
       assert theme.show_grid == true
-      assert is_list(theme.colors)
+      assert is_list(theme.colours)
     end
 
     test "returns corporate theme configuration" do
@@ -21,8 +21,8 @@ defmodule AshReports.Charts.ThemeTest do
       assert theme.font_family == "Arial, sans-serif"
       assert theme.font_size == 11
       assert theme.legend_position == :bottom
-      assert is_list(theme.colors)
-      assert "#2C3E50" in theme.colors
+      assert is_list(theme.colours)
+      assert "#2C3E50" in theme.colours
     end
 
     test "returns minimal theme configuration" do
@@ -31,7 +31,7 @@ defmodule AshReports.Charts.ThemeTest do
       assert is_map(theme)
       assert theme.show_grid == false
       assert theme.show_legend == false
-      assert is_list(theme.colors)
+      assert is_list(theme.colours)
     end
 
     test "returns vibrant theme configuration" do
@@ -40,13 +40,13 @@ defmodule AshReports.Charts.ThemeTest do
       assert is_map(theme)
       assert theme.font_size == 13
       assert theme.legend_position == :top
-      assert is_list(theme.colors)
+      assert is_list(theme.colours)
     end
   end
 
   describe "apply/3" do
     test "applies theme to config" do
-      config = %Config{title: "Test"}
+      config = %{title: "Test"}
       themed_config = Theme.apply(config, :corporate)
 
       assert themed_config.title == "Test"
@@ -56,19 +56,19 @@ defmodule AshReports.Charts.ThemeTest do
     end
 
     test "config values override theme defaults" do
-      config = %Config{title: "Test", font_size: 20, colors: ["#FF0000"]}
+      config = %{title: "Test", font_size: 20, colours: ["#FF0000"]}
       themed_config = Theme.apply(config, :corporate)
 
       # Config values preserved
       assert themed_config.font_size == 20
-      assert themed_config.colors == ["#FF0000"]
+      assert themed_config.colours == ["#FF0000"]
 
       # Theme values for non-set fields
       assert themed_config.font_family == "Arial, sans-serif"
     end
 
     test "overrides take highest precedence" do
-      config = %Config{title: "Test"}
+      config = %{title: "Test"}
       themed_config = Theme.apply(config, :corporate, %{font_size: 25})
 
       assert themed_config.font_size == 25
@@ -76,7 +76,7 @@ defmodule AshReports.Charts.ThemeTest do
     end
 
     test "preserves config title and basic fields" do
-      config = %Config{title: "Custom Title", width: 800, height: 600}
+      config = %{title: "Custom Title", width: 800, height: 600}
       themed_config = Theme.apply(config, :minimal)
 
       assert themed_config.title == "Custom Title"

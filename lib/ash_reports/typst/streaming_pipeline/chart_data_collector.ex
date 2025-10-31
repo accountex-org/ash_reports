@@ -49,7 +49,15 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
   require Logger
 
   alias AshReports.{Charts, Report}
-  alias AshReports.Element.Chart
+  alias AshReports.Element.{
+    BarChartElement,
+    LineChartElement,
+    PieChartElement,
+    AreaChartElement,
+    ScatterChartElement,
+    GanttChartElement,
+    SparklineElement
+  }
   alias AshReports.Typst.{ChartEmbedder, ChartHelpers}
 
   @type aggregation_ref :: %{
@@ -128,10 +136,16 @@ defmodule AshReports.Typst.StreamingPipeline.ChartDataCollector do
 
   # Private Functions
 
-  defp chart_element?(%Chart{}), do: true
+  defp chart_element?(%BarChartElement{}), do: true
+  defp chart_element?(%LineChartElement{}), do: true
+  defp chart_element?(%PieChartElement{}), do: true
+  defp chart_element?(%AreaChartElement{}), do: true
+  defp chart_element?(%ScatterChartElement{}), do: true
+  defp chart_element?(%GanttChartElement{}), do: true
+  defp chart_element?(%SparklineElement{}), do: true
   defp chart_element?(_), do: false
 
-  defp parse_chart_config(%Chart{} = chart) do
+  defp parse_chart_config(chart) when is_struct(chart) do
     case parse_data_source(chart.data_source) do
       {:aggregation, aggregation_ref} ->
         %{

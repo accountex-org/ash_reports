@@ -75,6 +75,17 @@ defmodule AshReports.Charts.Types.AreaChart do
 
   @impl true
   def build(data, %AreaChartConfig{} = config) do
+    do_build(data, config)
+  end
+
+  def build(data, config) when is_map(config) do
+    struct_keys = Map.keys(%AreaChartConfig{})
+    filtered_config = Map.take(config, struct_keys)
+    config_struct = struct!(AreaChartConfig, filtered_config)
+    do_build(data, config_struct)
+  end
+
+  defp do_build(data, config) do
     # Validate data is properly sorted by x values
     sorted_data = sort_by_x(data)
 
@@ -88,7 +99,10 @@ defmodule AshReports.Charts.Types.AreaChart do
     colors = get_colors(config)
 
     # Build Contex options
-    contex_opts = build_contex_options(config, x_col, y_cols, series_col, colors)
+    contex_opts =
+      config
+      |> build_contex_options(x_col, y_cols, series_col, colors)
+      |> Map.to_list()
 
     # Build base line plot
     line_plot = LinePlot.new(dataset, contex_opts)

@@ -2,7 +2,6 @@ defmodule AshReports.Charts.Types.GanttChartTest do
   use ExUnit.Case, async: true
 
   alias AshReports.Charts.Types.GanttChart
-  alias AshReports.Charts.Config
 
   describe "build/2" do
     test "builds gantt chart with valid datetime data" do
@@ -21,7 +20,7 @@ defmodule AshReports.Charts.Types.GanttChartTest do
         }
       ]
 
-      config = %Config{title: "Project Timeline"}
+      config = %{title: "Project Timeline"}
 
       chart = GanttChart.build(data, config)
 
@@ -47,7 +46,7 @@ defmodule AshReports.Charts.Types.GanttChartTest do
         }
       ]
 
-      config = %Config{}
+      config = %{}
 
       chart = GanttChart.build(data, config)
 
@@ -64,7 +63,7 @@ defmodule AshReports.Charts.Types.GanttChartTest do
         }
       ]
 
-      config = %Config{}
+      config = %{}
 
       chart = GanttChart.build(data, config)
 
@@ -81,7 +80,7 @@ defmodule AshReports.Charts.Types.GanttChartTest do
         }
       ]
 
-      config = %Config{width: 1000, height: 600}
+      config = %{width: 1000, height: 600}
 
       chart = GanttChart.build(data, config)
 
@@ -105,7 +104,7 @@ defmodule AshReports.Charts.Types.GanttChartTest do
         }
       ]
 
-      config = %Config{colors: ["#ff6384", "#36a2eb", "#ffce56"]}
+      config = %{colors: ["#ff6384", "#36a2eb", "#ffce56"]}
 
       chart = GanttChart.build(data, config)
 
@@ -122,7 +121,7 @@ defmodule AshReports.Charts.Types.GanttChartTest do
         }
       ]
 
-      config = %Config{}
+      config = %{}
 
       chart = GanttChart.build(data, config)
 
@@ -140,7 +139,7 @@ defmodule AshReports.Charts.Types.GanttChartTest do
         }
       ]
 
-      config = %Config{}
+      config = %{}
 
       chart = GanttChart.build(data, config)
 
@@ -422,7 +421,7 @@ defmodule AshReports.Charts.Types.GanttChartTest do
 
       assert :ok = GanttChart.validate(data)
 
-      config = %Config{
+      config = %{
         title: "Project Timeline",
         width: 1000,
         height: 500,

@@ -2,12 +2,11 @@ defmodule AshReports.Charts.Types.SparklineTest do
   use ExUnit.Case, async: true
 
   alias AshReports.Charts.Types.Sparkline
-  alias AshReports.Charts.Config
 
   describe "build/2" do
     test "builds sparkline with simple array data" do
       data = [1, 5, 10, 15, 12, 12, 15, 14, 20, 14, 10, 15, 15]
-      config = %Config{}
+      config = %{}
 
       sparkline = Sparkline.build(data, config)
 
@@ -24,7 +23,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
         %{value: 12},
         %{value: 18}
       ]
-      config = %Config{}
+      config = %{}
 
       sparkline = Sparkline.build(data, config)
 
@@ -38,7 +37,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
         %{"value" => 10},
         %{"value" => 8}
       ]
-      config = %Config{}
+      config = %{}
 
       sparkline = Sparkline.build(data, config)
 
@@ -48,7 +47,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
 
     test "applies custom width from config" do
       data = [1, 2, 3, 4, 5]
-      config = %Config{width: 200}
+      config = %{width: 200}
 
       sparkline = Sparkline.build(data, config)
 
@@ -57,7 +56,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
 
     test "applies custom height from config" do
       data = [1, 2, 3, 4, 5]
-      config = %Config{height: 40}
+      config = %{height: 40}
 
       sparkline = Sparkline.build(data, config)
 
@@ -66,7 +65,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
 
     test "applies custom colors when two colors provided" do
       data = [1, 2, 3]
-      config = %Config{colors: ["#fad48e", "#ff9838"]}
+      config = %{colors: ["#fad48e", "#ff9838"]}
 
       sparkline = Sparkline.build(data, config)
 
@@ -76,7 +75,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
 
     test "applies single color with transparency for fill" do
       data = [1, 2, 3]
-      config = %Config{colors: ["#ff0000"]}
+      config = %{colors: ["#ff0000"]}
 
       sparkline = Sparkline.build(data, config)
 
@@ -86,7 +85,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
 
     test "uses default colors when none provided" do
       data = [1, 2, 3]
-      config = %Config{}
+      config = %{}
 
       sparkline = Sparkline.build(data, config)
 
@@ -97,7 +96,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
 
     test "uses default line_width" do
       data = [1, 2, 3]
-      config = %Config{}
+      config = %{}
 
       sparkline = Sparkline.build(data, config)
 
@@ -106,7 +105,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
 
     test "uses default spot_radius" do
       data = [1, 2, 3]
-      config = %Config{}
+      config = %{}
 
       sparkline = Sparkline.build(data, config)
 
@@ -115,7 +114,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
 
     test "uses default spot_colour" do
       data = [1, 2, 3]
-      config = %Config{}
+      config = %{}
 
       sparkline = Sparkline.build(data, config)
 
@@ -124,7 +123,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
 
     test "adds # prefix to hex colors without it" do
       data = [1, 2, 3]
-      config = %Config{colors: ["fad48e", "ff9838"]}
+      config = %{colors: ["fad48e", "ff9838"]}
 
       sparkline = Sparkline.build(data, config)
 
@@ -134,7 +133,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
 
     test "handles named CSS colors" do
       data = [1, 2, 3]
-      config = %Config{colors: ["red", "blue"]}
+      config = %{colors: ["red", "blue"]}
 
       sparkline = Sparkline.build(data, config)
 
@@ -215,7 +214,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
   describe "integration with Charts.generate/3" do
     test "generates SVG output through Charts module" do
       data = [0, 5, 10, 15, 12, 12, 15, 14, 20, 14, 10, 15, 15]
-      config = %Config{width: 100, height: 20}
+      config = %{width: 100, height: 20}
 
       # Note: This will only work after sparkline is registered
       # For now, we test the build function directly
@@ -231,7 +230,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
     test "handles mixed data formats in same list" do
       # All should be treated as numeric values
       data = [1, %{value: 2}, %{"value" => 3}, 4]
-      config = %Config{}
+      config = %{}
 
       sparkline = Sparkline.build(data, config)
 
@@ -241,7 +240,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
     test "defaults invalid entries to 0" do
       # When building (not validating), invalid entries become 0
       data = [1, 2, 3]
-      config = %Config{}
+      config = %{}
 
       sparkline = Sparkline.build(data, config)
 
@@ -253,7 +252,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
   describe "compact visualization" do
     test "creates ultra-compact sparkline with minimal height" do
       data = [1, 5, 3, 7, 4, 9, 2, 6]
-      config = %Config{width: 50, height: 10}
+      config = %{width: 50, height: 10}
 
       sparkline = Sparkline.build(data, config)
 
@@ -264,7 +263,7 @@ defmodule AshReports.Charts.Types.SparklineTest do
 
     test "creates wide sparkline for dashboard use" do
       data = Enum.map(1..50, fn _ -> :rand.uniform(100) end)
-      config = %Config{width: 300, height: 30}
+      config = %{width: 300, height: 30}
 
       sparkline = Sparkline.build(data, config)
 

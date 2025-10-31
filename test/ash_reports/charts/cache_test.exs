@@ -4,7 +4,7 @@ defmodule AshReports.Charts.CacheTest do
   """
   use ExUnit.Case, async: false
 
-  alias AshReports.Charts.{Cache, Config}
+  alias AshReports.Charts.Cache
 
   setup do
     # Clear cache before each test
@@ -105,7 +105,7 @@ defmodule AshReports.Charts.CacheTest do
   describe "cache key generation" do
     test "generates consistent keys for same inputs" do
       data = [%{x: 1, y: 2}, %{x: 3, y: 4}]
-      config = %Config{title: "Test", width: 800}
+      config = %{title: "Test", width: 800}
 
       key1 = Cache.generate_cache_key(:bar, data, config)
       key2 = Cache.generate_cache_key(:bar, data, config)
@@ -117,7 +117,7 @@ defmodule AshReports.Charts.CacheTest do
 
     test "generates different keys for different chart types" do
       data = [%{x: 1, y: 2}]
-      config = %Config{title: "Test"}
+      config = %{title: "Test"}
 
       key_bar = Cache.generate_cache_key(:bar, data, config)
       key_line = Cache.generate_cache_key(:line, data, config)
@@ -126,7 +126,7 @@ defmodule AshReports.Charts.CacheTest do
     end
 
     test "generates different keys for different data" do
-      config = %Config{title: "Test"}
+      config = %{title: "Test"}
 
       key1 = Cache.generate_cache_key(:bar, [%{x: 1, y: 2}], config)
       key2 = Cache.generate_cache_key(:bar, [%{x: 3, y: 4}], config)
@@ -137,8 +137,8 @@ defmodule AshReports.Charts.CacheTest do
     test "generates different keys for different configs" do
       data = [%{x: 1, y: 2}]
 
-      key1 = Cache.generate_cache_key(:bar, data, %Config{title: "A"})
-      key2 = Cache.generate_cache_key(:bar, data, %Config{title: "B"})
+      key1 = Cache.generate_cache_key(:bar, data, %{title: "A"})
+      key2 = Cache.generate_cache_key(:bar, data, %{title: "B"})
 
       assert key1 != key2
     end
@@ -146,10 +146,11 @@ defmodule AshReports.Charts.CacheTest do
     test "handles config as map" do
       data = [%{x: 1, y: 2}]
 
-      key1 = Cache.generate_cache_key(:bar, data, %Config{title: "Test"})
+      key1 = Cache.generate_cache_key(:bar, data, %{title: "Test"})
       key2 = Cache.generate_cache_key(:bar, data, %{title: "Test"})
 
-      # Different because struct vs map, but both should work
+      # Keys should be identical for same inputs
+      assert key1 == key2
       assert is_binary(key1)
       assert is_binary(key2)
     end
@@ -336,7 +337,7 @@ defmodule AshReports.Charts.CacheTest do
 
     test "handles concurrent cache key generation" do
       data = [%{x: 1, y: 2}]
-      config = %Config{title: "Test"}
+      config = %{title: "Test"}
 
       keys =
         for _i <- 1..100 do

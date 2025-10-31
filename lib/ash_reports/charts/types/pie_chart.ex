@@ -50,6 +50,17 @@ defmodule AshReports.Charts.Types.PieChart do
 
   @impl true
   def build(data, %PieChartConfig{} = config) do
+    do_build(data, config)
+  end
+
+  def build(data, config) when is_map(config) do
+    struct_keys = Map.keys(%PieChartConfig{})
+    filtered_config = Map.take(config, struct_keys)
+    config_struct = struct!(PieChartConfig, filtered_config)
+    do_build(data, config_struct)
+  end
+
+  defp do_build(data, config) do
     # Convert data to Contex Dataset
     dataset = Dataset.new(data)
 
@@ -60,7 +71,10 @@ defmodule AshReports.Charts.Types.PieChart do
     colors = get_colors(config)
 
     # Build Contex options
-    contex_opts = build_contex_options(config, cat_col, val_col, colors)
+    contex_opts =
+      config
+      |> build_contex_options(cat_col, val_col, colors)
+      |> Map.to_list()
 
     # Build pie chart with all options
     PieChart.new(dataset, contex_opts)

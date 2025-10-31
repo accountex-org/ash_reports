@@ -60,6 +60,17 @@ defmodule AshReports.Charts.Types.LineChart do
 
   @impl true
   def build(data, %LineChartConfig{} = config) do
+    do_build(data, config)
+  end
+
+  def build(data, config) when is_map(config) do
+    struct_keys = Map.keys(%LineChartConfig{})
+    filtered_config = Map.take(config, struct_keys)
+    config_struct = struct!(LineChartConfig, filtered_config)
+    do_build(data, config_struct)
+  end
+
+  defp do_build(data, config) do
     # Convert data to Contex Dataset
     dataset = Dataset.new(data)
 
@@ -70,7 +81,10 @@ defmodule AshReports.Charts.Types.LineChart do
     colors = get_colors(config)
 
     # Build Contex options
-    contex_opts = build_contex_options(config, x_col, y_col, colors)
+    contex_opts =
+      config
+      |> build_contex_options(x_col, y_col, colors)
+      |> Map.to_list()
 
     # Build line plot with all options
     LinePlot.new(dataset, contex_opts)

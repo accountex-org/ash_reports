@@ -5,7 +5,7 @@ defmodule AshReports.Charts.PerformanceMonitorTest do
   use ExUnit.Case, async: false
 
   alias AshReports.Charts
-  alias AshReports.Charts.{PerformanceMonitor, Cache, Config}
+  alias AshReports.Charts.{PerformanceMonitor, Cache}
 
   setup do
     # Reset metrics before each test
@@ -19,7 +19,7 @@ defmodule AshReports.Charts.PerformanceMonitorTest do
       # Generate bar chart without caching
       bar_data = [%{category: "A", value: 10}, %{category: "B", value: 20}]
       line_data = [%{x: 1, y: 10}, %{x: 2, y: 20}]
-      config = %Config{title: "Test Chart", width: 400, height: 300}
+      config = %{title: "Test Chart", width: 400, height: 300}
 
       # Disable cache to ensure generation happens
       {:ok, _svg1} = Charts.generate(:bar, bar_data, config, cache: false)
@@ -37,7 +37,7 @@ defmodule AshReports.Charts.PerformanceMonitorTest do
 
     test "tracks cache hit and miss rates" do
       data = [%{category: "A", value: 10}]
-      config = %Config{title: "Cached Chart", width: 400, height: 300}
+      config = %{title: "Cached Chart", width: 400, height: 300}
 
       # First generation - cache miss
       {:ok, _svg} = Charts.generate(:bar, data, config)
@@ -69,7 +69,7 @@ defmodule AshReports.Charts.PerformanceMonitorTest do
           %{category: "Category #{i}", value: :rand.uniform(100)}
         end)
 
-      config = %Config{title: "Large Chart", width: 800, height: 600}
+      config = %{title: "Large Chart", width: 800, height: 600}
 
       # Generate chart (will be cached with compression)
       {:ok, _svg} = Charts.generate(:bar, large_data, config)
@@ -106,7 +106,7 @@ defmodule AshReports.Charts.PerformanceMonitorTest do
     test "resets all metrics to zero" do
       # Generate some charts to create metrics
       data = [%{category: "A", value: 10}]
-      config = %Config{title: "Test", width: 400, height: 300}
+      config = %{title: "Test", width: 400, height: 300}
 
       {:ok, _svg} = Charts.generate(:bar, data, config, cache: false)
 
@@ -187,7 +187,7 @@ defmodule AshReports.Charts.PerformanceMonitorTest do
     test "ignores cached chart generations in metrics" do
       # Generate chart first time (not cached)
       data = [%{category: "A", value: 10}]
-      config = %Config{title: "Test", width: 400, height: 300}
+      config = %{title: "Test", width: 400, height: 300}
 
       {:ok, _svg} = Charts.generate(:bar, data, config)
 
@@ -211,7 +211,7 @@ defmodule AshReports.Charts.PerformanceMonitorTest do
   describe "memory tracking" do
     test "estimates memory usage from SVG size" do
       data = [%{category: "A", value: 10}, %{category: "B", value: 20}]
-      config = %Config{title: "Memory Test", width: 400, height: 300}
+      config = %{title: "Memory Test", width: 400, height: 300}
 
       # Generate chart without cache (to track generation)
       {:ok, svg} = Charts.generate(:bar, data, config, cache: false)
@@ -261,7 +261,7 @@ defmodule AshReports.Charts.PerformanceMonitorTest do
         for i <- 1..10 do
           Task.async(fn ->
             data = [%{category: "A", value: i * 10}]
-            config = %Config{title: "Chart #{i}", width: 400, height: 300}
+            config = %{title: "Chart #{i}", width: 400, height: 300}
             Charts.generate(:bar, data, config, cache: false)
           end)
         end

@@ -72,6 +72,17 @@ defmodule AshReports.Charts.Types.Sparkline do
 
   @impl true
   def build(data, %SparklineConfig{} = config) do
+    do_build(data, config)
+  end
+
+  def build(data, config) when is_map(config) do
+    struct_keys = Map.keys(%SparklineConfig{})
+    filtered_config = Map.take(config, struct_keys)
+    config_struct = struct!(SparklineConfig, filtered_config)
+    do_build(data, config_struct)
+  end
+
+  defp do_build(data, config) do
     # Extract numeric values from data
     values = extract_values(data)
 
