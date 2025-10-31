@@ -79,7 +79,16 @@ defmodule AshReports.Dsl do
         end
         """
       ],
-      entities: [report_entity()],
+      entities: [
+        report_entity(),
+        bar_chart_entity(),
+        line_chart_entity(),
+        pie_chart_entity(),
+        area_chart_entity(),
+        scatter_chart_entity(),
+        gantt_chart_entity(),
+        sparkline_entity()
+      ],
       schema: []
     }
   end
@@ -338,6 +347,306 @@ defmodule AshReports.Dsl do
       target: AshReports.Element.Chart,
       args: [:name],
       schema: chart_element_schema()
+    }
+  end
+
+  @doc """
+  Standalone bar chart entity for reports section.
+  """
+  def bar_chart_entity do
+    %Entity{
+      name: :bar_chart,
+      describe: """
+      Defines a standalone bar chart that can be referenced in report bands.
+
+      Bar charts are ideal for comparing values across categories with support
+      for grouped and stacked variations.
+      """,
+      examples: [
+        """
+        bar_chart :sales_by_region do
+          data_source expr(aggregate_sales_by_region())
+          config do
+            width 600
+            height 400
+            title "Sales by Region"
+            type :grouped
+            orientation :vertical
+            data_labels true
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.BarChart,
+      args: [:name],
+      schema: bar_chart_schema(),
+      entities: [
+        config: [bar_chart_config_entity()]
+      ]
+    }
+  end
+
+  defp bar_chart_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for bar chart rendering.",
+      target: AshReports.Charts.BarChartConfig,
+      schema: bar_chart_config_schema()
+    }
+  end
+
+  @doc """
+  Standalone line chart entity for reports section.
+  """
+  def line_chart_entity do
+    %Entity{
+      name: :line_chart,
+      describe: """
+      Defines a standalone line chart that can be referenced in report bands.
+
+      Line charts are ideal for showing trends over time or continuous data.
+      """,
+      examples: [
+        """
+        line_chart :revenue_trend do
+          data_source expr(get_monthly_revenue())
+          config do
+            width 800
+            height 400
+            title "Revenue Trend"
+            smoothed true
+            stroke_width "2"
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.LineChart,
+      args: [:name],
+      schema: line_chart_schema(),
+      entities: [
+        config: [line_chart_config_entity()]
+      ]
+    }
+  end
+
+  defp line_chart_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for line chart rendering.",
+      target: AshReports.Charts.LineChartConfig,
+      schema: line_chart_config_schema()
+    }
+  end
+
+  @doc """
+  Standalone pie chart entity for reports section.
+  """
+  def pie_chart_entity do
+    %Entity{
+      name: :pie_chart,
+      describe: """
+      Defines a standalone pie chart that can be referenced in report bands.
+
+      Pie charts are ideal for showing proportions and percentage breakdowns.
+      """,
+      examples: [
+        """
+        pie_chart :market_share do
+          data_source expr(get_market_distribution())
+          config do
+            width 500
+            height 500
+            title "Market Share by Region"
+            data_labels true
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.PieChart,
+      args: [:name],
+      schema: pie_chart_schema(),
+      entities: [
+        config: [pie_chart_config_entity()]
+      ]
+    }
+  end
+
+  defp pie_chart_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for pie chart rendering.",
+      target: AshReports.Charts.PieChartConfig,
+      schema: pie_chart_config_schema()
+    }
+  end
+
+  @doc """
+  Standalone area chart entity for reports section.
+  """
+  def area_chart_entity do
+    %Entity{
+      name: :area_chart,
+      describe: """
+      Defines a standalone area chart that can be referenced in report bands.
+
+      Area charts show cumulative totals or volume over time with filled areas.
+      """,
+      examples: [
+        """
+        area_chart :cumulative_sales do
+          data_source expr(get_cumulative_data())
+          config do
+            width 800
+            height 400
+            title "Cumulative Sales"
+            mode :stacked
+            opacity 0.7
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.AreaChart,
+      args: [:name],
+      schema: area_chart_schema(),
+      entities: [
+        config: [area_chart_config_entity()]
+      ]
+    }
+  end
+
+  defp area_chart_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for area chart rendering.",
+      target: AshReports.Charts.AreaChartConfig,
+      schema: area_chart_config_schema()
+    }
+  end
+
+  @doc """
+  Standalone scatter chart entity for reports section.
+  """
+  def scatter_chart_entity do
+    %Entity{
+      name: :scatter_chart,
+      describe: """
+      Defines a standalone scatter chart that can be referenced in report bands.
+
+      Scatter charts (point plots) show correlation between two variables.
+      """,
+      examples: [
+        """
+        scatter_chart :price_vs_quantity do
+          data_source expr(get_correlation_data())
+          config do
+            width 700
+            height 500
+            title "Price vs Quantity Analysis"
+            axis_label_rotation :auto
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.ScatterChart,
+      args: [:name],
+      schema: scatter_chart_schema(),
+      entities: [
+        config: [scatter_chart_config_entity()]
+      ]
+    }
+  end
+
+  defp scatter_chart_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for scatter chart rendering.",
+      target: AshReports.Charts.ScatterChartConfig,
+      schema: scatter_chart_config_schema()
+    }
+  end
+
+  @doc """
+  Standalone Gantt chart entity for reports section.
+  """
+  def gantt_chart_entity do
+    %Entity{
+      name: :gantt_chart,
+      describe: """
+      Defines a standalone Gantt chart that can be referenced in report bands.
+
+      Gantt charts visualize project timelines and task schedules.
+      """,
+      examples: [
+        """
+        gantt_chart :project_timeline do
+          data_source expr(get_project_tasks())
+          config do
+            width 900
+            height 400
+            title "Project Timeline"
+            show_task_labels true
+            padding 2
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.GanttChart,
+      args: [:name],
+      schema: gantt_chart_schema(),
+      entities: [
+        config: [gantt_chart_config_entity()]
+      ]
+    }
+  end
+
+  defp gantt_chart_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for Gantt chart rendering.",
+      target: AshReports.Charts.GanttChartConfig,
+      schema: gantt_chart_config_schema()
+    }
+  end
+
+  @doc """
+  Standalone sparkline entity for reports section.
+  """
+  def sparkline_entity do
+    %Entity{
+      name: :sparkline,
+      describe: """
+      Defines a standalone sparkline that can be referenced in report bands.
+
+      Sparklines are compact inline charts showing trends at a glance.
+      """,
+      examples: [
+        """
+        sparkline :weekly_trend do
+          data_source expr(get_last_7_days())
+          config do
+            width 100
+            height 20
+            spot_radius 2
+            line_colour "rgba(0, 200, 50, 0.7)"
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.Sparkline,
+      args: [:name],
+      schema: sparkline_schema(),
+      entities: [
+        config: [sparkline_config_entity()]
+      ]
+    }
+  end
+
+  defp sparkline_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for sparkline rendering.",
+      target: AshReports.Charts.SparklineConfig,
+      schema: sparkline_config_schema()
     }
   end
 
@@ -809,5 +1118,364 @@ defmodule AshReports.Dsl do
           doc: "Title text above chart (string or expression)."
         ]
       ]
+  end
+
+  defp bar_chart_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp bar_chart_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 600,
+        doc: "Chart width in pixels."
+      ],
+      height: [
+        type: :integer,
+        default: 400,
+        doc: "Chart height in pixels."
+      ],
+      title: [
+        type: :string,
+        doc: "Chart title text."
+      ],
+      type: [
+        type: {:in, [:simple, :grouped, :stacked]},
+        default: :simple,
+        doc: "Bar chart type: :simple, :grouped, or :stacked."
+      ],
+      orientation: [
+        type: {:in, [:vertical, :horizontal]},
+        default: :vertical,
+        doc: "Bar orientation: :vertical or :horizontal."
+      ],
+      data_labels: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to show data labels on bars."
+      ],
+      padding: [
+        type: :integer,
+        default: 2,
+        doc: "Padding between bars in pixels."
+      ],
+      colours: [
+        type: {:list, :string},
+        default: [],
+        doc: "List of hex color codes (without #) for bars."
+      ]
+    ]
+  end
+
+  defp line_chart_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp line_chart_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 600,
+        doc: "Chart width in pixels."
+      ],
+      height: [
+        type: :integer,
+        default: 400,
+        doc: "Chart height in pixels."
+      ],
+      title: [
+        type: :string,
+        doc: "Chart title text."
+      ],
+      smoothed: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to smooth the line."
+      ],
+      stroke_width: [
+        type: :string,
+        default: "2",
+        doc: "Line stroke width."
+      ],
+      axis_label_rotation: [
+        type: {:in, [:auto, :"45", :"90"]},
+        default: :auto,
+        doc: "Axis label rotation: :auto, :\"45\", or :\"90\"."
+      ],
+      colours: [
+        type: {:list, :string},
+        default: [],
+        doc: "List of hex color codes (without #) for lines."
+      ]
+    ]
+  end
+
+  defp pie_chart_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp pie_chart_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 600,
+        doc: "Chart width in pixels."
+      ],
+      height: [
+        type: :integer,
+        default: 400,
+        doc: "Chart height in pixels."
+      ],
+      title: [
+        type: :string,
+        doc: "Chart title text."
+      ],
+      data_labels: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to show data labels on slices."
+      ],
+      colours: [
+        type: {:list, :string},
+        default: [],
+        doc: "List of hex color codes (without #) for slices."
+      ]
+    ]
+  end
+
+  defp area_chart_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp area_chart_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 600,
+        doc: "Chart width in pixels."
+      ],
+      height: [
+        type: :integer,
+        default: 400,
+        doc: "Chart height in pixels."
+      ],
+      title: [
+        type: :string,
+        doc: "Chart title text."
+      ],
+      mode: [
+        type: {:in, [:simple, :stacked]},
+        default: :simple,
+        doc: "Area chart mode: :simple or :stacked."
+      ],
+      opacity: [
+        type: :float,
+        default: 0.7,
+        doc: "Fill opacity (0.0 to 1.0)."
+      ],
+      smooth_lines: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to smooth the area boundaries."
+      ],
+      colours: [
+        type: {:list, :string},
+        default: [],
+        doc: "List of hex color codes (without #) for areas."
+      ]
+    ]
+  end
+
+  defp scatter_chart_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp scatter_chart_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 600,
+        doc: "Chart width in pixels."
+      ],
+      height: [
+        type: :integer,
+        default: 400,
+        doc: "Chart height in pixels."
+      ],
+      title: [
+        type: :string,
+        doc: "Chart title text."
+      ],
+      axis_label_rotation: [
+        type: {:in, [:auto, :"45", :"90"]},
+        default: :auto,
+        doc: "Axis label rotation: :auto, :\"45\", or :\"90\"."
+      ],
+      colours: [
+        type: {:list, :string},
+        default: [],
+        doc: "List of hex color codes (without #) for data points."
+      ]
+    ]
+  end
+
+  defp gantt_chart_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp gantt_chart_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 600,
+        doc: "Chart width in pixels."
+      ],
+      height: [
+        type: :integer,
+        default: 400,
+        doc: "Chart height in pixels."
+      ],
+      title: [
+        type: :string,
+        doc: "Chart title text."
+      ],
+      show_task_labels: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to show task labels."
+      ],
+      padding: [
+        type: :integer,
+        default: 2,
+        doc: "Padding between tasks in pixels."
+      ],
+      colours: [
+        type: {:list, :string},
+        default: [],
+        doc: "List of hex color codes (without #) for tasks."
+      ]
+    ]
+  end
+
+  defp sparkline_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp sparkline_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 100,
+        doc: "Chart width in pixels (compact default)."
+      ],
+      height: [
+        type: :integer,
+        default: 20,
+        doc: "Chart height in pixels (compact default)."
+      ],
+      spot_radius: [
+        type: :integer,
+        default: 2,
+        doc: "Radius of the spot marker."
+      ],
+      spot_colour: [
+        type: :string,
+        default: "red",
+        doc: "Color of the spot marker."
+      ],
+      line_width: [
+        type: :integer,
+        default: 1,
+        doc: "Width of the trend line."
+      ],
+      line_colour: [
+        type: :string,
+        default: "rgba(0, 200, 50, 0.7)",
+        doc: "Color of the trend line."
+      ],
+      fill_colour: [
+        type: :string,
+        default: "rgba(0, 200, 50, 0.2)",
+        doc: "Fill color beneath the line."
+      ]
+    ]
   end
 end
