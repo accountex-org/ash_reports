@@ -46,8 +46,16 @@ defmodule AshReports.Typst.ChartPreprocessor do
 
   require Logger
 
-  alias AshReports.{Band, Charts, Report}
-  alias AshReports.Element.Chart
+  alias AshReports.{Band, Report}
+  alias AshReports.Element.{
+    BarChartElement,
+    LineChartElement,
+    PieChartElement,
+    AreaChartElement,
+    ScatterChartElement,
+    GanttChartElement,
+    SparklineElement
+  }
   alias AshReports.Typst.{ChartEmbedder, ChartHelpers}
 
   @type data_context :: %{
@@ -60,7 +68,7 @@ defmodule AshReports.Typst.ChartPreprocessor do
           name: atom(),
           svg: String.t(),
           embedded_code: String.t(),
-          chart_type: Chart.chart_type(),
+          chart_type: atom(),
           error: term() | nil
         }
 
@@ -229,20 +237,22 @@ defmodule AshReports.Typst.ChartPreprocessor do
 
   ## Parameters
 
-    * `chart` - The Chart element struct
-    * `data_context` - Runtime data context
+    * `chart_element` - The chart element struct (BarChartElement, LineChartElement, etc.)
+    * `data_context` - Runtime data context with domain information
 
   ## Returns
 
     * Chart data map with svg, embedded_code, etc.
   """
-  @spec process_chart(Chart.t(), data_context()) :: chart_data()
-  def process_chart(%Chart{} = chart, data_context) do
+  @spec process_chart(map(), data_context()) :: chart_data()
+  def process_chart(chart_element, data_context) do
     start_time = System.monotonic_time()
+    chart_name = Map.get(chart_element, :chart_name)
+    chart_type = get_chart_type_from_element(chart_element)
 
     metadata = %{
-      chart_name: chart.name,
-      chart_type: chart.chart_type
+      chart_name: chart_name,
+      chart_type: chart_type
     }
 
     :telemetry.execute(
@@ -252,24 +262,24 @@ defmodule AshReports.Typst.ChartPreprocessor do
     )
 
     result =
-      with {:ok, chart_data} <- evaluate_data_source(chart.data_source, data_context),
-           {:ok, chart_config} <- evaluate_config(chart.config, data_context),
-           {:ok, svg} <- Charts.generate(chart.chart_type, chart_data, chart_config),
-           {:ok, embedded_code} <- embed_chart(svg, chart.embed_options) do
+      with {:ok, chart_def} <- resolve_chart_definition(chart_name, data_context),
+           {:ok, chart_data} <- evaluate_data_source(chart_def.data_source, data_context),
+           {:ok, svg} <- generate_chart_svg(chart_def, chart_data),
+           {:ok, embedded_code} <- embed_chart(svg, %{}) do
         %{
-          name: chart.name,
+          name: chart_name,
           svg: svg,
           embedded_code: embedded_code,
-          chart_type: chart.chart_type,
+          chart_type: chart_type,
           error: nil
         }
       else
         {:error, reason} ->
-          Logger.debug(fn -> "Chart #{chart.name} generation failed: #{inspect(reason)}" end)
-          Logger.warning("Chart #{chart.name} generation failed")
+          Logger.debug(fn -> "Chart #{chart_name} generation failed: #{inspect(reason)}" end)
+          Logger.warning("Chart #{chart_name} generation failed")
 
-          result = ChartHelpers.generate_error_placeholder(chart.name, reason, style: :compact)
-          Map.put(result, :chart_type, chart.chart_type)
+          result = ChartHelpers.generate_error_placeholder(chart_name, reason, style: :compact)
+          Map.put(result, :chart_type, chart_type)
       end
 
     duration = System.monotonic_time() - start_time
@@ -283,6 +293,97 @@ defmodule AshReports.Typst.ChartPreprocessor do
 
     result
   end
+
+  defp resolve_chart_definition(chart_name, data_context) do
+    # Get domain from context
+    domain = Map.get(data_context, :domain)
+
+    if domain do
+      case AshReports.Info.chart(domain, chart_name) do
+        nil -> {:error, {:chart_not_found, chart_name}}
+        chart_def -> {:ok, chart_def}
+      end
+    else
+      {:error, :missing_domain_in_context}
+    end
+  end
+
+  defp get_chart_type_from_element(%BarChartElement{}), do: :bar_chart
+  defp get_chart_type_from_element(%LineChartElement{}), do: :line_chart
+  defp get_chart_type_from_element(%PieChartElement{}), do: :pie_chart
+  defp get_chart_type_from_element(%AreaChartElement{}), do: :area_chart
+  defp get_chart_type_from_element(%ScatterChartElement{}), do: :scatter_chart
+  defp get_chart_type_from_element(%GanttChartElement{}), do: :gantt_chart
+  defp get_chart_type_from_element(%SparklineElement{}), do: :sparkline
+  defp get_chart_type_from_element(_), do: :unknown
+
+  defp generate_chart_svg(chart_def, chart_data) do
+    # Determine the chart type module
+    case get_chart_type_module(chart_def) do
+      nil ->
+        {:error, :unknown_chart_type}
+
+      module ->
+        build_chart_with_module(module, chart_def, chart_data)
+    end
+  end
+
+  defp build_chart_with_module(module, chart_def, chart_data) do
+    # Build the chart using the type-specific implementation
+    config = chart_def.config || struct(get_config_module(chart_def))
+
+    try do
+      case module.build(chart_data, config) do
+        %_{} = chart_struct ->
+          # Generate SVG from the Contex chart struct
+          svg_content = Contex.Plot.to_svg(chart_struct)
+          {:ok, svg_content}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    rescue
+      error ->
+        {:error, error}
+    end
+  end
+
+  defp get_chart_type_module(%AshReports.Charts.BarChart{}),
+    do: AshReports.Charts.Types.BarChart
+
+  defp get_chart_type_module(%AshReports.Charts.LineChart{}),
+    do: AshReports.Charts.Types.LineChart
+
+  defp get_chart_type_module(%AshReports.Charts.PieChart{}),
+    do: AshReports.Charts.Types.PieChart
+
+  defp get_chart_type_module(%AshReports.Charts.AreaChart{}),
+    do: AshReports.Charts.Types.AreaChart
+
+  defp get_chart_type_module(%AshReports.Charts.ScatterChart{}),
+    do: AshReports.Charts.Types.ScatterPlot
+
+  defp get_chart_type_module(%AshReports.Charts.GanttChart{}),
+    do: AshReports.Charts.Types.GanttChart
+
+  defp get_chart_type_module(%AshReports.Charts.Sparkline{}),
+    do: AshReports.Charts.Types.Sparkline
+
+  defp get_chart_type_module(_), do: nil
+
+  defp get_config_module(%AshReports.Charts.BarChart{}), do: AshReports.Charts.BarChartConfig
+  defp get_config_module(%AshReports.Charts.LineChart{}), do: AshReports.Charts.LineChartConfig
+  defp get_config_module(%AshReports.Charts.PieChart{}), do: AshReports.Charts.PieChartConfig
+  defp get_config_module(%AshReports.Charts.AreaChart{}), do: AshReports.Charts.AreaChartConfig
+
+  defp get_config_module(%AshReports.Charts.ScatterChart{}),
+    do: AshReports.Charts.ScatterChartConfig
+
+  defp get_config_module(%AshReports.Charts.GanttChart{}),
+    do: AshReports.Charts.GanttChartConfig
+
+  defp get_config_module(%AshReports.Charts.Sparkline{}), do: AshReports.Charts.SparklineConfig
+  defp get_config_module(_), do: nil
 
   defp embed_chart(svg, embed_options) when is_map(embed_options) do
     # Convert map to keyword list for ChartEmbedder
@@ -302,9 +403,31 @@ defmodule AshReports.Typst.ChartPreprocessor do
 
   defp extract_chart_elements(%Report{bands: bands}) do
     bands
-    |> Enum.flat_map(fn %Band{elements: elements} -> elements || [] end)
-    |> Enum.filter(fn element -> element.__struct__ == Chart end)
+    |> Enum.flat_map(&extract_chart_elements_from_band/1)
   end
+
+  defp extract_chart_elements_from_band(%Band{elements: elements, bands: nested_bands}) do
+    # Extract chart elements from this band
+    chart_elements =
+      (elements || [])
+      |> Enum.filter(&is_chart_element?/1)
+
+    # Recursively extract from nested bands
+    nested_chart_elements =
+      (nested_bands || [])
+      |> Enum.flat_map(&extract_chart_elements_from_band/1)
+
+    chart_elements ++ nested_chart_elements
+  end
+
+  defp is_chart_element?(%BarChartElement{}), do: true
+  defp is_chart_element?(%LineChartElement{}), do: true
+  defp is_chart_element?(%PieChartElement{}), do: true
+  defp is_chart_element?(%AreaChartElement{}), do: true
+  defp is_chart_element?(%ScatterChartElement{}), do: true
+  defp is_chart_element?(%GanttChartElement{}), do: true
+  defp is_chart_element?(%SparklineElement{}), do: true
+  defp is_chart_element?(_), do: false
 
   defp evaluate_data_source(nil, _context) do
     {:error, :missing_data_source}
@@ -329,29 +452,6 @@ defmodule AshReports.Typst.ChartPreprocessor do
       _ ->
         evaluate_expression(data_source, context)
     end
-  end
-
-  defp evaluate_config(config, _context) when is_map(config) do
-    # Config is already a map - use as-is
-    # In the future, we might support expressions in config values
-    {:ok, config}
-  end
-
-  defp evaluate_config(%{__struct__: Ash.Expr, expression: expr}, context) do
-    # Config is an expression - evaluate it
-    case evaluate_expression(expr, context) do
-      {:ok, result} when is_map(result) -> {:ok, result}
-      {:ok, _other} -> {:error, :config_must_be_map}
-      error -> error
-    end
-  end
-
-  defp evaluate_config(nil, _context) do
-    {:ok, %{}}
-  end
-
-  defp evaluate_config(_other, _context) do
-    {:ok, %{}}
   end
 
   defp evaluate_expression(:records, %{records: records}) do
