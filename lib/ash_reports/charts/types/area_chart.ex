@@ -70,11 +70,11 @@ defmodule AshReports.Charts.Types.AreaChart do
 
   @behaviour AshReports.Charts.Types.Behavior
 
-  alias AshReports.Charts.Config
+  alias AshReports.Charts.AreaChartConfig
   alias Contex.{Dataset, LinePlot}
 
   @impl true
-  def build(data, %Config{} = config) do
+  def build(data, %AreaChartConfig{} = config) do
     # Validate data is properly sorted by x values
     sorted_data = sort_by_x(data)
 
@@ -87,18 +87,16 @@ defmodule AshReports.Charts.Types.AreaChart do
     # Get colors
     colors = get_colors(config)
 
+    # Build Contex options
+    contex_opts = build_contex_options(config, x_col, y_cols, series_col, colors)
+
     # Build base line plot
-    line_plot =
-      LinePlot.new(dataset,
-        mapping: build_mapping(x_col, y_cols, series_col),
-        colour_palette: colors,
-        smoothed: Map.get(config, :smooth_lines, true)
-      )
+    line_plot = LinePlot.new(dataset, contex_opts)
 
     # Store area chart metadata for SVG post-processing
     Map.put(line_plot, :area_chart_meta, %{
-      mode: Map.get(config, :mode, :simple),
-      opacity: Map.get(config, :opacity, 0.7),
+      mode: config.mode || :simple,
+      opacity: config.opacity || 0.7,
       y_cols: y_cols
     })
   end
@@ -194,16 +192,31 @@ defmodule AshReports.Charts.Types.AreaChart do
     %{x_col: x_col, y_cols: y_cols, fill_col: series_col}
   end
 
-  defp get_colors(%Config{colors: colors}) when is_list(colors) and length(colors) > 0 do
+  defp build_contex_options(config, x_col, y_cols, series_col, colors) do
+    %{
+      mapping: build_mapping(x_col, y_cols, series_col),
+      colour_palette: colors
+    }
+    |> maybe_add_option(:smoothed, config.smooth_lines, true)
+  end
+
+  defp maybe_add_option(opts, _key, nil, _default), do: opts
+
+  defp maybe_add_option(opts, key, value, default) when value != default do
+    Map.put(opts, key, value)
+  end
+
+  defp maybe_add_option(opts, _key, _value, _default), do: opts
+
+  defp get_colors(%AreaChartConfig{colours: colours}) when is_list(colours) and length(colours) > 0 do
     # Contex expects hex colors without the # prefix
-    Enum.map(colors, fn color ->
+    Enum.map(colours, fn color ->
       String.trim_leading(color, "#")
     end)
   end
 
   defp get_colors(_config) do
-    # Use default colors, strip # prefix
-    Config.default_colors()
-    |> Enum.map(fn color -> String.trim_leading(color, "#") end)
+    # Use default Contex colors
+    :default
   end
 end
