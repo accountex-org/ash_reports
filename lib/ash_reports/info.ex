@@ -95,4 +95,51 @@ defmodule AshReports.Info do
     |> Enum.map(& &1.driving_resource)
     |> Enum.uniq()
   end
+
+  @doc """
+  Gets all chart definitions from the domain.
+
+  Returns all standalone chart definitions (bar charts, line charts, pie charts,
+  area charts, scatter charts, gantt charts, and sparklines) defined at the
+  reports level.
+  """
+  @spec charts(Ash.Domain.t() | Spark.Dsl.t()) :: [map()]
+  def charts(domain_or_dsl_state) do
+    Extension.get_entities(domain_or_dsl_state, [:reports])
+    |> Enum.reject(&is_struct(&1, AshReports.Report))
+  end
+
+  @doc """
+  Gets a specific chart definition by name from the domain.
+
+  Looks up a chart definition across all chart types (bar, line, pie, area,
+  scatter, gantt, sparkline) and returns the first match.
+  """
+  @spec chart(Ash.Domain.t() | Spark.Dsl.t(), atom()) :: map() | nil
+  def chart(domain_or_dsl_state, name) do
+    domain_or_dsl_state
+    |> charts()
+    |> Enum.find(&(&1.name == name))
+  end
+
+  @doc """
+  Gets all chart names from the domain.
+  """
+  @spec all_chart_names(Ash.Domain.t() | Spark.Dsl.t()) :: [atom()]
+  def all_chart_names(domain_or_dsl_state) do
+    domain_or_dsl_state
+    |> charts()
+    |> Enum.map(& &1.name)
+    |> Enum.uniq()
+  end
+
+  @doc """
+  Checks if a domain has a specific chart definition.
+  """
+  @spec has_chart?(Ash.Domain.t() | Spark.Dsl.t(), atom()) :: boolean()
+  def has_chart?(domain_or_dsl_state, name) do
+    domain_or_dsl_state
+    |> charts()
+    |> Enum.any?(&(&1.name == name))
+  end
 end

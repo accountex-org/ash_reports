@@ -303,6 +303,35 @@ defmodule AshReports.HeexRenderer.BandRenderer do
     render_image_element(element, context)
   end
 
+  # Chart Elements - New type-specific chart elements
+  defp render_element(%{type: :bar_chart_element} = element, context) do
+    render_chart_element(element, :bar_chart, context)
+  end
+
+  defp render_element(%{type: :line_chart_element} = element, context) do
+    render_chart_element(element, :line_chart, context)
+  end
+
+  defp render_element(%{type: :pie_chart_element} = element, context) do
+    render_chart_element(element, :pie_chart, context)
+  end
+
+  defp render_element(%{type: :area_chart_element} = element, context) do
+    render_chart_element(element, :area_chart, context)
+  end
+
+  defp render_element(%{type: :scatter_chart_element} = element, context) do
+    render_chart_element(element, :scatter_chart, context)
+  end
+
+  defp render_element(%{type: :gantt_chart_element} = element, context) do
+    render_chart_element(element, :gantt_chart, context)
+  end
+
+  defp render_element(%{type: :sparkline_element} = element, context) do
+    render_chart_element(element, :sparkline, context)
+  end
+
   defp render_element(element, _context) do
     """
     <div class="unknown-element">
@@ -310,6 +339,170 @@ defmodule AshReports.HeexRenderer.BandRenderer do
     </div>
     """
   end
+
+  # Chart Element Rendering
+  defp render_chart_element(element, _chart_type, context) do
+    chart_name = Map.get(element, :chart_name)
+
+    if is_nil(chart_name) do
+      error_placeholder("MISSING_CHART_NAME")
+    else
+      case resolve_chart_definition(chart_name, context) do
+        nil ->
+          error_placeholder("CHART_NOT_FOUND: #{chart_name}")
+
+        chart_def ->
+          render_resolved_chart(chart_def, element, context)
+      end
+    end
+  end
+
+  defp resolve_chart_definition(chart_name, %RenderContext{} = context) do
+    # Get the domain from the report's driving resource
+    domain = get_domain_from_context(context)
+
+    if domain do
+      AshReports.Info.chart(domain, chart_name)
+    else
+      nil
+    end
+  end
+
+  defp get_domain_from_context(%RenderContext{report: %{driving_resource: resource}})
+       when not is_nil(resource) do
+    # Get the domain from the resource's configuration
+    case Ash.Resource.Info.domain(resource) do
+      nil -> nil
+      domain -> domain
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp get_domain_from_context(%RenderContext{metadata: metadata}) do
+    # Try to get domain from metadata as fallback
+    Map.get(metadata, :domain)
+  end
+
+  defp get_domain_from_context(_), do: nil
+
+  defp render_resolved_chart(chart_def, element, context) do
+    # Evaluate the data_source expression to get chart data
+    chart_data = evaluate_chart_data_source(chart_def.data_source, context)
+
+    # Generate SVG using the chart type implementation
+    svg_result = generate_chart_svg(chart_def, chart_data)
+
+    style = element_style(element)
+
+    case svg_result do
+      {:ok, svg_content} ->
+        """
+        <div class="chart-element chart-#{chart_def.__struct__ |> Module.split() |> List.last() |> Macro.underscore()}"
+             data-chart="#{chart_def.name}"
+             style="#{style}">
+          #{svg_content}
+        </div>
+        """
+
+      {:error, reason} ->
+        error_placeholder("CHART_ERROR: #{inspect(reason)}")
+    end
+  end
+
+  defp evaluate_chart_data_source(nil, _context) do
+    []
+  end
+
+  defp evaluate_chart_data_source(data_source, _context) do
+    # TODO: Full expression evaluation with CalculationEngine
+    # For now, handle simple cases
+    case data_source do
+      {:expr, _} ->
+        # Complex expression - would need CalculationEngine
+        # Return empty data as placeholder
+        []
+
+      data when is_list(data) ->
+        data
+
+      _ ->
+        []
+    end
+  end
+
+  defp generate_chart_svg(chart_def, chart_data) do
+    # Determine the chart type module
+    case get_chart_type_module(chart_def) do
+      nil ->
+        {:error, :unknown_chart_type}
+
+      chart_type_module ->
+        if length(chart_data) == 0 do
+          {:error, :no_chart_data}
+        else
+          build_and_render_chart(chart_type_module, chart_def, chart_data)
+        end
+    end
+  rescue
+    error ->
+      {:error, error}
+  end
+
+  defp build_and_render_chart(chart_type_module, chart_def, chart_data) do
+    # Build the chart using the type-specific implementation
+    config = chart_def.config || struct(get_config_module(chart_def))
+
+    case chart_type_module.build(chart_data, config) do
+      %_{} = chart_struct ->
+        # Generate SVG from the Contex chart struct
+        svg_content = Contex.Plot.to_svg(chart_struct)
+        {:ok, svg_content}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  rescue
+    error ->
+      {:error, error}
+  end
+
+  defp get_chart_type_module(%AshReports.Charts.BarChart{}),
+    do: AshReports.Charts.Types.BarChart
+
+  defp get_chart_type_module(%AshReports.Charts.LineChart{}),
+    do: AshReports.Charts.Types.LineChart
+
+  defp get_chart_type_module(%AshReports.Charts.PieChart{}),
+    do: AshReports.Charts.Types.PieChart
+
+  defp get_chart_type_module(%AshReports.Charts.AreaChart{}),
+    do: AshReports.Charts.Types.AreaChart
+
+  defp get_chart_type_module(%AshReports.Charts.ScatterChart{}),
+    do: AshReports.Charts.Types.ScatterPlot
+
+  defp get_chart_type_module(%AshReports.Charts.GanttChart{}),
+    do: AshReports.Charts.Types.GanttChart
+
+  defp get_chart_type_module(%AshReports.Charts.Sparkline{}),
+    do: AshReports.Charts.Types.Sparkline
+
+  defp get_chart_type_module(_), do: nil
+
+  defp get_config_module(%AshReports.Charts.BarChart{}), do: AshReports.Charts.BarChartConfig
+  defp get_config_module(%AshReports.Charts.LineChart{}), do: AshReports.Charts.LineChartConfig
+  defp get_config_module(%AshReports.Charts.PieChart{}), do: AshReports.Charts.PieChartConfig
+  defp get_config_module(%AshReports.Charts.AreaChart{}), do: AshReports.Charts.AreaChartConfig
+
+  defp get_config_module(%AshReports.Charts.ScatterChart{}),
+    do: AshReports.Charts.ScatterChartConfig
+
+  defp get_config_module(%AshReports.Charts.GanttChart{}),
+    do: AshReports.Charts.GanttChartConfig
+
+  defp get_config_module(%AshReports.Charts.Sparkline{}), do: AshReports.Charts.SparklineConfig
+  defp get_config_module(_), do: nil
 
   # Field Element
   defp render_field_element(element, context) do
