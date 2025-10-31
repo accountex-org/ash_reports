@@ -81,7 +81,8 @@ defmodule AshReports.Dsl do
       ],
       entities: [
         report_entity(),
-        bar_chart_entity()
+        bar_chart_entity(),
+        line_chart_entity()
       ],
       schema: []
     }
@@ -386,6 +387,49 @@ defmodule AshReports.Dsl do
       describe: "Configuration for bar chart rendering.",
       target: AshReports.Charts.BarChartConfig,
       schema: bar_chart_config_schema()
+    }
+  end
+
+  @doc """
+  Standalone line chart entity for reports section.
+  """
+  def line_chart_entity do
+    %Entity{
+      name: :line_chart,
+      describe: """
+      Defines a standalone line chart that can be referenced in report bands.
+
+      Line charts are ideal for showing trends over time or continuous data.
+      """,
+      examples: [
+        """
+        line_chart :revenue_trend do
+          data_source expr(get_monthly_revenue())
+          config do
+            width 800
+            height 400
+            title "Revenue Trend"
+            smoothed true
+            stroke_width "2"
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.LineChart,
+      args: [:name],
+      schema: line_chart_schema(),
+      entities: [
+        config: [line_chart_config_entity()]
+      ]
+    }
+  end
+
+  defp line_chart_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for line chart rendering.",
+      target: AshReports.Charts.LineChartConfig,
+      schema: line_chart_config_schema()
     }
   end
 
@@ -914,6 +958,60 @@ defmodule AshReports.Dsl do
         type: {:list, :string},
         default: [],
         doc: "List of hex color codes (without #) for bars."
+      ]
+    ]
+  end
+
+  defp line_chart_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp line_chart_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 600,
+        doc: "Chart width in pixels."
+      ],
+      height: [
+        type: :integer,
+        default: 400,
+        doc: "Chart height in pixels."
+      ],
+      title: [
+        type: :string,
+        doc: "Chart title text."
+      ],
+      smoothed: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to smooth the line."
+      ],
+      stroke_width: [
+        type: :string,
+        default: "2",
+        doc: "Line stroke width."
+      ],
+      axis_label_rotation: [
+        type: {:in, [:auto, :"45", :"90"]},
+        default: :auto,
+        doc: "Axis label rotation: :auto, :\"45\", or :\"90\"."
+      ],
+      colours: [
+        type: {:list, :string},
+        default: [],
+        doc: "List of hex color codes (without #) for lines."
       ]
     ]
   end
