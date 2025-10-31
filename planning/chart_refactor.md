@@ -656,31 +656,45 @@ end
 
 ---
 
-## Section 8: Delete Deprecated Code
+## Section 8: Delete Deprecated Code ✅
 
-**Duration**: 30 minutes
+**Duration**: ~2 hours (estimated 30 minutes)
 
 **Goal**: Remove all old generic chart code.
 
-### Task 8.1: Delete generic Config struct
+**Status**: Complete
+**Completion Date**: 2025-10-31
+**Branch**: `feature/delete-deprecated-charts`
+
+### Task 8.1: Delete generic Config struct ✅
 - **File to delete**: `lib/ash_reports/charts/config.ex`
 - **Subtasks**:
-  - [ ] Delete the file completely
-  - [ ] Search codebase for AshReports.Charts.Config references
-  - [ ] Remove imports and aliases
+  - [x] Delete the file completely
+  - [x] Search codebase for AshReports.Charts.Config references
+  - [x] Remove imports and aliases
+- **Commit**: 43e2322 - "refactor: Delete generic Config struct and update references"
+- **Files changed**: 4 files, 31 insertions(+), 251 deletions(-)
 
-### Task 8.2: Delete generic Chart element
+### Task 8.2: Delete generic Chart element ✅
 - **File to delete**: `lib/ash_reports/reports/element/chart.ex`
 - **Subtasks**:
-  - [ ] Delete the file completely
-  - [ ] Search codebase for AshReports.Element.Chart references
-  - [ ] Remove imports and aliases
+  - [x] Delete the file completely
+  - [x] Search codebase for AshReports.Element.Chart references
+  - [x] Remove imports and aliases
+  - [x] Update ChartDataCollector to use type-specific elements
+  - [x] Enhanced all 7 chart types to accept both struct and map configs
+  - [x] Fixed Contex compatibility (map to keyword list conversion)
+- **Commit**: 218d309 - "refactor: Remove generic Chart element and update chart types"
+- **Files changed**: 17 files, 193 insertions(+), 271 deletions(-)
 
-### Task 8.3: Clean up chart_element_schema
+### Task 8.3: Clean up chart_element_schema ✅
 - **File**: `lib/ash_reports/dsl.ex`
 - **Subtasks**:
-  - [ ] Delete chart_element_schema/0 function (if still exists)
-  - [ ] Delete chart_element_entity/0 function
+  - [x] Delete chart_element_schema/0 function (already removed)
+  - [x] Delete chart_element_entity/0 function (already removed)
+- **Status**: Functions did not exist, already cleaned up in previous phases
+
+**Summary**: Section 8 successfully removed 522 lines of deprecated code across 18 files. Enhanced chart type implementations now accept both typed structs and plain maps, with proper filtering and Contex compatibility. See `notes/features/section8_delete_deprecated_summary.md` for detailed implementation notes.
 
 ---
 
