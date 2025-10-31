@@ -228,92 +228,109 @@ end
 
 ---
 
-## Section 3: DSL Standalone Chart Entities
+## Section 3: DSL Standalone Chart Entities ✅ COMPLETE
 
-**Duration**: 4-5 hours
+**Duration**: 4-5 hours (Actual: 2 hours)
+**Completed**: 2025-10-31
+**Branch**: `feature/chart-dsl-entities`
+**Summary**: `notes/features/section3-chart-dsl-entities-summary.md`
 
 **Goal**: Add standalone chart entity definitions to the reports DSL section so charts can be defined at the top level.
 
-### Task 3.1: Add chart entities to reports section
+### Task 3.1: Add chart entities to reports section ✅
 - **File**: `lib/ash_reports/dsl.ex`
 - **Location**: `reports_section/0` function
 - **Subtasks**:
-  - [ ] Add bar_chart_entity() to entities list
-  - [ ] Add line_chart_entity() to entities list
-  - [ ] Add pie_chart_entity() to entities list
-  - [ ] Add area_chart_entity() to entities list
-  - [ ] Add scatter_chart_entity() to entities list
-  - [ ] Add gantt_chart_entity() to entities list
-  - [ ] Add sparkline_entity() to entities list
+  - [x] Add bar_chart_entity() to entities list
+  - [x] Add line_chart_entity() to entities list
+  - [x] Add pie_chart_entity() to entities list
+  - [x] Add area_chart_entity() to entities list
+  - [x] Add scatter_chart_entity() to entities list
+  - [x] Add gantt_chart_entity() to entities list
+  - [x] Add sparkline_entity() to entities list
 
-### Task 3.2: Create bar_chart_entity function
+### Task 3.2: Create bar_chart_entity function ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: 095d640
 - **Subtasks**:
-  - [ ] Define Entity struct with name: :bar_chart
-  - [ ] Set target: AshReports.Chart.BarChart
-  - [ ] Set args: [:name]
-  - [ ] Define schema with name and data_source fields
-  - [ ] Add nested entities: config: [bar_chart_config_entity()]
-  - [ ] Add examples in moduledoc
+  - [x] Define Entity struct with name: :bar_chart
+  - [x] Set target: AshReports.Charts.BarChart
+  - [x] Set args: [:name]
+  - [x] Define schema with name and data_source fields
+  - [x] Add nested entities: config: [bar_chart_config_entity()]
+  - [x] Add examples in moduledoc
 
-### Task 3.3: Create bar_chart_config_entity function
+### Task 3.3: Create bar_chart_config_entity function ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: 095d640
 - **Subtasks**:
-  - [ ] Define Entity struct with name: :config
-  - [ ] Set target: AshReports.Charts.BarChartConfig
-  - [ ] Define schema with all BarChartConfig fields
-  - [ ] Add type validation: {:in, [:simple, :grouped, :stacked]}
-  - [ ] Add orientation validation: {:in, [:vertical, :horizontal]}
-  - [ ] Set appropriate defaults
+  - [x] Define Entity struct with name: :config
+  - [x] Set target: AshReports.Charts.BarChartConfig
+  - [x] Define schema with all BarChartConfig fields
+  - [x] Add type validation: {:in, [:simple, :grouped, :stacked]}
+  - [x] Add orientation validation: {:in, [:vertical, :horizontal]}
+  - [x] Set appropriate defaults
 
-### Task 3.4: Create line_chart_entity and config_entity
+### Task 3.4: Create line_chart_entity and config_entity ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: ab0054a
 - **Subtasks**:
-  - [ ] Define line_chart_entity with args and schema
-  - [ ] Define line_chart_config_entity with LineChartConfig fields
-  - [ ] Add smoothed, stroke_width, axis_label_rotation fields
-  - [ ] Set defaults
+  - [x] Define line_chart_entity with args and schema
+  - [x] Define line_chart_config_entity with LineChartConfig fields
+  - [x] Add smoothed, stroke_width, axis_label_rotation fields
+  - [x] Set defaults
 
-### Task 3.5: Create pie_chart_entity and config_entity
+### Task 3.5: Create pie_chart_entity and config_entity ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: d01e181
 - **Subtasks**:
-  - [ ] Define pie_chart_entity
-  - [ ] Define pie_chart_config_entity with PieChartConfig fields
-  - [ ] Set defaults
+  - [x] Define pie_chart_entity
+  - [x] Define pie_chart_config_entity with PieChartConfig fields
+  - [x] Set defaults
 
-### Task 3.6: Create area_chart_entity and config_entity
+### Task 3.6: Create area_chart_entity and config_entity ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: 96a8170
 - **Subtasks**:
-  - [ ] Define area_chart_entity
-  - [ ] Define area_chart_config_entity with AreaChartConfig fields
-  - [ ] Add mode, opacity, smooth_lines fields
-  - [ ] Set defaults
+  - [x] Define area_chart_entity
+  - [x] Define area_chart_config_entity with AreaChartConfig fields
+  - [x] Add mode, opacity, smooth_lines fields
+  - [x] Set defaults
 
-### Task 3.7: Create scatter_chart_entity and config_entity
+### Task 3.7: Create scatter_chart_entity and config_entity ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: 4bf5413
 - **Subtasks**:
-  - [ ] Define scatter_chart_entity
-  - [ ] Define scatter_chart_config_entity with ScatterChartConfig fields
-  - [ ] Set defaults
+  - [x] Define scatter_chart_entity
+  - [x] Define scatter_chart_config_entity with ScatterChartConfig fields
+  - [x] Set defaults
 
-### Task 3.8: Create gantt_chart_entity and config_entity
+### Task 3.8: Create gantt_chart_entity and config_entity ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: 1e35b33
 - **Subtasks**:
-  - [ ] Define gantt_chart_entity
-  - [ ] Define gantt_chart_config_entity with GanttChartConfig fields
-  - [ ] Add show_task_labels, padding fields
-  - [ ] Set defaults
+  - [x] Define gantt_chart_entity
+  - [x] Define gantt_chart_config_entity with GanttChartConfig fields
+  - [x] Add show_task_labels, padding fields
+  - [x] Set defaults
 
-### Task 3.9: Create sparkline_entity and config_entity
+### Task 3.9: Create sparkline_entity and config_entity ✅
 - **File**: `lib/ash_reports/dsl.ex`
+- **Commit**: 77e6a54
 - **Subtasks**:
-  - [ ] Define sparkline_entity
-  - [ ] Define sparkline_config_entity with SparklineConfig fields
-  - [ ] Add spot_radius, colours, line_width fields
-  - [ ] Set compact defaults (100×20)
+  - [x] Define sparkline_entity
+  - [x] Define sparkline_config_entity with SparklineConfig fields
+  - [x] Add spot_radius, colours, line_width fields
+  - [x] Set compact defaults (100×20)
 
----
-
+**Results**:
+- ✅ All 7 chart types have DSL entities (+668 lines)
+- ✅ Clean compilation with --warnings-as-errors
+- ✅ 14 entity functions (7 chart + 7 config)
+- ✅ 14 schema functions (7 chart + 7 config)
+- ✅ Consistent structure and comprehensive documentation
+- ✅ 7 atomic commits with clear messages
+- ✅ 50% faster than estimated (2hrs vs 4-5hrs)
 ## Section 4: Type-Specific Chart Elements in Bands
 
 **Duration**: 3-4 hours
