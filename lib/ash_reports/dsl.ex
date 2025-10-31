@@ -79,7 +79,10 @@ defmodule AshReports.Dsl do
         end
         """
       ],
-      entities: [report_entity()],
+      entities: [
+        report_entity(),
+        bar_chart_entity()
+      ],
       schema: []
     }
   end
@@ -338,6 +341,51 @@ defmodule AshReports.Dsl do
       target: AshReports.Element.Chart,
       args: [:name],
       schema: chart_element_schema()
+    }
+  end
+
+  @doc """
+  Standalone bar chart entity for reports section.
+  """
+  def bar_chart_entity do
+    %Entity{
+      name: :bar_chart,
+      describe: """
+      Defines a standalone bar chart that can be referenced in report bands.
+
+      Bar charts are ideal for comparing values across categories with support
+      for grouped and stacked variations.
+      """,
+      examples: [
+        """
+        bar_chart :sales_by_region do
+          data_source expr(aggregate_sales_by_region())
+          config do
+            width 600
+            height 400
+            title "Sales by Region"
+            type :grouped
+            orientation :vertical
+            data_labels true
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.BarChart,
+      args: [:name],
+      schema: bar_chart_schema(),
+      entities: [
+        config: [bar_chart_config_entity()]
+      ]
+    }
+  end
+
+  defp bar_chart_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for bar chart rendering.",
+      target: AshReports.Charts.BarChartConfig,
+      schema: bar_chart_config_schema()
     }
   end
 
@@ -809,5 +857,64 @@ defmodule AshReports.Dsl do
           doc: "Title text above chart (string or expression)."
         ]
       ]
+  end
+
+  defp bar_chart_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp bar_chart_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 600,
+        doc: "Chart width in pixels."
+      ],
+      height: [
+        type: :integer,
+        default: 400,
+        doc: "Chart height in pixels."
+      ],
+      title: [
+        type: :string,
+        doc: "Chart title text."
+      ],
+      type: [
+        type: {:in, [:simple, :grouped, :stacked]},
+        default: :simple,
+        doc: "Bar chart type: :simple, :grouped, or :stacked."
+      ],
+      orientation: [
+        type: {:in, [:vertical, :horizontal]},
+        default: :vertical,
+        doc: "Bar orientation: :vertical or :horizontal."
+      ],
+      data_labels: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to show data labels on bars."
+      ],
+      padding: [
+        type: :integer,
+        default: 2,
+        doc: "Padding between bars in pixels."
+      ],
+      colours: [
+        type: {:list, :string},
+        default: [],
+        doc: "List of hex color codes (without #) for bars."
+      ]
+    ]
   end
 end
