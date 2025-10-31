@@ -83,7 +83,8 @@ defmodule AshReports.Dsl do
         report_entity(),
         bar_chart_entity(),
         line_chart_entity(),
-        pie_chart_entity()
+        pie_chart_entity(),
+        area_chart_entity()
       ],
       schema: []
     }
@@ -473,6 +474,49 @@ defmodule AshReports.Dsl do
       describe: "Configuration for pie chart rendering.",
       target: AshReports.Charts.PieChartConfig,
       schema: pie_chart_config_schema()
+    }
+  end
+
+  @doc """
+  Standalone area chart entity for reports section.
+  """
+  def area_chart_entity do
+    %Entity{
+      name: :area_chart,
+      describe: """
+      Defines a standalone area chart that can be referenced in report bands.
+
+      Area charts show cumulative totals or volume over time with filled areas.
+      """,
+      examples: [
+        """
+        area_chart :cumulative_sales do
+          data_source expr(get_cumulative_data())
+          config do
+            width 800
+            height 400
+            title "Cumulative Sales"
+            mode :stacked
+            opacity 0.7
+          end
+        end
+        """
+      ],
+      target: AshReports.Charts.AreaChart,
+      args: [:name],
+      schema: area_chart_schema(),
+      entities: [
+        config: [area_chart_config_entity()]
+      ]
+    }
+  end
+
+  defp area_chart_config_entity do
+    %Entity{
+      name: :config,
+      describe: "Configuration for area chart rendering.",
+      target: AshReports.Charts.AreaChartConfig,
+      schema: area_chart_config_schema()
     }
   end
 
@@ -1099,6 +1143,60 @@ defmodule AshReports.Dsl do
         type: {:list, :string},
         default: [],
         doc: "List of hex color codes (without #) for slices."
+      ]
+    ]
+  end
+
+  defp area_chart_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The chart identifier."
+      ],
+      data_source: [
+        type: :any,
+        required: true,
+        doc: "Expression that evaluates to chart data at render time."
+      ]
+    ]
+  end
+
+  defp area_chart_config_schema do
+    [
+      width: [
+        type: :integer,
+        default: 600,
+        doc: "Chart width in pixels."
+      ],
+      height: [
+        type: :integer,
+        default: 400,
+        doc: "Chart height in pixels."
+      ],
+      title: [
+        type: :string,
+        doc: "Chart title text."
+      ],
+      mode: [
+        type: {:in, [:simple, :stacked]},
+        default: :simple,
+        doc: "Area chart mode: :simple or :stacked."
+      ],
+      opacity: [
+        type: :float,
+        default: 0.7,
+        doc: "Fill opacity (0.0 to 1.0)."
+      ],
+      smooth_lines: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to smooth the area boundaries."
+      ],
+      colours: [
+        type: {:list, :string},
+        default: [],
+        doc: "List of hex color codes (without #) for areas."
       ]
     ]
   end
