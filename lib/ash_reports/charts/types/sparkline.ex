@@ -67,11 +67,11 @@ defmodule AshReports.Charts.Types.Sparkline do
 
   @behaviour AshReports.Charts.Types.Behavior
 
-  alias AshReports.Charts.Config
+  alias AshReports.Charts.SparklineConfig
   alias Contex.Sparkline
 
   @impl true
-  def build(data, %Config{} = config) do
+  def build(data, %SparklineConfig{} = config) do
     # Extract numeric values from data
     values = extract_values(data)
 
@@ -119,39 +119,38 @@ defmodule AshReports.Charts.Types.Sparkline do
     end)
   end
 
-  defp apply_size_config(sparkline, %Config{} = config) do
+  defp apply_size_config(sparkline, %SparklineConfig{} = config) do
     sparkline
     |> maybe_set_width(config)
     |> maybe_set_height(config)
   end
 
-  defp maybe_set_width(sparkline, %Config{width: width})
-       when is_number(width) and width != 600 do
-    # Only override if width is explicitly set (not the default 600)
+  defp maybe_set_width(sparkline, %SparklineConfig{width: width})
+       when is_number(width) and width != 100 do
+    # Override if width is explicitly set (SparklineConfig default is 100)
     %{sparkline | width: width}
   end
 
   defp maybe_set_width(sparkline, _config), do: sparkline
 
-  defp maybe_set_height(sparkline, %Config{height: height})
-       when is_number(height) and height != 400 do
-    # Only override if height is explicitly set (not the default 400)
+  defp maybe_set_height(sparkline, %SparklineConfig{height: height})
+       when is_number(height) and height != 20 do
+    # Override if height is explicitly set (SparklineConfig default is 20)
     %{sparkline | height: height}
   end
 
   defp maybe_set_height(sparkline, _config), do: sparkline
 
-  defp apply_color_config(sparkline, %Config{colors: [fill, line | _]}) do
-    # If colors provided, use first for fill and second for line
-    # Contex expects CSS colors (with # prefix for hex)
-    Sparkline.colours(sparkline, ensure_css_color(fill), ensure_css_color(line))
+  defp apply_color_config(sparkline, %SparklineConfig{fill_colour: fill, line_colour: line})
+       when not is_nil(fill) and not is_nil(line) do
+    # Use explicit fill and line colours from config
+    Sparkline.colours(sparkline, fill, line)
   end
 
-  defp apply_color_config(sparkline, %Config{colors: [color]}) do
-    # Single color provided, use for both fill and line with different opacity
-    fill = ensure_css_color(color) <> "33"  # Add alpha for fill
-    line = ensure_css_color(color)
-    Sparkline.colours(sparkline, fill, line)
+  defp apply_color_config(sparkline, %SparklineConfig{line_colour: line})
+       when not is_nil(line) do
+    # Only line colour provided, use default fill
+    Sparkline.colours(sparkline, "rgba(0, 200, 50, 0.2)", line)
   end
 
   defp apply_color_config(sparkline, _config) do
@@ -159,25 +158,10 @@ defmodule AshReports.Charts.Types.Sparkline do
     sparkline
   end
 
-  defp apply_style_config(sparkline, _config) do
-    # Use Contex defaults for style configuration
-    # Future enhancement: add style fields to Config struct
+  defp apply_style_config(sparkline, %SparklineConfig{} = _config) do
+    # Note: Contex Sparkline doesn't expose separate functions for spot_radius,
+    # spot_colour, or line_width. These would need to be set in Sparkline.new/2
+    # options or via SVG post-processing. Current Contex API is limited.
     sparkline
   end
-
-  # Ensure color has # prefix if it's a hex code
-  defp ensure_css_color(color) when is_binary(color) do
-    if String.starts_with?(color, "#") do
-      color
-    else
-      # Check if it looks like a hex code (6 hex digits)
-      if String.match?(color, ~r/^[0-9A-Fa-f]{6}$/) do
-        "#" <> color
-      else
-        color  # Assume it's already a valid CSS color like "red" or "rgba(...)"
-      end
-    end
-  end
-
-  defp ensure_css_color(color), do: color
 end
