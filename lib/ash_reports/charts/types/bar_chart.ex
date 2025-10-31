@@ -51,24 +51,28 @@ defmodule AshReports.Charts.Types.BarChart do
 
   @behaviour AshReports.Charts.Types.Behavior
 
-  alias AshReports.Charts.Config
+  alias AshReports.Charts.BarChartConfig
   alias Contex.{Dataset, BarChart}
 
   @impl true
-  def build(data, %Config{} = config) do
+  def build(data, %BarChartConfig{} = config) do
     # Convert data to Contex Dataset
     dataset = Dataset.new(data)
 
-    # Determine chart type based on data structure
-    chart_type = determine_chart_type(data)
+    # Determine chart type from config or data structure
+    chart_type = config.type || determine_chart_type(data)
 
     # Get colors for the chart
     colors = get_colors(config)
 
+    # Build Contex options map
+    contex_opts = build_contex_options(config)
+
     # Build bar chart based on type
     case chart_type do
-      :simple -> build_simple_chart(dataset, data, colors)
-      :grouped -> build_grouped_chart(dataset, data, colors)
+      :simple -> build_simple_chart(dataset, data, colors, contex_opts)
+      :grouped -> build_grouped_chart(dataset, data, colors, contex_opts)
+      :stacked -> build_stacked_chart(dataset, data, colors, contex_opts)
     end
   end
 
@@ -104,20 +108,41 @@ defmodule AshReports.Charts.Types.BarChart do
     if has_series?, do: :grouped, else: :simple
   end
 
-  defp build_simple_chart(dataset, data, colors) do
+  defp build_contex_options(config) do
+    %{}
+    |> maybe_add_option(:orientation, config.orientation, :vertical)
+    |> maybe_add_option(:padding, config.padding, 2)
+    |> maybe_add_option(:data_labels, config.data_labels, true)
+  end
+
+  defp maybe_add_option(opts, _key, nil, _default), do: opts
+
+  defp maybe_add_option(opts, key, value, default) when value != default do
+    Map.put(opts, key, value)
+  end
+
+  defp maybe_add_option(opts, _key, _value, _default), do: opts
+
+  defp build_simple_chart(dataset, data, colors, contex_opts) do
     # Get column names from first data point
     first = List.first(data)
 
     cat_col = if Map.has_key?(first, :category), do: :category, else: "category"
     val_col = if Map.has_key?(first, :value), do: :value, else: "value"
 
-    BarChart.new(dataset,
-      mapping: %{category_col: cat_col, value_cols: [val_col]},
-      colour_palette: colors
-    )
+    opts =
+      Map.merge(
+        %{
+          mapping: %{category_col: cat_col, value_cols: [val_col]},
+          colour_palette: colors
+        },
+        contex_opts
+      )
+
+    BarChart.new(dataset, opts)
   end
 
-  defp build_grouped_chart(dataset, data, colors) do
+  defp build_grouped_chart(dataset, data, colors, contex_opts) do
     # For grouped charts, we need category, series, and value columns
     first = List.first(data)
 
@@ -132,31 +157,58 @@ defmodule AshReports.Charts.Types.BarChart do
       |> Enum.reject(&is_nil/1)
 
     # If we have series, set them as value columns (grouped)
-    if length(series_names) > 0 do
-      # This is a simplified approach - Contex may require data reshaping
-      BarChart.new(dataset,
-        mapping: %{category_col: cat_col, value_cols: [val_col]},
-        type: :grouped,
-        colour_palette: colors
-      )
-    else
-      BarChart.new(dataset,
-        mapping: %{category_col: cat_col, value_cols: [val_col]},
-        colour_palette: colors
-      )
-    end
+    opts =
+      if length(series_names) > 0 do
+        Map.merge(
+          %{
+            mapping: %{category_col: cat_col, value_cols: [val_col]},
+            type: :grouped,
+            colour_palette: colors
+          },
+          contex_opts
+        )
+      else
+        Map.merge(
+          %{
+            mapping: %{category_col: cat_col, value_cols: [val_col]},
+            colour_palette: colors
+          },
+          contex_opts
+        )
+      end
+
+    BarChart.new(dataset, opts)
   end
 
-  defp get_colors(%Config{colors: colors}) when is_list(colors) and length(colors) > 0 do
+  defp build_stacked_chart(dataset, data, colors, contex_opts) do
+    # For stacked charts, similar to grouped but with type: :stacked
+    first = List.first(data)
+
+    cat_col = if Map.has_key?(first, :category), do: :category, else: "category"
+    val_col = if Map.has_key?(first, :value), do: :value, else: "value"
+
+    opts =
+      Map.merge(
+        %{
+          mapping: %{category_col: cat_col, value_cols: [val_col]},
+          type: :stacked,
+          colour_palette: colors
+        },
+        contex_opts
+      )
+
+    BarChart.new(dataset, opts)
+  end
+
+  defp get_colors(%BarChartConfig{colours: colours}) when is_list(colours) and length(colours) > 0 do
     # Contex expects hex colors without the # prefix
-    Enum.map(colors, fn color ->
+    Enum.map(colours, fn color ->
       String.trim_leading(color, "#")
     end)
   end
 
   defp get_colors(_config) do
-    # Use default colors, strip # prefix
-    Config.default_colors()
-    |> Enum.map(fn color -> String.trim_leading(color, "#") end)
+    # Use default Contex colors
+    :default
   end
 end
