@@ -341,17 +341,35 @@ image :company_logo do
 end
 ```
 
-#### Charts (Basic)
+#### Charts
+
+Charts are defined at the reports level and referenced in bands:
+
 ```elixir
-chart :sales_chart do
-  chart_type(:bar)
-  data_source(:sales_data)  # Expression that returns chart data
-  title("Sales by Month")
-  position(x: 0, y: 0, width: 100, height: 40)
+# At reports level - define chart
+bar_chart :sales_chart do
+  data_source expr(monthly_sales_data())
+
+  config do
+    width 800
+    height 400
+    title "Sales by Month"
+    type :simple
+    colours ["4285F4", "34A853"]
+  end
+end
+
+# In band - reference chart
+band :analytics do
+  type :detail
+
+  elements do
+    bar_chart :sales_chart
+  end
 end
 ```
 
-> **Note**: Currently supports basic chart types (:bar, :line, :pie, :area, :scatter) via Contex. Full chart engine with multiple providers planned - see [ROADMAP.md Phase 2](../../ROADMAP.md#phase-2-enhanced-chart-engine).
+> **Supported Chart Types**: Bar, Line, Pie, Area, Scatter, Gantt, and Sparkline charts via Contex. See [Graphs and Visualizations](graphs-and-visualizations.md) for complete documentation.
 
 ## Output Formats
 

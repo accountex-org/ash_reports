@@ -1,202 +1,479 @@
 # Graphs and Visualizations
 
-This guide covers adding charts and visualizations to AshReports using the basic chart element integration.
-
-> **Important**: This guide reflects the current basic chart implementation. For the planned full-featured chart engine with multiple providers, interactive features, and auto-selection, see [ROADMAP.md Phase 2](../../ROADMAP.md#phase-2-enhanced-chart-engine).
+This guide covers adding charts and visualizations to AshReports using the declarative chart DSL.
 
 ## Table of Contents
 
-- [Current Chart Capabilities](#current-chart-capabilities)
-- [Basic Chart Element](#basic-chart-element)
-- [Supported Chart Types](#supported-chart-types)
-- [Chart Data Format](#chart-data-format)
-- [Chart Positioning and Sizing](#chart-positioning-and-sizing)
+- [Chart Architecture](#chart-architecture)
+- [Defining Charts](#defining-charts)
+- [Using Charts in Bands](#using-charts-in-bands)
+- [Chart Types](#chart-types)
+  - [Bar Charts](#bar-charts)
+  - [Line Charts](#line-charts)
+  - [Pie Charts](#pie-charts)
+  - [Area Charts](#area-charts)
+  - [Scatter Plots](#scatter-plots)
+  - [Sparklines](#sparklines)
+  - [Gantt Charts](#gantt-charts)
+- [Chart Configuration](#chart-configuration)
+- [Data Sources](#data-sources)
 - [Complete Examples](#complete-examples)
-- [Limitations and Planned Features](#limitations-and-planned-features)
 
-## Current Chart Capabilities
+## Chart Architecture
 
-AshReports currently provides basic chart integration through the `chart` element type with support for:
+AshReports uses a **two-level architecture** for charts:
 
-- **Chart Types**: Bar, Line, Pie, Area, Scatter, Sparkline, Gantt
-- **Data Source**: Expression-based data sourcing
-- **Output**: SVG generation via Contex library
-- **Configuration**: Basic config via map or expression
-- **Styling**: Width, height, and caption options
+1. **Chart Definitions** - Defined at the `reports` level, specifying data and configuration
+2. **Chart Elements** - Referenced in report bands, specifying where to place the chart
 
-### What's NOT Currently Available
+This separation allows charts to be:
+- **Reusable** across multiple bands and reports
+- **Testable** independently of layout
+- **Maintainable** with centralized configuration
 
-The following features are planned for future releases (see ROADMAP.md):
-
-- ❌ Interactive charts with zoom/pan (client-side interactivity)
-- ❌ Real-time chart updates via WebSocket
-- ❌ Auto chart selection based on data
-- ❌ Advanced theming and styling
-- ❌ Chart data accumulation and aggregation
-- ❌ Drill-down navigation
-
-## Basic Chart Element
-
-Charts are added as elements within bands using the `chart` element:
+### Basic Structure
 
 ```elixir
-band :analytics do
-  type :detail
+defmodule MyApp.Reports do
+  use Ash.Domain,
+    extensions: [AshReports.Domain]
 
-  chart :monthly_sales_chart do
-    chart_type :bar
-    data_source :sales_data  # Expression that returns chart data
-    title "Monthly Sales"
-    position(x: 0, y: 0, width: 100, height: 40)
+  reports do
+    # Level 1: Chart Definitions (reusable)
+    bar_chart :sales_by_region do
+      data_source expr(aggregate_sales_by_region())
+      config do
+        width 800
+        height 400
+        title "Sales by Region"
+      end
+    end
+
+    # Report using the chart
+    report :monthly_report do
+      bands do
+        band :summary do
+          type :detail
+
+          elements do
+            # Level 2: Chart Element (references definition)
+            bar_chart :sales_by_region
+          end
+        end
+      end
+    end
   end
 end
 ```
 
-### Chart Element Schema
+## Defining Charts
 
-The chart element supports the following options:
+Charts are defined at the `reports` level using type-specific entities. Each chart type has its own DSL function and configuration options.
+
+### Chart Definition Syntax
 
 ```elixir
-chart :chart_name do
-  # Required
-  chart_type :bar  # :bar, :line, :pie, :area, :scatter, :sparkline, :gantt
-  data_source :expression  # Expression returning chart data
+<chart_type> :chart_name do
+  data_source expr(...)  # Expression that evaluates to chart data
 
-  # Optional
-  title "Chart Title"  # String or expression
-  caption "Chart Caption"  # String or expression
-  config %{}  # Map or expression returning config
-  embed_options %{width: 800, height: 400}
-
-  # Standard element properties
-  position(x: 0, y: 0, width: 100, height: 50)
-  style(...)
-  conditional expr(...)
+  config do
+    # Type-specific configuration options
+    width 600
+    height 400
+    title "Chart Title"
+    # ... more options
+  end
 end
 ```
 
-## Supported Chart Types
+### Available Chart Types
+
+| Chart Type | DSL Function | Use Case |
+|------------|--------------|----------|
+| Bar Chart | `bar_chart` | Comparing values across categories |
+| Line Chart | `line_chart` | Showing trends over time |
+| Pie Chart | `pie_chart` | Displaying proportions and percentages |
+| Area Chart | `area_chart` | Visualizing cumulative values over time |
+| Scatter Plot | `scatter_chart` | Showing correlation between variables |
+| Sparkline | `sparkline` | Inline micro-charts for trends |
+| Gantt Chart | `gantt_chart` | Project timelines and task scheduling |
+
+## Using Charts in Bands
+
+Once defined, charts are referenced in report bands using the same type-specific function:
+
+```elixir
+report :sales_report do
+  bands do
+    band :analytics do
+      type :detail
+
+      elements do
+        # Reference the chart by name
+        bar_chart :sales_by_region
+
+        # Can reference multiple charts
+        line_chart :trend_analysis
+        pie_chart :market_share
+      end
+    end
+  end
+end
+```
+
+The chart element uses the definition's configuration but can be placed anywhere in the band hierarchy.
+
+## Chart Types
 
 ### Bar Charts
 
-Best for comparing values across categories:
+Best for comparing values across categories with support for simple, grouped, and stacked variations.
+
+**Definition:**
 
 ```elixir
-chart :revenue_by_region do
-  chart_type :bar
-  data_source :regional_revenue_data
-  title "Revenue by Region"
-  position(x: 0, y: 0, width: 100, height: 40)
+bar_chart :revenue_by_region do
+  data_source expr(aggregate_revenue_by_region())
+
+  config do
+    width 800
+    height 500
+    title "Revenue by Region"
+    type :simple          # :simple, :grouped, or :stacked
+    orientation :vertical # :vertical or :horizontal
+    data_labels true
+    padding 2
+    colours ["4285F4", "EA4335", "FBBC04", "34A853"]
+  end
 end
 ```
 
-**Data format:**
+**Configuration Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `width` | integer | 600 | Chart width in pixels |
+| `height` | integer | 400 | Chart height in pixels |
+| `title` | string | nil | Chart title |
+| `type` | atom | :simple | Bar type: `:simple`, `:grouped`, `:stacked` |
+| `orientation` | atom | :vertical | Bar orientation: `:vertical`, `:horizontal` |
+| `data_labels` | boolean | true | Show values on bars |
+| `padding` | integer | 2 | Padding between bars in pixels |
+| `colours` | list | [] | Hex colors without # prefix |
+
+**Data Format:**
+
 ```elixir
+# Simple bar chart
 [
   %{category: "North", value: 15000},
   %{category: "South", value: 12000},
   %{category: "East", value: 18000},
   %{category: "West", value: 14000}
 ]
+
+# Grouped bar chart (multiple series)
+[
+  %{category: "Q1", series: "2023", value: 100},
+  %{category: "Q1", series: "2024", value: 120},
+  %{category: "Q2", series: "2023", value: 110},
+  %{category: "Q2", series: "2024", value: 135}
+]
+```
+
+**Usage in Band:**
+
+```elixir
+band :regional_summary do
+  type :detail
+
+  elements do
+    bar_chart :revenue_by_region
+  end
+end
 ```
 
 ### Line Charts
 
-Best for showing trends over time:
+Best for showing trends and changes over time with support for single and multi-series data.
+
+**Definition:**
 
 ```elixir
-chart :sales_trend do
-  chart_type :line
-  data_source :monthly_sales_data
-  title "Sales Trend (12 Months)"
-  position(x: 0, y: 0, width: 100, height: 40)
+line_chart :sales_trend do
+  data_source expr(monthly_sales_data())
+
+  config do
+    width 900
+    height 400
+    title "Sales Trend (12 Months)"
+    smoothed true
+    stroke_width "2"
+    colours ["4285F4", "34A853"]
+  end
 end
 ```
 
-**Data format:**
+**Configuration Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `width` | integer | 600 | Chart width in pixels |
+| `height` | integer | 400 | Chart height in pixels |
+| `title` | string | nil | Chart title |
+| `smoothed` | boolean | true | Use smooth curves |
+| `stroke_width` | string | "2" | Line thickness |
+| `colours` | list | [] | Hex colors without # prefix |
+| `axis_label_rotation` | atom | :auto | Label rotation: `:auto`, `45`, `90` |
+
+**Data Format:**
+
 ```elixir
+# Single series
 [
   %{x: "Jan", y: 1200},
   %{x: "Feb", y: 1350},
   %{x: "Mar", y: 1100},
   %{x: "Apr", y: 1500}
 ]
+
+# Multi-series
+[
+  %{x: 1, series: "Product A", y: 10},
+  %{x: 1, series: "Product B", y: 15},
+  %{x: 2, series: "Product A", y: 12},
+  %{x: 2, series: "Product B", y: 18}
+]
+```
+
+**Usage in Band:**
+
+```elixir
+band :trend_analysis do
+  type :detail
+
+  elements do
+    line_chart :sales_trend
+  end
+end
 ```
 
 ### Pie Charts
 
-Best for showing proportions and percentages:
+Best for showing proportions and percentages of a whole.
+
+**Definition:**
 
 ```elixir
-chart :market_share do
-  chart_type :pie
-  data_source :market_share_data
-  title "Market Share by Product"
-  position(x: 0, y: 0, width: 50, height: 40)
+pie_chart :market_share do
+  data_source expr(product_market_share())
+
+  config do
+    width 600
+    height 500
+    title "Market Share by Product"
+    show_percentages true
+    donut_width nil  # Set to integer for donut chart (e.g., 20)
+    colours ["FF6384", "36A2EB", "FFCE56", "4BC0C0"]
+  end
 end
 ```
 
-**Data format:**
+**Configuration Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `width` | integer | 600 | Chart width in pixels |
+| `height` | integer | 400 | Chart height in pixels |
+| `title` | string | nil | Chart title |
+| `show_percentages` | boolean | true | Display percentage labels |
+| `donut_width` | integer | nil | Width for donut chart (nil for pie) |
+| `colours` | list | [] | Hex colors without # prefix |
+
+**Data Format:**
+
 ```elixir
 [
-  %{label: "Product A", value: 35},
-  %{label: "Product B", value: 25},
-  %{label: "Product C", value: 20},
-  %{label: "Product D", value: 20}
+  %{category: "Product A", value: 35},
+  %{category: "Product B", value: 25},
+  %{category: "Product C", value: 20},
+  %{category: "Product D", value: 20}
 ]
+
+# Alternative with label field
+[
+  %{label: "Segment A", value: 45},
+  %{label: "Segment B", value: 30},
+  %{label: "Segment C", value: 25}
+]
+```
+
+**Usage in Band:**
+
+```elixir
+band :market_analysis do
+  type :detail
+
+  elements do
+    pie_chart :market_share
+  end
+end
 ```
 
 ### Area Charts
 
-Similar to line charts but with filled areas:
+Best for visualizing cumulative values and trends over time with filled areas.
+
+**Definition:**
 
 ```elixir
-chart :cumulative_revenue do
-  chart_type :area
-  data_source :cumulative_data
-  title "Cumulative Revenue"
-  position(x: 0, y: 0, width: 100, height: 40)
+area_chart :cumulative_revenue do
+  data_source expr(revenue_over_time())
+
+  config do
+    width 800
+    height 400
+    title "Cumulative Revenue"
+    mode :simple      # :simple or :stacked
+    opacity 0.7       # Fill opacity (0.0 to 1.0)
+    smooth_lines true
+    colours ["4285F4", "34A853"]
+  end
 end
 ```
 
-**Data format:** Same as line charts
+**Configuration Options:**
 
-### Scatter Charts
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `width` | integer | 600 | Chart width in pixels |
+| `height` | integer | 400 | Chart height in pixels |
+| `title` | string | nil | Chart title |
+| `mode` | atom | :simple | `:simple` or `:stacked` |
+| `opacity` | float | 0.7 | Fill opacity (0.0 to 1.0) |
+| `smooth_lines` | boolean | true | Use smooth curves |
+| `colours` | list | [] | Hex colors without # prefix |
 
-Best for showing correlations between two variables:
+**Data Format:**
 
 ```elixir
-chart :price_vs_sales do
-  chart_type :scatter
-  data_source :correlation_data
-  title "Price vs Sales Volume"
-  position(x: 0, y: 0, width: 100, height: 40)
-end
-```
-
-**Data format:**
-```elixir
+# Simple area
 [
-  %{x: 10.5, y: 250},
-  %{x: 15.0, y: 180},
-  %{x: 20.0, y: 120},
-  %{x: 25.5, y: 90}
+  %{x: 1, y: 10},
+  %{x: 2, y: 15},
+  %{x: 3, y: 12}
+]
+
+# Stacked areas (multiple series)
+[
+  %{x: 1, series: "Product A", y: 10},
+  %{x: 1, series: "Product B", y: 5},
+  %{x: 2, series: "Product A", y: 15},
+  %{x: 2, series: "Product B", y: 8}
 ]
 ```
 
-### Sparkline Charts
-
-**NEW** - Ultra-compact inline charts perfect for dashboards and tables:
+**Usage in Band:**
 
 ```elixir
-chart :trend_sparkline do
-  chart_type :sparkline
-  data_source :daily_metrics
-  position(x: 0, y: 0, width: 20, height: 5)
+band :revenue_trends do
+  type :detail
+
+  elements do
+    area_chart :cumulative_revenue
+  end
 end
 ```
 
-**Data format:**
+### Scatter Plots
+
+Best for showing correlation and distribution between two variables.
+
+**Definition:**
+
+```elixir
+scatter_chart :price_vs_sales do
+  data_source expr(price_sales_correlation())
+
+  config do
+    width 700
+    height 500
+    title "Price vs Sales Correlation"
+    point_size 5
+    colours ["FF6D01"]
+  end
+end
+```
+
+**Configuration Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `width` | integer | 600 | Chart width in pixels |
+| `height` | integer | 400 | Chart height in pixels |
+| `title` | string | nil | Chart title |
+| `point_size` | integer | 5 | Size of scatter points |
+| `colours` | list | [] | Hex colors without # prefix |
+
+**Data Format:**
+
+```elixir
+[
+  %{x: 10.5, y: 20.3},
+  %{x: 15.2, y: 35.7},
+  %{x: 20.1, y: 25.4},
+  %{x: 25.8, y: 45.2}
+]
+```
+
+**Usage in Band:**
+
+```elixir
+band :correlation_analysis do
+  type :detail
+
+  elements do
+    scatter_chart :price_vs_sales
+  end
+end
+```
+
+### Sparklines
+
+Compact inline charts (default 100×20px) perfect for dashboards and table cells.
+
+**Definition:**
+
+```elixir
+sparkline :daily_trend do
+  data_source expr(last_30_days_data())
+
+  config do
+    width 100
+    height 20
+    line_colour "rgba(0, 200, 50, 0.7)"
+    fill_colour "rgba(0, 200, 50, 0.2)"
+    spot_radius 2
+    spot_colour "red"
+    line_width 1
+  end
+end
+```
+
+**Configuration Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `width` | integer | 100 | Chart width in pixels |
+| `height` | integer | 20 | Chart height in pixels |
+| `line_colour` | string | "rgba(0,200,50,0.7)" | CSS color for line |
+| `fill_colour` | string | "rgba(0,200,50,0.2)" | CSS color for fill |
+| `spot_radius` | integer | 2 | Radius of highlight spots |
+| `spot_colour` | string | "red" | CSS color for spots |
+| `line_width` | integer | 1 | Width of the line |
+
+**Data Format:**
+
 ```elixir
 # Simple array of numbers
 [1, 5, 10, 15, 12, 12, 15, 14, 20, 14, 10, 15, 15]
@@ -209,29 +486,69 @@ end
 ]
 ```
 
-**Use Cases:**
-- Dashboard metric trends
-- Inline table cell charts
-- Mobile-optimized visualizations
-- Quick trend indicators
-- Compact time-series displays
+**Usage in Band:**
 
-**Default Size:** 100px wide × 20px high (customizable via config)
-
-### Gantt Charts
-
-**NEW** - Project timeline visualization with task scheduling:
+Sparklines are perfect for inline display within other elements:
 
 ```elixir
-chart :project_timeline do
-  chart_type :gantt
-  data_source :project_tasks
-  title "Sprint Planning"
-  position(x: 0, y: 0, width: 100, height: 50)
+band :metrics do
+  type :detail
+
+  elements do
+    field :metric_name do
+      source :name
+    end
+
+    sparkline :daily_trend
+
+    field :current_value do
+      source :value
+    end
+  end
 end
 ```
 
-**Data format:**
+**Use Cases:**
+- Dashboard metric trends
+- Table cell visualizations
+- Mobile-optimized displays
+- Quick trend indicators
+- Space-constrained layouts
+
+### Gantt Charts
+
+Project timeline visualization with task scheduling and dependencies.
+
+**Definition:**
+
+```elixir
+gantt_chart :project_timeline do
+  data_source expr(sprint_tasks())
+
+  config do
+    width 1000
+    height 600
+    title "Sprint Planning Q1 2024"
+    padding 2
+    show_task_labels true
+    colours ["4285F4", "EA4335", "FBBC04", "34A853"]
+  end
+end
+```
+
+**Configuration Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `width` | integer | 600 | Chart width in pixels |
+| `height` | integer | 400 | Chart height in pixels |
+| `title` | string | nil | Chart title |
+| `padding` | integer | 2 | Padding between task bars |
+| `show_task_labels` | boolean | true | Display task labels |
+| `colours` | list | [] | Hex colors for categories |
+
+**Data Format:**
+
 ```elixir
 [
   %{
@@ -246,460 +563,519 @@ end
     task: "Development",
     start_time: ~N[2024-01-10 00:00:00],
     end_time: ~N[2024-02-01 00:00:00]
+  },
+  %{
+    category: "Phase 2",
+    task: "Testing",
+    start_time: ~N[2024-01-25 00:00:00],
+    end_time: ~N[2024-02-10 00:00:00]
   }
 ]
 ```
 
-**Requirements:**
+**⚠️ Important DateTime Requirements:**
+
 - `start_time` and `end_time` **MUST** be `NaiveDateTime` or `DateTime` types
 - String dates will **NOT** be automatically converted
-- Use `NaiveDateTime.new!/2` or similar to create proper DateTime values
+- Use `NaiveDateTime.new!/2` or `DateTime.from_naive!/2` to create proper values
+
+**Usage in Band:**
+
+```elixir
+band :project_planning do
+  type :detail
+
+  elements do
+    gantt_chart :project_timeline
+  end
+end
+```
 
 **Use Cases:**
 - Project timeline visualization
 - Sprint planning and tracking
-- Resource allocation planning
+- Resource allocation
 - Task dependency visualization
 - Milestone tracking
 
-## Chart Data Format
+## Chart Configuration
 
-### Data Source Expressions
+### Config Block Structure
 
-The `data_source` must be an expression that evaluates to chart data. This is typically:
-
-1. A reference to a variable or aggregate
-2. A reference to processed data in the render context
-3. A field that contains pre-formatted chart data
-
-> **Note**: Full expression evaluation and data processing for charts is under development. Currently, data should be prepared in the expected format before rendering.
-
-### Example Data Structures
+All chart configurations use a `config do ... end` block with type-specific options:
 
 ```elixir
-# Simple bar/line chart data
-[
-  %{x: "Category 1", y: 100},
-  %{x: "Category 2", y: 150},
-  %{x: "Category 3", y: 75}
-]
+bar_chart :my_chart do
+  data_source expr(...)
 
-# Pie chart data
-[
-  %{label: "Segment A", value: 45},
-  %{label: "Segment B", value: 30},
-  %{label: "Segment C", value: 25}
-]
+  config do
+    # Common options (available on all chart types)
+    width 800
+    height 400
+    title "Chart Title"
 
-# Scatter plot data
-[
-  %{x: 10, y: 20},
-  %{x: 15, y: 35},
-  %{x: 20, y: 25}
-]
-
-# Multi-series data (if supported by chart type)
-[
-  %{series: "2023", x: "Q1", y: 100},
-  %{series: "2023", x: "Q2", y: 120},
-  %{series: "2024", x: "Q1", y: 110},
-  %{series: "2024", x: "Q2", y: 140}
-]
-```
-
-## Chart Positioning and Sizing
-
-Charts use the same positioning system as other elements:
-
-```elixir
-chart :sales_chart do
-  chart_type :bar
-  data_source :sales_data
-
-  # Position within band
-  position(
-    x: 0,      # Horizontal position
-    y: 0,      # Vertical position
-    width: 100, # Width in units
-    height: 40  # Height in units
-  )
-
-  # Embed options for SVG generation
-  embed_options %{
-    width: 800,   # SVG width in pixels
-    height: 400   # SVG height in pixels
-  }
+    # Type-specific options
+    type :grouped        # Bar chart only
+    orientation :vertical # Bar chart only
+    smoothed true        # Line/Area charts only
+  end
 end
 ```
 
-### Responsive Sizing
+### Common Configuration Options
 
-For responsive charts in HTML output:
+These options are available on all chart types:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `width` | integer | 600 | Chart width in pixels |
+| `height` | integer | 400 | Chart height in pixels |
+| `title` | string | nil | Chart title |
+| `colours` | list | [] | Color palette (hex without #) |
+
+### Color Specification
+
+Colors are specified as hex codes **without** the `#` prefix:
 
 ```elixir
-chart :responsive_chart do
-  chart_type :line
-  data_source :trend_data
-  position(x: 0, y: 0, width: 100, height: 40)
+config do
+  # Correct
+  colours ["4285F4", "EA4335", "FBBC04", "34A853"]
 
-  embed_options %{
-    width: 1200,
-    height: 600
-  }
-
-  style(max_width: "100%", height: "auto")
+  # Incorrect - don't include #
+  colours ["#4285F4", "#EA4335"]  # Will be stripped automatically
 end
 ```
+
+### Default Color Palette
+
+If `colours` is not specified, the default palette is used:
+
+```elixir
+["4285F4", "EA4335", "FBBC04", "34A853", "FF6D01", "46BDC6"]
+```
+
+## Data Sources
+
+The `data_source` field specifies how to obtain chart data at render time.
+
+### Expression-Based Data Sources
+
+Use `expr()` to define expressions that evaluate to chart data:
+
+```elixir
+bar_chart :sales_by_region do
+  # Expression referencing an aggregation
+  data_source expr(aggregate_sales_by_region())
+
+  config do
+    title "Regional Sales"
+  end
+end
+```
+
+### Data Source Types
+
+1. **Aggregation References** - Reference computed aggregations
+   ```elixir
+   data_source expr(my_aggregation())
+   ```
+
+2. **Field References** - Reference report data fields
+   ```elixir
+   data_source expr(chart_data_field)
+   ```
+
+3. **Variable References** - Reference report variables
+   ```elixir
+   data_source expr(monthly_totals_var)
+   ```
+
+4. **Records Reference** - Access all report records
+   ```elixir
+   data_source expr(records)
+   ```
+
+### Data Preparation
+
+Chart data must be in the format expected by the chart type (see each chart type's "Data Format" section above).
+
+Data can be prepared:
+- In the driving resource query
+- Via Ash aggregations
+- Through report variables
+- Using custom expressions
 
 ## Complete Examples
 
-### Sales Report with Bar Chart
+### Example 1: Sales Report with Multiple Charts
 
 ```elixir
-report :monthly_sales_with_chart do
-  title "Monthly Sales Report"
-  driving_resource MyApp.Sale
+defmodule MyApp.Reports.SalesAnalytics do
+  use Ash.Domain,
+    extensions: [AshReports.Domain]
 
-  parameter :year, :integer do
-    required true
-    default Date.utc_today().year
-  end
+  reports do
+    # Define reusable charts
+    bar_chart :sales_by_region do
+      data_source expr(regional_sales_data())
 
-  # Report title
-  band :title do
-    type :title
-
-    label :report_title do
-      text "Monthly Sales Analysis"
-      style(font_size: 24, font_weight: :bold)
-    end
-  end
-
-  # Chart band
-  band :chart_section do
-    type :detail
-
-    label :chart_title do
-      text "Visual Overview"
-      style(font_size: 18, font_weight: :bold)
+      config do
+        width 800
+        height 500
+        title "Sales by Region"
+        type :grouped
+        data_labels true
+        colours ["4285F4", "34A853", "FBBC04", "EA4335"]
+      end
     end
 
-    chart :monthly_sales_chart do
-      chart_type :bar
-      data_source :monthly_aggregates  # Pre-processed data
-      title "Sales by Month"
-      caption "All amounts in USD"
+    line_chart :monthly_trend do
+      data_source expr(monthly_sales_trend())
 
-      position(x: 0, y: 5, width: 100, height: 40)
-
-      embed_options %{
-        width: 1000,
-        height: 500
-      }
-    end
-  end
-
-  # Detail data table
-  band :details do
-    type :detail
-
-    field :month do
-      source :month_name
+      config do
+        width 900
+        height 400
+        title "12-Month Sales Trend"
+        smoothed true
+        stroke_width "3"
+        colours ["4285F4"]
+      end
     end
 
-    field :total_sales do
-      source :total
-      format :currency
+    pie_chart :product_distribution do
+      data_source expr(product_sales_distribution())
+
+      config do
+        width 600
+        height 500
+        title "Sales Distribution by Product"
+        show_percentages true
+        colours ["FF6384", "36A2EB", "FFCE56", "4BC0C0", "9966FF"]
+      end
     end
 
-    field :transaction_count do
-      source :count
-      format :number
+    # Report using the charts
+    report :quarterly_sales do
+      title "Quarterly Sales Analytics"
+      description "Comprehensive sales analysis"
+      driving_resource MyApp.Sales.Order
+
+      parameter :quarter, :integer, required: true
+      parameter :year, :integer, required: true
+
+      bands do
+        band :report_header do
+          type :title
+
+          elements do
+            label :title do
+              text "Quarterly Sales Report"
+              style font_size: 24, font_weight: :bold
+            end
+          end
+        end
+
+        band :regional_analysis do
+          type :detail
+
+          elements do
+            label :section_title do
+              text "Regional Performance"
+              style font_size: 18, font_weight: :bold
+            end
+
+            bar_chart :sales_by_region
+          end
+        end
+
+        band :trend_analysis do
+          type :detail
+
+          elements do
+            label :section_title do
+              text "Monthly Trends"
+              style font_size: 18, font_weight: :bold
+            end
+
+            line_chart :monthly_trend
+          end
+        end
+
+        band :product_analysis do
+          type :detail
+
+          elements do
+            label :section_title do
+              text "Product Distribution"
+              style font_size: 18, font_weight: :bold
+            end
+
+            pie_chart :product_distribution
+          end
+        end
+      end
     end
   end
 end
 ```
 
-### Multi-Chart Dashboard Report
+### Example 2: Dashboard with Sparklines
 
 ```elixir
-report :executive_dashboard do
-  title "Executive Dashboard"
-  driving_resource MyApp.Sale
+defmodule MyApp.Reports.Dashboard do
+  use Ash.Domain,
+    extensions: [AshReports.Domain]
 
-  parameter :start_date, :date
-  parameter :end_date, :date
+  reports do
+    # Define compact sparklines for each metric
+    sparkline :revenue_trend do
+      data_source expr(last_7_days_revenue())
 
-  # Title
-  band :title do
-    type :title
-
-    label :dashboard_title do
-      text "Executive Dashboard"
-      style(font_size: 28, font_weight: :bold)
-    end
-  end
-
-  # Top metrics charts
-  band :top_charts do
-    type :detail
-
-    # Revenue trend line chart
-    chart :revenue_trend do
-      chart_type :line
-      data_source :revenue_by_day
-      title "Revenue Trend"
-      position(x: 0, y: 0, width: 60, height: 30)
-      embed_options %{width: 600, height: 300}
+      config do
+        width 120
+        height 30
+        line_colour "rgba(34, 168, 83, 0.8)"
+        fill_colour "rgba(34, 168, 83, 0.2)"
+      end
     end
 
-    # Market share pie chart
-    chart :market_share do
-      chart_type :pie
-      data_source :product_shares
-      title "Market Share"
-      position(x: 65, y: 0, width: 35, height: 30)
-      embed_options %{width: 350, height: 300}
-    end
-  end
+    sparkline :orders_trend do
+      data_source expr(last_7_days_orders())
 
-  # Bottom metrics charts
-  band :bottom_charts do
-    type :detail
-
-    # Customer growth area chart
-    chart :customer_growth do
-      chart_type :area
-      data_source :customer_counts
-      title "Customer Growth"
-      position(x: 0, y: 0, width: 48, height: 30)
-      embed_options %{width: 480, height: 300}
+      config do
+        width 120
+        height 30
+        line_colour "rgba(66, 133, 244, 0.8)"
+        fill_colour "rgba(66, 133, 244, 0.2)"
+      end
     end
 
-    # Product performance bar chart
-    chart :product_performance do
-      chart_type :bar
-      data_source :product_sales
-      title "Product Performance"
-      position(x: 52, y: 0, width: 48, height: 30)
-      embed_options %{width: 480, height: 300}
+    sparkline :customers_trend do
+      data_source expr(last_7_days_customers())
+
+      config do
+        width 120
+        height 30
+        line_colour "rgba(251, 188, 4, 0.8)"
+        fill_colour "rgba(251, 188, 4, 0.2)"
+      end
+    end
+
+    report :executive_dashboard do
+      title "Executive Dashboard"
+      driving_resource MyApp.Sales.Metric
+
+      bands do
+        band :metrics do
+          type :detail
+
+          elements do
+            # Revenue Metric
+            label :revenue_label do
+              text "Revenue (7d)"
+              style font_weight: :bold
+            end
+
+            sparkline :revenue_trend
+
+            field :revenue_current do
+              source :current_revenue
+              format :currency
+              style font_size: 18
+            end
+
+            # Orders Metric
+            label :orders_label do
+              text "Orders (7d)"
+              style font_weight: :bold
+            end
+
+            sparkline :orders_trend
+
+            field :orders_current do
+              source :current_orders
+              format :number
+              style font_size: 18
+            end
+
+            # Customers Metric
+            label :customers_label do
+              text "New Customers (7d)"
+              style font_weight: :bold
+            end
+
+            sparkline :customers_trend
+
+            field :customers_current do
+              source :current_customers
+              format :number
+              style font_size: 18
+            end
+          end
+        end
+      end
     end
   end
 end
 ```
 
-### Grouped Report with Summary Chart
+### Example 3: Project Timeline Report
 
 ```elixir
-report :regional_sales_with_chart do
-  title "Regional Sales Analysis"
-  driving_resource MyApp.Sale
+defmodule MyApp.Reports.ProjectTracking do
+  use Ash.Domain,
+    extensions: [AshReports.Domain]
 
-  group :by_region do
-    level 1
-    expression :region
-    sort :asc
-  end
+  reports do
+    gantt_chart :sprint_timeline do
+      data_source expr(sprint_tasks())
 
-  variable :region_total do
-    type :sum
-    expression :total
-    reset_on :group
-    reset_group 1
-  end
-
-  # Report title
-  band :title do
-    type :title
-
-    label :title do
-      text "Regional Sales Analysis"
-      style(font_size: 24, font_weight: :bold)
-    end
-  end
-
-  # Region header
-  band :region_header do
-    type :group_header
-    group_level 1
-
-    field :region_name do
-      source :region
-      style(font_size: 18, font_weight: :bold)
-    end
-  end
-
-  # Region details
-  band :details do
-    type :detail
-
-    field :product_name do
-      source :product.name
+      config do
+        width 1200
+        height 600
+        title "Sprint 1 Timeline"
+        padding 3
+        show_task_labels true
+        colours ["4285F4", "EA4335", "FBBC04", "34A853"]
+      end
     end
 
-    field :quantity do
-      source :quantity
-      format :number
+    bar_chart :task_completion do
+      data_source expr(task_status_breakdown())
+
+      config do
+        width 600
+        height 400
+        title "Task Status"
+        type :stacked
+        orientation :horizontal
+        colours ["34A853", "FBBC04", "EA4335"]
+      end
     end
 
-    field :amount do
-      source :total
-      format :currency
-    end
-  end
+    report :sprint_review do
+      title "Sprint Review"
+      driving_resource MyApp.Projects.Task
 
-  # Region footer with mini chart
-  band :region_footer do
-    type :group_footer
-    group_level 1
+      parameter :sprint_id, :integer, required: true
 
-    label :region_summary do
-      text "Region Summary"
-      style(font_weight: :bold)
-    end
+      bands do
+        band :header do
+          type :title
 
-    expression :region_total_display do
-      expression :region_total
-      format :currency
-      style(font_weight: :bold, font_size: 16)
-    end
-  end
+          elements do
+            label :title do
+              text "Sprint Review Report"
+              style font_size: 24, font_weight: :bold
+            end
+          end
+        end
 
-  # Overall summary with chart
-  band :summary do
-    type :summary
+        band :timeline do
+          type :detail
 
-    label :summary_title do
-      text "Overall Performance"
-      style(font_size: 20, font_weight: :bold)
-    end
+          elements do
+            label :timeline_title do
+              text "Project Timeline"
+              style font_size: 18, font_weight: :bold
+            end
 
-    chart :regional_comparison do
-      chart_type :bar
-      data_source :regional_totals  # Aggregated from groups
-      title "Sales by Region"
-      caption "Comparison of all regions"
-      position(x: 0, y: 5, width: 100, height: 40)
+            gantt_chart :sprint_timeline
+          end
+        end
+
+        band :status_summary do
+          type :detail
+
+          elements do
+            label :status_title do
+              text "Task Status Breakdown"
+              style font_size: 18, font_weight: :bold
+            end
+
+            bar_chart :task_completion
+          end
+        end
+      end
     end
   end
 end
 ```
-
-## Chart Configuration
-
-### Basic Config Map
-
-The `config` option accepts a map of chart-specific settings:
-
-```elixir
-chart :configured_chart do
-  chart_type :bar
-  data_source :sales_data
-
-  config %{
-    # Chart-specific options (passed to Contex)
-    axis_label_rotation: 45,
-    show_data_labels: true,
-    color_palette: [:blue, :green, :red]
-  }
-end
-```
-
-> **Note**: Configuration options depend on the Contex library capabilities. See [Contex documentation](https://github.com/mindok/contex) for available options.
-
-## Integration with Report Variables
-
-Charts can reference report variables for dynamic data:
-
-```elixir
-variable :monthly_totals do
-  type :sum
-  expression :total
-  reset_on :group
-  reset_group 1
-end
-
-band :summary do
-  type :summary
-
-  chart :monthly_chart do
-    chart_type :bar
-    data_source :monthly_totals  # Reference the variable
-    title "Monthly Totals"
-  end
-end
-```
-
-> **Note**: Variable-to-chart data transformation is still under development. Currently works best with pre-formatted data.
-
-## Limitations and Planned Features
-
-### Current Limitations
-
-1. **Limited Chart Types**: Only 5 basic types (bar, line, pie, area, scatter)
-2. **Static Charts**: No interactivity in generated reports
-3. **Single Provider**: Only Contex library support
-4. **Manual Data Formatting**: Data must be pre-formatted for charts
-5. **Basic Styling**: Limited customization options
-6. **No Real-time**: Charts are static snapshots
-
-### Planned Features (See ROADMAP.md)
-
-#### Future Chart Enhancements
-
-- **Auto Chart Selection**: Automatically suggest best chart type for data
-- **Interactive Charts**: Client-side zoom, pan, click/hover events via LiveView
-- **Real-time Updates**: Live data streaming to charts via Phoenix Channels
-- **Advanced Styling**: Themes, custom colors, fonts
-- **Chart Variables**: Accumulate data specifically for charts
-
-> **Note**: AshReports uses server-side SVG generation via Contex for all chart rendering. This ensures consistent output across all renderers (HTML, PDF, JSON) without requiring JavaScript dependencies.
 
 ## Best Practices
 
-### Current Best Practices
+### 1. Naming Conventions
 
-1. **Pre-process Data**: Format data for charts before rendering
-2. **Size Appropriately**: Choose embed_options that work for your output format
-3. **Keep It Simple**: Stick to basic chart types that work reliably
-4. **Test Output**: Verify charts render correctly in all output formats (HTML, PDF)
-5. **Position Carefully**: Leave adequate space for chart rendering
+- Use descriptive chart names: `:sales_by_region` not `:chart1`
+- Name charts by what they show, not by type
+- Use snake_case for chart names
 
-### Performance Tips
+### 2. Data Preparation
 
-1. **Limit Data Points**: Too many data points can slow chart generation
-2. **Use Appropriate Types**: Bar charts for <20 items, line charts for trends
-3. **Consider Output Format**: PDFs may render charts differently than HTML
+- Prepare data in the expected format before rendering
+- Use Ash aggregations for data transformation
+- Validate data structure matches chart requirements
+
+### 3. Performance
+
+- Keep data sets reasonable (<1000 points for most charts)
+- Use sparklines for high-density data visualization
+- Consider report generation time when adding multiple charts
+
+### 4. Color Palette
+
+- Use consistent colors across related charts
+- Ensure sufficient contrast for readability
+- Consider colorblind-friendly palettes
+
+### 5. Chart Sizing
+
+- Standard sizes: 600×400 (small), 800×500 (medium), 1000×600 (large)
+- Sparklines: 100×20 (compact), 150×30 (readable)
+- Gantt charts: Wider is better (1000+ width)
+
+### 6. Reusability
+
+- Define charts once at the reports level
+- Reference charts in multiple bands
+- Use consistent configuration across reports
 
 ## Troubleshooting
 
 ### Common Issues
 
-**Charts not appearing in output:**
-- Verify data_source expression returns valid data
-- Check chart positioning doesn't exceed band bounds
-- Ensure Contex dependency is properly installed
+**Chart not rendering:**
+- Verify data source expression is valid
+- Check data format matches chart type requirements
+- Ensure chart is defined before being referenced
 
-**Chart rendering errors:**
-- Validate data format matches chart type requirements
-- Check for null/nil values in data
-- Verify embed_options dimensions are reasonable
+**Wrong data format error:**
+- Review chart type's "Data Format" section
+- Validate field names (category/value, x/y, etc.)
+- For Gantt charts, ensure DateTime types (not strings)
 
-**PDF rendering issues:**
-- Charts may appear differently in PDF vs HTML
-- Consider adjusting embed_options for PDF output
-- Test with smaller datasets first
+**Colors not applied:**
+- Remove `#` prefix from hex colors
+- Ensure color list has enough values for data series
+- Check spelling: `colours` (British) not `colors`
 
-## Next Steps
+**Chart too small/large:**
+- Adjust `width` and `height` in config block
+- Consider PDF page size constraints
+- Use appropriate sizes for chart type
 
-1. Review [Report Creation Guide](report-creation.md) for variables and aggregates
-2. Learn about [Integration](integration.md) with Phoenix for interactive reports
-3. Check [ROADMAP.md](../../ROADMAP.md) for upcoming chart features
-4. Experiment with [Contex documentation](https://github.com/mindok/contex) for advanced options
+### Getting Help
 
-## See Also
+- Check examples in this guide
+- Review chart type moduledocs
+- Open issue on GitHub for bugs
+- Ask in Ash Framework Discord
 
-- [ROADMAP.md Phase 2](../../ROADMAP.md#phase-2-enhanced-chart-engine) - Planned chart engine
-- [Contex Library](https://github.com/mindok/contex) - Current chart provider
-- [Advanced Features](advanced-features.md) - Other visualization options
-- [Report Creation](report-creation.md) - Variables and data aggregation
+---
+
+**Next Steps:**
+
+- [Integration Guide](integration.md) - Using charts in Phoenix/LiveView
+- [Advanced Features](advanced-features.md) - Custom formatting and theming
+- [Report Creation](report-creation.md) - Building complete reports

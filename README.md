@@ -293,25 +293,43 @@ end
 
 ### Charts in Reports
 
+Charts use a two-level architecture: define charts at the reports level, then reference them in bands.
+
 ```elixir
-report :sales_chart do
-  title("Sales Chart")
-  driving_resource(MyApp.Sales.Order)
+defmodule MyApp.Reports do
+  use Ash.Domain,
+    extensions: [AshReports.Domain]
 
-  band :chart_band do
-    type :detail
+  reports do
+    # Define reusable chart at reports level
+    bar_chart :sales_by_month do
+      data_source expr(aggregate_monthly_sales())
 
-    chart :sales_by_month do
-      chart_type :bar
-      data_source :monthly_sales_data  # Pre-formatted chart data
-      title "Monthly Sales"
+      config do
+        width 800
+        height 400
+        title "Monthly Sales"
+        type :grouped
+        data_labels true
+        colours ["4285F4", "34A853", "FBBC04"]
+      end
+    end
 
-      position(x: 0, y: 0, width: 100, height: 40)
+    # Use chart in report
+    report :sales_report do
+      title "Sales Report"
+      driving_resource MyApp.Sales.Order
 
-      embed_options %{
-        width: 800,
-        height: 400
-      }
+      bands do
+        band :analytics do
+          type :detail
+
+          elements do
+            # Reference the chart by name
+            bar_chart :sales_by_month
+          end
+        end
+      end
     end
   end
 end
