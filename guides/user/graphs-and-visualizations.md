@@ -706,6 +706,56 @@ Data can be prepared:
 - Through report variables
 - Using custom expressions
 
+### Performance Considerations for Data Sources
+
+⚠️ **IMPORTANT**: When working with large datasets, avoid eager loading relationships in your data_source functions!
+
+**Common N+1 Problem:**
+
+```elixir
+# ❌ BAD - This causes N+1 queries with large datasets!
+data_source(fn ->
+  InvoiceLineItem
+  |> Ash.Query.load(product: :category)  # Loads for EVERY line item!
+  |> Ash.read!(domain: MyApp.Domain)
+  |> process_into_chart_data()
+end)
+```
+
+With 325,000 line items, this performs **325,000+ individual queries** and can take **8+ minutes**!
+
+**Optimized Pattern:**
+
+```elixir
+# ✅ GOOD - Load relationships separately
+data_source(fn ->
+  alias AshReports.Charts.DataSourceHelpers
+
+  # Use helper to load with optimization
+  {:ok, {line_items, products_map}} =
+    DataSourceHelpers.load_with_relationship(
+      InvoiceLineItem,
+      Product,
+      :product_id,
+      domain: MyApp.Domain,
+      preload: :category
+    )
+
+  # Join in memory using the lookup map
+  chart_data = process_with_lookup(line_items, products_map)
+
+  {:ok, chart_data, %{source_records: length(line_items)}}
+end)
+```
+
+This reduces execution from **8 minutes to <1 second** on large datasets!
+
+**See the [Performance Optimization Guide](performance-optimization.md) for:**
+- Detailed explanation of N+1 problems
+- Complete examples with DataSourceHelpers
+- Best practices for large datasets
+- Monitoring and profiling techniques
+
 ## Complete Examples
 
 ### Example 1: Sales Report with Multiple Charts
