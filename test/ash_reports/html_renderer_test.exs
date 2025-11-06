@@ -1,4 +1,4 @@
-defmodule AshReports.HtmlRendererTest do
+defmodule AshReports.HtmlRendererBasicTest do
   use ExUnit.Case
   doctest AshReports.HtmlRenderer
 

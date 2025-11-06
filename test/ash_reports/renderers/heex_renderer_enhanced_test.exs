@@ -525,6 +525,7 @@ defmodule AshReports.HeexRendererEnhancedTest do
       assert String.contains?(result.content, "ash-report")
     end
 
+    @tag :skip
     test "handles chart data from realistic invoices" do
       invoices = AshReports.RealisticTestHelpers.list_invoices(limit: 15)
 

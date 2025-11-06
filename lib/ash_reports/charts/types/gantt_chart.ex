@@ -116,11 +116,10 @@ defmodule AshReports.Charts.Types.GanttChart do
     # Get colors for the chart
     colors = get_colors(config)
 
-    # Build options map
+    # Build options keyword list
     options =
       config
       |> build_options(colors, column_mapping)
-      |> Map.to_list()
 
     # Build Gantt chart
     GanttChart.new(dataset, options)

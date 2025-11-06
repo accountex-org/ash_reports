@@ -94,9 +94,13 @@ defmodule AshReports.Charts.Renderer do
 
   defp render_to_svg(chart, config) do
     try do
+      # Use defaults for missing dimensions
+      width = Map.get(config, :width, 600)
+      height = Map.get(config, :height, 400)
+
       # Create Contex.Plot with the chart
       plot =
-        Contex.Plot.new(config.width, config.height, chart)
+        Contex.Plot.new(width, height, chart)
         |> maybe_add_title(config)
         |> maybe_add_axis_labels(config)
 
@@ -259,14 +263,20 @@ defmodule AshReports.Charts.Renderer do
   defp fallback_render(data, config, reason) do
     Logger.warning("Using fallback renderer due to: #{inspect(reason)}")
 
+    # Use defaults for missing dimensions
+    width = Map.get(config, :width, 600)
+    height = Map.get(config, :height, 400)
+    font_family = Map.get(config, :font_family, "Arial, sans-serif")
+    font_size = Map.get(config, :font_size, 14)
+
     # Generate simple text-based error SVG
     svg = """
-    <svg width="#{config.width}" height="#{config.height}" xmlns="http://www.w3.org/2000/svg">
+    <svg width="#{width}" height="#{height}" xmlns="http://www.w3.org/2000/svg">
       <rect width="100%" height="100%" fill="#f8f9fa"/>
-      <text x="50%" y="50%" text-anchor="middle" font-family="#{config.font_family}" font-size="#{config.font_size}">
+      <text x="50%" y="50%" text-anchor="middle" font-family="#{font_family}" font-size="#{font_size}">
         Chart generation failed: #{inspect(reason)}
       </text>
-      <text x="50%" y="60%" text-anchor="middle" font-family="#{config.font_family}" font-size="#{config.font_size - 2}" fill="#6c757d">
+      <text x="50%" y="60%" text-anchor="middle" font-family="#{font_family}" font-size="#{font_size - 2}" fill="#6c757d">
         Data points: #{length(data)}
       </text>
     </svg>

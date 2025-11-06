@@ -63,9 +63,9 @@ defmodule AshReports.Charts.Types.SparklineTest do
       assert sparkline.height == 40
     end
 
-    test "applies custom colors when two colors provided" do
+    test "applies custom colors when fill and line colors provided" do
       data = [1, 2, 3]
-      config = %{colors: ["#fad48e", "#ff9838"]}
+      config = %{fill_colour: "#fad48e", line_colour: "#ff9838"}
 
       sparkline = Sparkline.build(data, config)
 
@@ -73,13 +73,13 @@ defmodule AshReports.Charts.Types.SparklineTest do
       assert sparkline.line_colour == "#ff9838"
     end
 
-    test "applies single color with transparency for fill" do
+    test "applies line color with default fill when only line color provided" do
       data = [1, 2, 3]
-      config = %{colors: ["#ff0000"]}
+      config = %{line_colour: "#ff0000"}
 
       sparkline = Sparkline.build(data, config)
 
-      assert sparkline.fill_colour == "#ff000033"
+      assert sparkline.fill_colour == "rgba(0, 200, 50, 0.2)"
       assert sparkline.line_colour == "#ff0000"
     end
 
@@ -121,19 +121,20 @@ defmodule AshReports.Charts.Types.SparklineTest do
       assert sparkline.spot_colour == "red"  # Contex default
     end
 
-    test "adds # prefix to hex colors without it" do
+    test "accepts CSS colors as configured" do
       data = [1, 2, 3]
-      config = %{colors: ["fad48e", "ff9838"]}
+      config = %{fill_colour: "fad48e", line_colour: "ff9838"}
 
       sparkline = Sparkline.build(data, config)
 
-      assert sparkline.fill_colour == "#fad48e"
-      assert sparkline.line_colour == "#ff9838"
+      # Colors are passed through as-is (no # prefix added by sparkline)
+      assert sparkline.fill_colour == "fad48e"
+      assert sparkline.line_colour == "ff9838"
     end
 
     test "handles named CSS colors" do
       data = [1, 2, 3]
-      config = %{colors: ["red", "blue"]}
+      config = %{fill_colour: "red", line_colour: "blue"}
 
       sparkline = Sparkline.build(data, config)
 

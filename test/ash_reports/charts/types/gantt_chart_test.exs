@@ -104,7 +104,7 @@ defmodule AshReports.Charts.Types.GanttChartTest do
         }
       ]
 
-      config = %{colors: ["#ff6384", "#36a2eb", "#ffce56"]}
+      config = %{colours: ["#ff6384", "#36a2eb", "#ffce56"]}
 
       chart = GanttChart.build(data, config)
 

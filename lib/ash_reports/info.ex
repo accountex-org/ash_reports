@@ -28,6 +28,7 @@ defmodule AshReports.Info do
   @spec reports(Ash.Domain.t() | Spark.Dsl.t()) :: [AshReports.Report.t()]
   def reports(domain_or_dsl_state) do
     Extension.get_entities(domain_or_dsl_state, [:reports])
+    |> Enum.filter(&is_struct(&1, AshReports.Report))
   end
 
   @doc """

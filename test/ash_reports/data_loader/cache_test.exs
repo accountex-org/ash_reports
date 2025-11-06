@@ -442,12 +442,12 @@ defmodule AshReports.DataLoader.CacheTest do
     %AshReports.Report{
       name: :test_report,
       title: "Test Report",
-      driving_resource: TestResource,
+      driving_resource: DataLoaderCacheTestResource,
       parameters: []
     }
   end
 end
 
-defmodule TestResource do
+defmodule DataLoaderCacheTestResource do
   def __resource__, do: true
 end
