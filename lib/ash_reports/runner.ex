@@ -3,6 +3,39 @@ defmodule AshReports.Runner do
   Executes reports by fetching data and processing it through the band hierarchy.
 
   This module will be fully implemented in Phase 2 with the query system.
+
+  ## Telemetry Events
+
+  This module emits the following telemetry events:
+
+  - `[:ash_reports, :runner, :run_report, :start]` - Report execution started
+    - Measurements: `%{system_time: integer()}`
+    - Metadata: `%{domain: module(), report_name: atom(), format: atom()}`
+
+  - `[:ash_reports, :runner, :run_report, :stop]` - Report execution completed
+    - Measurements: `%{duration: integer()}`
+    - Metadata: `%{domain: module(), report_name: atom(), format: atom(), record_count: integer()}`
+
+  - `[:ash_reports, :runner, :run_report, :exception]` - Report execution failed
+    - Measurements: `%{duration: integer()}`
+    - Metadata: `%{domain: module(), report_name: atom(), format: atom(), error: term(), stage: atom()}`
+
+  ### Pipeline Stage Events
+
+  - `[:ash_reports, :runner, :data_loading, :start]` / `:stop` / `:exception`
+  - `[:ash_reports, :runner, :context_building, :start]` / `:stop` / `:exception`
+  - `[:ash_reports, :runner, :rendering, :start]` / `:stop` / `:exception`
+
+  ## Example Telemetry Handler
+
+      :telemetry.attach(
+        "report-timing",
+        [:ash_reports, :runner, :run_report, :stop],
+        fn _event, measurements, metadata, _config ->
+          IO.puts("Report \#{metadata.report_name} completed in \#{measurements.duration}ms")
+        end,
+        nil
+      )
   """
 
   @doc """
@@ -70,69 +103,222 @@ defmodule AshReports.Runner do
     start_time = System.monotonic_time(:microsecond)
     format = Keyword.get(opts, :format, :html)
 
-    with {:ok, data_result} <- load_report_data(domain, report_name, params, opts),
-         {:ok, render_context} <- build_render_context(data_result, opts),
-         {:ok, rendered_result} <- render_report(render_context, format, opts) do
-      end_time = System.monotonic_time(:microsecond)
-      execution_time_ms = div(end_time - start_time, 1000)
+    # Emit telemetry start event
+    :telemetry.execute(
+      [:ash_reports, :runner, :run_report, :start],
+      %{system_time: System.system_time()},
+      %{domain: domain, report_name: report_name, format: format}
+    )
 
-      {:ok,
-       %{
-         content: rendered_result.content,
-         metadata:
-           build_pipeline_metadata(
-             data_result.metadata,
-             rendered_result.metadata,
-             execution_time_ms,
-             format
-           ),
-         format: format,
-         # Include data for debugging (can be disabled in production)
-         data: if(Keyword.get(opts, :include_debug_data, true), do: data_result, else: nil)
-       }}
-    else
-      {:error, {stage, reason}} ->
-        handle_pipeline_error(stage, reason, opts)
+    result =
+      with {:ok, data_result} <- load_report_data(domain, report_name, params, opts),
+           {:ok, render_context} <- build_render_context(data_result, opts),
+           {:ok, rendered_result} <- render_report(render_context, format, opts) do
+        end_time = System.monotonic_time(:microsecond)
+        execution_time_ms = div(end_time - start_time, 1000)
 
-      {:error, reason} ->
-        handle_pipeline_error(:unknown, reason, opts)
+        {:ok,
+         %{
+           content: rendered_result.content,
+           metadata:
+             build_pipeline_metadata(
+               data_result.metadata,
+               rendered_result.metadata,
+               execution_time_ms,
+               format
+             ),
+           format: format,
+           # Include data for debugging (can be disabled in production)
+           data: if(Keyword.get(opts, :include_debug_data, true), do: data_result, else: nil),
+           record_count: Map.get(data_result.metadata, :record_count, 0)
+         }}
+      else
+        {:error, {stage, reason}} ->
+          handle_pipeline_error(stage, reason, opts)
+
+        {:error, reason} ->
+          handle_pipeline_error(:unknown, reason, opts)
+      end
+
+    # Emit telemetry stop or exception event
+    case result do
+      {:ok, report_result} ->
+        duration = div(System.monotonic_time(:microsecond) - start_time, 1000)
+
+        :telemetry.execute(
+          [:ash_reports, :runner, :run_report, :stop],
+          %{duration: duration},
+          %{
+            domain: domain,
+            report_name: report_name,
+            format: format,
+            record_count: report_result.record_count
+          }
+        )
+
+        result
+
+      {:error, error_details} ->
+        duration = div(System.monotonic_time(:microsecond) - start_time, 1000)
+
+        :telemetry.execute(
+          [:ash_reports, :runner, :run_report, :exception],
+          %{duration: duration},
+          %{
+            domain: domain,
+            report_name: report_name,
+            format: format,
+            error: error_details.reason,
+            stage: error_details.stage
+          }
+        )
+
+        result
     end
   end
 
   # Enhanced helper functions for the pipeline
 
   defp load_report_data(domain, report_name, params, _opts) do
-    case AshReports.DataLoader.load_report(domain, report_name, params) do
-      {:ok, data_result} -> {:ok, data_result}
-      {:error, reason} -> {:error, {:data_loading, reason}}
+    start_time = System.monotonic_time(:microsecond)
+
+    :telemetry.execute(
+      [:ash_reports, :runner, :data_loading, :start],
+      %{system_time: System.system_time()},
+      %{domain: domain, report_name: report_name}
+    )
+
+    result =
+      case AshReports.DataLoader.load_report(domain, report_name, params) do
+        {:ok, data_result} -> {:ok, data_result}
+        {:error, reason} -> {:error, {:data_loading, reason}}
+      end
+
+    case result do
+      {:ok, data_result} ->
+        duration = div(System.monotonic_time(:microsecond) - start_time, 1000)
+
+        :telemetry.execute(
+          [:ash_reports, :runner, :data_loading, :stop],
+          %{duration: duration},
+          %{
+            domain: domain,
+            report_name: report_name,
+            record_count: Map.get(data_result.metadata, :record_count, 0)
+          }
+        )
+
+        result
+
+      {:error, {_stage, reason}} ->
+        duration = div(System.monotonic_time(:microsecond) - start_time, 1000)
+
+        :telemetry.execute(
+          [:ash_reports, :runner, :data_loading, :exception],
+          %{duration: duration},
+          %{domain: domain, report_name: report_name, error: reason}
+        )
+
+        result
     end
   end
 
   defp build_render_context(data_result, opts) do
-    config = extract_render_config(opts)
+    start_time = System.monotonic_time(:microsecond)
 
-    context =
-      AshReports.RenderContext.new(
-        data_result.report || %{},
-        data_result,
-        config
-      )
+    :telemetry.execute(
+      [:ash_reports, :runner, :context_building, :start],
+      %{system_time: System.system_time()},
+      %{}
+    )
 
-    {:ok, context}
-  rescue
-    error -> {:error, {:context_building, Exception.message(error)}}
+    result =
+      try do
+        config = extract_render_config(opts)
+
+        context =
+          AshReports.RenderContext.new(
+            data_result.report || %{},
+            data_result,
+            config
+          )
+
+        {:ok, context}
+      rescue
+        error -> {:error, {:context_building, Exception.message(error)}}
+      end
+
+    case result do
+      {:ok, _context} ->
+        duration = div(System.monotonic_time(:microsecond) - start_time, 1000)
+
+        :telemetry.execute(
+          [:ash_reports, :runner, :context_building, :stop],
+          %{duration: duration},
+          %{}
+        )
+
+        result
+
+      {:error, {_stage, reason}} ->
+        duration = div(System.monotonic_time(:microsecond) - start_time, 1000)
+
+        :telemetry.execute(
+          [:ash_reports, :runner, :context_building, :exception],
+          %{duration: duration},
+          %{error: reason}
+        )
+
+        result
+    end
   end
 
   defp render_report(context, format, opts) do
-    case get_renderer_for_format(format) do
-      {:ok, renderer} ->
-        case renderer.render_with_context(context, opts) do
-          {:ok, result} -> {:ok, result}
-          {:error, reason} -> {:error, {:rendering, reason}}
-        end
+    start_time = System.monotonic_time(:microsecond)
 
-      {:error, reason} ->
-        {:error, {:renderer_selection, reason}}
+    :telemetry.execute(
+      [:ash_reports, :runner, :rendering, :start],
+      %{system_time: System.system_time()},
+      %{format: format}
+    )
+
+    result =
+      case get_renderer_for_format(format) do
+        {:ok, renderer} ->
+          case renderer.render_with_context(context, opts) do
+            {:ok, result} -> {:ok, result}
+            {:error, reason} -> {:error, {:rendering, reason}}
+          end
+
+        {:error, reason} ->
+          {:error, {:renderer_selection, reason}}
+      end
+
+    case result do
+      {:ok, rendered_result} ->
+        duration = div(System.monotonic_time(:microsecond) - start_time, 1000)
+
+        :telemetry.execute(
+          [:ash_reports, :runner, :rendering, :stop],
+          %{duration: duration},
+          %{
+            format: format,
+            content_size: byte_size(rendered_result.content || "")
+          }
+        )
+
+        result
+
+      {:error, {stage, reason}} ->
+        duration = div(System.monotonic_time(:microsecond) - start_time, 1000)
+
+        :telemetry.execute(
+          [:ash_reports, :runner, :rendering, :exception],
+          %{duration: duration},
+          %{format: format, error: reason, stage: stage}
+        )
+
+        result
     end
   end
 
