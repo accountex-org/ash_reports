@@ -143,11 +143,14 @@ defmodule AshReports.Charts.DataLoader do
   def load_chart_data(domain, chart, params, opts) when is_map(params) and is_list(opts) do
     start_time = System.monotonic_time(:millisecond)
 
+    # Safely get chart name for telemetry
+    chart_name = if is_map(chart), do: Map.get(chart, :name), else: nil
+
     # Emit telemetry start event
     :telemetry.execute(
       [:ash_reports, :charts, :data_loading, :start],
       %{system_time: System.system_time()},
-      %{domain: domain, chart_name: chart.name, params: params}
+      %{domain: domain, chart_name: chart_name, params: params}
     )
 
     result =
@@ -174,7 +177,7 @@ defmodule AshReports.Charts.DataLoader do
           %{duration: metadata.execution_time_ms},
           %{
             domain: domain,
-            chart_name: chart.name,
+            chart_name: chart_name,
             record_count: metadata.source_records
           }
         )
@@ -185,7 +188,7 @@ defmodule AshReports.Charts.DataLoader do
         :telemetry.execute(
           [:ash_reports, :charts, :data_loading, :exception],
           %{duration: System.monotonic_time(:millisecond) - start_time},
-          %{domain: domain, chart_name: chart.name, reason: reason}
+          %{domain: domain, chart_name: chart_name, reason: reason}
         )
 
         error
