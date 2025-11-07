@@ -576,6 +576,112 @@ defmodule AshReports.Charts.TransformTest do
     end
   end
 
+  describe "execute/2 with special mappings" do
+    test "supports Gantt chart mappings (task, start_date, end_date)" do
+      records = [
+        %{invoice_number: "INV-001", date: ~D[2024-01-01], status: :sent},
+        %{invoice_number: "INV-002", date: ~D[2024-01-15], status: :paid}
+      ]
+
+      transform = %Transform{
+        mappings: %{
+          task: :invoice_number,
+          start_date: :date,
+          end_date: {:date, :add_days, 30}
+        }
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 2
+      first = Enum.at(result, 0)
+      assert first.task == "INV-001"
+      assert first.start_date == ~D[2024-01-01]
+      assert first.end_date == ~D[2024-01-31]
+    end
+
+    test "supports sparkline values mapping" do
+      records = [
+        %{health_score: 75},
+        %{health_score: 80},
+        %{health_score: 72}
+      ]
+
+      transform = %Transform{
+        mappings: %{values: :health_score}
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 3
+      assert Enum.map(result, & &1.values) == [75, 80, 72]
+    end
+
+    test "date calculation with DateTime" do
+      records = [
+        %{created_at: ~U[2024-01-01 10:00:00Z]}
+      ]
+
+      transform = %Transform{
+        mappings: %{
+          start: :created_at,
+          end: {:created_at, :add_days, 7}
+        }
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      first = hd(result)
+      assert first.start == ~U[2024-01-01 10:00:00Z]
+      assert first.end == ~D[2024-01-08]
+    end
+
+    test "date calculation handles nil values" do
+      records = [
+        %{invoice_number: "INV-001", date: nil}
+      ]
+
+      transform = %Transform{
+        mappings: %{
+          task: :invoice_number,
+          end_date: {:date, :add_days, 30}
+        }
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      first = hd(result)
+      assert first.task == "INV-001"
+      assert first.end_date == nil
+    end
+
+    test "mappings can access source record fields with aggregates" do
+      records = [
+        %{category: "A", price: 100, quantity: 2},
+        %{category: "A", price: 150, quantity: 1},
+        %{category: "B", price: 200, quantity: 3}
+      ]
+
+      transform = %Transform{
+        group_by: :category,
+        aggregates: [{:sum, :quantity, :total_qty}],
+        mappings: %{
+          category: :group_key,
+          quantity: :total_qty,
+          sample_price: :price  # Access from source record
+        }
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 2
+      # First record in group A has price 100
+      a_result = Enum.find(result, &(&1.category == "A"))
+      assert a_result.sample_price == 100
+      assert a_result.quantity == 3
+    end
+  end
+
   describe "detect_relationships/1" do
     test "detects simple relationship from group_by" do
       transform = %Transform{

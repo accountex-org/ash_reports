@@ -65,7 +65,11 @@ defmodule AshReports.Charts.Transform do
           optional(:category) => atom() | tuple(),
           optional(:value) => atom(),
           optional(:x) => atom() | tuple(),
-          optional(:y) => atom()
+          optional(:y) => atom(),
+          optional(:task) => atom() | tuple(),
+          optional(:start_date) => atom() | tuple(),
+          optional(:end_date) => atom() | tuple(),
+          optional(:values) => atom()
         }
 
   @type t :: %__MODULE__{
@@ -195,6 +199,16 @@ defmodule AshReports.Charts.Transform do
   defp extract_date_period(_value, _period), do: nil
 
   # Step 2: Apply aggregations to each group
+  defp apply_aggregations(grouped_data, []) when is_list(grouped_data) do
+    # No aggregations - for simple mapping transforms
+    # Return records directly with source record reference
+    Enum.flat_map(grouped_data, fn {_group_key, group_records} ->
+      Enum.map(group_records, fn record ->
+        %{__source_record__: record}
+      end)
+    end)
+  end
+
   defp apply_aggregations(grouped_data, aggregates) when is_list(aggregates) do
     Enum.map(grouped_data, fn {group_key, group_records} ->
       aggregate_results =
@@ -204,8 +218,13 @@ defmodule AshReports.Charts.Transform do
         end)
 
       # Combine group key with aggregate results
+      # Also store first record for accessing non-aggregated fields
       base_data = if group_key, do: %{group_key: group_key}, else: %{}
-      Map.merge(base_data, aggregate_results)
+      first_record = if group_records != [], do: %{__source_record__: List.first(group_records)}, else: %{}
+
+      base_data
+      |> Map.merge(aggregate_results)
+      |> Map.merge(first_record)
     end)
   end
 
@@ -217,21 +236,57 @@ defmodule AshReports.Charts.Transform do
 
   defp apply_mappings(aggregated_data, mappings) when is_map(mappings) do
     Enum.map(aggregated_data, fn data ->
-      Enum.reduce(mappings, %{}, fn {target_field, source_field}, acc ->
-        value =
-          cond do
-            # Source is a literal value (for group_key)
-            source_field == :group_key -> Map.get(data, :group_key)
-            # Source is an aggregate result
-            Map.has_key?(data, source_field) -> Map.get(data, source_field)
-            # Fallback to nil
-            true -> nil
-          end
-
+      Enum.reduce(mappings, %{}, fn {target_field, source_spec}, acc ->
+        value = resolve_mapping_value(data, source_spec)
         Map.put(acc, target_field, value)
       end)
     end)
   end
+
+  # Resolve mapping value - supports various source formats
+  defp resolve_mapping_value(data, :group_key), do: Map.get(data, :group_key)
+
+  # Simple atom field - check aggregates first, then source record
+  defp resolve_mapping_value(data, source_field) when is_atom(source_field) do
+    cond do
+      Map.has_key?(data, source_field) -> Map.get(data, source_field)
+      Map.has_key?(data, :__source_record__) -> get_field_value(data.__source_record__, source_field)
+      true -> nil
+    end
+  end
+
+  # Tuple with date calculation: {:field, :add_days, N}
+  defp resolve_mapping_value(data, {field, :add_days, days}) when is_atom(field) and is_integer(days) do
+    source_record = Map.get(data, :__source_record__)
+    if source_record do
+      date_value = get_field_value(source_record, field)
+      add_days_to_date(date_value, days)
+    else
+      nil
+    end
+  end
+
+  # Nested tuple path: {:product, :price}
+  defp resolve_mapping_value(data, source_path) when is_tuple(source_path) do
+    source_record = Map.get(data, :__source_record__)
+    if source_record do
+      get_field_value(source_record, source_path)
+    else
+      nil
+    end
+  end
+
+  defp resolve_mapping_value(_data, _source_spec), do: nil
+
+  # Helper to add days to a date
+  defp add_days_to_date(nil, _days), do: nil
+  defp add_days_to_date(%Date{} = date, days), do: Date.add(date, days)
+  defp add_days_to_date(%DateTime{} = datetime, days) do
+    datetime
+    |> DateTime.to_date()
+    |> Date.add(days)
+  end
+  defp add_days_to_date(_value, _days), do: nil
 
   # Step 4: Apply sorting
   defp apply_sorting(data, nil), do: data
@@ -480,6 +535,10 @@ defmodule AshReports.Charts.Transform do
     |> maybe_put(:value, Map.get(transform_def, :as_value))
     |> maybe_put(:x, Map.get(transform_def, :as_x))
     |> maybe_put(:y, Map.get(transform_def, :as_y))
+    |> maybe_put(:task, Map.get(transform_def, :as_task))
+    |> maybe_put(:start_date, Map.get(transform_def, :as_start_date))
+    |> maybe_put(:end_date, Map.get(transform_def, :as_end_date))
+    |> maybe_put(:values, Map.get(transform_def, :as_values))
   end
 
   defp maybe_put(map, _key, nil), do: map
