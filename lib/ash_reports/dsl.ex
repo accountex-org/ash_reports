@@ -1264,10 +1264,26 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The chart identifier."
       ],
-      data_source: [
-        type: :any,
+      driving_resource: [
+        type: :atom,
         required: true,
-        doc: "Expression that evaluates to chart data at render time."
+        doc: "The Ash resource module to query for chart data."
+      ],
+      transform: [
+        type: :map,
+        required: false,
+        doc: "Transform definition for grouping and aggregating data."
+      ],
+      scope: [
+        type: {:fun, 1},
+        required: false,
+        doc: "Function that takes params and returns an Ash.Query for filtering."
+      ],
+      load_relationships: [
+        type: {:list, :atom},
+        required: false,
+        default: [],
+        doc: "List of relationships to preload for optimization."
       ]
     ]
   end
@@ -1323,10 +1339,26 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The chart identifier."
       ],
-      data_source: [
-        type: :any,
+      driving_resource: [
+        type: :atom,
         required: true,
-        doc: "Expression that evaluates to chart data at render time."
+        doc: "The Ash resource module to query for chart data."
+      ],
+      transform: [
+        type: :map,
+        required: false,
+        doc: "Transform definition for grouping and aggregating data."
+      ],
+      scope: [
+        type: {:fun, 1},
+        required: false,
+        doc: "Function that takes params and returns an Ash.Query for filtering."
+      ],
+      load_relationships: [
+        type: {:list, :atom},
+        required: false,
+        default: [],
+        doc: "List of relationships to preload for optimization."
       ]
     ]
   end
@@ -1377,10 +1409,26 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The chart identifier."
       ],
-      data_source: [
-        type: :any,
+      driving_resource: [
+        type: :atom,
         required: true,
-        doc: "Expression that evaluates to chart data at render time."
+        doc: "The Ash resource module to query for chart data."
+      ],
+      transform: [
+        type: :map,
+        required: false,
+        doc: "Transform definition for grouping and aggregating data."
+      ],
+      scope: [
+        type: {:fun, 1},
+        required: false,
+        doc: "Function that takes params and returns an Ash.Query for filtering."
+      ],
+      load_relationships: [
+        type: {:list, :atom},
+        required: false,
+        default: [],
+        doc: "List of relationships to preload for optimization."
       ]
     ]
   end
@@ -1421,10 +1469,26 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The chart identifier."
       ],
-      data_source: [
-        type: :any,
+      driving_resource: [
+        type: :atom,
         required: true,
-        doc: "Expression that evaluates to chart data at render time."
+        doc: "The Ash resource module to query for chart data."
+      ],
+      transform: [
+        type: :map,
+        required: false,
+        doc: "Transform definition for grouping and aggregating data."
+      ],
+      scope: [
+        type: {:fun, 1},
+        required: false,
+        doc: "Function that takes params and returns an Ash.Query for filtering."
+      ],
+      load_relationships: [
+        type: {:list, :atom},
+        required: false,
+        default: [],
+        doc: "List of relationships to preload for optimization."
       ]
     ]
   end
@@ -1475,10 +1539,26 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The chart identifier."
       ],
-      data_source: [
-        type: :any,
+      driving_resource: [
+        type: :atom,
         required: true,
-        doc: "Expression that evaluates to chart data at render time."
+        doc: "The Ash resource module to query for chart data."
+      ],
+      transform: [
+        type: :map,
+        required: false,
+        doc: "Transform definition for grouping and aggregating data."
+      ],
+      scope: [
+        type: {:fun, 1},
+        required: false,
+        doc: "Function that takes params and returns an Ash.Query for filtering."
+      ],
+      load_relationships: [
+        type: {:list, :atom},
+        required: false,
+        default: [],
+        doc: "List of relationships to preload for optimization."
       ]
     ]
   end
@@ -1519,10 +1599,26 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The chart identifier."
       ],
-      data_source: [
-        type: :any,
+      driving_resource: [
+        type: :atom,
         required: true,
-        doc: "Expression that evaluates to chart data at render time."
+        doc: "The Ash resource module to query for chart data."
+      ],
+      transform: [
+        type: :map,
+        required: false,
+        doc: "Transform definition for grouping and aggregating data."
+      ],
+      scope: [
+        type: {:fun, 1},
+        required: false,
+        doc: "Function that takes params and returns an Ash.Query for filtering."
+      ],
+      load_relationships: [
+        type: {:list, :atom},
+        required: false,
+        default: [],
+        doc: "List of relationships to preload for optimization."
       ]
     ]
   end
@@ -1568,10 +1664,26 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The chart identifier."
       ],
-      data_source: [
-        type: :any,
+      driving_resource: [
+        type: :atom,
         required: true,
-        doc: "Expression that evaluates to chart data at render time."
+        doc: "The Ash resource module to query for chart data."
+      ],
+      transform: [
+        type: :map,
+        required: false,
+        doc: "Transform definition for grouping and aggregating data."
+      ],
+      scope: [
+        type: {:fun, 1},
+        required: false,
+        doc: "Function that takes params and returns an Ash.Query for filtering."
+      ],
+      load_relationships: [
+        type: {:list, :atom},
+        required: false,
+        default: [],
+        doc: "List of relationships to preload for optimization."
       ]
     ]
   end
