@@ -343,7 +343,318 @@ defmodule AshReports.Charts.TransformTest do
       assert transform.group_by == :type
       assert transform.aggregates == []
       assert transform.mappings == %{}
-      assert transform.filters == []
+      assert transform.filters == %{}
+      assert transform.limit == nil
+    end
+
+    test "parses limit" do
+      transform_def = %{
+        group_by: :status,
+        aggregates: [{:count, nil, :count}],
+        limit: 10
+      }
+
+      {:ok, transform} = Transform.parse(transform_def)
+
+      assert transform.limit == 10
+    end
+
+    test "parses filter map" do
+      transform_def = %{
+        group_by: :status,
+        filter: %{status: :paid}
+      }
+
+      {:ok, transform} = Transform.parse(transform_def)
+
+      assert transform.filters == %{status: :paid}
+    end
+  end
+
+  describe "execute/2 with nested relationship paths" do
+    test "groups by nested relationship field" do
+      records = [
+        %{id: 1, product: %{category: %{name: "Electronics"}}},
+        %{id: 2, product: %{category: %{name: "Electronics"}}},
+        %{id: 3, product: %{category: %{name: "Books"}}}
+      ]
+
+      transform = %Transform{
+        group_by: {:product, :category, :name},
+        aggregates: [{:count, nil, :count}],
+        mappings: %{category: :group_key, value: :count}
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 2
+      assert Enum.find(result, &(&1.category == "Electronics")).value == 2
+      assert Enum.find(result, &(&1.category == "Books")).value == 1
+    end
+
+    test "handles nested paths with nil values" do
+      records = [
+        %{id: 1, product: %{category: %{name: "Electronics"}}},
+        %{id: 2, product: nil},
+        %{id: 3, product: %{category: nil}}
+      ]
+
+      transform = %Transform{
+        group_by: {:product, :category, :name},
+        aggregates: [{:count, nil, :count}],
+        mappings: %{category: :group_key, value: :count}
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 2
+    end
+
+    test "aggregates with nested field paths" do
+      records = [
+        %{id: 1, product: %{price: 100}},
+        %{id: 2, product: %{price: 200}},
+        %{id: 3, product: %{price: 150}}
+      ]
+
+      transform = %Transform{
+        group_by: nil,
+        aggregates: [{:sum, {:product, :price}, :total_price}],
+        mappings: %{value: :total_price}
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 1
+      assert hd(result).value == 450
+    end
+  end
+
+  describe "execute/2 with date grouping" do
+    test "groups by month" do
+      records = [
+        %{id: 1, created_at: ~D[2024-01-15]},
+        %{id: 2, created_at: ~D[2024-01-20]},
+        %{id: 3, created_at: ~D[2024-02-10]}
+      ]
+
+      transform = %Transform{
+        group_by: {:created_at, :month},
+        aggregates: [{:count, nil, :count}],
+        mappings: %{category: :group_key, value: :count}
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 2
+      assert Enum.find(result, &(&1.category == "2024-01")).value == 2
+      assert Enum.find(result, &(&1.category == "2024-02")).value == 1
+    end
+
+    test "groups by day" do
+      records = [
+        %{id: 1, created_at: ~D[2024-01-15]},
+        %{id: 2, created_at: ~D[2024-01-15]},
+        %{id: 3, created_at: ~D[2024-01-16]}
+      ]
+
+      transform = %Transform{
+        group_by: {:created_at, :day},
+        aggregates: [{:count, nil, :count}],
+        mappings: %{category: :group_key, value: :count}
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 2
+      assert Enum.find(result, &(&1.category == "2024-01-15")).value == 2
+      assert Enum.find(result, &(&1.category == "2024-01-16")).value == 1
+    end
+
+    test "handles nil dates in grouping" do
+      records = [
+        %{id: 1, created_at: ~D[2024-01-15]},
+        %{id: 2, created_at: nil},
+        %{id: 3, created_at: ~D[2024-01-15]}
+      ]
+
+      transform = %Transform{
+        group_by: {:created_at, :day},
+        aggregates: [{:count, nil, :count}],
+        mappings: %{category: :group_key, value: :count}
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 2
+    end
+  end
+
+  describe "execute/2 with filters" do
+    test "filters records before grouping" do
+      records = [
+        %{status: :active, id: 1},
+        %{status: :inactive, id: 2},
+        %{status: :active, id: 3}
+      ]
+
+      transform = %Transform{
+        filters: %{status: :active},
+        aggregates: [{:count, nil, :count}],
+        mappings: %{value: :count}
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 1
+      assert hd(result).value == 2
+    end
+
+    test "filters with list of values" do
+      records = [
+        %{status: :paid, id: 1},
+        %{status: :sent, id: 2},
+        %{status: :draft, id: 3},
+        %{status: :paid, id: 4}
+      ]
+
+      transform = %Transform{
+        filters: %{status: [:paid, :sent]},
+        aggregates: [{:count, nil, :count}],
+        mappings: %{value: :count}
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 1
+      assert hd(result).value == 3
+    end
+  end
+
+  describe "execute/2 with limit" do
+    test "limits results after sorting" do
+      records = [
+        %{type: "A", amount: 100},
+        %{type: "A", amount: 50},
+        %{type: "B", amount: 200},
+        %{type: "C", amount: 150},
+        %{type: "D", amount: 300}
+      ]
+
+      transform = %Transform{
+        group_by: :type,
+        aggregates: [{:sum, :amount, :total}],
+        mappings: %{category: :group_key, value: :total},
+        sort_by: {:value, :desc},
+        limit: 2
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 2
+      assert Enum.at(result, 0).category == "D"
+      assert Enum.at(result, 0).value == 300
+      assert Enum.at(result, 1).category == "B"
+      assert Enum.at(result, 1).value == 200
+    end
+
+    test "limit with no sorting" do
+      records = [
+        %{id: 1}, %{id: 2}, %{id: 3}, %{id: 4}, %{id: 5}
+      ]
+
+      transform = %Transform{
+        limit: 3,
+        aggregates: [{:count, nil, :count}],
+        mappings: %{value: :count}
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      # Without grouping, we get 1 result, but with limit 3 it should still work
+      assert length(result) <= 3
+    end
+  end
+
+  describe "detect_relationships/1" do
+    test "detects simple relationship from group_by" do
+      transform = %Transform{
+        group_by: {:product, :name}
+      }
+
+      relationships = Transform.detect_relationships(transform)
+
+      assert :product in relationships
+    end
+
+    test "detects nested relationships from group_by" do
+      transform = %Transform{
+        group_by: {:product, :category, :name}
+      }
+
+      relationships = Transform.detect_relationships(transform)
+
+      assert :product in relationships
+      assert {:product, :category} in relationships
+    end
+
+    test "detects relationships from aggregate fields" do
+      transform = %Transform{
+        aggregates: [{:sum, {:product, :price}, :total}]
+      }
+
+      relationships = Transform.detect_relationships(transform)
+
+      assert :product in relationships
+    end
+
+    test "detects relationships from mappings" do
+      transform = %Transform{
+        mappings: %{x: {:product, :price}}
+      }
+
+      relationships = Transform.detect_relationships(transform)
+
+      assert :product in relationships
+    end
+
+    test "does not detect relationships from date grouping" do
+      transform = %Transform{
+        group_by: {:created_at, :month}
+      }
+
+      relationships = Transform.detect_relationships(transform)
+
+      assert relationships == []
+    end
+
+    test "returns empty list for simple field grouping" do
+      transform = %Transform{
+        group_by: :status
+      }
+
+      relationships = Transform.detect_relationships(transform)
+
+      assert relationships == []
+    end
+
+    test "returns empty list for nil transform" do
+      assert Transform.detect_relationships(nil) == []
+    end
+
+    test "combines relationships from multiple sources" do
+      transform = %Transform{
+        group_by: {:product, :category, :name},
+        aggregates: [{:sum, {:invoice, :total}, :revenue}],
+        mappings: %{x: {:customer, :tier}}
+      }
+
+      relationships = Transform.detect_relationships(transform)
+
+      assert :product in relationships
+      assert {:product, :category} in relationships
+      assert :invoice in relationships
+      assert :customer in relationships
     end
   end
 end

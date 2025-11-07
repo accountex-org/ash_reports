@@ -54,23 +54,27 @@ defmodule AshReports.Charts.Transform do
             aggregates: [],
             mappings: %{},
             filters: [],
-            sort_by: nil
+            sort_by: nil,
+            limit: nil
 
   @type aggregate_type :: :count | :sum | :avg | :min | :max
-  @type aggregate_spec :: {aggregate_type(), field :: atom() | nil, as :: atom()}
+  @type aggregate_spec :: {aggregate_type(), field :: atom() | tuple() | nil, as :: atom()}
+  @type field_path :: atom() | tuple()
+  @type date_grouping :: {atom(), :year | :month | :day | :hour}
   @type mapping :: %{
-          optional(:category) => atom(),
+          optional(:category) => atom() | tuple(),
           optional(:value) => atom(),
-          optional(:x) => atom(),
+          optional(:x) => atom() | tuple(),
           optional(:y) => atom()
         }
 
   @type t :: %__MODULE__{
-          group_by: atom() | nil,
+          group_by: field_path() | date_grouping() | nil,
           aggregates: [aggregate_spec()],
           mappings: mapping(),
-          filters: [term()],
-          sort_by: {atom(), :asc | :desc} | nil
+          filters: map() | [term()],
+          sort_by: {atom(), :asc | :desc} | nil,
+          limit: pos_integer() | nil
         }
 
   @doc """
@@ -101,11 +105,12 @@ defmodule AshReports.Charts.Transform do
     try do
       result =
         records
+        |> apply_pre_filters(transform.filters)
         |> apply_grouping(transform.group_by)
         |> apply_aggregations(transform.aggregates)
         |> apply_mappings(transform.mappings)
-        |> apply_filters(transform.filters)
         |> apply_sorting(transform.sort_by)
+        |> apply_limit(transform.limit)
 
       {:ok, result}
     rescue
@@ -121,6 +126,22 @@ defmodule AshReports.Charts.Transform do
 
   # Private Functions
 
+  # Step 0: Apply pre-aggregation filters (simple map-based filters)
+  defp apply_pre_filters(records, filters) when is_map(filters) and map_size(filters) > 0 do
+    Enum.filter(records, fn record ->
+      Enum.all?(filters, fn {field, expected_value} ->
+        actual_value = get_field_value(record, field)
+
+        cond do
+          is_list(expected_value) -> actual_value in expected_value
+          true -> actual_value == expected_value
+        end
+      end)
+    end)
+  end
+
+  defp apply_pre_filters(records, _), do: records
+
   # Step 1: Group records by field
   defp apply_grouping(records, nil), do: [{nil, records}]
 
@@ -131,6 +152,47 @@ defmodule AshReports.Charts.Transform do
     end)
     |> Enum.to_list()
   end
+
+  # Handle nested relationship paths like {:product, :category, :name}
+  defp apply_grouping(records, group_path) when is_tuple(group_path) do
+    # Check if this is date grouping (second element is :year, :month, :day, or :hour)
+    if is_date_grouping?(group_path) do
+      apply_date_grouping(records, group_path)
+    else
+      # Regular nested path grouping
+      records
+      |> Enum.group_by(fn record ->
+        get_nested_value(record, Tuple.to_list(group_path))
+      end)
+      |> Enum.to_list()
+    end
+  end
+
+  # Check if tuple is a date grouping pattern
+  defp is_date_grouping?({_field, period}) when period in [:year, :month, :day, :hour], do: true
+  defp is_date_grouping?(_), do: false
+
+  # Apply date-based grouping
+  defp apply_date_grouping(records, {field, period}) do
+    records
+    |> Enum.group_by(fn record ->
+      date_value = get_field_value(record, field)
+      extract_date_period(date_value, period)
+    end)
+    |> Enum.to_list()
+  end
+
+  defp extract_date_period(nil, _period), do: nil
+  defp extract_date_period(%Date{} = date, :year), do: date.year
+  defp extract_date_period(%Date{} = date, :month), do: "#{date.year}-#{String.pad_leading("#{date.month}", 2, "0")}"
+  defp extract_date_period(%Date{} = date, :day), do: Date.to_string(date)
+
+  defp extract_date_period(%DateTime{} = datetime, :year), do: datetime.year
+  defp extract_date_period(%DateTime{} = datetime, :month), do: "#{datetime.year}-#{String.pad_leading("#{datetime.month}", 2, "0")}"
+  defp extract_date_period(%DateTime{} = datetime, :day), do: Date.to_string(DateTime.to_date(datetime))
+  defp extract_date_period(%DateTime{} = datetime, :hour), do: "#{Date.to_string(DateTime.to_date(datetime))} #{String.pad_leading("#{datetime.hour}", 2, "0")}:00"
+
+  defp extract_date_period(_value, _period), do: nil
 
   # Step 2: Apply aggregations to each group
   defp apply_aggregations(grouped_data, aggregates) when is_list(aggregates) do
@@ -171,22 +233,17 @@ defmodule AshReports.Charts.Transform do
     end)
   end
 
-  # Step 4: Apply post-aggregation filters
-  defp apply_filters(data, []), do: data
-
-  defp apply_filters(data, filters) when is_list(filters) do
-    Enum.filter(data, fn record ->
-      Enum.all?(filters, fn filter_fn ->
-        filter_fn.(record)
-      end)
-    end)
-  end
-
-  # Step 5: Apply sorting
+  # Step 4: Apply sorting
   defp apply_sorting(data, nil), do: data
 
   defp apply_sorting(data, {field, direction}) when direction in [:asc, :desc] do
     Enum.sort_by(data, &Map.get(&1, field), direction)
+  end
+
+  # Step 5: Apply limit
+  defp apply_limit(data, nil), do: data
+  defp apply_limit(data, limit) when is_integer(limit) and limit > 0 do
+    Enum.take(data, limit)
   end
 
   # Aggregate Calculations
@@ -195,7 +252,7 @@ defmodule AshReports.Charts.Transform do
     length(records)
   end
 
-  defp calculate_aggregate(:sum, records, field) when is_atom(field) do
+  defp calculate_aggregate(:sum, records, field) do
     records
     |> Enum.map(&get_field_value(&1, field))
     |> Enum.reject(&is_nil/1)
@@ -204,7 +261,7 @@ defmodule AshReports.Charts.Transform do
     end)
   end
 
-  defp calculate_aggregate(:avg, records, field) when is_atom(field) do
+  defp calculate_aggregate(:avg, records, field) do
     values =
       records
       |> Enum.map(&get_field_value(&1, field))
@@ -216,14 +273,14 @@ defmodule AshReports.Charts.Transform do
     end
   end
 
-  defp calculate_aggregate(:min, records, field) when is_atom(field) do
+  defp calculate_aggregate(:min, records, field) do
     records
     |> Enum.map(&get_field_value(&1, field))
     |> Enum.reject(&is_nil/1)
     |> Enum.min(fn -> nil end)
   end
 
-  defp calculate_aggregate(:max, records, field) when is_atom(field) do
+  defp calculate_aggregate(:max, records, field) do
     records
     |> Enum.map(&get_field_value(&1, field))
     |> Enum.reject(&is_nil/1)
@@ -232,12 +289,31 @@ defmodule AshReports.Charts.Transform do
 
   # Helper Functions
 
+  # Get field value - supports both simple atoms and nested tuples
   defp get_field_value(record, field) when is_atom(field) do
     cond do
       is_map(record) -> Map.get(record, field)
       true -> nil
     end
   end
+
+  defp get_field_value(record, field) when is_tuple(field) do
+    get_nested_value(record, Tuple.to_list(field))
+  end
+
+  defp get_field_value(_record, _field), do: nil
+
+  # Traverse nested relationships like [:product, :category, :name]
+  defp get_nested_value(record, []), do: record
+  defp get_nested_value(nil, _path), do: nil
+
+  defp get_nested_value(record, [field | rest]) when is_map(record) do
+    record
+    |> Map.get(field)
+    |> get_nested_value(rest)
+  end
+
+  defp get_nested_value(_record, _path), do: nil
 
   # Handle Decimal values for sum
   defp add_values(acc, %Decimal{} = value) do
@@ -257,6 +333,96 @@ defmodule AshReports.Charts.Transform do
   end
 
   defp add_values(acc, _value), do: acc
+
+  @doc """
+  Extracts required relationships from a transform definition.
+
+  Analyzes the transform to detect which relationships need to be preloaded
+  based on nested field paths in group_by, aggregates, and mappings.
+
+  ## Examples
+
+      iex> transform = %Transform{group_by: {:product, :category, :name}}
+      iex> Transform.detect_relationships(transform)
+      [:product, {:product, :category}]
+
+      iex> transform = %Transform{group_by: :status}
+      iex> Transform.detect_relationships(transform)
+      []
+  """
+  @spec detect_relationships(t() | nil) :: [atom() | tuple()]
+  def detect_relationships(nil), do: []
+
+  def detect_relationships(%__MODULE__{} = transform) do
+    []
+    |> detect_from_group_by(transform.group_by)
+    |> detect_from_aggregates(transform.aggregates)
+    |> detect_from_mappings(transform.mappings)
+    |> Enum.uniq()
+  end
+
+  # Extract relationships from group_by field
+  defp detect_from_group_by(acc, nil), do: acc
+  defp detect_from_group_by(acc, field) when is_atom(field), do: acc
+
+  defp detect_from_group_by(acc, field) when is_tuple(field) do
+    path = Tuple.to_list(field)
+
+    # Check if this is date grouping (e.g., {:updated_at, :day})
+    if is_date_grouping?(field) do
+      acc
+    else
+      # Build nested relationship list
+      # {:product, :category, :name} → [:product, {:product, :category}]
+      build_relationship_list(path) ++ acc
+    end
+  end
+
+  # Extract relationships from aggregate fields
+  defp detect_from_aggregates(acc, aggregates) when is_list(aggregates) do
+    aggregate_rels =
+      Enum.flat_map(aggregates, fn {_type, field, _as_name} ->
+        case field do
+          nil -> []
+          field when is_atom(field) -> []
+          field when is_tuple(field) -> build_relationship_list(Tuple.to_list(field))
+          _ -> []
+        end
+      end)
+
+    aggregate_rels ++ acc
+  end
+
+  # Extract relationships from mappings
+  defp detect_from_mappings(acc, mappings) when is_map(mappings) do
+    mapping_rels =
+      mappings
+      |> Map.values()
+      |> Enum.flat_map(fn
+        field when is_tuple(field) -> build_relationship_list(Tuple.to_list(field))
+        _ -> []
+      end)
+
+    mapping_rels ++ acc
+  end
+
+  # Build nested relationship list from path
+  # [:product, :category, :name] → [:product, {:product, :category}]
+  defp build_relationship_list([]), do: []
+  defp build_relationship_list([_single]), do: []
+
+  defp build_relationship_list(path) do
+    path
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {_field, index} ->
+      case Enum.slice(path, 0, index + 1) do
+        [] -> []
+        [single] -> [single]
+        multiple -> [List.to_tuple(multiple)]
+      end
+    end)
+    |> Enum.uniq()
+  end
 
   @doc """
   Parses a transform definition from chart DSL.
@@ -284,8 +450,9 @@ defmodule AshReports.Charts.Transform do
         group_by: Map.get(transform_def, :group_by),
         aggregates: parse_aggregates(Map.get(transform_def, :aggregates, [])),
         mappings: parse_mappings(transform_def),
-        filters: Map.get(transform_def, :filters, []),
-        sort_by: Map.get(transform_def, :sort_by)
+        filters: parse_filters(Map.get(transform_def, :filter)),
+        sort_by: Map.get(transform_def, :sort_by),
+        limit: Map.get(transform_def, :limit)
       }
 
       {:ok, transform}
@@ -294,6 +461,10 @@ defmodule AshReports.Charts.Transform do
         {:error, {:parse_failed, Exception.message(error)}}
     end
   end
+
+  defp parse_filters(nil), do: %{}
+  defp parse_filters(filter_map) when is_map(filter_map), do: filter_map
+  defp parse_filters(_), do: %{}
 
   defp parse_aggregates(aggregates) when is_list(aggregates) do
     Enum.map(aggregates, fn

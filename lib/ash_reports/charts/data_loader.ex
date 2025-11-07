@@ -250,9 +250,28 @@ defmodule AshReports.Charts.DataLoader do
   end
 
   defp extract_relationships_from_transform(chart) do
-    # TODO: Phase 1.2 will implement transform parsing
-    # For now, check if chart has explicit :load_relationships field
-    Map.get(chart, :load_relationships, [])
+    # Get explicitly declared relationships
+    explicit_rels = Map.get(chart, :load_relationships, [])
+
+    # Auto-detect relationships from transform definition
+    detected_rels =
+      case chart do
+        %{transform: transform} when not is_nil(transform) ->
+          case AshReports.Charts.Transform.parse(transform) do
+            {:ok, parsed_transform} ->
+              AshReports.Charts.Transform.detect_relationships(parsed_transform)
+
+            {:error, _reason} ->
+              []
+          end
+
+        _ ->
+          []
+      end
+
+    # Merge explicit and detected relationships, preferring explicit
+    (explicit_rels ++ detected_rels)
+    |> Enum.uniq()
   end
 
   defp load_relationships(query, []), do: query
