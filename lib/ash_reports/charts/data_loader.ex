@@ -52,7 +52,7 @@ defmodule AshReports.Charts.DataLoader do
 
   - `:streaming` - Enable streaming for large datasets (default: false)
   - `:chunk_size` - Chunk size for streaming (default: 500)
-  - `:timeout` - Query timeout in milliseconds (default: 60_000)
+  - `:timeout` - Query timeout in milliseconds (optional, not supported by all data layers)
   - `:actor` - Actor for authorization (default: nil)
   - `:load_relationships` - Automatically load relationships (default: true)
 
@@ -284,11 +284,18 @@ defmodule AshReports.Charts.DataLoader do
   end
 
   defp execute_query(domain, query, opts) do
-    timeout = Keyword.get(opts, :timeout, 60_000)
     actor = Keyword.get(opts, :actor)
 
-    read_opts = [domain: domain, timeout: timeout]
+    # Build read options - only add timeout if explicitly provided
+    # (ETS data layer doesn't support timeout)
+    read_opts = [domain: domain]
     read_opts = if actor, do: Keyword.put(read_opts, :actor, actor), else: read_opts
+
+    read_opts =
+      case Keyword.get(opts, :timeout) do
+        nil -> read_opts
+        timeout -> Keyword.put(read_opts, :timeout, timeout)
+      end
 
     case Ash.read(query, read_opts) do
       {:ok, records} ->
