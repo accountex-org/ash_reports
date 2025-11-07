@@ -181,6 +181,7 @@ defmodule AshReports.Charts.TransformDSL do
 
   defp validate_filters(nil), do: :ok
   defp validate_filters([]), do: :ok
+  defp validate_filters(filters) when is_map(filters) and map_size(filters) == 0, do: :ok
 
   defp validate_filters(filters) when is_list(filters) do
     filters
@@ -192,7 +193,7 @@ defmodule AshReports.Charts.TransformDSL do
     end)
   end
 
-  defp validate_filters(filters), do: {:error, "Filters must be a list, got: #{inspect(filters)}"}
+  defp validate_filters(filters), do: {:error, "Filters must be a list or empty map, got: #{inspect(filters)}"}
 
   defp validate_group_by(nil), do: :ok
   defp validate_group_by(field) when is_atom(field), do: :ok
