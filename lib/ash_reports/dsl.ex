@@ -771,7 +771,7 @@ defmodule AshReports.Dsl do
         doc: "An Ash query expression to scope the report data."
       ],
       permissions: [
-        type: {:list, :atom},
+        type: :any,
         default: [],
         doc: "List of required permissions to run this report."
       ],
@@ -1280,7 +1280,7 @@ defmodule AshReports.Dsl do
         doc: "Function that takes params and returns an Ash.Query for filtering."
       ],
       load_relationships: [
-        type: {:list, :atom},
+        type: :any,
         required: false,
         default: [],
         doc: "List of relationships to preload for optimization."
@@ -1355,7 +1355,7 @@ defmodule AshReports.Dsl do
         doc: "Function that takes params and returns an Ash.Query for filtering."
       ],
       load_relationships: [
-        type: {:list, :atom},
+        type: :any,
         required: false,
         default: [],
         doc: "List of relationships to preload for optimization."
@@ -1425,7 +1425,7 @@ defmodule AshReports.Dsl do
         doc: "Function that takes params and returns an Ash.Query for filtering."
       ],
       load_relationships: [
-        type: {:list, :atom},
+        type: :any,
         required: false,
         default: [],
         doc: "List of relationships to preload for optimization."
@@ -1485,7 +1485,7 @@ defmodule AshReports.Dsl do
         doc: "Function that takes params and returns an Ash.Query for filtering."
       ],
       load_relationships: [
-        type: {:list, :atom},
+        type: :any,
         required: false,
         default: [],
         doc: "List of relationships to preload for optimization."
@@ -1555,7 +1555,7 @@ defmodule AshReports.Dsl do
         doc: "Function that takes params and returns an Ash.Query for filtering."
       ],
       load_relationships: [
-        type: {:list, :atom},
+        type: :any,
         required: false,
         default: [],
         doc: "List of relationships to preload for optimization."
@@ -1615,7 +1615,7 @@ defmodule AshReports.Dsl do
         doc: "Function that takes params and returns an Ash.Query for filtering."
       ],
       load_relationships: [
-        type: {:list, :atom},
+        type: :any,
         required: false,
         default: [],
         doc: "List of relationships to preload for optimization."
@@ -1680,7 +1680,7 @@ defmodule AshReports.Dsl do
         doc: "Function that takes params and returns an Ash.Query for filtering."
       ],
       load_relationships: [
-        type: {:list, :atom},
+        type: :any,
         required: false,
         default: [],
         doc: "List of relationships to preload for optimization."
