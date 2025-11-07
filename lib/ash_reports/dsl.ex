@@ -1352,11 +1352,7 @@ defmodule AshReports.Dsl do
       of data from the driving resource before chart rendering.
       """,
       target: AshReports.Charts.TransformDSL,
-      schema: transform_entity_schema(),
-      entities: [
-        filters: [filter_entity()],
-        aggregates: [aggregate_entity()]
-      ]
+      schema: transform_entity_schema()
     }
   end
 
@@ -1818,11 +1814,21 @@ defmodule AshReports.Dsl do
   defp transform_entity_schema do
     [
       group_by: [
-        type: {:or, [:atom, :tuple]},
+        type: :any,
         doc: "Field or tuple to group by (e.g., :status or {:created_at, :month})."
       ],
+      aggregates: [
+        type: {:list, :any},
+        default: [],
+        doc: "List of aggregate operations to perform."
+      ],
+      filters: [
+        type: :any,
+        default: %{},
+        doc: "Map of filter conditions to apply before aggregation."
+      ],
       sort_by: [
-        type: {:or, [:atom, :tuple]},
+        type: :any,
         doc: "Field to sort by, optionally with direction (e.g., :name or {:value, :desc})."
       ],
       limit: [
@@ -1830,7 +1836,7 @@ defmodule AshReports.Dsl do
         doc: "Maximum number of results to return."
       ],
       as_category: [
-        type: {:or, [:atom, :tuple]},
+        type: :any,
         doc: "Map to category field for pie/bar charts."
       ],
       as_value: [
@@ -1838,7 +1844,7 @@ defmodule AshReports.Dsl do
         doc: "Map to value field for pie/bar charts."
       ],
       as_x: [
-        type: {:or, [:atom, :tuple]},
+        type: :any,
         doc: "Map to X-axis field for line/scatter charts."
       ],
       as_y: [
@@ -1846,15 +1852,15 @@ defmodule AshReports.Dsl do
         doc: "Map to Y-axis field for line/scatter charts."
       ],
       as_task: [
-        type: {:or, [:atom, :tuple]},
+        type: :any,
         doc: "Map to task name field for Gantt charts."
       ],
       as_start_date: [
-        type: {:or, [:atom, :tuple]},
+        type: :any,
         doc: "Map to start date field for Gantt charts."
       ],
       as_end_date: [
-        type: {:or, [:atom, :tuple]},
+        type: :any,
         doc: "Map to end date field for Gantt charts (supports date calculations)."
       ],
       as_values: [
