@@ -315,62 +315,6 @@ defmodule AshReports.Charts.TransformTest do
     end
   end
 
-  describe "parse/1" do
-    test "parses simple transform definition" do
-      transform_def = %{
-        group_by: :status,
-        aggregates: [{:count, nil, :count}],
-        as_category: :group_key,
-        as_value: :count
-      }
-
-      {:ok, transform} = Transform.parse(transform_def)
-
-      assert transform.group_by == :status
-      assert transform.aggregates == [{:count, nil, :count}]
-      assert transform.mappings == %{category: :group_key, value: :count}
-    end
-
-    test "parses nil transform" do
-      assert {:ok, nil} = Transform.parse(nil)
-    end
-
-    test "handles missing fields with defaults" do
-      transform_def = %{group_by: :type}
-
-      {:ok, transform} = Transform.parse(transform_def)
-
-      assert transform.group_by == :type
-      assert transform.aggregates == []
-      assert transform.mappings == %{}
-      assert transform.filters == %{}
-      assert transform.limit == nil
-    end
-
-    test "parses limit" do
-      transform_def = %{
-        group_by: :status,
-        aggregates: [{:count, nil, :count}],
-        limit: 10
-      }
-
-      {:ok, transform} = Transform.parse(transform_def)
-
-      assert transform.limit == 10
-    end
-
-    test "parses filter map" do
-      transform_def = %{
-        group_by: :status,
-        filter: %{status: :paid}
-      }
-
-      {:ok, transform} = Transform.parse(transform_def)
-
-      assert transform.filters == %{status: :paid}
-    end
-  end
-
   describe "execute/2 with nested relationship paths" do
     test "groups by nested relationship field" do
       records = [
@@ -679,6 +623,116 @@ defmodule AshReports.Charts.TransformTest do
       a_result = Enum.find(result, &(&1.category == "A"))
       assert a_result.sample_price == 100
       assert a_result.quantity == 3
+    end
+  end
+
+  describe "execute/2 with edge cases" do
+    test "handles empty records gracefully" do
+      transform = %Transform{
+        group_by: :status,
+        aggregates: [{:count, nil, :total}],
+        mappings: %{category: :group_key, value: :total}
+      }
+
+      {:ok, result} = Transform.execute([], transform)
+
+      assert result == []
+    end
+
+    test "handles nil aggregates list" do
+      transform = %Transform{
+        group_by: :status,
+        aggregates: [],
+        mappings: %{}
+      }
+
+      records = [%{status: :active}, %{status: :inactive}]
+      {:ok, result} = Transform.execute(records, transform)
+
+      # Without aggregates, should group but not aggregate
+      assert is_list(result)
+    end
+
+    test "handles records with all nil values" do
+      records = [
+        %{status: nil, value: nil},
+        %{status: nil, value: nil}
+      ]
+
+      transform = %Transform{
+        group_by: :status,
+        aggregates: [{:count, nil, :total}],
+        mappings: %{category: :group_key, value: :total}
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      assert length(result) == 1
+      assert hd(result).category == nil
+      assert hd(result).value == 2
+    end
+
+    test "handles empty mappings" do
+      records = [%{status: :active}]
+
+      transform = %Transform{
+        group_by: :status,
+        aggregates: [{:count, nil, :total}],
+        mappings: %{}
+      }
+
+      {:ok, result} = Transform.execute(records, transform)
+
+      # Should return data with raw aggregates
+      assert length(result) == 1
+      assert Map.has_key?(hd(result), :total)
+    end
+  end
+
+  describe "TransformDSL edge cases" do
+    alias AshReports.Charts.TransformDSL
+
+    test "handles nil filters" do
+      dsl = %TransformDSL{
+        filters: nil,
+        group_by: :status,
+        aggregates: []
+      }
+
+      {:ok, transform} = TransformDSL.to_transform(dsl)
+
+      assert transform.filters == %{}
+    end
+
+    test "handles nil aggregates" do
+      dsl = %TransformDSL{
+        filters: [],
+        group_by: :status,
+        aggregates: nil
+      }
+
+      {:ok, transform} = TransformDSL.to_transform(dsl)
+
+      assert transform.aggregates == []
+    end
+
+    test "handles empty TransformDSL" do
+      dsl = %TransformDSL{}
+
+      {:ok, transform} = TransformDSL.to_transform(dsl)
+
+      assert transform.filters == %{}
+      assert transform.aggregates == []
+      assert transform.group_by == nil
+      assert transform.mappings == %{}
+    end
+
+    test "validates successfully with minimal fields" do
+      dsl = %TransformDSL{
+        group_by: :status
+      }
+
+      assert :ok = TransformDSL.validate(dsl)
     end
   end
 

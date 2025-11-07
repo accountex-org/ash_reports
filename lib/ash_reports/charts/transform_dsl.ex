@@ -107,9 +107,9 @@ defmodule AshReports.Charts.TransformDSL do
   @spec to_transform(t()) :: {:ok, Transform.t()} | {:error, term()}
   def to_transform(%__MODULE__{} = dsl) do
     with :ok <- validate(dsl) do
-      # Convert filters list to map
+      # Convert filters list to map, handle nil
       filters_map =
-        dsl.filters
+        (dsl.filters || [])
         |> Enum.map(&FilterSpec.to_tuple/1)
         |> Map.new()
 
@@ -125,10 +125,15 @@ defmodule AshReports.Charts.TransformDSL do
         |> maybe_put_mapping(:end_date, dsl.as_end_date)
         |> maybe_put_mapping(:values, dsl.as_values)
 
+      # Convert aggregates, handle nil
+      aggregates =
+        (dsl.aggregates || [])
+        |> Enum.map(&AggregateSpec.to_tuple/1)
+
       transform = %Transform{
         filters: filters_map,
         group_by: dsl.group_by,
-        aggregates: Enum.map(dsl.aggregates, &AggregateSpec.to_tuple/1),
+        aggregates: aggregates,
         mappings: mappings,
         sort_by: dsl.sort_by,
         limit: dsl.limit
@@ -170,6 +175,9 @@ defmodule AshReports.Charts.TransformDSL do
     end
   end
 
+  defp validate_filters(nil), do: :ok
+  defp validate_filters([]), do: :ok
+
   defp validate_filters(filters) when is_list(filters) do
     filters
     |> Enum.reduce_while(:ok, fn filter, :ok ->
@@ -192,6 +200,9 @@ defmodule AshReports.Charts.TransformDSL do
 
   defp validate_group_by(group_by),
     do: {:error, "Invalid group_by: #{inspect(group_by)}"}
+
+  defp validate_aggregates(nil), do: :ok
+  defp validate_aggregates([]), do: :ok
 
   defp validate_aggregates(aggregates) when is_list(aggregates) do
     aggregates
