@@ -125,10 +125,14 @@ defmodule AshReports.Charts.TransformDSL do
         |> maybe_put_mapping(:end_date, dsl.as_end_date)
         |> maybe_put_mapping(:values, dsl.as_values)
 
-      # Convert aggregates, handle nil
+      # Convert aggregates, handle nil - accept both tuples and structs
       aggregates =
         (dsl.aggregates || [])
-        |> Enum.map(&AggregateSpec.to_tuple/1)
+        |> Enum.map(fn
+          %AggregateSpec{} = agg -> AggregateSpec.to_tuple(agg)
+          tuple when is_tuple(tuple) -> tuple
+          other -> other
+        end)
 
       transform = %Transform{
         filters: filters_map,
@@ -207,7 +211,7 @@ defmodule AshReports.Charts.TransformDSL do
   defp validate_aggregates(aggregates) when is_list(aggregates) do
     aggregates
     |> Enum.reduce_while(:ok, fn agg, :ok ->
-      case AggregateSpec.validate(agg) do
+      case validate_aggregate(agg) do
         :ok -> {:cont, :ok}
         error -> {:halt, error}
       end
@@ -216,6 +220,20 @@ defmodule AshReports.Charts.TransformDSL do
 
   defp validate_aggregates(aggregates),
     do: {:error, "Aggregates must be a list, got: #{inspect(aggregates)}"}
+
+  # Validate individual aggregate - accepts both tuple and struct forms
+  defp validate_aggregate(%AggregateSpec{} = agg), do: AggregateSpec.validate(agg)
+
+  defp validate_aggregate({type, field, as_name}) when is_atom(type) and is_atom(as_name) do
+    cond do
+      as_name == nil -> {:error, "Aggregate must have an :as name"}
+      type not in [:count, :sum, :avg, :min, :max] -> {:error, "Invalid aggregate type: #{inspect(type)}"}
+      type != :count and field == nil -> {:error, "Aggregate type #{inspect(type)} requires a field"}
+      true -> :ok
+    end
+  end
+
+  defp validate_aggregate(agg), do: {:error, "Invalid aggregate format: #{inspect(agg)}"}
 
   defp validate_sort_by(nil), do: :ok
   defp validate_sort_by({field, direction}) when is_atom(field) and direction in [:asc, :desc], do: :ok
