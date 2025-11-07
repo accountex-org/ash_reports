@@ -459,12 +459,23 @@ defmodule AshReports.Dsl do
       examples: [
         """
         bar_chart :sales_by_region do
-          data_source expr(aggregate_sales_by_region())
+          driving_resource Sales
+
+          transform do
+            group_by :region
+            as_category :group_key
+            as_value :total
+
+            aggregates do
+              aggregate type: :count, as: :total
+            end
+          end
+
           config do
             width 600
             height 400
             title "Sales by Region"
-            type :grouped
+            type :simple
             orientation :vertical
             data_labels true
           end
@@ -475,6 +486,7 @@ defmodule AshReports.Dsl do
       args: [:name],
       schema: bar_chart_schema(),
       entities: [
+        transform: [transform_entity()],
         config: [bar_chart_config_entity()]
       ]
     }
@@ -503,7 +515,18 @@ defmodule AshReports.Dsl do
       examples: [
         """
         line_chart :revenue_trend do
-          data_source expr(get_monthly_revenue())
+          driving_resource Sales
+
+          transform do
+            group_by {:created_at, :month}
+            as_x :group_key
+            as_y :total
+
+            aggregates do
+              aggregate type: :sum, field: :amount, as: :total
+            end
+          end
+
           config do
             width 800
             height 400
@@ -518,6 +541,7 @@ defmodule AshReports.Dsl do
       args: [:name],
       schema: line_chart_schema(),
       entities: [
+        transform: [transform_entity()],
         config: [line_chart_config_entity()]
       ]
     }
@@ -546,7 +570,18 @@ defmodule AshReports.Dsl do
       examples: [
         """
         pie_chart :market_share do
-          data_source expr(get_market_distribution())
+          driving_resource Customer
+
+          transform do
+            group_by :region
+            as_category :group_key
+            as_value :count
+
+            aggregates do
+              aggregate type: :count, as: :count
+            end
+          end
+
           config do
             width 500
             height 500
@@ -560,6 +595,7 @@ defmodule AshReports.Dsl do
       args: [:name],
       schema: pie_chart_schema(),
       entities: [
+        transform: [transform_entity()],
         config: [pie_chart_config_entity()]
       ]
     }
@@ -588,12 +624,23 @@ defmodule AshReports.Dsl do
       examples: [
         """
         area_chart :cumulative_sales do
-          data_source expr(get_cumulative_data())
+          driving_resource Sales
+
+          transform do
+            group_by {:created_at, :day}
+            as_x :group_key
+            as_y :total
+
+            aggregates do
+              aggregate type: :sum, field: :amount, as: :total
+            end
+          end
+
           config do
             width 800
             height 400
             title "Cumulative Sales"
-            mode :stacked
+            mode :simple
             opacity 0.7
           end
         end
@@ -603,6 +650,7 @@ defmodule AshReports.Dsl do
       args: [:name],
       schema: area_chart_schema(),
       entities: [
+        transform: [transform_entity()],
         config: [area_chart_config_entity()]
       ]
     }
@@ -631,7 +679,13 @@ defmodule AshReports.Dsl do
       examples: [
         """
         scatter_chart :price_vs_quantity do
-          data_source expr(get_correlation_data())
+          driving_resource Product
+
+          transform do
+            as_x :price
+            as_y :quantity
+          end
+
           config do
             width 700
             height 500
@@ -645,6 +699,7 @@ defmodule AshReports.Dsl do
       args: [:name],
       schema: scatter_chart_schema(),
       entities: [
+        transform: [transform_entity()],
         config: [scatter_chart_config_entity()]
       ]
     }
@@ -673,7 +728,20 @@ defmodule AshReports.Dsl do
       examples: [
         """
         gantt_chart :project_timeline do
-          data_source expr(get_project_tasks())
+          driving_resource Invoice
+
+          transform do
+            as_task :invoice_number
+            as_start_date :date
+            as_end_date {:date, :add_days, 30}
+            sort_by {:date, :desc}
+            limit 20
+
+            filters do
+              filter :status, [:sent, :paid, :overdue]
+            end
+          end
+
           config do
             width 900
             height 400
@@ -688,6 +756,7 @@ defmodule AshReports.Dsl do
       args: [:name],
       schema: gantt_chart_schema(),
       entities: [
+        transform: [transform_entity()],
         config: [gantt_chart_config_entity()]
       ]
     }
@@ -716,7 +785,19 @@ defmodule AshReports.Dsl do
       examples: [
         """
         sparkline :weekly_trend do
-          data_source expr(get_last_7_days())
+          driving_resource Customer
+
+          transform do
+            group_by {:updated_at, :day}
+            as_values :avg_health
+            sort_by {:group_key, :desc}
+            limit 7
+
+            aggregates do
+              aggregate type: :avg, field: :customer_health_score, as: :avg_health
+            end
+          end
+
           config do
             width 100
             height 20
@@ -730,6 +811,7 @@ defmodule AshReports.Dsl do
       args: [:name],
       schema: sparkline_schema(),
       entities: [
+        transform: [transform_entity()],
         config: [sparkline_config_entity()]
       ]
     }
@@ -1257,6 +1339,46 @@ defmodule AshReports.Dsl do
       ]
   end
 
+  @doc """
+  Transform entity for declarative data transformations in charts.
+  """
+  def transform_entity do
+    %Entity{
+      name: :transform,
+      describe: """
+      Defines declarative data transformation for chart data processing.
+
+      Transform supports filtering, grouping, aggregation, mapping, sorting, and limiting
+      of data from the driving resource before chart rendering.
+      """,
+      target: AshReports.Charts.TransformDSL,
+      schema: transform_entity_schema(),
+      entities: [
+        filters: [filter_entity()],
+        aggregates: [aggregate_entity()]
+      ]
+    }
+  end
+
+  defp filter_entity do
+    %Entity{
+      name: :filter,
+      describe: "A filter condition to apply before aggregation.",
+      target: AshReports.Charts.FilterSpec,
+      args: [:field, :value],
+      schema: []
+    }
+  end
+
+  defp aggregate_entity do
+    %Entity{
+      name: :aggregate,
+      describe: "An aggregation operation (count, sum, avg, min, max).",
+      target: AshReports.Charts.AggregateSpec,
+      schema: aggregate_entity_schema()
+    }
+  end
+
   defp bar_chart_schema do
     [
       name: [
@@ -1268,11 +1390,6 @@ defmodule AshReports.Dsl do
         type: :atom,
         required: true,
         doc: "The Ash resource module to query for chart data."
-      ],
-      transform: [
-        type: :map,
-        required: false,
-        doc: "Transform definition for grouping and aggregating data."
       ],
       scope: [
         type: {:fun, 1},
@@ -1344,11 +1461,6 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      transform: [
-        type: :map,
-        required: false,
-        doc: "Transform definition for grouping and aggregating data."
-      ],
       scope: [
         type: {:fun, 1},
         required: false,
@@ -1414,11 +1526,6 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      transform: [
-        type: :map,
-        required: false,
-        doc: "Transform definition for grouping and aggregating data."
-      ],
       scope: [
         type: {:fun, 1},
         required: false,
@@ -1473,11 +1580,6 @@ defmodule AshReports.Dsl do
         type: :atom,
         required: true,
         doc: "The Ash resource module to query for chart data."
-      ],
-      transform: [
-        type: :map,
-        required: false,
-        doc: "Transform definition for grouping and aggregating data."
       ],
       scope: [
         type: {:fun, 1},
@@ -1544,11 +1646,6 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      transform: [
-        type: :map,
-        required: false,
-        doc: "Transform definition for grouping and aggregating data."
-      ],
       scope: [
         type: {:fun, 1},
         required: false,
@@ -1603,11 +1700,6 @@ defmodule AshReports.Dsl do
         type: :atom,
         required: true,
         doc: "The Ash resource module to query for chart data."
-      ],
-      transform: [
-        type: :map,
-        required: false,
-        doc: "Transform definition for grouping and aggregating data."
       ],
       scope: [
         type: {:fun, 1},
@@ -1669,11 +1761,6 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      transform: [
-        type: :map,
-        required: false,
-        doc: "Transform definition for grouping and aggregating data."
-      ],
       scope: [
         type: {:fun, 1},
         required: false,
@@ -1724,6 +1811,74 @@ defmodule AshReports.Dsl do
         type: :string,
         default: "rgba(0, 200, 50, 0.2)",
         doc: "Fill color beneath the line."
+      ]
+    ]
+  end
+
+  defp transform_entity_schema do
+    [
+      group_by: [
+        type: {:or, [:atom, :tuple]},
+        doc: "Field or tuple to group by (e.g., :status or {:created_at, :month})."
+      ],
+      sort_by: [
+        type: {:or, [:atom, :tuple]},
+        doc: "Field to sort by, optionally with direction (e.g., :name or {:value, :desc})."
+      ],
+      limit: [
+        type: :pos_integer,
+        doc: "Maximum number of results to return."
+      ],
+      as_category: [
+        type: {:or, [:atom, :tuple]},
+        doc: "Map to category field for pie/bar charts."
+      ],
+      as_value: [
+        type: :atom,
+        doc: "Map to value field for pie/bar charts."
+      ],
+      as_x: [
+        type: {:or, [:atom, :tuple]},
+        doc: "Map to X-axis field for line/scatter charts."
+      ],
+      as_y: [
+        type: :atom,
+        doc: "Map to Y-axis field for line/scatter charts."
+      ],
+      as_task: [
+        type: {:or, [:atom, :tuple]},
+        doc: "Map to task name field for Gantt charts."
+      ],
+      as_start_date: [
+        type: {:or, [:atom, :tuple]},
+        doc: "Map to start date field for Gantt charts."
+      ],
+      as_end_date: [
+        type: {:or, [:atom, :tuple]},
+        doc: "Map to end date field for Gantt charts (supports date calculations)."
+      ],
+      as_values: [
+        type: :atom,
+        doc: "Map to values field for sparklines."
+      ]
+    ]
+  end
+
+  defp aggregate_entity_schema do
+    [
+      type: [
+        type: {:in, [:count, :sum, :avg, :min, :max]},
+        required: true,
+        doc: "The type of aggregation to perform."
+      ],
+      field: [
+        type: :atom,
+        doc: "The field to aggregate (not needed for :count)."
+      ],
+      as: [
+        type: :atom,
+        required: true,
+        doc: "The name to use for the aggregate result."
       ]
     ]
   end

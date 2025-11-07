@@ -48,15 +48,18 @@ defmodule AshReports.Charts.BarChart do
   record scope.
   """
 
-  alias AshReports.Charts.BarChartConfig
+  alias AshReports.Charts.{BarChartConfig, TransformDSL}
 
   @type t :: %__MODULE__{
           name: atom(),
-          data_source: term(),
+          driving_resource: module() | nil,
+          transform: TransformDSL.t() | nil,
+          scope: (map() -> Ash.Query.t()) | nil,
+          load_relationships: list() | nil,
           config: BarChartConfig.t() | nil
         }
 
-  defstruct [:name, :data_source, :config]
+  defstruct [:name, :driving_resource, :transform, :scope, :load_relationships, :config]
 
   @doc """
   Creates a new BarChart definition.
@@ -64,18 +67,21 @@ defmodule AshReports.Charts.BarChart do
   ## Parameters
 
   - `name` - Atom identifier for the chart
-  - `opts` - Keyword list with optional :data_source and :config
+  - `opts` - Keyword list with optional fields
 
   ## Examples
 
-      iex> BarChart.new(:my_chart, data_source: expr(get_data()), config: %BarChartConfig{})
-      %BarChart{name: :my_chart, data_source: {:expr, [get_data()]}, config: %BarChartConfig{}}
+      iex> BarChart.new(:my_chart, driving_resource: MyResource)
+      %BarChart{name: :my_chart, driving_resource: MyResource}
   """
   @spec new(atom(), keyword()) :: t()
   def new(name, opts \\ []) when is_atom(name) do
     %__MODULE__{
       name: name,
-      data_source: Keyword.get(opts, :data_source),
+      driving_resource: Keyword.get(opts, :driving_resource),
+      transform: Keyword.get(opts, :transform),
+      scope: Keyword.get(opts, :scope),
+      load_relationships: Keyword.get(opts, :load_relationships, []),
       config: Keyword.get(opts, :config)
     }
   end

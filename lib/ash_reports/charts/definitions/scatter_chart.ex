@@ -47,15 +47,18 @@ defmodule AshReports.Charts.ScatterChart do
   record scope.
   """
 
-  alias AshReports.Charts.ScatterChartConfig
+  alias AshReports.Charts.{ScatterChartConfig, TransformDSL}
 
   @type t :: %__MODULE__{
           name: atom(),
-          data_source: term(),
+          driving_resource: module() | nil,
+          transform: TransformDSL.t() | nil,
+          scope: (map() -> Ash.Query.t()) | nil,
+          load_relationships: list() | nil,
           config: ScatterChartConfig.t() | nil
         }
 
-  defstruct [:name, :data_source, :config]
+  defstruct [:name, :driving_resource, :transform, :scope, :load_relationships, :config]
 
   @doc """
   Creates a new ScatterChart definition.
@@ -74,7 +77,10 @@ defmodule AshReports.Charts.ScatterChart do
   def new(name, opts \\ []) when is_atom(name) do
     %__MODULE__{
       name: name,
-      data_source: Keyword.get(opts, :data_source),
+      driving_resource: Keyword.get(opts, :driving_resource),
+      transform: Keyword.get(opts, :transform),
+      scope: Keyword.get(opts, :scope),
+      load_relationships: Keyword.get(opts, :load_relationships, []),
       config: Keyword.get(opts, :config)
     }
   end
