@@ -256,10 +256,11 @@ defmodule AshReports.Charts.DataLoader do
     # Auto-detect relationships from transform definition
     detected_rels =
       case chart do
-        %{transform: transform} when not is_nil(transform) ->
-          case AshReports.Charts.Transform.parse(transform) do
-            {:ok, parsed_transform} ->
-              AshReports.Charts.Transform.detect_relationships(parsed_transform)
+        %{transform: %AshReports.Charts.TransformDSL{} = transform_dsl} ->
+          # Convert TransformDSL to Transform for relationship detection
+          case AshReports.Charts.TransformDSL.to_transform(transform_dsl) do
+            {:ok, transform} ->
+              AshReports.Charts.Transform.detect_relationships(transform)
 
             {:error, _reason} ->
               []
