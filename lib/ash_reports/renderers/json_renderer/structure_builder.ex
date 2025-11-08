@@ -585,6 +585,11 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
 
   defp extract_field_name_from_expression(expression) when is_atom(expression), do: expression
 
+  defp extract_field_name_from_expression(%{__struct__: Ash.Query.Ref} = expression) do
+    # Handle Ash.Query.Ref - return the full expression for later processing
+    expression
+  end
+
   defp extract_field_name_from_expression(%{__struct__: _} = expression) do
     # Handle Ash.Expr - try to extract field name
     # This is a simplified approach - may need enhancement
@@ -596,6 +601,11 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
 
   defp extract_field_name_from_expression(_), do: :unknown
 
+  defp get_field_value(record, %{__struct__: Ash.Query.Ref, relationship_path: relationship_path, attribute: attribute}) do
+    # Navigate through relationship path to get the value
+    navigate_relationship_path(record, relationship_path, attribute)
+  end
+
   defp get_field_value(record, field_name) when is_atom(field_name) do
     Map.get(record, field_name) || Map.get(record, to_string(field_name))
   end
@@ -605,6 +615,37 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   end
 
   defp get_field_value(_, _), do: nil
+
+  defp navigate_relationship_path(record, [], attribute) do
+    # No relationship path, just get the attribute
+    Map.get(record, attribute) || Map.get(record, to_string(attribute))
+  end
+
+  defp navigate_relationship_path(record, [rel | rest], attribute) do
+    # Get the relationship data
+    rel_data = Map.get(record, rel) || Map.get(record, to_string(rel))
+
+    case rel_data do
+      # Has-many relationship - get the first record
+      [first | _] when is_map(first) ->
+        if rest == [] do
+          Map.get(first, attribute) || Map.get(first, to_string(attribute))
+        else
+          navigate_relationship_path(first, rest, attribute)
+        end
+
+      # Belongs-to or has-one relationship
+      %{} = related_record ->
+        if rest == [] do
+          Map.get(related_record, attribute) || Map.get(related_record, to_string(attribute))
+        else
+          navigate_relationship_path(related_record, rest, attribute)
+        end
+
+      _ ->
+        nil
+    end
+  end
 
   defp calculate_group_aggregates(group_records, _context) do
     # Calculate common aggregates
