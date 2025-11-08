@@ -67,8 +67,8 @@ defmodule AshReports.Charts.Transform do
           optional(:x) => atom() | tuple(),
           optional(:y) => atom(),
           optional(:task) => atom() | tuple(),
-          optional(:start_date) => atom() | tuple(),
-          optional(:end_date) => atom() | tuple(),
+          optional(:start_time) => atom() | tuple(),
+          optional(:end_time) => atom() | tuple(),
           optional(:values) => atom()
         }
 
@@ -238,10 +238,18 @@ defmodule AshReports.Charts.Transform do
     Enum.map(aggregated_data, fn data ->
       Enum.reduce(mappings, %{}, fn {target_field, source_spec}, acc ->
         value = resolve_mapping_value(data, source_spec)
+        # Convert Date to NaiveDateTime for Gantt chart time fields
+        value = convert_date_for_gantt(target_field, value)
         Map.put(acc, target_field, value)
       end)
     end)
   end
+
+  # Convert Date to NaiveDateTime for Gantt chart compatibility
+  defp convert_date_for_gantt(field, %Date{} = date) when field in [:start_time, :end_time] do
+    NaiveDateTime.new!(date, ~T[00:00:00])
+  end
+  defp convert_date_for_gantt(_field, value), do: value
 
   # Resolve mapping value - supports various source formats
   defp resolve_mapping_value(data, :group_key), do: Map.get(data, :group_key)
@@ -278,13 +286,21 @@ defmodule AshReports.Charts.Transform do
 
   defp resolve_mapping_value(_data, _source_spec), do: nil
 
-  # Helper to add days to a date
+  # Helper to add days to a date - returns NaiveDateTime for Gantt chart compatibility
   defp add_days_to_date(nil, _days), do: nil
-  defp add_days_to_date(%Date{} = date, days), do: Date.add(date, days)
+  defp add_days_to_date(%Date{} = date, days) do
+    date
+    |> Date.add(days)
+    |> NaiveDateTime.new!(~T[00:00:00])
+  end
   defp add_days_to_date(%DateTime{} = datetime, days) do
     datetime
     |> DateTime.to_date()
     |> Date.add(days)
+    |> NaiveDateTime.new!(~T[00:00:00])
+  end
+  defp add_days_to_date(%NaiveDateTime{} = naive_datetime, days) do
+    NaiveDateTime.add(naive_datetime, days * 24 * 60 * 60, :second)
   end
   defp add_days_to_date(_value, _days), do: nil
 

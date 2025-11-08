@@ -107,11 +107,17 @@ defmodule AshReports.Charts.TransformDSL do
   @spec to_transform(t()) :: {:ok, Transform.t()} | {:error, term()}
   def to_transform(%__MODULE__{} = dsl) do
     with :ok <- validate(dsl) do
-      # Convert filters list to map, handle nil
+      # Convert filters to map - handle both list and map forms
       filters_map =
-        (dsl.filters || [])
-        |> Enum.map(&FilterSpec.to_tuple/1)
-        |> Map.new()
+        case dsl.filters do
+          nil -> %{}
+          [] -> %{}
+          filters when is_map(filters) -> filters
+          filters when is_list(filters) ->
+            filters
+            |> Enum.map(&FilterSpec.to_tuple/1)
+            |> Map.new()
+        end
 
       # Build mappings map from individual fields
       mappings =
@@ -121,8 +127,8 @@ defmodule AshReports.Charts.TransformDSL do
         |> maybe_put_mapping(:x, dsl.as_x)
         |> maybe_put_mapping(:y, dsl.as_y)
         |> maybe_put_mapping(:task, dsl.as_task)
-        |> maybe_put_mapping(:start_date, dsl.as_start_date)
-        |> maybe_put_mapping(:end_date, dsl.as_end_date)
+        |> maybe_put_mapping(:start_time, dsl.as_start_date)
+        |> maybe_put_mapping(:end_time, dsl.as_end_date)
         |> maybe_put_mapping(:values, dsl.as_values)
 
       # Convert aggregates, handle nil - accept both tuples and structs
@@ -181,7 +187,8 @@ defmodule AshReports.Charts.TransformDSL do
 
   defp validate_filters(nil), do: :ok
   defp validate_filters([]), do: :ok
-  defp validate_filters(filters) when is_map(filters) and map_size(filters) == 0, do: :ok
+  # Accept any map (including non-empty) - will be passed through to Transform
+  defp validate_filters(filters) when is_map(filters), do: :ok
 
   defp validate_filters(filters) when is_list(filters) do
     filters
@@ -193,7 +200,7 @@ defmodule AshReports.Charts.TransformDSL do
     end)
   end
 
-  defp validate_filters(filters), do: {:error, "Filters must be a list or empty map, got: #{inspect(filters)}"}
+  defp validate_filters(filters), do: {:error, "Filters must be a list or map, got: #{inspect(filters)}"}
 
   defp validate_group_by(nil), do: :ok
   defp validate_group_by(field) when is_atom(field), do: :ok

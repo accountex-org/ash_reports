@@ -135,8 +135,13 @@ defmodule AshReports.Charts.Types.AreaChart do
 
   # Private functions
 
+  # Support numeric x and y
   defp valid_data_point?(%{x: x, y: y}) when is_number(x) and is_number(y), do: true
   defp valid_data_point?(%{"x" => x, "y" => y}) when is_number(x) and is_number(y), do: true
+
+  # Support string x (categorical) and numeric y
+  defp valid_data_point?(%{x: x, y: y}) when is_binary(x) and is_number(y), do: true
+  defp valid_data_point?(%{"x" => x, "y" => y}) when is_binary(x) and is_number(y), do: true
 
   # Support date/value format
   defp valid_data_point?(%{date: %Date{}, value: value}) when is_number(value), do: true
@@ -145,8 +150,10 @@ defmodule AshReports.Charts.Types.AreaChart do
   # Support DateTime/value format
   defp valid_data_point?(%{date: %DateTime{}, value: value}) when is_number(value), do: true
 
-  # Support series-based format
+  # Support series-based format (numeric)
   defp valid_data_point?(%{x: x, series: _, y: y}) when is_number(x) and is_number(y), do: true
+  # Support series-based format (string)
+  defp valid_data_point?(%{x: x, series: _, y: y}) when is_binary(x) and is_number(y), do: true
 
   defp valid_data_point?(_), do: false
 
@@ -212,6 +219,7 @@ defmodule AshReports.Charts.Types.AreaChart do
       colour_palette: colors
     }
     |> maybe_add_option(:smoothed, config.smooth_lines, true)
+    |> maybe_add_option(:custom_x_formatter, &format_gregorian_days/1, nil)
   end
 
   defp maybe_add_option(opts, _key, nil, _default), do: opts
@@ -233,4 +241,32 @@ defmodule AshReports.Charts.Types.AreaChart do
     # Use default Contex colors
     :default
   end
+
+  # Format gregorian days back to readable month labels
+  defp format_gregorian_days(value) when is_number(value) do
+    try do
+      # Convert gregorian days to Date
+      date = Date.from_gregorian_days(round(value))
+      # Format as "Mon YYYY" (e.g., "Jan 2024")
+      month_name = month_abbr(date.month)
+      "#{month_name} #{date.year}"
+    rescue
+      _ -> to_string(round(value))
+    end
+  end
+
+  defp format_gregorian_days(value), do: to_string(value)
+
+  defp month_abbr(1), do: "Jan"
+  defp month_abbr(2), do: "Feb"
+  defp month_abbr(3), do: "Mar"
+  defp month_abbr(4), do: "Apr"
+  defp month_abbr(5), do: "May"
+  defp month_abbr(6), do: "Jun"
+  defp month_abbr(7), do: "Jul"
+  defp month_abbr(8), do: "Aug"
+  defp month_abbr(9), do: "Sep"
+  defp month_abbr(10), do: "Oct"
+  defp month_abbr(11), do: "Nov"
+  defp month_abbr(12), do: "Dec"
 end

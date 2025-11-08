@@ -94,29 +94,86 @@ defmodule AshReports.Charts.Renderer do
 
   defp render_to_svg(chart, config) do
     try do
-      # Use defaults for missing dimensions
-      width = Map.get(config, :width, 600)
-      height = Map.get(config, :height, 400)
+      # Sparklines are rendered differently - they don't use Contex.Plot
+      case chart do
+        %Contex.Sparkline{} ->
+          render_sparkline(chart, config)
 
-      # Create Contex.Plot with the chart
-      plot =
-        Contex.Plot.new(width, height, chart)
-        |> maybe_add_title(config)
-        |> maybe_add_axis_labels(config)
-
-      # Render to SVG - returns {:safe, iodata}
-      {:safe, iodata} = Contex.Plot.to_svg(plot)
-
-      # Convert iodata to string
-      svg = IO.iodata_to_binary(iodata)
-
-      # Apply area chart post-processing if needed
-      svg = maybe_add_area_fill(svg, chart)
-
-      {:ok, svg}
+        _ ->
+          render_with_plot(chart, config)
+      end
     rescue
       e ->
         {:error, {:render_error, Exception.message(e)}}
+    end
+  end
+
+  defp render_sparkline(sparkline, config) do
+    # Sparklines render directly to SVG
+    {:safe, iodata} = Contex.Sparkline.draw(sparkline)
+    svg = IO.iodata_to_binary(iodata)
+
+    # Optionally wrap with title if provided
+    svg_with_title = maybe_wrap_sparkline_title(svg, config)
+
+    {:ok, svg_with_title}
+  end
+
+  defp render_with_plot(chart, config) do
+    # Use defaults for missing dimensions
+    width = Map.get(config, :width, 600)
+    height = Map.get(config, :height, 400)
+
+    # Create Contex.Plot with the chart
+    plot =
+      Contex.Plot.new(width, height, chart)
+      |> maybe_add_title(config)
+      |> maybe_add_axis_labels(config)
+
+    # Render to SVG - returns {:safe, iodata}
+    {:safe, iodata} = Contex.Plot.to_svg(plot)
+
+    # Convert iodata to string
+    svg = IO.iodata_to_binary(iodata)
+
+    # Apply area chart post-processing if needed
+    svg = maybe_add_area_fill(svg, chart)
+
+    {:ok, svg}
+  end
+
+  defp maybe_wrap_sparkline_title(svg, %{title: title}) when is_binary(title) and title != "" do
+    # Extract viewBox or default dimensions
+    width = if String.contains?(svg, "width="), do: extract_width(svg), else: 150
+    height = if String.contains?(svg, "height="), do: extract_height(svg), else: 30
+
+    # Add title above the sparkline
+    title_height = 20
+    total_height = height + title_height + 5
+
+    """
+    <svg width="#{width}" height="#{total_height}" xmlns="http://www.w3.org/2000/svg">
+      <text x="#{width / 2}" y="15" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold">#{title}</text>
+      <g transform="translate(0, #{title_height + 5})">
+        #{String.replace(svg, ~r/<\?xml[^>]*>/, "") |> String.replace(~r/<svg[^>]*>/, "") |> String.replace(~r/<\/svg>/, "")}
+      </g>
+    </svg>
+    """
+  end
+
+  defp maybe_wrap_sparkline_title(svg, _config), do: svg
+
+  defp extract_width(svg) do
+    case Regex.run(~r/width="(\d+)"/, svg) do
+      [_, width] -> String.to_integer(width)
+      _ -> 150
+    end
+  end
+
+  defp extract_height(svg) do
+    case Regex.run(~r/height="(\d+)"/, svg) do
+      [_, height] -> String.to_integer(height)
+      _ -> 30
     end
   end
 

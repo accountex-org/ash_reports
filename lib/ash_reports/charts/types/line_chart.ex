@@ -105,8 +105,13 @@ defmodule AshReports.Charts.Types.LineChart do
 
   # Private functions
 
+  # Support numeric x and y
   defp valid_data_point?(%{x: x, y: y}) when is_number(x) and is_number(y), do: true
   defp valid_data_point?(%{"x" => x, "y" => y}) when is_number(x) and is_number(y), do: true
+
+  # Support string x (categorical) and numeric y
+  defp valid_data_point?(%{x: x, y: y}) when is_binary(x) and is_number(y), do: true
+  defp valid_data_point?(%{"x" => x, "y" => y}) when is_binary(x) and is_number(y), do: true
 
   # Support date/value format
   defp valid_data_point?(%{date: %Date{}, value: value}) when is_number(value), do: true
@@ -140,12 +145,29 @@ defmodule AshReports.Charts.Types.LineChart do
   end
 
   defp build_contex_options(config, x_col, y_col, colors) do
-    %{
-      mapping: %{x_col: x_col, y_cols: [y_col]},
-      colour_palette: colors
+    # Convert stroke_width to integer if it's a string
+    stroke_width =
+      case config.stroke_width do
+        width when is_binary(width) -> String.to_integer(width)
+        width when is_integer(width) -> width
+        _ -> 2
+      end
+
+    base_opts = %{
+      mapping: %{x_col: x_col, y_cols: [y_col]}
     }
+
+    # Only add colour_palette if we have actual colors (not :default)
+    opts =
+      case colors do
+        colors when is_list(colors) -> Map.put(base_opts, :colour_palette, colors)
+        _ -> base_opts
+      end
+
+    opts
     |> maybe_add_option(:smoothed, config.smoothed, true)
-    |> maybe_add_option(:stroke_width, config.stroke_width, "2")
+    |> maybe_add_option(:stroke_width, stroke_width, 2)
+    |> maybe_add_option(:custom_x_formatter, &format_gregorian_days/1, nil)
     |> maybe_add_axis_label_rotation(config.axis_label_rotation)
   end
 
@@ -177,4 +199,32 @@ defmodule AshReports.Charts.Types.LineChart do
     # Use default Contex colors
     :default
   end
+
+  # Format gregorian days back to readable month labels
+  defp format_gregorian_days(value) when is_number(value) do
+    try do
+      # Convert gregorian days to Date
+      date = Date.from_gregorian_days(round(value))
+      # Format as "Mon YYYY" (e.g., "Jan 2024")
+      month_name = month_abbr(date.month)
+      "#{month_name} #{date.year}"
+    rescue
+      _ -> to_string(round(value))
+    end
+  end
+
+  defp format_gregorian_days(value), do: to_string(value)
+
+  defp month_abbr(1), do: "Jan"
+  defp month_abbr(2), do: "Feb"
+  defp month_abbr(3), do: "Mar"
+  defp month_abbr(4), do: "Apr"
+  defp month_abbr(5), do: "May"
+  defp month_abbr(6), do: "Jun"
+  defp month_abbr(7), do: "Jul"
+  defp month_abbr(8), do: "Aug"
+  defp month_abbr(9), do: "Sep"
+  defp month_abbr(10), do: "Oct"
+  defp month_abbr(11), do: "Nov"
+  defp month_abbr(12), do: "Dec"
 end

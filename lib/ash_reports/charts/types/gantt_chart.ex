@@ -107,11 +107,14 @@ defmodule AshReports.Charts.Types.GanttChart do
   end
 
   defp do_build(data, config) do
+    # Convert data to string keys and string values for Contex compatibility
+    stringified_data = stringify_data(data)
+
     # Convert data to Contex Dataset
-    dataset = Dataset.new(data)
+    dataset = Dataset.new(stringified_data)
 
     # Get column names from data
-    column_mapping = get_column_mapping(data)
+    column_mapping = get_column_mapping(stringified_data)
 
     # Get colors for the chart
     colors = get_colors(config)
@@ -123,6 +126,18 @@ defmodule AshReports.Charts.Types.GanttChart do
 
     # Build Gantt chart
     GanttChart.new(dataset, options)
+  end
+
+  # Convert all data to string keys and string values for Contex
+  defp stringify_data(data) do
+    Enum.map(data, fn item ->
+      Map.new(item, fn
+        {k, v} when is_atom(v) and not is_nil(v) and not is_boolean(v) ->
+          {to_string(k), to_string(v)}
+        {k, v} ->
+          {to_string(k), v}
+      end)
+    end)
   end
 
   @impl true

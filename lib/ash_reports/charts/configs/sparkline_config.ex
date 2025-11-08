@@ -71,6 +71,7 @@ defmodule AshReports.Charts.SparklineConfig do
   embedded_schema do
     field :width, :integer, default: 100
     field :height, :integer, default: 20
+    field :title, :string
     field :spot_radius, :integer, default: 2
     field :spot_colour, :string, default: "red"
     field :line_width, :integer, default: 1
@@ -81,6 +82,7 @@ defmodule AshReports.Charts.SparklineConfig do
   @type t :: %__MODULE__{
           width: integer(),
           height: integer(),
+          title: String.t() | nil,
           spot_radius: integer(),
           spot_colour: String.t(),
           line_width: integer(),
@@ -104,6 +106,7 @@ defmodule AshReports.Charts.SparklineConfig do
     |> cast(attrs, [
       :width,
       :height,
+      :title,
       :spot_radius,
       :spot_colour,
       :line_width,

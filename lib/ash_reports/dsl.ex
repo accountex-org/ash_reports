@@ -1783,6 +1783,10 @@ defmodule AshReports.Dsl do
         default: 20,
         doc: "Chart height in pixels (compact default)."
       ],
+      title: [
+        type: :string,
+        doc: "Optional title to display above the sparkline."
+      ],
       spot_radius: [
         type: :integer,
         default: 2,
