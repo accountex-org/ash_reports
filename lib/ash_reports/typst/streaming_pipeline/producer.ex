@@ -116,15 +116,24 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
     memory_limit = Keyword.get(opts, :memory_limit, default_memory_limit())
     max_retries = Keyword.get(opts, :max_retries, 3)
     load_config = Keyword.get(opts, :load_config, nil)
+    aggregation_configs = Keyword.get(opts, :aggregation_configs, [])
+
+    # Auto-detect relationships from aggregation configs if not explicitly provided
+    enhanced_load_config =
+      if load_config == nil and aggregation_configs != [] do
+        auto_detect_load_config(aggregation_configs, stream_id)
+      else
+        load_config
+      end
 
     # Apply relationship loading strategy if configured
     enhanced_query =
-      if load_config do
+      if enhanced_load_config do
         Logger.debug(
-          "Producer #{stream_id} applying relationship loading strategy: #{inspect(load_config)}"
+          "Producer #{stream_id} applying relationship loading strategy: #{inspect(enhanced_load_config)}"
         )
 
-        RelationshipLoader.apply_load_strategy(query, load_config)
+        RelationshipLoader.apply_load_strategy(query, enhanced_load_config)
       else
         query
       end
@@ -426,6 +435,30 @@ defmodule AshReports.Typst.StreamingPipeline.Producer do
     config = Application.get_env(:ash_reports, :streaming, [])
     # Default to 500MB per pipeline
     Keyword.get(config, :max_memory_per_pipeline, 500_000_000)
+  end
+
+  # Auto-detect required relationships from aggregation configurations
+  defp auto_detect_load_config(aggregation_configs, stream_id) do
+    alias AshReports.Typst.AggregationConfigurator
+
+    required_rels = AggregationConfigurator.extract_all_relationship_dependencies(aggregation_configs)
+
+    if required_rels != [] do
+      Logger.debug(
+        "Producer #{stream_id} auto-detected relationships for preloading: #{inspect(required_rels)}"
+      )
+
+      %{
+        strategy: :selective,
+        # Conservative default - prevents deep recursion
+        max_depth: 2,
+        required: required_rels,
+        optional: []
+      }
+    else
+      # No relationships needed
+      nil
+    end
   end
 
   defp cleanup_resources(state) do

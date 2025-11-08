@@ -231,6 +231,51 @@ defmodule AshReports.Typst.ExpressionParser do
     end
   end
 
+  @doc """
+  Extracts relationship dependencies from an expression.
+
+  Returns the list of relationship atoms that need to be preloaded
+  for this expression to be evaluated successfully. For simple fields,
+  returns an empty list.
+
+  ## Examples
+
+      # Relationship path
+      iex> expression = %Ash.Expr{expression: {:get_path, _, [...]}}
+      iex> extract_relationship_dependencies(expression)
+      {:ok, [:addresses]}
+
+      # Simple field
+      iex> extract_relationship_dependencies(:region)
+      {:ok, []}
+
+      # Multi-level relationship
+      iex> extract_relationship_dependencies(expr(customer.address.country.region))
+      {:ok, [:customer, :address, :country]}
+
+  ## Returns
+
+  - `{:ok, [relationship_atoms]}` - List of relationships to preload
+  - `{:ok, []}` - No relationships needed (simple field)
+  """
+  def extract_relationship_dependencies(expression) do
+    case extract_field_path(expression) do
+      {:ok, [_single_field]} ->
+        # No relationships, just a field
+        {:ok, []}
+
+      {:ok, path} when is_list(path) and length(path) > 1 ->
+        # Path like [:addresses, :state] → need to load :addresses
+        # Path like [:customer, :address, :country] → need to load [:customer, :address, :country]
+        relationships = Enum.take(path, length(path) - 1)
+        {:ok, relationships}
+
+      {:error, _} ->
+        # Failed to parse, assume no dependencies
+        {:ok, []}
+    end
+  end
+
   # Private helper: Extract terminal field from get_path structure
   defp extract_field_from_get_path(path) when is_list(path) and length(path) > 0 do
     case List.last(path) do

@@ -699,15 +699,64 @@ defmodule AshReports.Typst.StreamingPipeline.ProducerConsumer do
   defp normalize_group_by(group_by) when is_list(group_by), do: group_by
   defp normalize_group_by(group_by) when is_atom(group_by), do: [group_by]
 
+  defp extract_group_value(record, {:relationship_path, path}) when is_list(path) do
+    # Single field accessed via relationship path
+    # Example: {:relationship_path, [:addresses, :state]} → navigate to get state
+    navigate_relationship_path(record, path)
+  end
+
   defp extract_group_value(record, group_by) when is_list(group_by) do
-    # Multi-field grouping - create tuple of values
-    values = Enum.map(group_by, fn field -> Map.get(record, field) end)
+    # Multi-field grouping (cumulative groups)
+    # Example: [:region, :tier] → create tuple ("West", "Gold")
+    # Can also include relationship paths mixed with simple fields
+    values =
+      Enum.map(group_by, fn field ->
+        case field do
+          {:relationship_path, path} -> navigate_relationship_path(record, path)
+          atom when is_atom(atom) -> Map.get(record, atom)
+        end
+      end)
+
     List.to_tuple(values)
   end
 
   defp extract_group_value(record, group_by) when is_atom(group_by) do
-    # Single field grouping
+    # Single field grouping (simple)
     Map.get(record, group_by)
+  end
+
+  # Navigate relationship paths to extract grouped field values
+  # Adapted from JSON renderer's navigate_relationship_path/3
+  defp navigate_relationship_path(record, [field]) when is_atom(field) do
+    # Base case: single field, no relationships
+    Map.get(record, field) || Map.get(record, to_string(field))
+  end
+
+  defp navigate_relationship_path(record, [rel | rest]) when is_list(rest) and rest != [] do
+    # Recursive case: navigate through relationship
+    rel_data = Map.get(record, rel) || Map.get(record, to_string(rel))
+
+    case rel_data do
+      # Has-many relationship: use FIRST record (consistent with JSON renderer)
+      [first | _] when is_map(first) ->
+        navigate_relationship_path(first, rest)
+
+      # Belongs-to or has-one: navigate directly
+      %{} = related_record ->
+        navigate_relationship_path(related_record, rest)
+
+      # Relationship not loaded or nil
+      nil ->
+        Logger.warning(
+          "Relationship #{rel} not loaded for grouping - will use nil. " <>
+            "Ensure relationships are preloaded via load_config."
+        )
+
+        nil
+
+      _ ->
+        nil
+    end
   end
 
   defp format_subscriptions(subscribe_to, max_demand, min_demand) do

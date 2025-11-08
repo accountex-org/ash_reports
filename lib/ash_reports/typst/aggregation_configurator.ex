@@ -248,23 +248,69 @@ defmodule AshReports.Typst.AggregationConfigurator do
     end
   end
 
+  @doc """
+  Extracts all relationship dependencies from aggregation configurations.
+
+  Returns a list of relationships that need to be preloaded for the
+  streaming pipeline to successfully evaluate group expressions.
+
+  ## Parameters
+
+    * `configs` - List of aggregation configurations from `build_aggregations/2`
+
+  ## Returns
+
+  - List of unique relationship atoms that need to be preloaded
+
+  ## Examples
+
+      iex> configs = [
+      ...>   %{group_by: {:relationship_path, [:addresses, :state]}, relationship_dependencies: [:addresses]},
+      ...>   %{group_by: :region, relationship_dependencies: []}
+      ...> ]
+      iex> extract_all_relationship_dependencies(configs)
+      [:addresses]
+  """
+  @spec extract_all_relationship_dependencies([map()]) :: [atom()]
+  def extract_all_relationship_dependencies(configs) when is_list(configs) do
+    configs
+    |> Enum.flat_map(fn config ->
+      Map.get(config, :relationship_dependencies, [])
+    end)
+    |> Enum.uniq()
+  end
+
   # Private Functions
 
-  # Extract field name from a group (helper for cumulative grouping)
+  # Extract field or relationship path from a group (helper for cumulative grouping)
   defp extract_field_for_group(group) do
-    case ExpressionParser.extract_field_with_fallback(group.expression, group.name) do
-      {:ok, field} ->
-        field
+    # Use extract_field_path to preserve full paths for relationship traversal
+    case ExpressionParser.extract_field_path(group.expression) do
+      {:ok, [single_field]} ->
+        # Simple field, return as atom
+        single_field
 
-      _error ->
-        Logger.warning(fn ->
-          """
-          Failed to parse group expression for #{group.name}, falling back to group name.
-          Expression: #{inspect(group.expression)}
-          """
-        end)
+      {:ok, path} when is_list(path) and length(path) > 1 ->
+        # Relationship path like [:addresses, :state]
+        # Mark it with metadata so we can distinguish it from multi-field grouping
+        {:relationship_path, path}
 
-        group.name
+      {:error, _} ->
+        # Fallback: try to extract simple field
+        case ExpressionParser.extract_field_with_fallback(group.expression, group.name) do
+          {:ok, field} ->
+            field
+
+          _error ->
+            Logger.warning(fn ->
+              """
+              Failed to parse group expression for #{group.name}, falling back to group name.
+              Expression: #{inspect(group.expression)}
+              """
+            end)
+
+            group.name
+        end
     end
   end
 
@@ -276,12 +322,16 @@ defmodule AshReports.Typst.AggregationConfigurator do
     # Normalize group_by: single field as atom, multiple fields as list
     group_by = normalize_group_by_fields(accumulated_fields)
 
+    # Extract relationship dependencies from accumulated fields
+    relationship_deps = extract_relationship_dependencies_from_fields(accumulated_fields)
+
     Logger.debug(fn ->
       """
       Group #{group.name} (level #{group.level}):
         - Accumulated fields: #{inspect(accumulated_fields)}
         - Normalized group_by: #{inspect(group_by)}
         - Aggregations: #{inspect(aggregations)}
+        - Relationship dependencies: #{inspect(relationship_deps)}
       """
     end)
 
@@ -289,7 +339,8 @@ defmodule AshReports.Typst.AggregationConfigurator do
       group_by: group_by,
       level: group.level,
       aggregations: aggregations,
-      sort: group.sort || :asc
+      sort: group.sort || :asc,
+      relationship_dependencies: relationship_deps
     }
   rescue
     error ->
@@ -306,8 +357,38 @@ defmodule AshReports.Typst.AggregationConfigurator do
   end
 
   # Normalize group_by fields: single field as atom, multiple fields as list
-  defp normalize_group_by_fields([single_field]), do: single_field
-  defp normalize_group_by_fields(fields) when is_list(fields), do: fields
+  # Special handling for relationship paths
+  defp normalize_group_by_fields([{:relationship_path, _path} = rel_path]) do
+    # Single relationship path, keep the tuple wrapper
+    rel_path
+  end
+
+  defp normalize_group_by_fields([single_field]) when is_atom(single_field) do
+    # Simple single field
+    single_field
+  end
+
+  defp normalize_group_by_fields(fields) when is_list(fields) do
+    # Multi-field grouping (can include mix of simple fields and relationship paths)
+    fields
+  end
+
+  # Extract relationship dependencies from accumulated fields
+  defp extract_relationship_dependencies_from_fields(fields) do
+    fields
+    |> Enum.flat_map(fn
+      {:relationship_path, path} when is_list(path) and length(path) > 1 ->
+        # Extract all but last element (the relationships, not the terminal field)
+        # For [:addresses, :state], extract [:addresses]
+        # For [:customer, :address, :country], extract [:customer, :address, :country]
+        Enum.take(path, length(path) - 1)
+
+      _simple_field ->
+        # Simple atom field has no relationship dependencies
+        []
+    end)
+    |> Enum.uniq()
+  end
 
   defp derive_aggregations_for_group(group_level, report) do
     variables = report.variables || []
