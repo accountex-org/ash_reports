@@ -116,6 +116,42 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   end
 
   @doc """
+  Builds grouped structure from raw (unserialized) records.
+
+  This function groups records BEFORE serialization, preserving relationship
+  data needed for grouping by relationship fields.
+
+  Returns {:ok, %{grouped: true, groups: grouped_records}} for grouped data
+  or {:ok, %{grouped: false, records: records}} for ungrouped data.
+  """
+  @spec build_grouped_raw_records(RenderContext.t(), [map()]) :: {:ok, map()} | {:error, term()}
+  def build_grouped_raw_records(%RenderContext{} = context, records) do
+    try do
+      groups = get_report_groups(context)
+      sorted_groups = Enum.sort_by(groups, & &1.level)
+
+      case sorted_groups do
+        [] ->
+          {:ok, %{grouped: false, records: records}}
+
+        [first_group | _rest] ->
+          grouped_records = build_raw_groups_at_level(records, sorted_groups, first_group.level, context)
+          {:ok, %{grouped: true, groups: grouped_records}}
+      end
+    rescue
+      error -> {:error, {:grouping_failed, error}}
+    end
+  end
+
+  @doc """
+  Checks if the report has grouping configured.
+  """
+  def has_grouping?(%RenderContext{} = context) do
+    report_groups = get_report_groups(context)
+    length(report_groups) > 0
+  end
+
+  @doc """
   Builds the report header section with metadata and generation information.
 
   ## Examples
@@ -508,12 +544,6 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
 
   # Grouping support functions
 
-  defp has_grouping?(%RenderContext{} = context) do
-    # Check if report has groups defined
-    report_groups = get_report_groups(context)
-    length(report_groups) > 0
-  end
-
   defp get_report_groups(%RenderContext{report: %{groups: groups}}) when is_list(groups),
     do: groups
 
@@ -533,6 +563,51 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
     end
   end
 
+  # Build groups from raw (unserialized) records
+  defp build_raw_groups_at_level(records, groups, current_level, context) do
+    # Validate that records is a list
+    unless is_list(records) do
+      raise "build_raw_groups_at_level expects a list of records, got: #{inspect(records.__struct__)}"
+    end
+
+    # Find the group configuration for this level
+    group_config = Enum.find(groups, fn g -> g.level == current_level end)
+
+    if group_config do
+      # Group records by the group field
+      grouped_records = group_records_by_field(records, group_config)
+
+      # Build group structures (with atom keys for raw data)
+      Enum.map(grouped_records, fn {group_value, group_records} ->
+        # Calculate aggregates for this group
+        aggregates = calculate_group_aggregates(group_records, context)
+
+        # Check if there are more levels to nest
+        next_level = current_level + 1
+        next_group = Enum.find(groups, fn g -> g.level == next_level end)
+
+        nested_records =
+          if next_group do
+            # Recursively build nested groups
+            build_raw_groups_at_level(group_records, groups, next_level, context)
+          else
+            # No more nesting - return detail records (raw, unserialized)
+            group_records
+          end
+
+        %{
+          group_value: group_value,
+          group_level: current_level,
+          aggregates: aggregates,
+          records: nested_records
+        }
+      end)
+    else
+      records
+    end
+  end
+
+  # Build groups from serialized records (legacy path)
   defp build_groups_at_level(records, groups, current_level, context) do
     # Find the group configuration for this level
     group_config = Enum.find(groups, fn g -> g.level == current_level end)
@@ -572,15 +647,21 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   end
 
   defp group_records_by_field(records, group_config) do
+    # Validate input
+    unless is_list(records) do
+      raise "group_records_by_field expects a list, got: #{inspect(records.__struct__)}"
+    end
+
     # Get the group field name from the expression
     field_name = extract_field_name_from_expression(group_config.expression)
 
     # Group records by the field value
-    records
-    |> Enum.group_by(fn record ->
+    grouped = Enum.group_by(records, fn record ->
       get_field_value(record, field_name)
     end)
-    |> Enum.sort_by(fn {group_value, _} -> group_value end, group_config.sort || :asc)
+
+    # Sort the groups
+    Enum.sort_by(grouped, fn {group_value, _} -> group_value end, group_config.sort || :asc)
   end
 
   defp extract_field_name_from_expression(expression) when is_atom(expression), do: expression
@@ -661,9 +742,17 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
 
   defp calculate_numeric_sums([first_record | _rest] = records) do
     # Get numeric fields from the first record
+    # Convert struct to map first if needed
+    first_as_map =
+      if is_struct(first_record) do
+        Map.from_struct(first_record)
+      else
+        first_record
+      end
+
     numeric_fields =
-      first_record
-      |> Enum.filter(fn {_key, value} -> is_number(value) end)
+      first_as_map
+      |> Enum.filter(fn {_key, value} -> is_number(value) || match?(%Decimal{}, value) end)
       |> Enum.map(fn {key, _value} -> key end)
 
     # Calculate sums for each numeric field
@@ -672,7 +761,12 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
       sum =
         records
         |> Enum.map(fn record -> Map.get(record, field, 0) end)
-        |> Enum.sum()
+        |> Enum.reduce(0, fn
+          %Decimal{} = val, %Decimal{} = acc -> Decimal.add(acc, val)
+          %Decimal{} = val, acc when is_number(acc) -> Decimal.add(val, Decimal.new(acc))
+          val, %Decimal{} = acc when is_number(val) -> Decimal.add(acc, Decimal.new(val))
+          val, acc -> val + acc
+        end)
 
       {"#{field}_sum", sum}
     end)

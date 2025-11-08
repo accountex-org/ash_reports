@@ -174,13 +174,23 @@ defmodule AshReports.QueryBuilder do
   end
 
   defp apply_to_query(scope_result, query) when is_struct(scope_result, Ash.Query) do
-    # If scope returns a query, merge it
-    # For now, we'll apply the filter from the scope query if it exists
-    case scope_result.filter do
-      nil -> query
-      filter -> Ash.Query.do_filter(query, filter)
-    end
+    # If scope returns a query, merge filter and loads from it
+    query
+    |> apply_scope_filter(scope_result.filter)
+    |> apply_scope_loads(scope_result.load)
   end
+
+  defp apply_scope_filter(query, nil), do: query
+  defp apply_scope_filter(query, filter), do: Ash.Query.do_filter(query, filter)
+
+  defp apply_scope_loads(query, []), do: query
+  defp apply_scope_loads(query, nil), do: query
+  defp apply_scope_loads(query, loads) when is_list(loads) do
+    Enum.reduce(loads, query, fn load, acc_query ->
+      Ash.Query.load(acc_query, load)
+    end)
+  end
+  defp apply_scope_loads(query, load), do: Ash.Query.load(query, load)
 
   defp apply_to_query(_scope_result, query) do
     # If scope returns an expression, apply as filter

@@ -261,9 +261,9 @@ defmodule AshReports.JsonRenderer do
   defp render_complete(%RenderContext{} = context, opts, start_time) do
     with {:ok, json_context} <- prepare_json_context(context, opts),
          {:ok, formatted_context} <- apply_json_locale_formatting(json_context),
-         {:ok, serialized_data} <- serialize_report_data(formatted_context),
-         {:ok, json_structure} <- build_json_structure(formatted_context, serialized_data),
-         {:ok, final_json} <- encode_final_json(json_structure),
+         {:ok, grouped_data} <- group_raw_records(formatted_context),
+         {:ok, serialized_data} <- serialize_grouped_data(formatted_context, grouped_data),
+         {:ok, final_json} <- encode_final_json(serialized_data),
          {:ok, result_metadata} <- build_result_metadata(formatted_context, start_time) do
       result = %{
         content: final_json,
@@ -342,6 +342,73 @@ defmodule AshReports.JsonRenderer do
     case Jason.encode(json_structure) do
       {:ok, json_string} -> {:ok, json_string}
       {:error, reason} -> {:error, {:json_encoding_failed, reason}}
+    end
+  end
+
+  # New grouping-before-serialization functions
+
+  defp group_raw_records(%RenderContext{} = context) do
+    # Group raw records before serialization to preserve relationship data
+    if StructureBuilder.has_grouping?(context) do
+      StructureBuilder.build_grouped_raw_records(context, context.records)
+    else
+      # No grouping - return records wrapped in the expected structure
+      {:ok, %{records: context.records, grouped: false}}
+    end
+  end
+
+  defp serialize_grouped_data(%RenderContext{} = _context, %{grouped: false, records: records}) do
+    # No grouping - serialize records directly
+    case DataSerializer.serialize_records(records) do
+      {:ok, serialized_records} -> {:ok, %{"records" => serialized_records}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp serialize_grouped_data(%RenderContext{} = _context, %{grouped: true, groups: grouped_records}) do
+    # Grouped - serialize the grouped structure
+    case serialize_grouped_structure(grouped_records) do
+      {:ok, serialized_groups} -> {:ok, %{"records" => serialized_groups}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp serialize_grouped_structure(groups) when is_list(groups) do
+    groups
+    |> Enum.reduce_while({:ok, []}, fn group, {:ok, acc} ->
+      case serialize_single_group(group) do
+        {:ok, serialized_group} -> {:cont, {:ok, [serialized_group | acc]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+    |> case do
+      {:ok, reversed_groups} -> {:ok, Enum.reverse(reversed_groups)}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp serialize_single_group(group) do
+    with {:ok, serialized_records} <- serialize_group_records(group.records) do
+      serialized_group = %{
+        "group_value" => group.group_value,
+        "group_level" => group.group_level,
+        "aggregates" => group.aggregates,
+        "records" => serialized_records
+      }
+      {:ok, serialized_group}
+    end
+  end
+
+  defp serialize_group_records(records) when is_list(records) do
+    # Check if first record is a group (nested grouping) or a data record
+    case List.first(records) do
+      %{group_level: _, group_value: _, aggregates: _, records: _} ->
+        # Nested groups - recursively serialize
+        serialize_grouped_structure(records)
+
+      _ ->
+        # Data records - serialize normally
+        DataSerializer.serialize_records(records)
     end
   end
 
