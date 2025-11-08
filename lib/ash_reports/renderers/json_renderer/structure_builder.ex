@@ -728,15 +728,98 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
     end
   end
 
-  defp calculate_group_aggregates(group_records, _context) do
-    # Calculate common aggregates
-    count = length(group_records)
+  defp calculate_group_aggregates(group_records, context) do
+    # Get group-level variables from the report
+    group_variables =
+      (context.report.variables || [])
+      |> Enum.filter(fn var -> var.reset_on == :group end)
 
-    # Find numeric fields and calculate sums
-    sums = calculate_numeric_sums(group_records)
-
-    Map.merge(%{"count" => count}, sums)
+    if Enum.empty?(group_variables) do
+      # Fallback: auto-calculate aggregates if no group variables defined
+      count = length(group_records)
+      sums = calculate_numeric_sums(group_records)
+      Map.merge(%{"count" => count}, sums)
+    else
+      # Calculate defined group variables
+      group_variables
+      |> Enum.map(fn var ->
+        value = calculate_variable_value(var, group_records)
+        {to_string(var.name), value}
+      end)
+      |> Enum.into(%{})
+    end
   end
+
+  defp calculate_variable_value(%{type: :count}, group_records) do
+    length(group_records)
+  end
+
+  defp calculate_variable_value(%{type: :sum, expression: expression}, group_records) do
+    group_records
+    |> Enum.map(fn record -> evaluate_expression(expression, record) end)
+    |> Enum.reduce(0, fn
+      %Decimal{} = val, %Decimal{} = acc -> Decimal.add(acc, val)
+      %Decimal{} = val, acc when is_number(acc) -> Decimal.add(val, Decimal.new(acc))
+      val, %Decimal{} = acc when is_number(val) -> Decimal.add(acc, Decimal.new(val))
+      val, acc when is_number(val) and is_number(acc) -> val + acc
+      _, acc -> acc
+    end)
+  end
+
+  defp calculate_variable_value(%{type: :average, expression: expression}, group_records) do
+    values = Enum.map(group_records, fn record -> evaluate_expression(expression, record) end)
+    count = length(values)
+
+    if count == 0 do
+      0
+    else
+      sum =
+        Enum.reduce(values, 0, fn
+          %Decimal{} = val, %Decimal{} = acc -> Decimal.add(acc, val)
+          %Decimal{} = val, acc when is_number(acc) -> Decimal.add(val, Decimal.new(acc))
+          val, %Decimal{} = acc when is_number(val) -> Decimal.add(acc, Decimal.new(val))
+          val, acc when is_number(val) and is_number(acc) -> val + acc
+          _, acc -> acc
+        end)
+
+      case sum do
+        %Decimal{} -> Decimal.div(sum, Decimal.new(count))
+        _ when is_number(sum) -> sum / count
+        _ -> 0
+      end
+    end
+  end
+
+  defp calculate_variable_value(_var, _group_records), do: nil
+
+  defp evaluate_expression(expression, record) when is_function(expression) do
+    expression.(record)
+  end
+
+  defp evaluate_expression(%{__struct__: Ash.Query.Ref, attribute: attribute}, record) do
+    # Handle Ash.Query.Ref - get the attribute value from the record
+    Map.get(record, attribute, 0)
+  end
+
+  defp evaluate_expression(%{__struct__: _} = expression, record) do
+    # Handle other Ash.Expr structures - try to extract field name
+    case expression do
+      %{arguments: [field]} when is_atom(field) ->
+        Map.get(record, field, 0)
+
+      %{attribute: attribute} when is_atom(attribute) ->
+        Map.get(record, attribute, 0)
+
+      _ ->
+        0
+    end
+  end
+
+  defp evaluate_expression(field, record) when is_atom(field) do
+    Map.get(record, field, 0)
+  end
+
+  defp evaluate_expression(_, _record), do: 0
 
   defp calculate_numeric_sums(records) when length(records) == 0, do: %{}
 
