@@ -29,6 +29,38 @@ defmodule AshReports.Typst.AggregationConfigurator do
       - 50,000 groups ≈ 30 MB
       - 100,000 groups ≈ 60 MB
 
+  ## Relationship-Based Grouping
+
+  The configurator preserves full relationship paths for groups defined with
+  relationship expressions, enabling the streaming pipeline to group by fields
+  accessed through associations.
+
+      # Simple field grouping
+      group :tier do
+        expression(expr(customer_tier))
+      end
+      # → Config: %{group_by: :customer_tier}
+
+      # Relationship-based grouping
+      group :region do
+        expression(expr(addresses.state))
+      end
+      # → Config: %{group_by: {:relationship_path, [:addresses, :state]}}
+
+  The configurator automatically:
+  - Detects relationship paths using ExpressionParser
+  - Marks them with `{:relationship_path, path}` tuple wrapper
+  - Extracts relationship dependencies for auto-preloading
+  - Handles mixed simple and relationship fields in cumulative grouping
+
+  ### Relationship Dependencies
+
+  Use `extract_all_relationship_dependencies/1` to get relationships that need preloading:
+
+      iex> configs = build_aggregations(report)
+      iex> extract_all_relationship_dependencies(configs)
+      [:addresses, :customer]  # Must preload these before streaming
+
   ## Options
 
   - `cumulative: false` - Disable cumulative grouping (each level only groups by its own field)
@@ -44,6 +76,10 @@ defmodule AshReports.Typst.AggregationConfigurator do
       # Non-cumulative grouping
       iex> AggregationConfigurator.build_aggregations(report, cumulative: false)
       [%{group_by: :region, level: 1}, %{group_by: :city, level: 2}]
+
+      # Relationship-based grouping
+      iex> AggregationConfigurator.build_aggregations(report_with_relationships)
+      [%{group_by: {:relationship_path, [:addresses, :state]}, relationship_dependencies: [:addresses]}]
 
       # Strict validation
       iex> AggregationConfigurator.build_aggregations(report, max_estimated_groups: 10_000)

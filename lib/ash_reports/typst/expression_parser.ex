@@ -16,20 +16,52 @@ defmodule AshReports.Typst.ExpressionParser do
   7. **Ash.Expr get_path**: `%Ash.Expr{expression: {:get_path, _, [...]}}`
   8. **Complex Ash.Expr**: Nested structures with refs and get_path
 
-  ## Usage
+  ## Relationship-Based Grouping
+
+  The parser can extract both terminal field names and full relationship paths,
+  enabling the streaming pipeline to group by fields accessed through relationships.
+
+  ### Field Extraction
 
       iex> ExpressionParser.extract_field(:region)
       {:ok, :region}
 
-      iex> ExpressionParser.extract_field({:field, :customer, :region})
-      {:ok, :region}
+      iex> ExpressionParser.extract_field({:field, :addresses, :state})
+      {:ok, :state}  # Terminal field only
 
-      iex> ash_expr = %Ash.Expr{expression: {:ref, [], :status}}
-      iex> ExpressionParser.extract_field(ash_expr)
-      {:ok, :status}
+  ### Path Extraction
 
-      iex> ExpressionParser.extract_field_with_fallback(invalid_expr, :default_name)
-      {:ok, :default_name}
+      iex> ExpressionParser.extract_field_path(:region)
+      {:ok, [:region]}
+
+      iex> ExpressionParser.extract_field_path({:field, :addresses, :state})
+      {:ok, [:addresses, :state]}  # Full path preserved
+
+  ### Relationship Dependencies
+
+      iex> ExpressionParser.extract_relationship_dependencies(:region)
+      {:ok, []}  # No relationships needed
+
+      iex> ExpressionParser.extract_relationship_dependencies({:field, :addresses, :state})
+      {:ok, [:addresses]}  # Must preload :addresses
+
+      iex> ExpressionParser.extract_relationship_dependencies({:field, :customer, :address, :country})
+      {:ok, [:customer, :address]}  # Multi-level preloading
+
+  ## Usage in Streaming Pipeline
+
+  When defining reports with relationship-based grouping:
+
+      group :region do
+        level 1
+        expression(expr(addresses.state))  # Groups by related field
+      end
+
+  The pipeline will:
+  1. Extract path: `[:addresses, :state]`
+  2. Detect dependency: `[:addresses]`
+  3. Preload relationships automatically
+  4. Navigate path during grouping
   """
 
   @doc """
