@@ -334,9 +334,9 @@ defmodule AshReports.Typst.DSLGenerator do
 
       """
       // Iterate over records
-      #for record in data.records [
+      for record in data.records {
       #{band_content}
-      ]
+      }
       """
     else
       "// No detail bands defined"
