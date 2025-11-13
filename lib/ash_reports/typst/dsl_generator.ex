@@ -247,7 +247,7 @@ defmodule AshReports.Typst.DSLGenerator do
       if page_footer do
         "footer: [#{generate_band_content(page_footer, context)}]"
       else
-        "footer: [Page #counter(page).display() of #counter(page).final().at(0)]"
+        "footer: context [Page #counter(page).display() of #counter(page).final().at(0)]"
       end
 
     "#{header_content}\n    #{footer_content}"
@@ -379,14 +379,50 @@ defmodule AshReports.Typst.DSLGenerator do
 
   # Private Functions - Element Generation
 
-  defp generate_field_element(%{source: source} = _field, _context) do
+  defp generate_field_element(%{source: source} = field, _context) do
     case source do
-      {:resource, field_name} -> "[#record.#{field_name}]"
-      {:parameter, param_name} -> "[#config.#{param_name}]"
-      {:variable, var_name} -> "[#variables.#{var_name}]"
-      _ -> "[#record.unknown_field]"
+      {:resource, field_name} ->
+        "[#record.#{field_name}]"
+
+      {:parameter, param_name} ->
+        "[#config.#{param_name}]"
+
+      {:variable, var_name} ->
+        "[#variables.#{var_name}]"
+
+      field_name when is_atom(field_name) ->
+        "[#record.#{field_name}]"
+
+      %Ash.Query.Ref{attribute: %Ash.Resource.Attribute{name: field_name}} ->
+        "[#record.#{field_name}]"
+
+      %Ash.Query.Ref{relationship_path: [], attribute: attr} when is_atom(attr) ->
+        "[#record.#{attr}]"
+
+      %{__struct__: Ash.Query.Ref} = ref ->
+        # Extract field name from Ash reference
+        field_name = extract_field_from_ref(ref)
+        "[#record.#{field_name}]"
+
+      # Handle Ash expression structs
+      %{__struct__: struct_module} = expr when is_atom(struct_module) ->
+        case extract_field_from_expression(expr) do
+          {:ok, field_name} -> "[#record.#{field_name}]"
+          :error -> "[#record.unknown_field]"
+        end
+
+      _ ->
+        Logger.warning("Unknown field source type: #{inspect(source)} for field: #{inspect(field.name)}")
+        "[#record.unknown_field]"
     end
   end
+
+  defp extract_field_from_ref(%Ash.Query.Ref{attribute: %{name: name}}), do: name
+  defp extract_field_from_ref(%Ash.Query.Ref{attribute: name}) when is_atom(name), do: name
+  defp extract_field_from_ref(_), do: :unknown_field
+
+  defp extract_field_from_expression(%Ash.Query.Ref{} = ref), do: {:ok, extract_field_from_ref(ref)}
+  defp extract_field_from_expression(_), do: :error
 
   defp generate_label_element(%{text: text} = _label, _context) do
     "[#{text}]"
