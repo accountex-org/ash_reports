@@ -354,9 +354,9 @@ defmodule AshReports.Typst.DSLGenerator do
     elements = band.elements || []
 
     if length(elements) > 0 do
-      # Generate elements within the band
+      # Generate elements within the band with explicit paragraph breaks
       Enum.map(elements, fn element ->
-        "  #{generate_element(element, context)}"
+        "  #{generate_element(element, context)}\n  parbreak()"
       end)
       |> Enum.join("\n")
     else
