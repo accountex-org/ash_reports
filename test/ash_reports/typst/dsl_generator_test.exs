@@ -3,7 +3,7 @@ defmodule AshReports.Typst.DSLGeneratorTest do
 
   alias AshReports.{Band, Report}
   alias AshReports.Element.{Field, Label}
-  alias AshReports.Typst.DSLGenerator
+  alias AshReports.Typst.{BinaryWrapper, DSLGenerator}
 
   describe "generate_template/2" do
     test "generates a basic template for a simple report" do
@@ -250,6 +250,217 @@ defmodule AshReports.Typst.DSLGeneratorTest do
       assert String.contains?(template, "Company Header")
       assert String.contains?(template, "footer: [")
       assert String.contains?(template, "Page Footer")
+    end
+  end
+
+  describe "integration tests with Typst compiler" do
+    test "generated template compiles to valid PDF with basic report" do
+      report = %Report{
+        name: :simple_report,
+        title: "Simple Test Report",
+        bands: [
+          %Band{
+            name: :title_band,
+            type: :title,
+            elements: [
+              %Label{
+                name: :title_label,
+                text: "Test Report Title"
+              }
+            ]
+          }
+        ]
+      }
+
+      assert {:ok, template} = DSLGenerator.generate_template(report)
+      assert {:ok, pdf} = BinaryWrapper.compile(template, format: :pdf)
+      assert is_binary(pdf)
+      assert <<"%PDF", _rest::binary>> = pdf
+      # Ensure PDF is reasonable size (not empty)
+      assert byte_size(pdf) > 1000
+    end
+
+    test "generated template compiles with detail bands and data" do
+      report = %Report{
+        name: :customer_report,
+        title: "Customer Report",
+        bands: [
+          %Band{
+            name: :title_band,
+            type: :title,
+            elements: [
+              %Label{name: :title, text: "Customer List"}
+            ]
+          },
+          %Band{
+            name: :detail_band,
+            type: :detail,
+            elements: [
+              %Field{name: :customer_name, source: {:resource, :name}},
+              %Field{name: :customer_email, source: {:resource, :email}}
+            ]
+          }
+        ]
+      }
+
+      # Mock RenderContext with sample data
+      mock_context = %{
+        records: [
+          %{id: 1, name: "John Doe", email: "john@example.com"},
+          %{id: 2, name: "Jane Smith", email: "jane@example.com"}
+        ]
+      }
+
+      assert {:ok, template} =
+               DSLGenerator.generate_template(report, context: mock_context)
+
+      assert {:ok, pdf} = BinaryWrapper.compile(template, format: :pdf)
+      assert is_binary(pdf)
+      assert <<"%PDF", _rest::binary>> = pdf
+      assert byte_size(pdf) > 1000
+    end
+
+    test "generated template compiles with default page footer using context" do
+      report = %Report{
+        name: :footer_report,
+        title: "Report with Default Footer",
+        bands: [
+          %Band{
+            name: :title_band,
+            type: :title,
+            elements: [
+              %Label{name: :title, text: "Footer Test"}
+            ]
+          }
+        ]
+      }
+
+      assert {:ok, template} = DSLGenerator.generate_template(report)
+
+      # Verify the context wrapper is present for counter.final()
+      assert String.contains?(template, "context [Page #counter(page)")
+
+      assert {:ok, pdf} = BinaryWrapper.compile(template, format: :pdf)
+      assert is_binary(pdf)
+      assert <<"%PDF", _rest::binary>> = pdf
+    end
+
+    test "generated template compiles with custom page header and footer" do
+      report = %Report{
+        name: :custom_header_footer,
+        title: "Custom Headers Test",
+        bands: [
+          %Band{
+            name: :page_header,
+            type: :page_header,
+            elements: [
+              %Label{name: :header, text: "Company Name - Confidential"}
+            ]
+          },
+          %Band{
+            name: :title_band,
+            type: :title,
+            elements: [
+              %Label{name: :title, text: "Annual Report"}
+            ]
+          },
+          %Band{
+            name: :page_footer,
+            type: :page_footer,
+            elements: [
+              %Label{name: :footer, text: "Copyright 2025"}
+            ]
+          }
+        ]
+      }
+
+      assert {:ok, template} = DSLGenerator.generate_template(report)
+      assert {:ok, pdf} = BinaryWrapper.compile(template, format: :pdf)
+      assert is_binary(pdf)
+      assert <<"%PDF", _rest::binary>> = pdf
+      assert byte_size(pdf) > 1000
+    end
+
+    test "generated template compiles with for loop over records" do
+      report = %Report{
+        name: :loop_test,
+        title: "Loop Test",
+        bands: [
+          %Band{
+            name: :detail_band,
+            type: :detail,
+            elements: [
+              %Label{name: :label, text: "Item: "},
+              %Field{name: :name, source: {:resource, :name}}
+            ]
+          }
+        ]
+      }
+
+      mock_context = %{
+        records: [
+          %{name: "Item 1"},
+          %{name: "Item 2"},
+          %{name: "Item 3"}
+        ]
+      }
+
+      assert {:ok, template} =
+               DSLGenerator.generate_template(report, context: mock_context)
+
+      # Verify correct for loop syntax (no # prefix, uses {})
+      assert String.contains?(template, "for record in data.records {")
+      refute String.contains?(template, "#for record in data.records [")
+
+      assert {:ok, pdf} = BinaryWrapper.compile(template, format: :pdf)
+      assert is_binary(pdf)
+      assert <<"%PDF", _rest::binary>> = pdf
+    end
+
+    test "generated template compiles with multiple band types" do
+      report = %Report{
+        name: :full_report,
+        title: "Complete Report",
+        bands: [
+          %Band{
+            name: :title_band,
+            type: :title,
+            elements: [
+              %Label{name: :title, text: "Sales Summary"}
+            ]
+          },
+          %Band{
+            name: :detail_band,
+            type: :detail,
+            elements: [
+              %Field{name: :product, source: {:resource, :product_name}},
+              %Field{name: :amount, source: {:resource, :amount}}
+            ]
+          },
+          %Band{
+            name: :summary_band,
+            type: :summary,
+            elements: [
+              %Label{name: :summary, text: "End of Report"}
+            ]
+          }
+        ]
+      }
+
+      mock_context = %{
+        records: [
+          %{product_name: "Widget A", amount: 100},
+          %{product_name: "Widget B", amount: 250}
+        ]
+      }
+
+      assert {:ok, template} =
+               DSLGenerator.generate_template(report, context: mock_context)
+
+      assert {:ok, pdf} = BinaryWrapper.compile(template, format: :pdf)
+      assert is_binary(pdf)
+      assert <<"%PDF", _rest::binary>> = pdf
+      assert byte_size(pdf) > 1500
     end
   end
 end
