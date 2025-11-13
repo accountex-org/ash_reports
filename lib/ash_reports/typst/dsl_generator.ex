@@ -76,6 +76,9 @@ defmodule AshReports.Typst.DSLGenerator do
   def generate_template(%Report{} = report, options) do
     context = build_generation_context(report, options)
 
+    # Serialize data from context if available
+    data_string = serialize_context_data(context)
+
     template =
       """
       // Generated Typst template for report: #{report.name}
@@ -87,6 +90,10 @@ defmodule AshReports.Typst.DSLGenerator do
 
         #{generate_report_content(report, context)}
       }
+
+      // Call the function to render the report with data
+      #{data_string}
+      ##{report.name}(report_data, config: ())
       """
       |> String.trim()
 
@@ -161,7 +168,7 @@ defmodule AshReports.Typst.DSLGenerator do
   # Private Functions - Context and Setup
 
   defp build_generation_context(report, options) do
-    %{
+    base_context = %{
       report: report,
       format: Keyword.get(options, :format, :pdf),
       theme: Keyword.get(options, :theme, "default"),
@@ -169,6 +176,12 @@ defmodule AshReports.Typst.DSLGenerator do
       variables: extract_report_variables(report),
       groups: extract_report_groups(report)
     }
+
+    # Add RenderContext if provided
+    case Keyword.get(options, :context) do
+      nil -> base_context
+      render_context -> Map.put(base_context, :context, render_context)
+    end
   end
 
   defp generate_debug_info(report) do
@@ -317,8 +330,13 @@ defmodule AshReports.Typst.DSLGenerator do
     detail_bands = filter_bands_by_type(report.bands || [], :detail)
 
     if length(detail_bands) > 0 do
+      band_content = Enum.map(detail_bands, fn band -> generate_band_content(band, context) end) |> Enum.join("\n")
+
       """
-      #{Enum.map(detail_bands, fn band -> generate_band_content(band, context) end) |> Enum.join("\n")}
+      // Iterate over records
+      #for record in data.records [
+      #{band_content}
+      ]
       """
     else
       "// No detail bands defined"
@@ -587,4 +605,86 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   defp humanize_name(name), do: to_string(name)
+
+  # Private Functions - Data Serialization
+
+  defp serialize_context_data(%{context: %{records: records}}) when is_list(records) do
+    # Serialize records from RenderContext
+    serialized_records = serialize_records(records)
+    "#let report_data = (records: #{serialized_records})"
+  end
+
+  defp serialize_context_data(_context) do
+    # No context or no records - use empty data
+    "#let report_data = (records: ())"
+  end
+
+  defp serialize_records([]), do: "()"
+
+  defp serialize_records(records) when is_list(records) do
+    serialized =
+      records
+      |> Enum.take(100)  # Limit to first 100 records to prevent huge templates
+      |> Enum.map(&serialize_record/1)
+      |> Enum.join(",\n    ")
+
+    "(#{serialized})"
+  end
+
+  defp serialize_record(%_{} = struct) do
+    # Convert struct to map and serialize
+    struct
+    |> Map.from_struct()
+    |> serialize_map()
+  end
+
+  defp serialize_record(map) when is_map(map) do
+    serialize_map(map)
+  end
+
+  defp serialize_map(map) do
+    fields =
+      map
+      |> Enum.reject(fn {key, _value} -> key == :__meta__ end)
+      |> Enum.map(fn {key, value} -> "#{key}: #{serialize_value(value)}" end)
+      |> Enum.join(", ")
+
+    "(#{fields})"
+  end
+
+  defp serialize_value(nil), do: "none"
+  defp serialize_value(true), do: "true"
+  defp serialize_value(false), do: "false"
+
+  defp serialize_value(value) when is_binary(value) do
+    # Escape quotes and wrap in quotes
+    escaped = String.replace(value, "\"", "\\\"")
+    "\"#{escaped}\""
+  end
+
+  defp serialize_value(value) when is_integer(value), do: to_string(value)
+  defp serialize_value(value) when is_float(value), do: to_string(value)
+
+  defp serialize_value(%Decimal{} = decimal) do
+    Decimal.to_string(decimal)
+  end
+
+  defp serialize_value(%DateTime{} = dt) do
+    "\"#{DateTime.to_iso8601(dt)}\""
+  end
+
+  defp serialize_value(%Date{} = date) do
+    "\"#{Date.to_iso8601(date)}\""
+  end
+
+  defp serialize_value(value) when is_atom(value) do
+    "\"#{Atom.to_string(value)}\""
+  end
+
+  defp serialize_value(value) when is_list(value) do
+    serialized = Enum.map(value, &serialize_value/1) |> Enum.join(", ")
+    "(#{serialized})"
+  end
+
+  defp serialize_value(_value), do: "none"
 end

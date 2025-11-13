@@ -149,7 +149,8 @@ defmodule AshReports.PdfRenderer do
     options = [
       format: :pdf,
       theme: "default",
-      debug: false
+      debug: false,
+      context: context  # Pass the full context with data
     ]
 
     case Typst.DSLGenerator.generate_template(report, options) do
