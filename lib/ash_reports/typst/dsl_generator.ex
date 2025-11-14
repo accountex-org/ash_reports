@@ -238,7 +238,15 @@ defmodule AshReports.Typst.DSLGenerator do
 
     header_content =
       if page_header do
-        "header: [#{generate_band_content(page_header, context)}],"
+        header_band_content = generate_band_content(page_header, context)
+
+        # Check if header should repeat on all pages (default: true)
+        if Map.get(page_header, :repeat_on_pages, true) do
+          "header: [#{header_band_content}],"
+        else
+          # Only show on first page using context
+          "header: context [#if counter(page).get().first() == 1 [#{header_band_content}]],"
+        end
       else
         ""
       end
@@ -448,8 +456,13 @@ defmodule AshReports.Typst.DSLGenerator do
 
   # Generate Typst column specification
   defp generate_column_spec(columns) when is_integer(columns) do
-    # Equal-width columns
-    "#{columns}"
+    if columns == 1 do
+      # Single column uses full page width
+      "(100%)"
+    else
+      # Multiple equal-width columns
+      "#{columns}"
+    end
   end
 
   defp generate_column_spec(columns) when is_binary(columns) do
@@ -463,7 +476,7 @@ defmodule AshReports.Typst.DSLGenerator do
     "(#{widths})"
   end
 
-  defp generate_column_spec(_), do: "1"  # Default: single column
+  defp generate_column_spec(_), do: "(100%)"  # Default: single full-width column
 
   # Generate table cells in column order
   defp generate_table_cells(elements, max_column, context) do

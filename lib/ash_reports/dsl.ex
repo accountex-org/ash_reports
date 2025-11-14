@@ -974,6 +974,14 @@ defmodule AshReports.Dsl do
         - List of strings: Individual column widths (e.g., ["150pt", "1fr", "80pt"])
         Defaults to 1 (single column).
         """
+      ],
+      repeat_on_pages: [
+        type: :boolean,
+        default: true,
+        doc: """
+        For page_header and group_header bands, whether to repeat the header on each page.
+        Defaults to true. Only applies to page_header and group_header band types.
+        """
       ]
     ]
   end

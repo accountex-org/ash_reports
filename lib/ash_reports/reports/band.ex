@@ -20,6 +20,7 @@ defmodule AshReports.Band do
     :keep_together,
     :visible,
     :columns,
+    :repeat_on_pages,
     :elements,
     :bands
   ]
@@ -51,6 +52,7 @@ defmodule AshReports.Band do
           keep_together: boolean(),
           visible: Ash.Expr.t() | boolean(),
           columns: pos_integer() | String.t() | [String.t()] | nil,
+          repeat_on_pages: boolean() | nil,
           elements: [AshReports.Element.t()],
           bands: [t()] | nil
         }
@@ -60,6 +62,15 @@ defmodule AshReports.Band do
   """
   @spec new(atom(), Keyword.t()) :: t()
   def new(name, opts \\ []) do
+    band_type = Keyword.get(opts, :type)
+
+    # Set repeat_on_pages default based on band type
+    repeat_default = case band_type do
+      :page_header -> true
+      :group_header -> true
+      _ -> nil
+    end
+
     struct(
       __MODULE__,
       [name: name]
@@ -69,6 +80,7 @@ defmodule AshReports.Band do
       |> Keyword.put_new(:keep_together, false)
       |> Keyword.put_new(:visible, true)
       |> Keyword.put_new(:columns, 1)
+      |> Keyword.put_new(:repeat_on_pages, repeat_default)
       |> Keyword.put_new(:elements, [])
     )
   end
