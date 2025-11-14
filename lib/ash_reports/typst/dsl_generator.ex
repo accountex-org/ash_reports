@@ -409,7 +409,7 @@ defmodule AshReports.Typst.DSLGenerator do
     # For column headers: use table.header()
     if band.type == :column_header do
       """
-        #table(
+        [#table(
           columns: #{column_spec},
           align: (left, left, left),
           stroke: none,
@@ -418,19 +418,21 @@ defmodule AshReports.Typst.DSLGenerator do
           table.header(
             #{cells}
           )
-        )
+        )]
+        parbreak()
       """
     else
       # For detail and other bands: regular table
       """
-        #table(
+        [#table(
           columns: #{column_spec},
           align: (left, left, left),
           stroke: none,
           inset: 5pt,
 
           #{cells}
-        )
+        )]
+        parbreak()
       """
     end
   end
