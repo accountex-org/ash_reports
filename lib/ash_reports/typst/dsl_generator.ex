@@ -390,13 +390,16 @@ defmodule AshReports.Typst.DSLGenerator do
 
           # Calculate spacing needed from previous column
           spacing = if current_x > prev_x do
-            "#h(#{current_x - prev_x}pt)"
+            " #h(#{current_x - prev_x}pt) "
           else
             ""
           end
 
+          # Generate element and strip outer brackets since we'll wrap everything
           element_code = generate_element(element, context)
-          {codes ++ [spacing, element_code], current_x}
+          stripped_code = strip_outer_brackets(element_code)
+
+          {codes ++ [spacing, stripped_code], current_x}
         end)
 
         "  [#{Enum.join(field_codes, "")}]\n  parbreak()"
