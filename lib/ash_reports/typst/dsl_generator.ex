@@ -258,6 +258,7 @@ defmodule AshReports.Typst.DSLGenerator do
 
     # Group bands by processing order
     title_bands = filter_bands_by_type(bands, :title)
+    column_header_bands = filter_bands_by_type(bands, :column_header)
     _group_header_bands = filter_bands_by_type(bands, :group_header)
     _detail_bands = filter_bands_by_type(bands, :detail)
     _group_footer_bands = filter_bands_by_type(bands, :group_footer)
@@ -269,6 +270,14 @@ defmodule AshReports.Typst.DSLGenerator do
     content_parts =
       if length(title_bands) > 0 do
         content_parts ++ [generate_title_section(title_bands, context)]
+      else
+        content_parts
+      end
+
+    # Column headers (once before data)
+    content_parts =
+      if length(column_header_bands) > 0 do
+        content_parts ++ [generate_column_header_section(column_header_bands, context)]
       else
         content_parts
       end
@@ -298,6 +307,13 @@ defmodule AshReports.Typst.DSLGenerator do
     """
     // Title Section
     #{Enum.map(title_bands, fn band -> generate_band_content(band, context) end) |> Enum.join("\n")}
+    """
+  end
+
+  defp generate_column_header_section(column_header_bands, context) do
+    """
+    // Column Header Section
+    #{Enum.map(column_header_bands, fn band -> generate_band_content(band, context) end) |> Enum.join("\n")}
     """
   end
 
@@ -354,13 +370,35 @@ defmodule AshReports.Typst.DSLGenerator do
     elements = band.elements || []
 
     if length(elements) > 0 do
-      # For detail bands, render all fields on the same line
+      # For detail bands, render all fields on the same line with calculated spacing
       # For other bands, render each element with a paragraph break
-      if band.type == :detail do
-        # Detail band: all fields on one line, parbreak after all fields
-        field_codes = Enum.map(elements, fn element ->
-          generate_element(element, context)
+      if band.type == :detail or band.type == :column_header do
+        # Sort elements by x position for proper column ordering
+        sorted_elements = Enum.sort_by(elements, fn el ->
+          case Map.get(el, :position, []) do
+            pos when is_list(pos) -> Keyword.get(pos, :x, 0)
+            _ -> 0
+          end
         end)
+
+        # Generate field codes with relative spacing between columns
+        {field_codes, _last_x} = Enum.reduce(sorted_elements, {[], 0}, fn element, {codes, prev_x} ->
+          current_x = case Map.get(element, :position, []) do
+            pos when is_list(pos) -> Keyword.get(pos, :x, 0)
+            _ -> 0
+          end
+
+          # Calculate spacing needed from previous column
+          spacing = if current_x > prev_x do
+            "#h(#{current_x - prev_x}pt)"
+          else
+            ""
+          end
+
+          element_code = generate_element(element, context)
+          {codes ++ [spacing, element_code], current_x}
+        end)
+
         "  [#{Enum.join(field_codes, "")}]\n  parbreak()"
       else
         # Other bands: each element with its own paragraph break
@@ -813,17 +851,9 @@ defmodule AshReports.Typst.DSLGenerator do
             content
           end
 
-        # Horizontal-only positioning (for columnar layout without breaking flow)
+        # Horizontal-only positioning - skip, handled at band level for columns
         Keyword.has_key?(position, :x) and not Keyword.has_key?(position, :y) ->
-          dx = Keyword.get(position, :x, 0)
-
-          # For horizontal-only positioning, use h() to add spacing
-          # This keeps content in the normal flow (for detail bands)
-          if dx > 0 do
-            "#h(#{dx}pt)#{content}"
-          else
-            content
-          end
+          content
 
         # Absolute positioning with both x and y (existing behavior)
         Keyword.has_key?(position, :x) or Keyword.has_key?(position, :y) ->
