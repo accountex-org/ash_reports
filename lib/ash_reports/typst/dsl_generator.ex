@@ -370,30 +370,39 @@ defmodule AshReports.Typst.DSLGenerator do
     elements = band.elements || []
 
     if length(elements) > 0 do
-      # Check if band uses column-based layout
-      if band.columns && band.columns != 1 && has_column_elements?(elements) do
-        generate_table_based_band(band, context)
-      else
-        # Legacy: absolute positioning for non-column bands
-        generate_absolute_positioned_band(band, elements, context)
-      end
+      # Use table-based layout for all bands with elements
+      generate_table_based_band(band, context)
     else
       # Empty band with default content based on type
       generate_default_band_content(band, context)
     end
   end
 
-  defp has_column_elements?(elements) do
-    Enum.any?(elements, fn el -> Map.get(el, :column) != nil end)
-  end
-
-  # NEW: Table-based band generation
+  # Table-based band generation
   defp generate_table_based_band(%Band{} = band, context) do
     elements = band.elements || []
-    column_spec = generate_column_spec(band.columns)
+
+    # If elements don't have column attributes, assign them sequentially
+    elements_with_columns = elements
+    |> Enum.with_index()
+    |> Enum.map(fn {element, index} ->
+      if Map.get(element, :column) == nil do
+        Map.put(element, :column, index)
+      else
+        element
+      end
+    end)
+
+    # Determine column spec based on band.columns or number of elements
+    column_spec = if band.columns && band.columns != 1 do
+      generate_column_spec(band.columns)
+    else
+      # Default: equal-width columns based on number of elements
+      generate_column_spec(length(elements_with_columns))
+    end
 
     # Sort elements by column number
-    sorted_elements = Enum.sort_by(elements, fn el ->
+    sorted_elements = Enum.sort_by(elements_with_columns, fn el ->
       Map.get(el, :column, 0)
     end)
 
@@ -497,51 +506,6 @@ defmodule AshReports.Typst.DSLGenerator do
       end
     else
       "[#{strip_outer_brackets(content)}]"
-    end
-  end
-
-  # LEGACY: Absolute positioning (for non-column bands)
-  defp generate_absolute_positioned_band(%Band{} = band, elements, context) do
-    # For detail bands, render all fields on the same line with calculated spacing
-    # For other bands, render each element with a paragraph break
-    if band.type == :detail or band.type == :column_header do
-      # Sort elements by x position for proper column ordering
-      sorted_elements = Enum.sort_by(elements, fn el ->
-        case Map.get(el, :position, []) do
-          pos when is_list(pos) -> Keyword.get(pos, :x, 0)
-          _ -> 0
-        end
-      end)
-
-      # Generate field codes with relative spacing between columns
-      {field_codes, _last_x} = Enum.reduce(sorted_elements, {[], 0}, fn element, {codes, prev_x} ->
-        current_x = case Map.get(element, :position, []) do
-          pos when is_list(pos) -> Keyword.get(pos, :x, 0)
-          _ -> 0
-        end
-
-        # Calculate spacing needed from previous column
-        spacing = if current_x > prev_x do
-          " #h(#{current_x - prev_x}pt) "
-        else
-          ""
-        end
-
-        # Generate element and strip outer brackets since we'll wrap everything
-        element_code = generate_element(element, context)
-        stripped_code = strip_outer_brackets(element_code)
-
-        {codes ++ [spacing, stripped_code], current_x}
-      end)
-
-      "  [#{Enum.join(field_codes, "")}]\n  parbreak()"
-    else
-      # Other bands: each element with its own paragraph break
-      Enum.map(elements, fn element ->
-        element_code = generate_element(element, context)
-        "  [#{element_code}]\n  parbreak()"
-      end)
-      |> Enum.join("\n")
     end
   end
 
