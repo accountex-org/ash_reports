@@ -354,13 +354,22 @@ defmodule AshReports.Typst.DSLGenerator do
     elements = band.elements || []
 
     if length(elements) > 0 do
-      # Generate elements within the band with explicit paragraph breaks
-      # Wrap each element in content brackets since we're in code mode { }
-      Enum.map(elements, fn element ->
-        element_code = generate_element(element, context)
-        "  [#{element_code}]\n  parbreak()"
-      end)
-      |> Enum.join("\n")
+      # For detail bands, render all fields on the same line
+      # For other bands, render each element with a paragraph break
+      if band.type == :detail do
+        # Detail band: all fields on one line, parbreak after all fields
+        field_codes = Enum.map(elements, fn element ->
+          generate_element(element, context)
+        end)
+        "  [#{Enum.join(field_codes, "")}]\n  parbreak()"
+      else
+        # Other bands: each element with its own paragraph break
+        Enum.map(elements, fn element ->
+          element_code = generate_element(element, context)
+          "  [#{element_code}]\n  parbreak()"
+        end)
+        |> Enum.join("\n")
+      end
     else
       # Empty band with default content based on type
       generate_default_band_content(band, context)
@@ -804,7 +813,19 @@ defmodule AshReports.Typst.DSLGenerator do
             content
           end
 
-        # Absolute positioning with dx/dy (existing behavior)
+        # Horizontal-only positioning (for columnar layout without breaking flow)
+        Keyword.has_key?(position, :x) and not Keyword.has_key?(position, :y) ->
+          dx = Keyword.get(position, :x, 0)
+
+          # For horizontal-only positioning, use h() to add spacing
+          # This keeps content in the normal flow (for detail bands)
+          if dx > 0 do
+            "#h(#{dx}pt)#{content}"
+          else
+            content
+          end
+
+        # Absolute positioning with both x and y (existing behavior)
         Keyword.has_key?(position, :x) or Keyword.has_key?(position, :y) ->
           dx = Keyword.get(position, :x, 0)
           dy = Keyword.get(position, :y, 0)
