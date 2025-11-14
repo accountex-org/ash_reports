@@ -249,17 +249,19 @@ end
 band :group_footer do
   type :group_footer
   group_level(1)
+  columns "(1fr, 100pt)"  # Label and value columns
 
   label :group_total_label do
     text("Group Total:")
-    position(x: 60, y: 0, width: 20, height: 12)
+    column 0
+    style text_align: :right
   end
 
   # Display variable value
   expression :group_total_value do
     expression :running_total  # References the variable
     format :currency
-    position(x: 80, y: 0, width: 20, height: 12)
+    column 1
   end
 end
 
@@ -397,16 +399,18 @@ end
 # Detail band
 band :details do
   type :detail
+  columns "(1fr, 100pt)"  # Invoice number and total
 
   field :invoice_number do
     source :invoice_number
-    position(x: 20, y: 0, width: 20, height: 12)  # Indented
+    column 0
   end
 
   field :total do
     source :total
     format :currency
-    position(x: 80, y: 0, width: 20, height: 12)
+    column 1
+    style text_align: :right
   end
 end
 
@@ -414,10 +418,12 @@ end
 band :customer_footer do
   type :group_footer
   group_level(2)
+  columns "(1fr, 100pt)"
 
   label :customer_subtotal_label do
     text("  Customer Subtotal:")
-    position(x: 40, y: 0, width: 40, height: 12)
+    column 0
+    style text_align: :right
   end
 
   aggregate :customer_subtotal do
@@ -425,7 +431,7 @@ band :customer_footer do
     source :total
     scope :group
     format :currency
-    position(x: 80, y: 0, width: 20, height: 12)
+    column 1
   end
 end
 
@@ -433,11 +439,12 @@ end
 band :region_footer do
   type :group_footer
   group_level(1)
+  columns "(1fr, 100pt)"
 
   label :region_total_label do
     text("Region Total:")
-    style(font_weight: :bold)
-    position(x: 40, y: 0, width: 40, height: 12)
+    column 0
+    style font_weight: :bold, text_align: :right
   end
 
   aggregate :region_total do
@@ -445,8 +452,8 @@ band :region_footer do
     source :total
     scope :group
     format :currency
-    style(font_weight: :bold)
-    position(x: 80, y: 0, width: 20, height: 12)
+    column 1
+    style font_weight: :bold
   end
 end
 ```
@@ -615,8 +622,7 @@ report :sales_by_region_report do
 
     label :main_title do
       text("Sales Analysis by Region")
-      style(font_size: 20, font_weight: :bold)
-      position(x: 0, y: 0, width: 100, height: 20)
+      style font_size: 20, font_weight: :bold, text_align: :center
     end
   end
 
@@ -626,8 +632,7 @@ report :sales_by_region_report do
 
     label :company_name do
       text("ACME Corporation")
-      style(font_weight: :bold)
-      position(x: 0, y: 0, width: 50, height: 15)
+      style font_weight: :bold
     end
   end
 
@@ -635,79 +640,77 @@ report :sales_by_region_report do
   band :region_header do
     type :group_header
     group_level(1)
+    columns "(auto, 1fr)"
 
     label :region_label do
       text("Region: ")
-      style(font_weight: :bold, font_size: 16)
-      position(x: 0, y: 0, width: 15, height: 15)
+      column 0
+      style font_weight: :bold, font_size: 16
     end
 
     field :region_name do
       source :customer.region
-      style(font_weight: :bold, font_size: 16)
-      position(x: 15, y: 0, width: 50, height: 15)
-    end
-
-    line :region_separator do
-      orientation :horizontal
-      thickness 2
-      position(x: 0, y: 16, width: 100, height: 2)
+      column 1
+      style font_weight: :bold, font_size: 16
     end
   end
 
   # Column headers
   band :column_header do
     type :column_header
+    columns "(100pt, 1fr, 100pt, 100pt)"
 
     label :date_header do
       text("Date")
-      style(font_weight: :bold)
-      position(x: 0, y: 0, width: 20, height: 12)
+      column 0
+      style font_weight: :bold
     end
 
     label :customer_header do
       text("Customer")
-      style(font_weight: :bold)
-      position(x: 20, y: 0, width: 40, height: 12)
+      column 1
+      style font_weight: :bold
     end
 
     label :invoice_header do
       text("Invoice #")
-      style(font_weight: :bold)
-      position(x: 60, y: 0, width: 20, height: 12)
+      column 2
+      style font_weight: :bold
     end
 
     label :amount_header do
       text("Amount")
-      style(font_weight: :bold)
-      position(x: 80, y: 0, width: 20, height: 12)
+      column 3
+      style font_weight: :bold, text_align: :right
     end
   end
 
   # Detail rows
   band :details do
     type :detail
+    columns "(100pt, 1fr, 100pt, 100pt)"
 
     field :invoice_date do
       source :date
       format :date
-      position(x: 0, y: 0, width: 20, height: 12)
+      column 0
     end
 
     field :customer_name do
       source :customer.name
-      position(x: 20, y: 0, width: 40, height: 12)
+      column 1
     end
 
     field :invoice_number do
       source :invoice_number
-      position(x: 60, y: 0, width: 20, height: 12)
+      column 2
     end
 
     field :invoice_amount do
       source :total
       format_spec :sales_currency
-      position(x: 80, y: 0, width: 20, height: 12)
+      column 3
+      style text_align: :right
     end
   end
 
@@ -715,24 +718,25 @@ report :sales_by_region_report do
   band :region_footer do
     type :group_footer
     group_level(1)
+    columns "(1fr, auto, 100pt)"
 
     label :region_summary_title do
       text("Region Summary")
-      style(font_weight: :bold, font_size: 14)
-      position(x: 0, y: 0, width: 60, height: 12)
+      column 0
+      style font_weight: :bold, font_size: 14
     end
 
     label :region_total_label do
       text("Region Total:")
-      style(font_weight: :bold, font_size: 14)
-      position(x: 60, y: 0, width: 20, height: 12)
+      column 1
+      style font_weight: :bold, font_size: 14, text_align: :right
     end
 
     expression :region_total_value do
       expression :region_total
       format_spec :sales_currency
-      style(font_weight: :bold, font_size: 14)
-      position(x: 80, y: 0, width: 20, height: 12)
+      column 2
+      style font_weight: :bold, font_size: 14, text_align: :right
     end
   end
 
@@ -742,15 +746,13 @@ report :sales_by_region_report do
 
     label :summary_title do
       text("Report Summary")
-      style(font_size: 18, font_weight: :bold)
-      position(x: 0, y: 0, width: 100, height: 20)
+      style font_size: 18, font_weight: :bold, text_align: :center
     end
 
     expression :grand_total_display do
       expression :running_total
       format_spec :sales_currency
-      style(font_size: 16, font_weight: :bold)
-      position(x: 0, y: 25, width: 100, height: 15)
+      style font_size: 16, font_weight: :bold, text_align: :center
     end
   end
 end

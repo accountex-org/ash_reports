@@ -11,7 +11,7 @@ This guide covers the currently available advanced features in AshReports, inclu
 - [Conditional Visibility](#conditional-visibility)
 - [Band Control Options](#band-control-options)
 - [Column-Based Layout](#column-based-layout)
-- [Element Positioning and Styling](#element-positioning-and-styling)
+- [Element Styling](#element-styling)
 - [Planned Advanced Features](#planned-advanced-features)
 
 ## Basic Internationalization
@@ -534,28 +534,16 @@ end
 - Single columns automatically use full page width (100%)
 - Multiple columns use equal width distribution unless explicit widths are provided
 
-## Element Positioning and Styling
+## Element Styling
 
-### Position Properties
-
-```elixir
-label :positioned_label do
-  text "Report Title"
-
-  position(
-    x: 0,       # Horizontal position
-    y: 0,       # Vertical position
-    width: 100, # Element width
-    height: 20  # Element height
-  )
-end
-```
+Elements within columns support various styling options for formatting and appearance.
 
 ### Style Properties
 
 ```elixir
 label :styled_label do
   text "Styled Text"
+  column 0
 
   style(
     font_size: 16,
@@ -569,31 +557,41 @@ label :styled_label do
 end
 ```
 
-### Visual Elements
+### Styled Fields
 
 ```elixir
-# Line element
-line :separator do
-  orientation :horizontal  # or :vertical
-  thickness 2
-  position(x: 0, y: 15, width: 100, height: 2)
-  style(color: "#cccccc")
-end
+band :detail do
+  type :detail
+  columns "(150pt, 100pt, 80pt)"
 
-# Box element
-box :section_container do
-  position(x: 0, y: 0, width: 100, height: 50)
-  border(width: 1, color: "#000000", style: :solid)
-  fill(color: "#f9f9f9")
-end
+  field :customer_name do
+    source :name
+    column 0
+    style font_size: 14, font_weight: :bold
+  end
 
-# Image element
-image :company_logo do
-  source "/images/logo.png"
-  scale_mode :fit  # :fit, :fill, :stretch, :none
-  position(x: 0, y: 0, width: 20, height: 15)
+  field :health_score do
+    source :score
+    column 1
+    style text_align: :center, color: "#10B981"
+  end
+
+  field :tier do
+    source :tier
+    column 2
+    style font_weight: :bold, text_align: :right
+  end
 end
 ```
+
+**Available Style Options:**
+- `font_size` - Integer (e.g., 12, 14, 16)
+- `font_weight` - `:normal` or `:bold`
+- `font_style` - `:normal` or `:italic`
+- `color` - Hex color string (e.g., "#333333")
+- `background_color` - Hex color string
+- `text_align` - `:left`, `:center`, `:right`, or `:justify`
+- `vertical_align` - `:top`, `:middle`, or `:bottom`
 
 ## Planned Advanced Features
 

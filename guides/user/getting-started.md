@@ -108,49 +108,50 @@ defmodule MyApp.MyDomain do
 
         label :report_title do
           text("Customer Directory")
-          position(x: 0, y: 0, width: 100, height: 20)
-          style(font_size: 18, font_weight: :bold)
+          style font_size: 18, font_weight: :bold, text_align: :center
         end
       end
 
       band :column_header do
         type :column_header
+        columns "(1fr, 1fr, 100pt)"
 
         label :name_header do
           text("Customer Name")
-          position(x: 0, y: 0, width: 40, height: 15)
-          style(font_weight: :bold)
+          column 0
+          style font_weight: :bold
         end
 
         label :email_header do
           text("Email")
-          position(x: 40, y: 0, width: 40, height: 15)
-          style(font_weight: :bold)
+          column 1
+          style font_weight: :bold
         end
 
         label :status_header do
           text("Status")
-          position(x: 80, y: 0, width: 20, height: 15)
-          style(font_weight: :bold)
+          column 2
+          style font_weight: :bold
         end
       end
 
       band :details do
         type :detail
+        columns "(1fr, 1fr, 100pt)"
 
         field :customer_name do
           source :name
-          position(x: 0, y: 0, width: 40, height: 12)
+          column 0
         end
 
         field :customer_email do
           source :email
-          position(x: 40, y: 0, width: 40, height: 12)
+          column 1
         end
 
         field :customer_status do
           source :status
-          position(x: 80, y: 0, width: 20, height: 12)
+          column 2
         end
       end
     end
@@ -221,24 +222,24 @@ band :page_header do
 
   label :page_title do
     text("My Company - Customer Report")
-    position(x: 0, y: 0, width: 80, height: 15)
   end
 end
 
 band :group_header do
   type :group_header
   group_level(1)  # First level grouping
+  columns "(auto, 1fr)"
 
   label :group_title do
     text("Region: ")
-    position(x: 0, y: 0, width: 15, height: 15)
-    style(font_weight: :bold)
+    column 0
+    style font_weight: :bold
   end
 
   field :region_name do
     source :region
-    position(x: 15, y: 0, width: 25, height: 15)
-    style(font_weight: :bold)
+    column 1
+    style font_weight: :bold
   end
 end
 ```
@@ -249,22 +250,28 @@ end
 Display data from your Ash resource attributes:
 
 ```elixir
-field :customer_name do
-  source :name
-  format :text
-  position(x: 0, y: 0, width: 40, height: 12)
-end
+band :details do
+  type :detail
+  columns "(1fr, 100pt, 100pt)"
 
-field :invoice_total do
-  source :total
-  format :currency
-  position(x: 40, y: 0, width: 20, height: 12)
-end
+  field :customer_name do
+    source :name
+    format :text
+    column 0
+  end
 
-field :created_date do
-  source :inserted_at
-  format :date
-  position(x: 60, y: 0, width: 20, height: 12)
+  field :invoice_total do
+    source :total
+    format :currency
+    column 1
+    style text_align: :right
+  end
+
+  field :created_date do
+    source :inserted_at
+    format :date
+    column 2
+  end
 end
 ```
 
@@ -274,8 +281,7 @@ Static text content:
 ```elixir
 label :section_title do
   text("Customer Information")
-  position(x: 0, y: 0, width: 100, height: 15)
-  style(font_size: 14, font_weight: :bold, color: "#333333")
+  style font_size: 14, font_weight: :bold, color: "#333333"
 end
 ```
 
@@ -285,59 +291,36 @@ Calculated values using Ash expressions:
 ```elixir
 expression :full_name do
   expression(:first_name)  # Will be enhanced with actual expression support
-  position(x: 0, y: 0, width: 40, height: 12)
+  column 0
 end
 ```
 
 > **Note**: Full Ash expression support in expressions is a work in progress. See [ROADMAP.md Phase 4](../../ROADMAP.md#phase-4-performance-and-optimization).
 
 ### Aggregate Elements
-Statistical calculations:
+Statistical calculations within bands:
 
 ```elixir
-aggregate :total_customers do
-  function(:count)
-  source :id
-  scope :report
-  position(x: 0, y: 0, width: 20, height: 12)
-end
+band :summary do
+  type :summary
+  columns "(1fr, 100pt)"
 
-aggregate :average_order_value do
-  function(:average)
-  source :total
-  scope :group
-  format :currency
-  position(x: 20, y: 0, width: 20, height: 12)
-end
-```
+  aggregate :total_customers do
+    function(:count)
+    source :id
+    scope :report
+    column 1
+    style text_align: :right
+  end
 
-### Visual Elements
-
-#### Lines
-```elixir
-line :separator do
-  orientation(:horizontal)
-  thickness(2)
-  position(x: 0, y: 15, width: 100, height: 2)
-  style(color: "#cccccc")
-end
-```
-
-#### Boxes
-```elixir
-box :section_box do
-  position(x: 0, y: 0, width: 100, height: 50)
-  border(width: 1, color: "#000000", style: :solid)
-  fill(color: "#f5f5f5")
-end
-```
-
-#### Images
-```elixir
-image :company_logo do
-  source "/images/logo.png"
-  scale_mode(:fit)
-  position(x: 0, y: 0, width: 20, height: 15)
+  aggregate :average_order_value do
+    function(:average)
+    source :total
+    scope :group
+    format :currency
+    column 1
+    style text_align: :right
+  end
 end
 ```
 
