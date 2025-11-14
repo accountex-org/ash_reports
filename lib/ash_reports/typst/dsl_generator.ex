@@ -370,50 +370,176 @@ defmodule AshReports.Typst.DSLGenerator do
     elements = band.elements || []
 
     if length(elements) > 0 do
-      # For detail bands, render all fields on the same line with calculated spacing
-      # For other bands, render each element with a paragraph break
-      if band.type == :detail or band.type == :column_header do
-        # Sort elements by x position for proper column ordering
-        sorted_elements = Enum.sort_by(elements, fn el ->
-          case Map.get(el, :position, []) do
-            pos when is_list(pos) -> Keyword.get(pos, :x, 0)
-            _ -> 0
-          end
-        end)
-
-        # Generate field codes with relative spacing between columns
-        {field_codes, _last_x} = Enum.reduce(sorted_elements, {[], 0}, fn element, {codes, prev_x} ->
-          current_x = case Map.get(element, :position, []) do
-            pos when is_list(pos) -> Keyword.get(pos, :x, 0)
-            _ -> 0
-          end
-
-          # Calculate spacing needed from previous column
-          spacing = if current_x > prev_x do
-            " #h(#{current_x - prev_x}pt) "
-          else
-            ""
-          end
-
-          # Generate element and strip outer brackets since we'll wrap everything
-          element_code = generate_element(element, context)
-          stripped_code = strip_outer_brackets(element_code)
-
-          {codes ++ [spacing, stripped_code], current_x}
-        end)
-
-        "  [#{Enum.join(field_codes, "")}]\n  parbreak()"
+      # Check if band uses column-based layout
+      if band.columns && band.columns != 1 && has_column_elements?(elements) do
+        generate_table_based_band(band, context)
       else
-        # Other bands: each element with its own paragraph break
-        Enum.map(elements, fn element ->
-          element_code = generate_element(element, context)
-          "  [#{element_code}]\n  parbreak()"
-        end)
-        |> Enum.join("\n")
+        # Legacy: absolute positioning for non-column bands
+        generate_absolute_positioned_band(band, elements, context)
       end
     else
       # Empty band with default content based on type
       generate_default_band_content(band, context)
+    end
+  end
+
+  defp has_column_elements?(elements) do
+    Enum.any?(elements, fn el -> Map.get(el, :column) != nil end)
+  end
+
+  # NEW: Table-based band generation
+  defp generate_table_based_band(%Band{} = band, context) do
+    elements = band.elements || []
+    column_spec = generate_column_spec(band.columns)
+
+    # Sort elements by column number
+    sorted_elements = Enum.sort_by(elements, fn el ->
+      Map.get(el, :column, 0)
+    end)
+
+    # Get max column index
+    max_column = case Enum.max_by(sorted_elements, & Map.get(&1, :column, 0), fn -> %{column: 0} end) do
+      element when is_map(element) -> Map.get(element, :column, 0)
+      _ -> 0
+    end
+
+    # Generate table cells
+    cells = generate_table_cells(sorted_elements, max_column, context)
+
+    # For column headers: use table.header()
+    if band.type == :column_header do
+      """
+        #table(
+          columns: #{column_spec},
+          align: (left, left, left),
+          stroke: none,
+          inset: 5pt,
+
+          table.header(
+            #{cells}
+          )
+        )
+      """
+    else
+      # For detail and other bands: regular table
+      """
+        #table(
+          columns: #{column_spec},
+          align: (left, left, left),
+          stroke: none,
+          inset: 5pt,
+
+          #{cells}
+        )
+      """
+    end
+  end
+
+  # Generate Typst column specification
+  defp generate_column_spec(columns) when is_integer(columns) do
+    # Equal-width columns
+    "#{columns}"
+  end
+
+  defp generate_column_spec(columns) when is_binary(columns) do
+    # Direct Typst expression (e.g., "(150pt, 1fr, 80pt)")
+    columns
+  end
+
+  defp generate_column_spec(columns) when is_list(columns) do
+    # List of column widths
+    widths = Enum.join(columns, ", ")
+    "(#{widths})"
+  end
+
+  defp generate_column_spec(_), do: "1"  # Default: single column
+
+  # Generate table cells in column order
+  defp generate_table_cells(elements, max_column, context) do
+    # Create array with placeholder for each column
+    cells = List.duplicate("[  ]", max_column + 1)
+
+    # Fill in actual element content
+    cells_with_content = Enum.reduce(elements, cells, fn element, acc ->
+      column_index = Map.get(element, :column, 0)
+      element_code = generate_table_cell_content(element, context)
+      List.replace_at(acc, column_index, element_code)
+    end)
+
+    Enum.join(cells_with_content, ",\n    ")
+  end
+
+  # Generate content for a table cell (strip position wrapper, keep style)
+  defp generate_table_cell_content(element, context) do
+    content = case element do
+      %{type: :field} -> generate_field_element(element, context)
+      %{type: :label} -> generate_label_element(element, context)
+      %{type: :expression} -> generate_expression_element(element, context)
+      %{type: :aggregate} -> generate_aggregate_element(element, context)
+      _ -> generate_element(element, context)
+    end
+
+    # For table cells, apply style but not position
+    apply_table_cell_style(content, element)
+  end
+
+  defp apply_table_cell_style(content, element) when is_map(element) do
+    style = extract_style(element)
+
+    if style != [] and is_list(style) do
+      params = build_style_params(style)
+      if params != "" do
+        "[#text(#{params})[#{strip_outer_brackets(content)}]]"
+      else
+        "[#{strip_outer_brackets(content)}]"
+      end
+    else
+      "[#{strip_outer_brackets(content)}]"
+    end
+  end
+
+  # LEGACY: Absolute positioning (for non-column bands)
+  defp generate_absolute_positioned_band(%Band{} = band, elements, context) do
+    # For detail bands, render all fields on the same line with calculated spacing
+    # For other bands, render each element with a paragraph break
+    if band.type == :detail or band.type == :column_header do
+      # Sort elements by x position for proper column ordering
+      sorted_elements = Enum.sort_by(elements, fn el ->
+        case Map.get(el, :position, []) do
+          pos when is_list(pos) -> Keyword.get(pos, :x, 0)
+          _ -> 0
+        end
+      end)
+
+      # Generate field codes with relative spacing between columns
+      {field_codes, _last_x} = Enum.reduce(sorted_elements, {[], 0}, fn element, {codes, prev_x} ->
+        current_x = case Map.get(element, :position, []) do
+          pos when is_list(pos) -> Keyword.get(pos, :x, 0)
+          _ -> 0
+        end
+
+        # Calculate spacing needed from previous column
+        spacing = if current_x > prev_x do
+          " #h(#{current_x - prev_x}pt) "
+        else
+          ""
+        end
+
+        # Generate element and strip outer brackets since we'll wrap everything
+        element_code = generate_element(element, context)
+        stripped_code = strip_outer_brackets(element_code)
+
+        {codes ++ [spacing, stripped_code], current_x}
+      end)
+
+      "  [#{Enum.join(field_codes, "")}]\n  parbreak()"
+    else
+      # Other bands: each element with its own paragraph break
+      Enum.map(elements, fn element ->
+        element_code = generate_element(element, context)
+        "  [#{element_code}]\n  parbreak()"
+      end)
+      |> Enum.join("\n")
     end
   end
 
