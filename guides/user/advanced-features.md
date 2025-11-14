@@ -10,6 +10,8 @@ This guide covers the currently available advanced features in AshReports, inclu
 - [Format Specifications](#format-specifications)
 - [Conditional Visibility](#conditional-visibility)
 - [Band Control Options](#band-control-options)
+- [Column-Based Layout](#column-based-layout)
+- [Element Positioning and Styling](#element-positioning-and-styling)
 - [Planned Advanced Features](#planned-advanced-features)
 
 ## Basic Internationalization
@@ -341,6 +343,196 @@ band :detail_services do
   # Service fields...
 end
 ```
+
+### Repeating Headers
+
+Control whether page headers and group headers repeat on every page:
+
+```elixir
+band :page_header do
+  type :page_header
+  repeat_on_pages true  # Repeat on all pages (default)
+
+  # Header elements...
+end
+
+band :region_header do
+  type :group_header
+  group_level 1
+  repeat_on_pages false  # Only show on first page of group
+
+  # Group header elements...
+end
+```
+
+**Options:**
+- `repeat_on_pages: true` (default for `:page_header` and `:group_header`) - Header appears on every page
+- `repeat_on_pages: false` - Header appears only on the first page
+
+> **Note**: The `repeat_on_pages` option only applies to `:page_header` and `:group_header` band types.
+
+## Column-Based Layout
+
+AshReports uses a column-based layout system that leverages Typst's native `table()` function for clean, maintainable report definitions.
+
+### Basic Column Layout
+
+Define columns at the band level and assign elements to specific columns:
+
+```elixir
+band :customer_detail do
+  type :detail
+  columns 3  # Three equal-width columns
+
+  field :name do
+    source :customer_name
+    column 0  # First column (zero-indexed)
+  end
+
+  field :score do
+    source :health_score
+    column 1  # Second column
+  end
+
+  field :tier do
+    source :tier_name
+    column 2  # Third column
+  end
+end
+```
+
+### Explicit Column Widths
+
+For precise control, use Typst column width specifications:
+
+```elixir
+band :column_header do
+  type :column_header
+  columns "(150pt, 1fr, 80pt)"  # Explicit widths
+
+  label :name_header do
+    text "Customer Name"
+    column 0
+    style font_weight: :bold
+  end
+
+  label :score_header do
+    text "Health Score"
+    column 1
+    style font_weight: :bold
+  end
+
+  label :tier_header do
+    text "Tier"
+    column 2
+    style font_weight: :bold
+  end
+end
+```
+
+**Supported Column Width Units:**
+- `150pt` - Fixed pixel width
+- `1fr` - Fractional (proportional) sizing
+- `auto` - Content-determined width
+- `30%` - Percentage of page width
+- `100%` - Full page width (default for single columns)
+
+### Column Defaults and Auto-Assignment
+
+**Single Column Behavior:**
+When a band has a single column (or `columns` is not specified), it automatically uses the full page width:
+
+```elixir
+band :title do
+  type :title
+  # No columns specified - defaults to full page width
+
+  label :report_title do
+    text "Customer Report"
+    # No column specified - uses column 0
+  end
+end
+```
+
+**Auto-Assignment:**
+Elements without an explicit `column` attribute are automatically assigned sequential columns starting from 0:
+
+```elixir
+band :detail do
+  type :detail
+  columns 3
+
+  field :name do
+    source :name
+    # Auto-assigned to column 0
+  end
+
+  field :score do
+    source :score
+    # Auto-assigned to column 1
+  end
+
+  field :tier do
+    source :tier
+    # Auto-assigned to column 2
+  end
+end
+```
+
+### Matching Column Widths
+
+Ensure column widths match between related bands (e.g., headers and details):
+
+```elixir
+# Column header with explicit widths
+band :column_header do
+  type :column_header
+  columns "(150pt, 100pt, 80pt)"
+
+  label :name_header do
+    text "Customer Name"
+    column 0
+  end
+
+  label :score_header do
+    text "Score"
+    column 1
+  end
+
+  label :tier_header do
+    text "Tier"
+    column 2
+  end
+end
+
+# Detail band with matching widths
+band :customer_detail do
+  type :detail
+  columns "(150pt, 100pt, 80pt)"  # Must match header
+
+  field :customer_name do
+    source :name
+    column 0
+  end
+
+  field :health_score do
+    source :score
+    column 1
+  end
+
+  field :tier_name do
+    source :tier
+    column 2
+  end
+end
+```
+
+**Key Points:**
+- Columns are **zero-indexed** (0 = first column, 1 = second, etc.)
+- Empty columns render as blank table cells
+- Styling (font, color, alignment) is preserved in column layout
+- Single columns automatically use full page width (100%)
+- Multiple columns use equal width distribution unless explicit widths are provided
 
 ## Element Positioning and Styling
 
