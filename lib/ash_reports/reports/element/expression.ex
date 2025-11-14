@@ -8,6 +8,7 @@ defmodule AshReports.Element.Expression do
     :expression,
     :format,
     :position,
+    :column,
     :style,
     :conditional,
     type: :expression
@@ -19,6 +20,7 @@ defmodule AshReports.Element.Expression do
           expression: Ash.Expr.t(),
           format: any(),
           position: AshReports.Element.position(),
+          column: non_neg_integer() | nil,
           style: AshReports.Element.style(),
           conditional: Ash.Expr.t() | nil
         }

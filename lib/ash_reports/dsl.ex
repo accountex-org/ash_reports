@@ -963,6 +963,17 @@ defmodule AshReports.Dsl do
         type: :any,
         default: true,
         doc: "Expression to determine if the band should be visible."
+      ],
+      columns: [
+        type: {:or, [:pos_integer, :string, {:list, :string}]},
+        default: 1,
+        doc: """
+        Column layout for this band. Can be:
+        - Integer: Number of equal-width columns (e.g., 3)
+        - String: Typst column spec (e.g., "(150pt, 1fr, 80pt)")
+        - List of strings: Individual column widths (e.g., ["150pt", "1fr", "80pt"])
+        Defaults to 1 (single column).
+        """
       ]
     ]
   end
@@ -1095,7 +1106,11 @@ defmodule AshReports.Dsl do
       position: [
         type: :keyword_list,
         default: [],
-        doc: "Position properties (x, y, width, height)."
+        doc: "Position properties (x, y, width, height). For absolute positioning only."
+      ],
+      column: [
+        type: :non_neg_integer,
+        doc: "Zero-indexed column position for this element (0 = first column). Used for column-based layout."
       ],
       style: [
         type: :keyword_list,

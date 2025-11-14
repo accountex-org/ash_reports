@@ -19,6 +19,7 @@ defmodule AshReports.Band do
     :can_shrink,
     :keep_together,
     :visible,
+    :columns,
     :elements,
     :bands
   ]
@@ -49,6 +50,7 @@ defmodule AshReports.Band do
           can_shrink: boolean(),
           keep_together: boolean(),
           visible: Ash.Expr.t() | boolean(),
+          columns: pos_integer() | String.t() | [String.t()] | nil,
           elements: [AshReports.Element.t()],
           bands: [t()] | nil
         }
@@ -66,6 +68,7 @@ defmodule AshReports.Band do
       |> Keyword.put_new(:can_shrink, false)
       |> Keyword.put_new(:keep_together, false)
       |> Keyword.put_new(:visible, true)
+      |> Keyword.put_new(:columns, 1)
       |> Keyword.put_new(:elements, [])
     )
   end

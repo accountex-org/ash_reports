@@ -8,6 +8,7 @@ defmodule AshReports.Element.Field do
     :source,
     :format,
     :position,
+    :column,
     :style,
     :conditional,
     type: :field
@@ -19,6 +20,7 @@ defmodule AshReports.Element.Field do
           source: Ash.Expr.t() | atom() | list(atom()),
           format: any(),
           position: AshReports.Element.position(),
+          column: non_neg_integer() | nil,
           style: AshReports.Element.style(),
           conditional: Ash.Expr.t() | nil
         }

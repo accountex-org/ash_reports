@@ -7,6 +7,7 @@ defmodule AshReports.Element.Label do
     :name,
     :text,
     :position,
+    :column,
     :style,
     :conditional,
     type: :label
@@ -17,6 +18,7 @@ defmodule AshReports.Element.Label do
           type: :label,
           text: String.t(),
           position: AshReports.Element.position(),
+          column: non_neg_integer() | nil,
           style: AshReports.Element.style(),
           conditional: Ash.Expr.t() | nil
         }
