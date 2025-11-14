@@ -355,8 +355,10 @@ defmodule AshReports.Typst.DSLGenerator do
 
     if length(elements) > 0 do
       # Generate elements within the band with explicit paragraph breaks
+      # Wrap each element in content brackets since we're in code mode { }
       Enum.map(elements, fn element ->
-        "  #{generate_element(element, context)}\n  parbreak()"
+        element_code = generate_element(element, context)
+        "  [#{element_code}]\n  parbreak()"
       end)
       |> Enum.join("\n")
     else
@@ -380,41 +382,44 @@ defmodule AshReports.Typst.DSLGenerator do
   # Private Functions - Element Generation
 
   defp generate_field_element(%{source: source} = field, _context) do
-    case source do
-      {:resource, field_name} ->
-        "[#record.#{field_name}]"
+    content =
+      case source do
+        {:resource, field_name} ->
+          "[#record.#{field_name}]"
 
-      {:parameter, param_name} ->
-        "[#config.#{param_name}]"
+        {:parameter, param_name} ->
+          "[#config.#{param_name}]"
 
-      {:variable, var_name} ->
-        "[#variables.#{var_name}]"
+        {:variable, var_name} ->
+          "[#variables.#{var_name}]"
 
-      field_name when is_atom(field_name) ->
-        "[#record.#{field_name}]"
+        field_name when is_atom(field_name) ->
+          "[#record.#{field_name}]"
 
-      %Ash.Query.Ref{attribute: %Ash.Resource.Attribute{name: field_name}} ->
-        "[#record.#{field_name}]"
+        %Ash.Query.Ref{attribute: %Ash.Resource.Attribute{name: field_name}} ->
+          "[#record.#{field_name}]"
 
-      %Ash.Query.Ref{relationship_path: [], attribute: attr} when is_atom(attr) ->
-        "[#record.#{attr}]"
+        %Ash.Query.Ref{relationship_path: [], attribute: attr} when is_atom(attr) ->
+          "[#record.#{attr}]"
 
-      %{__struct__: Ash.Query.Ref} = ref ->
-        # Extract field name from Ash reference
-        field_name = extract_field_from_ref(ref)
-        "[#record.#{field_name}]"
+        %{__struct__: Ash.Query.Ref} = ref ->
+          # Extract field name from Ash reference
+          field_name = extract_field_from_ref(ref)
+          "[#record.#{field_name}]"
 
-      # Handle Ash expression structs
-      %{__struct__: struct_module} = expr when is_atom(struct_module) ->
-        case extract_field_from_expression(expr) do
-          {:ok, field_name} -> "[#record.#{field_name}]"
-          :error -> "[#record.unknown_field]"
-        end
+        # Handle Ash expression structs
+        %{__struct__: struct_module} = expr when is_atom(struct_module) ->
+          case extract_field_from_expression(expr) do
+            {:ok, field_name} -> "[#record.#{field_name}]"
+            :error -> "[#record.unknown_field]"
+          end
 
-      _ ->
-        Logger.warning("Unknown field source type: #{inspect(source)} for field: #{inspect(field.name)}")
-        "[#record.unknown_field]"
-    end
+        _ ->
+          Logger.warning("Unknown field source type: #{inspect(source)} for field: #{inspect(field.name)}")
+          "[#record.unknown_field]"
+      end
+
+    apply_element_wrappers(content, field)
   end
 
   defp extract_field_from_ref(%Ash.Query.Ref{attribute: %{name: name}}), do: name
@@ -424,27 +429,32 @@ defmodule AshReports.Typst.DSLGenerator do
   defp extract_field_from_expression(%Ash.Query.Ref{} = ref), do: {:ok, extract_field_from_ref(ref)}
   defp extract_field_from_expression(_), do: :error
 
-  defp generate_label_element(%{text: text} = _label, _context) do
-    "[#{text}]"
+  defp generate_label_element(%{text: text} = label, _context) do
+    content = "[#{text}]"
+    apply_element_wrappers(content, label)
   end
 
-  defp generate_expression_element(%{expression: expression} = _expr, context) do
+  defp generate_expression_element(%{expression: expression} = expr, context) do
     # Convert AshReports expression to Typst expression
     typst_expr = convert_expression_to_typst(expression, context)
-    "[#(#{typst_expr})]"
+    content = "[#(#{typst_expr})]"
+    apply_element_wrappers(content, expr)
   end
 
-  defp generate_aggregate_element(%{function: function, source: source} = _aggregate, _context) do
+  defp generate_aggregate_element(%{function: function, source: source} = aggregate, _context) do
     # Generate aggregate calculation
-    case function do
-      :sum -> "[Sum: #data.records.map(r => r.#{source}).sum()]"
-      :count -> "[Count: #data.records.len()]"
-      :average -> "[Avg: #data.records.map(r => r.#{source}).sum() / #data.records.len()]"
-      :avg -> "[Avg: #data.records.map(r => r.#{source}).sum() / #data.records.len()]"
-      :min -> "[Min: #calc.min(..data.records.map(r => r.#{source}))]"
-      :max -> "[Max: #calc.max(..data.records.map(r => r.#{source}))]"
-      _ -> "[Aggregate: #{function}]"
-    end
+    content =
+      case function do
+        :sum -> "[Sum: #data.records.map(r => r.#{source}).sum()]"
+        :count -> "[Count: #data.records.len()]"
+        :average -> "[Avg: #data.records.map(r => r.#{source}).sum() / #data.records.len()]"
+        :avg -> "[Avg: #data.records.map(r => r.#{source}).sum() / #data.records.len()]"
+        :min -> "[Min: #calc.min(..data.records.map(r => r.#{source}))]"
+        :max -> "[Max: #calc.max(..data.records.map(r => r.#{source}))]"
+        _ -> "[Aggregate: #{function}]"
+      end
+
+    apply_element_wrappers(content, aggregate)
   end
 
   defp generate_line_element(%{} = line, _context) do
@@ -723,4 +733,205 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   defp serialize_value(_value), do: "none"
+
+  # Private Functions - Position and Style Support
+
+  @doc false
+  defp extract_position(element) when is_map(element) do
+    Map.get(element, :position, [])
+  end
+
+  @doc false
+  defp extract_style(element) when is_map(element) do
+    Map.get(element, :style, [])
+  end
+
+  @doc false
+  defp has_position?(element) when is_map(element) do
+    position = extract_position(element)
+    is_list(position) and position != []
+  end
+
+  @doc false
+  defp has_style?(element) when is_map(element) do
+    style = extract_style(element)
+    is_list(style) and style != []
+  end
+
+  @doc false
+  defp alignment_to_typst(align) when is_atom(align) do
+    case align do
+      :center -> "center"
+      :top -> "top"
+      :bottom -> "bottom"
+      :horizon -> "horizon"
+      :left -> "left"
+      :right -> "right"
+      :start -> "start"
+      :end -> "end"
+      _ -> nil
+    end
+  end
+
+  @doc false
+  defp build_alignment_string(align) when is_atom(align) do
+    alignment_to_typst(align)
+  end
+
+  defp build_alignment_string(align) when is_list(align) do
+    # Convert list of alignment atoms to Typst syntax: top + center
+    align
+    |> Enum.map(&alignment_to_typst/1)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" + ")
+  end
+
+  @doc false
+  defp generate_position_wrapper(content, element) when is_map(element) do
+    position = extract_position(element)
+
+    if position != [] and is_list(position) do
+      # Check if using alignment-based positioning
+      align = Keyword.get(position, :align)
+
+      cond do
+        # Alignment-based positioning (e.g., position align: :center or align: [:top, :center])
+        align != nil ->
+          alignment_str = build_alignment_string(align)
+          if alignment_str != "" do
+            "#place(#{alignment_str})[#{content}]"
+          else
+            content
+          end
+
+        # Absolute positioning with dx/dy (existing behavior)
+        Keyword.has_key?(position, :x) or Keyword.has_key?(position, :y) ->
+          dx = Keyword.get(position, :x, 0)
+          dy = Keyword.get(position, :y, 0)
+
+          # Convert to Typst units (assuming pixels to points conversion)
+          dx_pt = "#{dx}pt"
+          dy_pt = "#{dy}pt"
+
+          "#place(dx: #{dx_pt}, dy: #{dy_pt})[#{content}]"
+
+        # No valid positioning attributes
+        true ->
+          content
+      end
+    else
+      content
+    end
+  end
+
+  @doc false
+  defp generate_style_wrapper(content, element) when is_map(element) do
+    style = extract_style(element)
+
+    if style != [] and is_list(style) do
+      # Build Typst text() parameters from style attributes
+      params = build_style_params(style)
+
+      if params != "" do
+        # Content-producing functions need # prefix even in code blocks
+        "#text(#{params})[#{content}]"
+      else
+        content
+      end
+    else
+      content
+    end
+  end
+
+  @doc false
+  defp build_style_params(style) when is_list(style) do
+    params = []
+
+    # Font size
+    params =
+      case Keyword.get(style, :font_size) do
+        nil -> params
+        size when is_integer(size) -> params ++ ["size: #{size}pt"]
+        size when is_binary(size) -> params ++ ["size: #{size}"]
+        _ -> params
+      end
+
+    # Color (convert hex to rgb())
+    params =
+      case Keyword.get(style, :color) do
+        nil ->
+          params
+
+        color when is_binary(color) ->
+          # Strip leading # if present (Typst rgb() doesn't accept it)
+          clean_color = String.trim_leading(color, "#")
+          params ++ ["fill: rgb(\"#{clean_color}\")"]
+
+        _ ->
+          params
+      end
+
+    # Font weight
+    params =
+      case Keyword.get(style, :font_weight) do
+        nil -> params
+        weight when is_binary(weight) -> params ++ ["weight: \"#{weight}\""]
+        weight when is_atom(weight) -> params ++ ["weight: \"#{Atom.to_string(weight)}\""]
+        _ -> params
+      end
+
+    # Font family
+    params =
+      case Keyword.get(style, :font) do
+        nil -> params
+        font when is_binary(font) -> params ++ ["font: \"#{font}\""]
+        _ -> params
+      end
+
+    # Alignment
+    params =
+      case Keyword.get(style, :alignment) do
+        nil -> params
+        :left -> params ++ ["align: left"]
+        :center -> params ++ ["align: center"]
+        :right -> params ++ ["align: right"]
+        :justify -> params ++ ["align: justify"]
+        align when is_atom(align) -> params ++ ["align: #{Atom.to_string(align)}"]
+        _ -> params
+      end
+
+    Enum.join(params, ", ")
+  end
+
+  @doc false
+  defp apply_element_wrappers(content, element) when is_map(element) do
+    # Strip outer brackets from content if present, since wrappers will add them back
+    inner_content = strip_outer_brackets(content)
+
+    # Apply style wrapper first (inner), then position wrapper (outer)
+    wrapped =
+      inner_content
+      |> generate_style_wrapper(element)
+      |> generate_position_wrapper(element)
+
+    # If no wrappers were applied, re-add the brackets
+    if wrapped == inner_content do
+      content  # Return original with brackets
+    else
+      wrapped  # Return wrapped (wrappers add brackets)
+    end
+  end
+
+  @doc false
+  defp strip_outer_brackets(content) when is_binary(content) do
+    # Remove outer [...] if present
+    content = String.trim(content)
+
+    if String.starts_with?(content, "[") and String.ends_with?(content, "]") do
+      content
+      |> String.slice(1..-2//1)
+    else
+      content
+    end
+  end
 end
