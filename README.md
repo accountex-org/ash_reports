@@ -47,7 +47,7 @@ Quick overview of what's production-ready:
 | Core DSL | ✅ Production-Ready | 75 passing tests |
 | Band System | ✅ Production-Ready | Full hierarchy support |
 | Chart Generation | ✅ Production-Ready | SVG output via Contex |
-| Streaming | ✅ Production-Ready | Memory-efficient GenStage |
+| Streaming | ✅ Production-Ready | Ash.stream! with keyset pagination |
 | Data Loading | ✅ Production-Ready | Ash query integration |
 | Internationalization | ✅ Production-Ready | CLDR formatting |
 | HTML Renderer | ⚠️ Untested | Implemented, needs tests |
@@ -339,7 +339,7 @@ end
 
 ```elixir
 # AshReports has streaming infrastructure for large datasets
-# using a GenStage-based pipeline for memory efficiency
+# using Ash.stream! with keyset pagination for memory efficiency
 
 {:ok, result} = AshReports.generate(
   MyApp.Reports.HugeReport,
@@ -436,8 +436,8 @@ AshReports takes security seriously. We have:
 
 **Q: Memory issues with large reports**
 - Use streaming for datasets >10,000 records (automatic)
-- Monitor GenStage backpressure
-- Adjust chunk sizes in streaming configuration
+- Adjust batch_size in streaming configuration
+- Consider using keyset pagination for optimal performance
 
 **For more troubleshooting help**, see user guides or open an issue.
 
@@ -533,7 +533,6 @@ Built with:
 - [Contex](https://github.com/mindok/contex) - Chart generation
 - [CLDR](https://github.com/elixir-cldr/cldr) - Internationalization
 - [ChromicPDF](https://github.com/bitcrowd/chromic_pdf) - PDF generation
-- [GenStage](https://github.com/elixir-lang/gen_stage) - Streaming pipeline
 
 ---
 

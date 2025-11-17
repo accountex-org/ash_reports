@@ -3,14 +3,18 @@ defmodule AshReports.Application do
   AshReports Application - Supervisor for runtime services.
 
   This application module provides supervision for runtime services needed by
-  AshReports, including streaming pipeline infrastructure and chart generation.
+  AshReports, including chart generation infrastructure.
 
   ## Services Supervised
 
-  - **Typst StreamingPipeline**: Manages large dataset processing with GenStage
   - **Chart Registry**: Tracks active chart instances
   - **Chart Cache**: Caches chart data for performance
   - **Performance Monitor**: Monitors system performance metrics
+
+  ## Data Streaming
+
+  AshReports now uses Ash.stream! natively for data loading with keyset pagination.
+  No GenStage infrastructure is needed as Ash Framework handles streaming efficiently.
 
   ## Usage
 
@@ -23,13 +27,12 @@ defmodule AshReports.Application do
 
   use Application
 
-  alias AshReports.Typst.StreamingPipeline
   alias AshReports.Charts.{Registry, Cache, PerformanceMonitor}
 
   @doc """
   Starts the AshReports application supervisor.
 
-  Starts supervision tree with streaming pipeline, chart infrastructure, and other services.
+  Starts supervision tree with chart infrastructure and other services.
   """
   def start(_type, _args) do
     children = build_supervision_tree()
@@ -41,14 +44,11 @@ defmodule AshReports.Application do
   @doc """
   Builds the supervision tree for AshReports runtime services.
 
-  Includes streaming pipeline, chart infrastructure, and test endpoint when applicable.
+  Includes chart infrastructure and test endpoint when applicable.
   """
   def build_supervision_tree do
     base_children = [
-      # StreamingPipeline infrastructure for large dataset processing
-      {StreamingPipeline.Supervisor, []},
-
-      # Chart generation infrastructure (Stage 3)
+      # Chart generation infrastructure
       {Registry, []},
       {Cache, []},
       {PerformanceMonitor, []}

@@ -220,7 +220,7 @@ end
 - Pre-calculated aggregations at database level
 - Configurable preload strategies
 - Batch loading for relationships
-- Query result streaming via GenStage
+- Query result streaming via Ash.stream! with keyset pagination
 
 #### Memory Management
 
