@@ -233,6 +233,17 @@ defmodule AshReports.QueryBuilder do
     sorted_query =
       Enum.reduce(valid_groups, query, fn group, acc_query ->
         sort_direction = if group.sort == :desc, do: :desc, else: :asc
+
+        require Logger
+
+        expr_type = try do
+          inspect(group.expression.__struct__)
+        rescue
+          _ -> "not_a_struct"
+        end
+
+        Logger.debug("QueryBuilder: Processing group #{inspect(group.name)}, expression type: #{expr_type}")
+
         # Apply group expression as sort
         case group.expression do
           field when is_atom(field) ->
@@ -245,16 +256,50 @@ defmodule AshReports.QueryBuilder do
                 acc_query
             end
 
-          _expr ->
-            # For complex expressions, we'd need to add a calculation
-            # For now, fallback to basic sorting
+          %{__struct__: _} = expr ->
+            # For Ash expressions, check if we need an aggregate or calculation
+            calc_name = :"__group_#{group.level}_#{group.name}"
+            Logger.debug("QueryBuilder: Processing expression for #{calc_name}")
+
+            # Check if this expression accesses a has_many relationship
+            case extract_relationship_and_field(expr, query.resource) do
+              {:has_many, rel_name, field_name} ->
+                # Use a first aggregate for has_many relationships
+                Logger.debug("QueryBuilder: Creating aggregate for has_many #{rel_name}.#{field_name}")
+
+                try do
+                  acc_query
+                  |> Ash.Query.aggregate(calc_name, {:first, field_name}, path: [rel_name])
+                  |> Ash.Query.sort([{calc_name, sort_direction}])
+                rescue
+                  error ->
+                    Logger.warning("QueryBuilder: Failed to add aggregate for #{group.name}: #{inspect(error)}")
+                    acc_query
+                end
+
+              :not_relationship ->
+                # Regular calculation
+                Logger.debug("QueryBuilder: Creating calculation for expression")
+
+                try do
+                  acc_query
+                  |> Ash.Query.calculate(calc_name, expr, :string)
+                  |> Ash.Query.sort([{calc_name, sort_direction}])
+                rescue
+                  error ->
+                    Logger.warning("QueryBuilder: Failed to add calculation for #{group.name}: #{inspect(error)}")
+                    acc_query
+                end
+            end
+
+          expr ->
+            # For other expressions, fallback to basic sorting
+            Logger.debug("QueryBuilder: Unhandled expression type for group #{group.name}: #{inspect(expr)}")
             acc_query
         end
       end)
 
     {:ok, sorted_query}
-  rescue
-    error -> {:error, {Ash.Error.Invalid, "Failed to apply group sorting: #{inspect(error)}"}}
   end
 
   defp load_relationships(query, report, opts) do
@@ -443,6 +488,32 @@ defmodule AshReports.QueryBuilder do
       _ ->
         # Return nil for now, specific filters should be built in scope
         nil
+    end
+  end
+
+  # Extract relationship and field from an Ash expression
+  # Returns {:has_many, rel_name, field_name} if it's a has_many relationship
+  # Returns :not_relationship otherwise
+  defp extract_relationship_and_field(expr, resource) do
+    try do
+      case expr do
+        # Handle relationship traversal like expr(addresses.state)
+        %{expression: {:get_path, _context, [%{expression: {:ref, [], rel}}, field]}} ->
+          # Check if this is a has_many relationship
+          case Ash.Resource.Info.relationship(resource, rel) do
+            %{cardinality: :many} ->
+              {:has_many, rel, field}
+
+            _ ->
+              :not_relationship
+          end
+
+        # For other expression types
+        _ ->
+          :not_relationship
+      end
+    rescue
+      _ -> :not_relationship
     end
   end
 end

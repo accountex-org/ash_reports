@@ -145,12 +145,20 @@ defmodule AshReports.GroupProcessor do
 
   @doc """
   Extracts group values from a record using group expressions.
+
+  First checks if the query added a calculation for this group (named __group_<level>_<name>),
+  otherwise falls back to evaluating the expression directly.
   """
   @spec extract_group_values([Group.t()], map()) :: %{pos_integer() => any()}
   def extract_group_values(groups, record) do
     groups
     |> Enum.map(fn group ->
-      value = evaluate_group_expression(group.expression, record)
+      # Try to get the calculated group value first (added by QueryBuilder)
+      calc_name = :"__group_#{group.level}_#{group.name}"
+      value = case Map.get(record, calc_name) do
+        nil -> evaluate_group_expression(group.expression, record)
+        calculated_value -> calculated_value
+      end
       {group.level, value}
     end)
     |> Enum.into(%{})
