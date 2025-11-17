@@ -10,6 +10,13 @@ defmodule AshReports.Element.Field do
     :position,
     :column,
     :style,
+    :padding,
+    :margin,
+    :spacing_before,
+    :spacing_after,
+    :align,
+    :decimal_places,
+    :number_format,
     :conditional,
     type: :field
   ]
@@ -22,6 +29,13 @@ defmodule AshReports.Element.Field do
           position: AshReports.Element.position(),
           column: non_neg_integer() | nil,
           style: AshReports.Element.style(),
+          padding: String.t() | Keyword.t() | nil,
+          margin: String.t() | Keyword.t() | nil,
+          spacing_before: String.t() | nil,
+          spacing_after: String.t() | nil,
+          align: atom() | nil,
+          decimal_places: integer() | nil,
+          number_format: Keyword.t() | nil,
           conditional: Ash.Expr.t() | nil
         }
 

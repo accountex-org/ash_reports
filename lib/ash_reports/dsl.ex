@@ -1123,7 +1123,35 @@ defmodule AshReports.Dsl do
       style: [
         type: :keyword_list,
         default: [],
-        doc: "Style properties (font, color, alignment, etc.)."
+        doc: "Text style properties (font, font_size, font_weight, color, alignment). Maps to Typst text() function parameters."
+      ],
+      padding: [
+        type: {:or, [:string, :keyword_list]},
+        doc: "Padding around the element. Can be a single value (string like '10pt') or keyword list with :top, :bottom, :left, :right, :x, :y keys. Maps to Typst pad() function."
+      ],
+      margin: [
+        type: {:or, [:string, :keyword_list]},
+        doc: "Margin around the element. Can be a single value (string like '10pt') or keyword list with :top, :bottom, :left, :right, :x, :y keys. Used for spacing between elements."
+      ],
+      spacing_before: [
+        type: :string,
+        doc: "Vertical spacing before this element (e.g., '10pt', '1em'). Maps to Typst v() function."
+      ],
+      spacing_after: [
+        type: :string,
+        doc: "Vertical spacing after this element (e.g., '10pt', '1em'). Maps to Typst v() function."
+      ],
+      align: [
+        type: :atom,
+        doc: "Text alignment for this element (:left, :center, :right). Overrides table-level alignment for this cell."
+      ],
+      decimal_places: [
+        type: :integer,
+        doc: "Number of decimal places to display for numeric values. Uses Typst calc.round() for rounding."
+      ],
+      number_format: [
+        type: :keyword_list,
+        doc: "Number formatting options. Supports :decimal_places, :thousands_separator, :decimal_separator."
       ],
       conditional: [
         type: :any,

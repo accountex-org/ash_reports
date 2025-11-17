@@ -423,8 +423,11 @@ defmodule AshReports.Typst.DSLGenerator do
     # Generate table cells
     cells = generate_table_cells(sorted_elements, max_column, context)
 
+    # Check if any element has spacing_after or bottom padding for band-level spacing
+    band_spacing_after = extract_band_spacing_after(elements)
+
     # For column headers: use table.header()
-    if band.type == :column_header do
+    table_output = if band.type == :column_header do
       """
         [#table(
           columns: #{column_spec},
@@ -436,7 +439,6 @@ defmodule AshReports.Typst.DSLGenerator do
             #{cells}
           )
         )]
-        parbreak()
       """
     else
       # For detail and other bands: regular table
@@ -449,8 +451,41 @@ defmodule AshReports.Typst.DSLGenerator do
 
           #{cells}
         )]
+      """
+    end
+
+    # Add vertical spacing after table if any element specified it
+    if band_spacing_after do
+      """
+      #{table_output}
+        [#v(#{band_spacing_after})]
         parbreak()
       """
+    else
+      """
+      #{table_output}
+        parbreak()
+      """
+    end
+  end
+
+  # Extract spacing_after or bottom padding from elements to apply at band level
+  defp extract_band_spacing_after(elements) do
+    # Check for explicit spacing_after on any element
+    spacing_after = Enum.find_value(elements, fn element ->
+      Map.get(element, :spacing_after)
+    end)
+
+    if spacing_after do
+      spacing_after
+    else
+      # Check for bottom padding on any element
+      Enum.find_value(elements, fn element ->
+        case Map.get(element, :padding) do
+          opts when is_list(opts) -> Keyword.get(opts, :bottom)
+          _ -> nil
+        end
+      end)
     end
   end
 
@@ -508,18 +543,132 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   defp apply_table_cell_style(content, element) when is_map(element) do
+    # Strip outer brackets first
+    inner_content = strip_outer_brackets(content)
+
+    # Apply formatting, style, padding, margin, and alignment wrappers
+    wrapped =
+      inner_content
+      |> apply_numeric_formatting(element)
+      |> apply_style_only(element)
+      |> apply_padding_only(element)
+      |> apply_margin_only(element)
+      |> apply_alignment_only(element)
+
+    # Wrap in brackets for table cell
+    "[#{wrapped}]"
+  end
+
+  # Helper to apply only style wrapper without brackets
+  defp apply_style_only(content, element) do
     style = extract_style(element)
 
     if style != [] and is_list(style) do
       params = build_style_params(style)
       if params != "" do
-        "[#text(#{params})[#{strip_outer_brackets(content)}]]"
+        "#text(#{params})[#{content}]"
       else
-        "[#{strip_outer_brackets(content)}]"
+        content
       end
     else
-      "[#{strip_outer_brackets(content)}]"
+      content
     end
+  end
+
+  # Helper to apply only padding wrapper without outer brackets
+  defp apply_padding_only(content, element) do
+    padding = Map.get(element, :padding)
+
+    case padding do
+      nil ->
+        content
+
+      value when is_binary(value) ->
+        "#pad(#{value})[#{content}]"
+
+      opts when is_list(opts) ->
+        params = build_padding_params(opts)
+        if params != "", do: "#pad(#{params})[#{content}]", else: content
+
+      _ ->
+        content
+    end
+  end
+
+  # Helper to apply only margin wrapper without outer brackets
+  defp apply_margin_only(content, element) do
+    margin = Map.get(element, :margin)
+
+    case margin do
+      nil ->
+        content
+
+      value when is_binary(value) ->
+        "#pad(#{value})[#{content}]"
+
+      opts when is_list(opts) ->
+        params = build_padding_params(opts)
+        if params != "", do: "#pad(#{params})[#{content}]", else: content
+
+      _ ->
+        content
+    end
+  end
+
+  # Helper to apply alignment wrapper without outer brackets
+  defp apply_alignment_only(content, element) do
+    align = Map.get(element, :align)
+
+    case align do
+      nil -> content
+      :left -> "#align(left)[#{content}]"
+      :center -> "#align(center)[#{content}]"
+      :right -> "#align(right)[#{content}]"
+      _ -> content
+    end
+  end
+
+  # Helper to apply numeric formatting
+  defp apply_numeric_formatting(content, element) do
+    decimal_places = Map.get(element, :decimal_places)
+    number_format = Map.get(element, :number_format)
+
+    cond do
+      # Use decimal_places if specified
+      decimal_places != nil && is_integer(decimal_places) ->
+        # Wrap the expression in calc.round()
+        rounded_content = String.replace(content, ~r/#\((.+)\)/, "#(calc.round(\\1, digits: #{decimal_places}))")
+        if rounded_content != content do
+          rounded_content
+        else
+          # If no expression found, try wrapping the whole thing
+          "#(calc.round(#{strip_hash(content)}, digits: #{decimal_places}))"
+        end
+
+      # Use number_format options if specified
+      number_format != nil && is_list(number_format) ->
+        decimal_places = Keyword.get(number_format, :decimal_places)
+        if decimal_places do
+          rounded_content = String.replace(content, ~r/#\((.+)\)/, "#(calc.round(\\1, digits: #{decimal_places}))")
+          if rounded_content != content do
+            rounded_content
+          else
+            "#(calc.round(#{strip_hash(content)}, digits: #{decimal_places}))"
+          end
+        else
+          content
+        end
+
+      true ->
+        content
+    end
+  end
+
+  # Helper to strip leading # from content
+  defp strip_hash(content) when is_binary(content) do
+    String.trim_leading(content, "#")
+    |> String.trim_leading("(")
+    |> String.trim_trailing(")")
   end
 
   defp generate_default_band_content(%Band{type: :title, name: name}, _context) do
@@ -1067,10 +1216,12 @@ defmodule AshReports.Typst.DSLGenerator do
     # Strip outer brackets from content if present, since wrappers will add them back
     inner_content = strip_outer_brackets(content)
 
-    # Apply style wrapper first (inner), then position wrapper (outer)
+    # Apply wrappers in order: style (innermost) -> padding -> margin -> position (outermost)
     wrapped =
       inner_content
       |> generate_style_wrapper(element)
+      |> generate_padding_wrapper(element)
+      |> generate_margin_wrapper(element)
       |> generate_position_wrapper(element)
 
     # If no wrappers were applied, re-add the brackets
@@ -1079,6 +1230,111 @@ defmodule AshReports.Typst.DSLGenerator do
     else
       wrapped  # Return wrapped (wrappers add brackets)
     end
+  end
+
+  @doc false
+  defp generate_padding_wrapper(content, element) when is_map(element) do
+    padding = Map.get(element, :padding)
+
+    case padding do
+      nil ->
+        content
+
+      # Single value padding (e.g., "10pt")
+      value when is_binary(value) ->
+        "#pad(#{value})[#{content}]"
+
+      # Keyword list padding (e.g., [top: "5pt", bottom: "10pt"])
+      opts when is_list(opts) ->
+        params = build_padding_params(opts)
+
+        if params != "" do
+          "#pad(#{params})[#{content}]"
+        else
+          content
+        end
+
+      _ ->
+        content
+    end
+  end
+
+  @doc false
+  defp generate_margin_wrapper(content, element) when is_map(element) do
+    margin = Map.get(element, :margin)
+
+    case margin do
+      nil ->
+        content
+
+      # Single value margin (e.g., "10pt")
+      value when is_binary(value) ->
+        "#pad(#{value})[#{content}]"
+
+      # Keyword list margin (e.g., [top: "5pt", bottom: "10pt"])
+      opts when is_list(opts) ->
+        params = build_padding_params(opts)
+
+        if params != "" do
+          "#pad(#{params})[#{content}]"
+        else
+          content
+        end
+
+      _ ->
+        content
+    end
+  end
+
+  @doc false
+  defp build_padding_params(opts) when is_list(opts) do
+    params = []
+
+    # Individual sides
+    params =
+      case Keyword.get(opts, :top) do
+        nil -> params
+        value -> params ++ ["top: #{value}"]
+      end
+
+    params =
+      case Keyword.get(opts, :bottom) do
+        nil -> params
+        value -> params ++ ["bottom: #{value}"]
+      end
+
+    params =
+      case Keyword.get(opts, :left) do
+        nil -> params
+        value -> params ++ ["left: #{value}"]
+      end
+
+    params =
+      case Keyword.get(opts, :right) do
+        nil -> params
+        value -> params ++ ["right: #{value}"]
+      end
+
+    # Shortcuts
+    params =
+      case Keyword.get(opts, :x) do
+        nil -> params
+        value -> params ++ ["x: #{value}"]
+      end
+
+    params =
+      case Keyword.get(opts, :y) do
+        nil -> params
+        value -> params ++ ["y: #{value}"]
+      end
+
+    params =
+      case Keyword.get(opts, :rest) do
+        nil -> params
+        value -> params ++ ["rest: #{value}"]
+      end
+
+    Enum.join(params, ", ")
   end
 
   @doc false
