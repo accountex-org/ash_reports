@@ -446,6 +446,9 @@ defmodule AshReports.Typst.DSLGenerator do
     # Check if any element has spacing_after or bottom padding for band-level spacing
     band_spacing_after = extract_band_spacing_after(elements)
 
+    # Build inset parameter based on band padding
+    inset_param = build_table_inset(band)
+
     # For column headers: use table.header()
     table_output = if band.type == :column_header do
       """
@@ -453,7 +456,7 @@ defmodule AshReports.Typst.DSLGenerator do
           columns: #{column_spec},
           align: (left, left, left),
           stroke: none,
-          inset: 5pt,
+          inset: #{inset_param},
 
           table.header(
             #{cells}
@@ -467,7 +470,7 @@ defmodule AshReports.Typst.DSLGenerator do
           columns: #{column_spec},
           align: (left, left, left),
           stroke: none,
-          inset: 5pt,
+          inset: #{inset_param},
 
           #{cells}
         )]
@@ -475,7 +478,7 @@ defmodule AshReports.Typst.DSLGenerator do
     end
 
     # Add vertical spacing after table if any element specified it
-    final_output = if band_spacing_after do
+    if band_spacing_after do
       """
       #{table_output}
         [#v(#{band_spacing_after})]
@@ -487,10 +490,28 @@ defmodule AshReports.Typst.DSLGenerator do
         parbreak()
       """
     end
-
-    # Apply band-level padding if specified
-    apply_band_padding(final_output, band)
   end
+
+  # Build Typst inset parameter from band padding
+  defp build_table_inset(%Band{padding: nil}), do: "5pt"
+
+  defp build_table_inset(%Band{padding: padding}) when is_list(padding) do
+    # Convert padding keyword list to Typst inset format
+    # Default to 5pt for unspecified sides
+    left = Keyword.get(padding, :left, "5pt")
+    right = Keyword.get(padding, :right, "5pt")
+    top = Keyword.get(padding, :top, "5pt")
+    bottom = Keyword.get(padding, :bottom, "5pt")
+
+    "(left: #{left}, right: #{right}, top: #{top}, bottom: #{bottom})"
+  end
+
+  defp build_table_inset(%Band{padding: value}) when is_binary(value) do
+    # Single value applies to all sides
+    value
+  end
+
+  defp build_table_inset(_band), do: "5pt"
 
   # Extract spacing_after or bottom padding from elements to apply at band level
   defp extract_band_spacing_after(elements) do
@@ -510,79 +531,6 @@ defmodule AshReports.Typst.DSLGenerator do
         end
       end)
     end
-  end
-  # Apply band-level padding if the band has a padding property
-  defp apply_band_padding(output, %Band{padding: nil}), do: output
-
-  defp apply_band_padding(output, %Band{padding: padding}) when is_list(padding) do
-    # Build padding parameters from keyword list
-    params = build_padding_params(padding)
-
-    if params != "" do
-      wrap_in_padding(output, params)
-    else
-      output
-    end
-  end
-
-  defp apply_band_padding(output, %Band{padding: value}) when is_binary(value) do
-    wrap_in_padding(output, value)
-  end
-
-  defp apply_band_padding(output, _band), do: output
-
-  # Helper to wrap band output in #pad() directive
-  defp wrap_in_padding(output, params) do
-    # The output structure is: [#table(...)]<newlines>parbreak()
-    # We need to extract the table part and wrap it in #pad()
-    
-    # Check if we're in code mode (output starts with '[')
-    # In code mode, we don't use '#' prefix for function calls
-    in_code_mode = String.trim_leading(output) |> String.starts_with?("[")
-    
-    # Find the start of the table
-    case String.split(output, "[#table(", parts: 2) do
-      [before, rest] ->
-        # Now we need to find the matching closing bracket
-        # Count brackets to find the correct closing ]
-        {table_content, after_table} = extract_bracketed_content(rest)
-        
-        if in_code_mode do
-          # In code mode: pad(...)[ table(...) ]
-          before <> "[pad(#{params})[\n  table(" <> table_content <> "\n]\n" <> String.trim_leading(after_table)
-        else
-          # In markup mode: #pad(...)[ #table(...) ]
-          before <> "#pad(#{params})[\n  #table(" <> table_content <> "\n]\n" <> String.trim_leading(after_table)
-        end
-
-      _ ->
-        # Fallback: no table found, return original
-        output
-    end
-  end
-
-  # Extract content up to the matching closing bracket
-  defp extract_bracketed_content(str) do
-    extract_bracketed_content(str, 0, 0, "")
-  end
-
-  defp extract_bracketed_content(<<>>, _depth, _pos, acc), do: {acc, ""}
-
-  defp extract_bracketed_content(<<"[", rest::binary>>, depth, pos, acc) do
-    extract_bracketed_content(rest, depth + 1, pos + 1, acc <> "[")
-  end
-
-  defp extract_bracketed_content(<<"]", rest::binary>>, 0, _pos, acc) do
-    # Found the matching closing bracket
-    {acc, rest}
-  end
-
-  defp extract_bracketed_content(<<"]", rest::binary>>, depth, pos, acc) do
-    extract_bracketed_content(rest, depth - 1, pos + 1, acc <> "]")
-  end
-
-  defp extract_bracketed_content(<<c::utf8, rest::binary>>, depth, pos, acc) do
-    extract_bracketed_content(rest, depth, pos + 1, acc <> <<c::utf8>>)
   end
 
   # Generate Typst column specification
