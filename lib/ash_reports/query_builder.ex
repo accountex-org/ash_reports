@@ -262,14 +262,18 @@ defmodule AshReports.QueryBuilder do
             Logger.debug("QueryBuilder: Processing expression for #{calc_name}")
 
             # Check if this expression accesses a has_many relationship
-            case extract_relationship_and_field(expr, query.resource) do
+            extraction_result = extract_relationship_and_field(expr, query.resource)
+            Logger.debug("QueryBuilder: Extraction result for #{group.name}: #{inspect(extraction_result)}")
+            Logger.debug("QueryBuilder: Expression structure: #{inspect(expr)}")
+
+            case extraction_result do
               {:has_many, rel_name, field_name} ->
                 # Use a first aggregate for has_many relationships
                 Logger.debug("QueryBuilder: Creating aggregate for has_many #{rel_name}.#{field_name}")
 
                 try do
                   acc_query
-                  |> Ash.Query.aggregate(calc_name, {:first, field_name}, path: [rel_name])
+                  |> Ash.Query.aggregate(calc_name, :first, field_name, relationship_path: [rel_name])
                   |> Ash.Query.sort([{calc_name, sort_direction}])
                 rescue
                   error ->
