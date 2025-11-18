@@ -536,6 +536,10 @@ defmodule AshReports.Typst.DSLGenerator do
     # The output structure is: [#table(...)]<newlines>parbreak()
     # We need to extract the table part and wrap it in #pad()
     
+    # Check if we're in code mode (output starts with '[')
+    # In code mode, we don't use '#' prefix for function calls
+    in_code_mode = String.trim_leading(output) |> String.starts_with?("[")
+    
     # Find the start of the table
     case String.split(output, "[#table(", parts: 2) do
       [before, rest] ->
@@ -543,8 +547,13 @@ defmodule AshReports.Typst.DSLGenerator do
         # Count brackets to find the correct closing ]
         {table_content, after_table} = extract_bracketed_content(rest)
         
-        # Reconstruct with padding
-        before <> "#pad(#{params})[\n  #table(" <> table_content <> "\n]\n" <> String.trim_leading(after_table)
+        if in_code_mode do
+          # In code mode: pad(...)[ table(...) ]
+          before <> "[pad(#{params})[\n  table(" <> table_content <> "\n]\n" <> String.trim_leading(after_table)
+        else
+          # In markup mode: #pad(...)[ #table(...) ]
+          before <> "#pad(#{params})[\n  #table(" <> table_content <> "\n]\n" <> String.trim_leading(after_table)
+        end
 
       _ ->
         # Fallback: no table found, return original
