@@ -21,6 +21,7 @@ defmodule AshReports.Band do
     :visible,
     :columns,
     :repeat_on_pages,
+    :padding,
     :elements,
     :bands
   ]
@@ -53,6 +54,7 @@ defmodule AshReports.Band do
           visible: Ash.Expr.t() | boolean(),
           columns: pos_integer() | String.t() | [String.t()] | nil,
           repeat_on_pages: boolean() | nil,
+          padding: keyword() | nil,
           elements: [AshReports.Element.t()],
           bands: [t()] | nil
         }

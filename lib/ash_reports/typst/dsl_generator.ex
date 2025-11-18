@@ -475,7 +475,7 @@ defmodule AshReports.Typst.DSLGenerator do
     end
 
     # Add vertical spacing after table if any element specified it
-    if band_spacing_after do
+    final_output = if band_spacing_after do
       """
       #{table_output}
         [#v(#{band_spacing_after})]
@@ -487,6 +487,9 @@ defmodule AshReports.Typst.DSLGenerator do
         parbreak()
       """
     end
+
+    # Apply band-level padding if specified
+    apply_band_padding(final_output, band)
   end
 
   # Extract spacing_after or bottom padding from elements to apply at band level
@@ -508,6 +511,31 @@ defmodule AshReports.Typst.DSLGenerator do
       end)
     end
   end
+  # Apply band-level padding if the band has a padding property
+  defp apply_band_padding(output, %Band{padding: nil}), do: output
+
+  defp apply_band_padding(output, %Band{padding: padding}) when is_list(padding) do
+    # Build padding parameters from keyword list
+    params = build_padding_params(padding)
+
+    if params != "" do
+      # Wrap the entire output in a #pad() directive
+      "[#pad(#{params})[
+#{String.trim(output)}
+]]"
+    else
+      output
+    end
+  end
+
+  defp apply_band_padding(output, %Band{padding: value}) when is_binary(value) do
+    # Single value padding - apply to all sides
+    "[#pad(#{value})[
+#{String.trim(output)}
+]]"
+  end
+
+  defp apply_band_padding(output, _band), do: output
 
   # Generate Typst column specification
   defp generate_column_spec(columns) when is_integer(columns) do

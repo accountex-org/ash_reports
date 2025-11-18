@@ -982,6 +982,18 @@ defmodule AshReports.Dsl do
         For page_header and group_header bands, whether to repeat the header on each page.
         Defaults to true. Only applies to page_header and group_header band types.
         """
+      ],
+      padding: [
+        type: :keyword_list,
+        doc: """
+        Padding for the band content. Accepts a keyword list with directional values:
+        - `left`: Left padding (e.g., "20pt")
+        - `right`: Right padding
+        - `top`: Top padding
+        - `bottom`: Bottom padding
+
+        Example: `padding left: "20pt", top: "10pt"`
+        """
       ]
     ]
   end
