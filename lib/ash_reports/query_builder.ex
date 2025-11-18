@@ -99,6 +99,18 @@ defmodule AshReports.QueryBuilder do
   end
 
   @doc """
+  Extracts aggregate fields from group expressions that need to be loaded.
+  """
+  @spec extract_group_aggregates(Report.t()) :: [atom()]
+  def extract_group_aggregates(%Report{groups: groups, driving_resource: resource}) do
+    (groups || [])
+    |> Enum.flat_map(fn group ->
+      extract_aggregate_from_expression(group.expression, resource)
+    end)
+    |> Enum.uniq()
+  end
+
+  @doc """
   Builds filter expressions from parameter values.
   """
   @spec build_parameter_filters(Report.t(), map()) :: [Ash.Expr.t()]
@@ -337,11 +349,12 @@ defmodule AshReports.QueryBuilder do
 
     if should_load do
       relationships = extract_relationships(report)
+      aggregates = extract_group_aggregates(report)
 
       loaded_query =
-        Enum.reduce(relationships, query, fn rel, acc ->
-          Ash.Query.load(acc, rel)
-        end)
+        query
+        |> load_items(relationships)
+        |> load_items(aggregates)
 
       {:ok, loaded_query}
     else
@@ -350,6 +363,13 @@ defmodule AshReports.QueryBuilder do
   rescue
     error ->
       {:error, {Ash.Error.Framework, "Failed to load relationships: #{inspect(error)}"}}
+  end
+
+  defp load_items(query, []), do: query
+  defp load_items(query, items) do
+    Enum.reduce(items, query, fn item, acc ->
+      Ash.Query.load(acc, item)
+    end)
   end
 
   defp preload_aggregates(query, report, opts) do
@@ -544,6 +564,52 @@ defmodule AshReports.QueryBuilder do
       end
     rescue
       _ -> :not_relationship
+    end
+  end
+
+  # Extract aggregate field names from group expressions
+  # Returns a list of aggregate field names that need to be loaded
+  defp extract_aggregate_from_expression(expression, resource) do
+    try do
+      case expression do
+        # Ash.Query.Ref pointing to a field - check if it's an aggregate
+        %Ash.Query.Ref{attribute: %{name: field_name}} ->
+          if is_aggregate_field?(resource, field_name) do
+            [field_name]
+          else
+            []
+          end
+
+        %Ash.Query.Ref{attribute: field_name} when is_atom(field_name) ->
+          if is_aggregate_field?(resource, field_name) do
+            [field_name]
+          else
+            []
+          end
+
+        # Simple atom - check if it's an aggregate
+        field when is_atom(field) ->
+          if is_aggregate_field?(resource, field) do
+            [field]
+          else
+            []
+          end
+
+        _ ->
+          []
+      end
+    rescue
+      _ -> []
+    end
+  end
+
+  # Check if a field is an aggregate on the resource
+  defp is_aggregate_field?(resource, field_name) when is_atom(field_name) do
+    try do
+      aggregates = Ash.Resource.Info.aggregates(resource)
+      Enum.any?(aggregates, fn agg -> agg.name == field_name end)
+    rescue
+      _ -> false
     end
   end
 end

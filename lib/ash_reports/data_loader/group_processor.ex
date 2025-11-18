@@ -338,10 +338,31 @@ defmodule AshReports.GroupProcessor do
   end
 
   defp evaluate_group_expression(expression, record) do
+    require Logger
+
     case expression do
       # Simple field reference
       field when is_atom(field) ->
         Map.get(record, field)
+
+      # Ash.Query.Ref - field or aggregate reference (e.g., expr(region))
+      %Ash.Query.Ref{} = ref_expr ->
+        # Extract field name from the Ref
+        field_name = case ref_expr do
+          %{attribute: %{name: name}} -> name
+          %{attribute: name} when is_atom(name) -> name
+          _ ->
+            Logger.warning("GroupProcessor: Could not extract field from Ref: #{inspect(ref_expr)}")
+            nil
+        end
+
+        if field_name do
+          value = Map.get(record, field_name)
+          Logger.debug("GroupProcessor: Extracted #{field_name} = #{inspect(value)} from record")
+          value
+        else
+          nil
+        end
 
       # Ash.Expr expressions - evaluate using the record data
       %{__struct__: Ash.Expr} = ash_expr ->
