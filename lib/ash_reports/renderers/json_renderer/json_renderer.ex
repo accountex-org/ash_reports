@@ -330,14 +330,6 @@ defmodule AshReports.JsonRenderer do
     }
   end
 
-  defp serialize_report_data(%RenderContext{} = context) do
-    DataSerializer.serialize_context(context)
-  end
-
-  defp build_json_structure(%RenderContext{} = context, serialized_data) do
-    StructureBuilder.build_report_structure(context, serialized_data)
-  end
-
   defp encode_final_json(json_structure) do
     case Jason.encode(json_structure) do
       {:ok, json_string} -> {:ok, json_string}

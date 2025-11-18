@@ -1407,25 +1407,6 @@ defmodule AshReports.Dsl do
     }
   end
 
-  defp filter_entity do
-    %Entity{
-      name: :filter,
-      describe: "A filter condition to apply before aggregation.",
-      target: AshReports.Charts.FilterSpec,
-      args: [:field, :value],
-      schema: []
-    }
-  end
-
-  defp aggregate_entity do
-    %Entity{
-      name: :aggregate,
-      describe: "An aggregation operation (count, sum, avg, min, max).",
-      target: AshReports.Charts.AggregateSpec,
-      schema: aggregate_entity_schema()
-    }
-  end
-
   defp bar_chart_schema do
     [
       name: [
@@ -1921,25 +1902,6 @@ defmodule AshReports.Dsl do
       as_values: [
         type: :atom,
         doc: "Map to values field for sparklines."
-      ]
-    ]
-  end
-
-  defp aggregate_entity_schema do
-    [
-      type: [
-        type: {:in, [:count, :sum, :avg, :min, :max]},
-        required: true,
-        doc: "The type of aggregation to perform."
-      ],
-      field: [
-        type: :atom,
-        doc: "The field to aggregate (not needed for :count)."
-      ],
-      as: [
-        type: :atom,
-        required: true,
-        doc: "The name to use for the aggregate result."
       ]
     ]
   end

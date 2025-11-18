@@ -180,6 +180,12 @@ defmodule AshReports.QueryBuilder do
     |> apply_scope_loads(scope_result.load)
   end
 
+  defp apply_to_query(_scope_result, query) do
+    # If scope returns an expression, apply as filter
+    # For now, we can't apply arbitrary expressions without context
+    query
+  end
+
   defp apply_scope_filter(query, nil), do: query
   defp apply_scope_filter(query, filter), do: Ash.Query.do_filter(query, filter)
 
@@ -191,12 +197,6 @@ defmodule AshReports.QueryBuilder do
     end)
   end
   defp apply_scope_loads(query, load), do: Ash.Query.load(query, load)
-
-  defp apply_to_query(_scope_result, query) do
-    # If scope returns an expression, apply as filter
-    # For now, we can't apply arbitrary expressions without context
-    query
-  end
 
   defp apply_parameter_filters(query, %Report{parameters: []}, _params), do: {:ok, query}
 

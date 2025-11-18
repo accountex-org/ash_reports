@@ -982,27 +982,6 @@ defmodule AshReports.Typst.DSLGenerator do
 
   defp extract_group_field_name(_), do: "unknown"
 
-  defp generate_field_accessor(%{expression: {:get_path, _, [%{expression: {:ref, [], rel}}, field]}}) do
-    # Handle relationship traversal like addresses.state
-    # Since addresses is an array, we need to access the first element
-    "if record.at(\"#{rel}\", default: none) != none and record.at(\"#{rel}\").len() > 0 { record.at(\"#{rel}\").at(0).#{field} } else { none }"
-  end
-
-  defp generate_field_accessor(expression) when is_atom(expression) do
-    # Simple field reference
-    "record.at(\"#{Atom.to_string(expression)}\", default: none)"
-  end
-
-  defp generate_field_accessor(%{expression: {:ref, [], field}}) when is_atom(field) do
-    # Simple field reference from Ash expression
-    "record.at(\"#{Atom.to_string(field)}\", default: none)"
-  end
-
-  defp generate_field_accessor(_) do
-    # Fallback for unknown expression types
-    "none"
-  end
-
   defp generate_nested_group_loops(groups, group_header_bands, detail_bands, group_footer_bands, context, level) do
     if level >= length(groups) do
       # Base case: generate detail bands
@@ -1231,18 +1210,6 @@ defmodule AshReports.Typst.DSLGenerator do
   @doc false
   defp extract_style(element) when is_map(element) do
     Map.get(element, :style, [])
-  end
-
-  @doc false
-  defp has_position?(element) when is_map(element) do
-    position = extract_position(element)
-    is_list(position) and position != []
-  end
-
-  @doc false
-  defp has_style?(element) when is_map(element) do
-    style = extract_style(element)
-    is_list(style) and style != []
   end
 
   @doc false
