@@ -53,9 +53,12 @@ defmodule AshReports.PdfRenderer do
          {:ok, typst_template} <- generate_typst_template(pdf_context),
          {:ok, pdf_binary} <- compile_to_pdf(typst_template, pdf_context),
          {:ok, metadata} <- build_pdf_metadata(pdf_context, start_time) do
+      # Include the Typst template in metadata for debugging/viewing
+      metadata_with_template = Map.put(metadata, :typst_template, typst_template)
+
       result = %{
         content: pdf_binary,
-        metadata: metadata,
+        metadata: metadata_with_template,
         context: pdf_context
       }
 
