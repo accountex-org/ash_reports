@@ -291,6 +291,80 @@ report :sales_by_category do
 end
 ```
 
+### Band Padding and Spacing
+
+Control the spacing within bands using the `padding` option. This is particularly useful for indenting detail rows in grouped reports or adding vertical spacing to section headers.
+
+```elixir
+report :sales_by_region do
+  title("Sales by Region")
+  driving_resource(MyApp.Sales.Order)
+
+  group :region do
+    level 1
+    expression :region_name
+  end
+
+  # Group header - no padding
+  band :group_header do
+    type :group_header
+    group_level(1)
+
+    field :region_name do
+      source :region_name
+      style(font_weight: :bold, font_size: 14)
+    end
+  end
+
+  # Detail records - indented 20pt from left
+  band :detail do
+    type :detail
+    padding left: "20pt"  # Indent detail rows
+
+    field :order_id do
+      source :order_id
+    end
+
+    field :customer_name do
+      source :customer_name
+    end
+
+    field :amount do
+      source :amount
+      format :currency
+    end
+  end
+
+  # Group footer with subtotal - moderate indent
+  band :group_footer do
+    type :group_footer
+    group_level(1)
+    padding left: "10pt", top: "5pt"  # Slight indent and top spacing
+
+    label :total_label do
+      text("Region Total:")
+      style(font_weight: :bold)
+    end
+
+    expression :region_total do
+      expression :region_total_var
+      format :currency
+    end
+  end
+end
+```
+
+**Padding Options:**
+
+- **Directional padding**: `padding left: "20pt", right: "10pt", top: "5pt", bottom: "5pt"`
+- **Uniform padding**: `padding "15pt"` (applies to all sides)
+- **Unspecified sides default to "5pt"**
+
+**Common use cases:**
+- Indent detail rows under group headers
+- Add vertical spacing between sections
+- Create visual hierarchy in reports
+
 ### Charts in Reports
 
 Charts use a two-level architecture: define charts at the reports level, then reference them in bands.

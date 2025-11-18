@@ -986,13 +986,60 @@ defmodule AshReports.Dsl do
       padding: [
         type: :keyword_list,
         doc: """
-        Padding for the band content. Accepts a keyword list with directional values:
-        - `left`: Left padding (e.g., "20pt")
-        - `right`: Right padding
-        - `top`: Top padding
-        - `bottom`: Bottom padding
+        Padding for the band content. Controls the spacing inside table cells for this band.
 
-        Example: `padding left: "20pt", top: "10pt"`
+        Accepts either:
+        - A keyword list with directional values: `[left: "20pt", top: "10pt"]`
+        - A single string value: `"10pt"` (applies to all sides)
+
+        Directional options:
+        - `left`: Left padding (e.g., "20pt")
+        - `right`: Right padding (e.g., "15pt")
+        - `top`: Top padding (e.g., "8pt")
+        - `bottom`: Bottom padding (e.g., "8pt")
+
+        Unspecified sides default to "5pt".
+
+        Common use cases:
+        - Indent detail rows in grouped reports: `padding left: "20pt"`
+        - Add vertical spacing: `padding top: "10pt", bottom: "10pt"`
+        - Remove padding: `padding "0pt"`
+
+        Examples:
+        ```elixir
+        # Indent detail rows 20pt from the left
+        band :customer_detail do
+          type :detail
+          padding left: "20pt"
+
+          field :name do
+            source :customer_name
+          end
+        end
+
+        # Add vertical spacing to section headers
+        band :section_header do
+          type :group_header
+          padding top: "15pt", bottom: "5pt"
+
+          label :title do
+            text("Section Title")
+          end
+        end
+
+        # Apply uniform padding on all sides
+        band :summary do
+          type :summary
+          padding "15pt"
+
+          expression :total do
+            expression :grand_total
+          end
+        end
+        ```
+
+        Implementation: Uses Typst's table `inset` property to control padding
+        inside table cells. This is the recommended way to add spacing within bands.
         """
       ]
     ]
