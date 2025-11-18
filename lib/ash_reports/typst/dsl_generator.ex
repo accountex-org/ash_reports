@@ -519,40 +519,62 @@ defmodule AshReports.Typst.DSLGenerator do
     params = build_padding_params(padding)
 
     if params != "" do
-      # Split output into table part and parbreak part
-      # The output structure is: [#table(...)]<newlines>parbreak()
-      case Regex.run(~r/(\[#table.*?\])(.*)/s, output) do
-        [_, table_part, rest_part] ->
-          # Strip outer brackets from table, wrap in #pad(), re-add brackets
-          inner_table = String.slice(table_part, 1..-2//1)
-          wrapped_table = "[#pad(#{params})[#{inner_table}]]"
-          wrapped_table <> rest_part
-
-        _ ->
-          # Fallback: wrap entire output
-          output
-      end
+      wrap_in_padding(output, params)
     else
       output
     end
   end
 
   defp apply_band_padding(output, %Band{padding: value}) when is_binary(value) do
-    # Split output into table part and parbreak part
-    case Regex.run(~r/(\[#table.*?\])(.*)/s, output) do
-      [_, table_part, rest_part] ->
-        # Strip outer brackets from table, wrap in #pad(), re-add brackets
-        inner_table = String.slice(table_part, 1..-2//1)
-        wrapped_table = "[#pad(#{value})[#{inner_table}]]"
-        wrapped_table <> rest_part
+    wrap_in_padding(output, value)
+  end
+
+  defp apply_band_padding(output, _band), do: output
+
+  # Helper to wrap band output in #pad() directive
+  defp wrap_in_padding(output, params) do
+    # The output structure is: [#table(...)]<newlines>parbreak()
+    # We need to extract the table part and wrap it in #pad()
+    
+    # Find the start of the table
+    case String.split(output, "[#table(", parts: 2) do
+      [before, rest] ->
+        # Now we need to find the matching closing bracket
+        # Count brackets to find the correct closing ]
+        {table_content, after_table} = extract_bracketed_content(rest)
+        
+        # Reconstruct with padding
+        before <> "#pad(#{params})[\n  #table(" <> table_content <> "\n]\n" <> String.trim_leading(after_table)
 
       _ ->
-        # Fallback: wrap entire output
+        # Fallback: no table found, return original
         output
     end
   end
 
-  defp apply_band_padding(output, _band), do: output
+  # Extract content up to the matching closing bracket
+  defp extract_bracketed_content(str) do
+    extract_bracketed_content(str, 0, 0, "")
+  end
+
+  defp extract_bracketed_content(<<>>, _depth, _pos, acc), do: {acc, ""}
+
+  defp extract_bracketed_content(<<"[", rest::binary>>, depth, pos, acc) do
+    extract_bracketed_content(rest, depth + 1, pos + 1, acc <> "[")
+  end
+
+  defp extract_bracketed_content(<<"]", rest::binary>>, 0, _pos, acc) do
+    # Found the matching closing bracket
+    {acc, rest}
+  end
+
+  defp extract_bracketed_content(<<"]", rest::binary>>, depth, pos, acc) do
+    extract_bracketed_content(rest, depth - 1, pos + 1, acc <> "]")
+  end
+
+  defp extract_bracketed_content(<<c::utf8, rest::binary>>, depth, pos, acc) do
+    extract_bracketed_content(rest, depth, pos + 1, acc <> <<c::utf8>>)
+  end
 
   # Generate Typst column specification
   defp generate_column_spec(columns) when is_integer(columns) do
