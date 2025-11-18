@@ -111,6 +111,23 @@ defmodule AshReports.QueryBuilder do
   end
 
   @doc """
+  Extracts relationships that aggregates depend on.
+
+  When an aggregate references a relationship (like region aggregate on addresses),
+  we need to ensure that relationship is loaded.
+  """
+  @spec extract_aggregate_relationships(Report.t()) :: [atom()]
+  def extract_aggregate_relationships(%Report{groups: groups, driving_resource: resource}) do
+    aggregates = extract_group_aggregates(%Report{groups: groups, driving_resource: resource})
+
+    aggregates
+    |> Enum.flat_map(fn agg_name ->
+      get_aggregate_relationship(resource, agg_name)
+    end)
+    |> Enum.uniq()
+  end
+
+  @doc """
   Builds filter expressions from parameter values.
   """
   @spec build_parameter_filters(Report.t(), map()) :: [Ash.Expr.t()]
@@ -350,10 +367,13 @@ defmodule AshReports.QueryBuilder do
     if should_load do
       relationships = extract_relationships(report)
       aggregates = extract_group_aggregates(report)
+      aggregate_relationships = extract_aggregate_relationships(report)
+
+      all_relationships = (relationships ++ aggregate_relationships) |> Enum.uniq()
 
       loaded_query =
         query
-        |> load_items(relationships)
+        |> load_items(all_relationships)
         |> load_items(aggregates)
 
       {:ok, loaded_query}
@@ -610,6 +630,28 @@ defmodule AshReports.QueryBuilder do
       Enum.any?(aggregates, fn agg -> agg.name == field_name end)
     rescue
       _ -> false
+    end
+  end
+
+  # Get the relationship that an aggregate depends on
+  defp get_aggregate_relationship(resource, agg_name) when is_atom(agg_name) do
+    try do
+      aggregates = Ash.Resource.Info.aggregates(resource)
+
+      case Enum.find(aggregates, fn agg -> agg.name == agg_name end) do
+        nil ->
+          []
+
+        aggregate ->
+          # Aggregates have a :relationship field that specifies which relationship they aggregate over
+          case Map.get(aggregate, :relationship) do
+            nil -> []
+            rel when is_atom(rel) -> [rel]
+            _ -> []
+          end
+      end
+    rescue
+      _ -> []
     end
   end
 end
