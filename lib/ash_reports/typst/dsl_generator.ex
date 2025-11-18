@@ -519,20 +519,37 @@ defmodule AshReports.Typst.DSLGenerator do
     params = build_padding_params(padding)
 
     if params != "" do
-      # Wrap the entire output in a #pad() directive
-      "[#pad(#{params})[
-#{String.trim(output)}
-]]"
+      # Split output into table part and parbreak part
+      # The output structure is: [#table(...)]<newlines>parbreak()
+      case Regex.run(~r/(\[#table.*?\])(.*)/s, output) do
+        [_, table_part, rest_part] ->
+          # Strip outer brackets from table, wrap in #pad(), re-add brackets
+          inner_table = String.slice(table_part, 1..-2//1)
+          wrapped_table = "[#pad(#{params})[#{inner_table}]]"
+          wrapped_table <> rest_part
+
+        _ ->
+          # Fallback: wrap entire output
+          output
+      end
     else
       output
     end
   end
 
   defp apply_band_padding(output, %Band{padding: value}) when is_binary(value) do
-    # Single value padding - apply to all sides
-    "[#pad(#{value})[
-#{String.trim(output)}
-]]"
+    # Split output into table part and parbreak part
+    case Regex.run(~r/(\[#table.*?\])(.*)/s, output) do
+      [_, table_part, rest_part] ->
+        # Strip outer brackets from table, wrap in #pad(), re-add brackets
+        inner_table = String.slice(table_part, 1..-2//1)
+        wrapped_table = "[#pad(#{value})[#{inner_table}]]"
+        wrapped_table <> rest_part
+
+      _ ->
+        # Fallback: wrap entire output
+        output
+    end
   end
 
   defp apply_band_padding(output, _band), do: output
