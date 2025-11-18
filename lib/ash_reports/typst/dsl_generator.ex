@@ -754,13 +754,19 @@ defmodule AshReports.Typst.DSLGenerator do
   defp extract_field_from_expression(_), do: :error
 
   defp generate_label_element(%{text: text} = label, context) do
-    # Replace group value placeholders if in group header/footer
+    # Step 1: Replace group value placeholders if in group header/footer
     processed_text = if Map.get(context, :is_group_header) || Map.get(context, :is_group_footer) do
       # Replace [group_value] with actual Typst code to access the group key
       String.replace(text, "[group_value]", "#group.key")
     else
       text
     end
+
+    # Step 2: Replace variable placeholders like [variable_name]
+    # Matches patterns like [group_total_credit_limit] and replaces with #data.variables.group_total_credit_limit
+    processed_text = Regex.replace(~r/\[([a-z_][a-z0-9_]*)\]/i, processed_text, fn _full_match, var_name ->
+      "#data.variables.#{var_name}"
+    end)
 
     content = "[#{processed_text}]"
     apply_element_wrappers(content, label)
@@ -1120,15 +1126,22 @@ defmodule AshReports.Typst.DSLGenerator do
 
   # Private Functions - Data Serialization
 
-  defp serialize_context_data(%{context: %{records: records}}) when is_list(records) do
-    # Serialize records from RenderContext
+  defp serialize_context_data(%{context: %{records: records, variables: variables}}) when is_list(records) do
+    # Serialize records and variables from RenderContext
     serialized_records = serialize_records(records)
-    "#let report_data = (records: #{serialized_records})"
+    serialized_variables = serialize_variables(variables)
+    "#let report_data = (records: #{serialized_records}, variables: #{serialized_variables})"
+  end
+
+  defp serialize_context_data(%{context: %{records: records}}) when is_list(records) do
+    # Serialize records from RenderContext (no variables)
+    serialized_records = serialize_records(records)
+    "#let report_data = (records: #{serialized_records}, variables: (:))"
   end
 
   defp serialize_context_data(_context) do
     # No context or no records - use empty data
-    "#let report_data = (records: ())"
+    "#let report_data = (records: (), variables: (:))"
   end
 
   defp serialize_records([]), do: "()"
@@ -1142,6 +1155,21 @@ defmodule AshReports.Typst.DSLGenerator do
 
     "(#{serialized})"
   end
+
+  defp serialize_variables(variables) when is_map(variables) do
+    if map_size(variables) == 0 do
+      "(:)"
+    else
+      fields =
+        variables
+        |> Enum.map(fn {key, value} -> "#{key}: #{serialize_value(value)}" end)
+        |> Enum.join(", ")
+
+      "(#{fields})"
+    end
+  end
+
+  defp serialize_variables(_), do: "(:)"
 
   defp serialize_record(%_{} = struct) do
     # Convert struct to map and serialize
