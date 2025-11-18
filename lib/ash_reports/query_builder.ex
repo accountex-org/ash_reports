@@ -256,6 +256,32 @@ defmodule AshReports.QueryBuilder do
                 acc_query
             end
 
+          %Ash.Query.Ref{} = ref_expr ->
+            # Simple field or aggregate reference - extract the field name
+            # Ash.Query.Ref has a 'relationship_path' and 'attribute' fields
+            Logger.debug("QueryBuilder: Ref expression details: #{inspect(ref_expr, pretty: true)}")
+
+            # Try to extract the field name from the ref
+            field_name = case ref_expr do
+              %{attribute: %{name: name}} -> name
+              %{attribute: name} when is_atom(name) -> name
+              _ -> nil
+            end
+
+            if field_name do
+              Logger.debug("QueryBuilder: Sorting by field reference: #{field_name}")
+              try do
+                Ash.Query.sort(acc_query, [{field_name, sort_direction}])
+              rescue
+                error ->
+                  Logger.warning("QueryBuilder: Failed to sort by #{field_name}: #{inspect(error)}")
+                  acc_query
+              end
+            else
+              Logger.warning("QueryBuilder: Could not extract field name from Ref: #{inspect(ref_expr)}")
+              acc_query
+            end
+
           %{__struct__: _} = expr ->
             # For Ash expressions, check if we need an aggregate or calculation
             calc_name = :"__group_#{group.level}_#{group.name}"
