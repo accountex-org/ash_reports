@@ -848,9 +848,9 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The main Ash resource that drives the report data."
       ],
-      scope: [
+      base_filter: [
         type: :any,
-        doc: "An Ash query expression to scope the report data."
+        doc: "A function that takes params and returns an Ash.Query with base filters applied. This runs before parameter filters and sets the foundation for what data is loaded."
       ],
       permissions: [
         type: :any,
@@ -1240,10 +1240,10 @@ defmodule AshReports.Dsl do
           required: true,
           doc: "The field or expression to aggregate."
         ],
-        scope: [
+        reset_on: [
           type: {:in, [:band, :group, :page, :report]},
           default: :band,
-          doc: "The scope over which to calculate the aggregate."
+          doc: "When to reset the aggregate calculation. :band resets for each record, :group resets when the group changes, :page resets for each page, :report accumulates across the entire report."
         ],
         format: [
           type: :any,
@@ -1419,7 +1419,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1489,7 +1489,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1554,7 +1554,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1609,7 +1609,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1674,7 +1674,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1729,7 +1729,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1789,7 +1789,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."

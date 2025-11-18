@@ -140,9 +140,9 @@ parameter :regions, {:array, :string} do
 end
 ```
 
-### Using Parameters in Scope
+### Using Base Filters
 
-> **Note**: Advanced parameter-based filtering with Ash expressions in `scope` is currently under development. For now, filtering should be handled in the data loading layer.
+Base filters allow you to pre-filter data before any parameter filters are applied. This is useful for security, performance optimization, and setting default data boundaries.
 
 ```elixir
 report :filtered_invoices do
@@ -160,8 +160,15 @@ report :filtered_invoices do
     default Decimal.new("0.00")
   end
 
-  # Basic scope (expression support in progress)
-  # scope expr(date >= ^start_date and date <= ^end_date)
+  # Base filter with parameter-based filtering
+  base_filter(fn params ->
+    import Ash.Query
+
+    MyApp.Invoice
+    |> new()
+    |> filter(date >= ^params[:start_date] and date <= ^params[:end_date])
+    |> filter(amount >= ^params[:min_amount])
+  end)
 
   band :details do
     type :detail
@@ -337,14 +344,14 @@ band :group_footer_customer do
   aggregate :customer_total do
     function :sum
     source :total
-    scope :group
+    reset_on :group
     format :currency
   end
 
   aggregate :customer_count do
     function :count
     source :id
-    scope :group
+    reset_on :group
   end
 end
 ```
@@ -429,7 +436,7 @@ band :customer_footer do
   aggregate :customer_subtotal do
     function :sum
     source :total
-    scope :group
+    reset_on :group
     format :currency
     column 1
   end
@@ -450,7 +457,7 @@ band :region_footer do
   aggregate :region_total do
     function :sum
     source :total
-    scope :group
+    reset_on :group
     format :currency
     column 1
     style font_weight: :bold

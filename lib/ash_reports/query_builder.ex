@@ -43,8 +43,8 @@ defmodule AshReports.QueryBuilder do
   def build(report, params \\ %{}, opts \\ []) do
     with {:ok, validated_params} <- validate_parameters(report, params, opts),
          {:ok, base_query} <- build_base_query(report),
-         {:ok, scoped_query} <- apply_scope(base_query, report.scope, validated_params),
-         {:ok, filtered_query} <- apply_parameter_filters(scoped_query, report, validated_params),
+         {:ok, filtered_base_query} <- apply_base_filter(base_query, report.base_filter, validated_params),
+         {:ok, filtered_query} <- apply_parameter_filters(filtered_base_query, report, validated_params),
          {:ok, sorted_query} <- apply_group_sorting(filtered_query, report),
          {:ok, loaded_query} <- load_relationships(sorted_query, report, opts),
          {:ok, final_query} <- preload_aggregates(loaded_query, report, opts) do
@@ -151,52 +151,52 @@ defmodule AshReports.QueryBuilder do
     {:error, {Ash.Error.Invalid, "Invalid driving_resource: #{inspect(resource)}"}}
   end
 
-  defp apply_scope(query, nil, _params), do: {:ok, query}
+  defp apply_base_filter(query, nil, _params), do: {:ok, query}
 
-  defp apply_scope(query, scope_expr, params) do
-    # Apply scope expression with parameter substitution
-    scoped_query =
-      case scope_expr do
+  defp apply_base_filter(query, base_filter_expr, params) do
+    # Apply base filter expression with parameter substitution
+    filtered_query =
+      case base_filter_expr do
         expr when is_function(expr, 1) ->
-          # If scope is a function, call it with params
+          # If base_filter is a function, call it with params
           expr.(params)
           |> apply_to_query(query)
 
         _expr ->
-          # If scope is an expression, apply directly
+          # If base_filter is an expression, apply directly
           # For now, we can't apply arbitrary expressions without context
           query
       end
 
-    {:ok, scoped_query}
+    {:ok, filtered_query}
   rescue
-    error -> {:error, {Ash.Error.Invalid, "Failed to apply scope: #{inspect(error)}"}}
+    error -> {:error, {Ash.Error.Invalid, "Failed to apply base_filter: #{inspect(error)}"}}
   end
 
-  defp apply_to_query(scope_result, query) when is_struct(scope_result, Ash.Query) do
-    # If scope returns a query, merge filter and loads from it
+  defp apply_to_query(filter_result, query) when is_struct(filter_result, Ash.Query) do
+    # If base_filter returns a query, merge filter and loads from it
     query
-    |> apply_scope_filter(scope_result.filter)
-    |> apply_scope_loads(scope_result.load)
+    |> apply_base_filter_filter(filter_result.filter)
+    |> apply_base_filter_loads(filter_result.load)
   end
 
-  defp apply_to_query(_scope_result, query) do
-    # If scope returns an expression, apply as filter
+  defp apply_to_query(_filter_result, query) do
+    # If base_filter returns an expression, apply as filter
     # For now, we can't apply arbitrary expressions without context
     query
   end
 
-  defp apply_scope_filter(query, nil), do: query
-  defp apply_scope_filter(query, filter), do: Ash.Query.do_filter(query, filter)
+  defp apply_base_filter_filter(query, nil), do: query
+  defp apply_base_filter_filter(query, filter), do: Ash.Query.do_filter(query, filter)
 
-  defp apply_scope_loads(query, []), do: query
-  defp apply_scope_loads(query, nil), do: query
-  defp apply_scope_loads(query, loads) when is_list(loads) do
+  defp apply_base_filter_loads(query, []), do: query
+  defp apply_base_filter_loads(query, nil), do: query
+  defp apply_base_filter_loads(query, loads) when is_list(loads) do
     Enum.reduce(loads, query, fn load, acc_query ->
       Ash.Query.load(acc_query, load)
     end)
   end
-  defp apply_scope_loads(query, load), do: Ash.Query.load(query, load)
+  defp apply_base_filter_loads(query, load), do: Ash.Query.load(query, load)
 
   defp apply_parameter_filters(query, %Report{parameters: []}, _params), do: {:ok, query}
 

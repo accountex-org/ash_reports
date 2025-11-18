@@ -308,7 +308,7 @@ band :summary do
   aggregate :total_customers do
     function(:count)
     source :id
-    scope :report
+    reset_on :report
     column 1
     style text_align: :right
   end
@@ -316,7 +316,7 @@ band :summary do
   aggregate :average_order_value do
     function(:average)
     source :total
-    scope :group
+    reset_on :group
     format :currency
     column 1
     style text_align: :right
