@@ -43,8 +43,10 @@ defmodule AshReports.QueryBuilder do
   def build(report, params \\ %{}, opts \\ []) do
     with {:ok, validated_params} <- validate_parameters(report, params, opts),
          {:ok, base_query} <- build_base_query(report),
-         {:ok, filtered_base_query} <- apply_base_filter(base_query, report.base_filter, validated_params),
-         {:ok, filtered_query} <- apply_parameter_filters(filtered_base_query, report, validated_params),
+         {:ok, filtered_base_query} <-
+           apply_base_filter(base_query, report.base_filter, validated_params),
+         {:ok, filtered_query} <-
+           apply_parameter_filters(filtered_base_query, report, validated_params),
          {:ok, sorted_query} <- apply_group_sorting(filtered_query, report),
          {:ok, loaded_query} <- load_relationships(sorted_query, report, opts),
          {:ok, final_query} <- preload_aggregates(loaded_query, report, opts) do
@@ -220,11 +222,13 @@ defmodule AshReports.QueryBuilder do
 
   defp apply_base_filter_loads(query, []), do: query
   defp apply_base_filter_loads(query, nil), do: query
+
   defp apply_base_filter_loads(query, loads) when is_list(loads) do
     Enum.reduce(loads, query, fn load, acc_query ->
       Ash.Query.load(acc_query, load)
     end)
   end
+
   defp apply_base_filter_loads(query, load), do: Ash.Query.load(query, load)
 
   defp apply_parameter_filters(query, %Report{parameters: []}, _params), do: {:ok, query}
@@ -263,16 +267,6 @@ defmodule AshReports.QueryBuilder do
       Enum.reduce(valid_groups, query, fn group, acc_query ->
         sort_direction = if group.sort == :desc, do: :desc, else: :asc
 
-        require Logger
-
-        expr_type = try do
-          inspect(group.expression.__struct__)
-        rescue
-          _ -> "not_a_struct"
-        end
-
-        Logger.debug("QueryBuilder: Processing group #{inspect(group.name)}, expression type: #{expr_type}")
-
         # Apply group expression as sort
         case group.expression do
           field when is_atom(field) ->
@@ -288,72 +282,63 @@ defmodule AshReports.QueryBuilder do
           %Ash.Query.Ref{} = ref_expr ->
             # Simple field or aggregate reference - extract the field name
             # Ash.Query.Ref has a 'relationship_path' and 'attribute' fields
-            Logger.debug("QueryBuilder: Ref expression details: #{inspect(ref_expr, pretty: true)}")
 
             # Try to extract the field name from the ref
-            field_name = case ref_expr do
-              %{attribute: %{name: name}} -> name
-              %{attribute: name} when is_atom(name) -> name
-              _ -> nil
-            end
+            field_name =
+              case ref_expr do
+                %{attribute: %{name: name}} -> name
+                %{attribute: name} when is_atom(name) -> name
+                _ -> nil
+              end
 
             if field_name do
-              Logger.debug("QueryBuilder: Sorting by field reference: #{field_name}")
               try do
                 Ash.Query.sort(acc_query, [{field_name, sort_direction}])
               rescue
-                error ->
-                  Logger.warning("QueryBuilder: Failed to sort by #{field_name}: #{inspect(error)}")
+                _error ->
                   acc_query
               end
             else
-              Logger.warning("QueryBuilder: Could not extract field name from Ref: #{inspect(ref_expr)}")
               acc_query
             end
 
           %{__struct__: _} = expr ->
             # For Ash expressions, check if we need an aggregate or calculation
             calc_name = :"__group_#{group.level}_#{group.name}"
-            Logger.debug("QueryBuilder: Processing expression for #{calc_name}")
 
             # Check if this expression accesses a has_many relationship
             extraction_result = extract_relationship_and_field(expr, query.resource)
-            Logger.debug("QueryBuilder: Extraction result for #{group.name}: #{inspect(extraction_result)}")
-            Logger.debug("QueryBuilder: Expression structure: #{inspect(expr)}")
 
             case extraction_result do
               {:has_many, rel_name, field_name} ->
                 # Use a first aggregate for has_many relationships
-                Logger.debug("QueryBuilder: Creating aggregate for has_many #{rel_name}.#{field_name}")
 
                 try do
                   acc_query
-                  |> Ash.Query.aggregate(calc_name, :first, field_name, relationship_path: [rel_name])
+                  |> Ash.Query.aggregate(calc_name, :first, field_name,
+                    relationship_path: [rel_name]
+                  )
                   |> Ash.Query.sort([{calc_name, sort_direction}])
                 rescue
-                  error ->
-                    Logger.warning("QueryBuilder: Failed to add aggregate for #{group.name}: #{inspect(error)}")
+                  _error ->
                     acc_query
                 end
 
               :not_relationship ->
                 # Regular calculation
-                Logger.debug("QueryBuilder: Creating calculation for expression")
 
                 try do
                   acc_query
                   |> Ash.Query.calculate(calc_name, expr, :string)
                   |> Ash.Query.sort([{calc_name, sort_direction}])
                 rescue
-                  error ->
-                    Logger.warning("QueryBuilder: Failed to add calculation for #{group.name}: #{inspect(error)}")
+                  _error ->
                     acc_query
                 end
             end
 
-          expr ->
+          _expr ->
             # For other expressions, fallback to basic sorting
-            Logger.debug("QueryBuilder: Unhandled expression type for group #{group.name}: #{inspect(expr)}")
             acc_query
         end
       end)
@@ -386,6 +371,7 @@ defmodule AshReports.QueryBuilder do
   end
 
   defp load_items(query, []), do: query
+
   defp load_items(query, items) do
     Enum.reduce(items, query, fn item, acc ->
       Ash.Query.load(acc, item)

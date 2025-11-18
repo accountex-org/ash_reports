@@ -155,10 +155,13 @@ defmodule AshReports.GroupProcessor do
     |> Enum.map(fn group ->
       # Try to get the calculated group value first (added by QueryBuilder)
       calc_name = :"__group_#{group.level}_#{group.name}"
-      value = case Map.get(record, calc_name) do
-        nil -> evaluate_group_expression(group.expression, record)
-        calculated_value -> calculated_value
-      end
+
+      value =
+        case Map.get(record, calc_name) do
+          nil -> evaluate_group_expression(group.expression, record)
+          calculated_value -> calculated_value
+        end
+
       {group.level, value}
     end)
     |> Enum.into(%{})
@@ -338,8 +341,6 @@ defmodule AshReports.GroupProcessor do
   end
 
   defp evaluate_group_expression(expression, record) do
-    require Logger
-
     case expression do
       # Simple field reference
       field when is_atom(field) ->
@@ -348,17 +349,20 @@ defmodule AshReports.GroupProcessor do
       # Ash.Query.Ref - field or aggregate reference (e.g., expr(region))
       %Ash.Query.Ref{} = ref_expr ->
         # Extract field name from the Ref
-        field_name = case ref_expr do
-          %{attribute: %{name: name}} -> name
-          %{attribute: name} when is_atom(name) -> name
-          _ ->
-            Logger.warning("GroupProcessor: Could not extract field from Ref: #{inspect(ref_expr)}")
-            nil
-        end
+        field_name =
+          case ref_expr do
+            %{attribute: %{name: name}} ->
+              name
+
+            %{attribute: name} when is_atom(name) ->
+              name
+
+            _ ->
+              nil
+          end
 
         if field_name do
           value = Map.get(record, field_name)
-          Logger.debug("GroupProcessor: Extracted #{field_name} = #{inspect(value)} from record")
           value
         else
           nil
