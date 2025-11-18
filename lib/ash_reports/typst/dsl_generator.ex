@@ -1018,7 +1018,7 @@ defmodule AshReports.Typst.DSLGenerator do
 
       # For level 0, we use a simple approach: track group value changes
       if level == 0 do
-        # Use the calculated field name that QueryBuilder adds
+        # Try direct field name first (for simple fields/aggregates), then calculated field (for complex expressions)
         calc_field_name = "__group_#{group_level}_#{current_group.name}"
 
         """
@@ -1028,7 +1028,12 @@ defmodule AshReports.Typst.DSLGenerator do
           let group_records = ()
 
           for record in data.records {
-            let current_group_value = record.at("#{calc_field_name}", default: none)
+            // Try direct field first, fall back to calculated field
+            let current_group_value = if "#{group_field}" in record {
+              record.at("#{group_field}", default: none)
+            } else {
+              record.at("#{calc_field_name}", default: none)
+            }
 
             // Check for group break
             if prev_group_value != none and prev_group_value != current_group_value {
