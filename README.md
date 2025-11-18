@@ -30,9 +30,9 @@ AshReports is a **declarative reporting framework** built on the Ash Framework t
 - 📝 **Declarative DSL** - Define reports using Spark-powered DSL
 - 📊 **Band-Based Layout** - Report/page headers/footers, detail, group sections
 - 📈 **Chart Generation** - Bar, line, pie, area, scatter charts with Contex
-- 🌊 **Streaming Pipeline** - Memory-efficient processing of large datasets
+- 🌊 **Streaming Data** - Memory-efficient processing via Ash.stream!
 - 🌍 **Internationalization** - CLDR-based formatting for numbers, dates, currencies
-- 📄 **Multiple Formats** - HTML, PDF, JSON, HEEX/LiveView output
+- 📄 **Multiple Formats** - HTML, PDF (Typst), JSON, HEEX/LiveView output
 - ⚡ **LiveView Integration** - Real-time interactive reports
 - 🔐 **Security Hardened** - Safe against atom exhaustion attacks
 
@@ -407,7 +407,6 @@ AshReports takes security seriously. We have:
 - **Erlang/OTP**: 25 or later
 - **Ash Framework**: 3.0 or later
 - **PostgreSQL**: 13+ (if using AshPostgres)
-- **Chrome/Chromium**: Required for PDF generation (ChromicPDF dependency)
 
 ---
 
@@ -420,10 +419,6 @@ AshReports takes security seriously. We have:
 - Compile dependencies: `mix deps.compile`
 - Try cleaning: `mix clean && mix compile`
 
-**Q: PDF generation fails**
-- Install Chrome or Chromium
-- Ensure ChromicPDF dependency is configured
-- Check system resources (memory)
 
 **Q: Atom exhaustion warnings**
 - Update to latest version (fixed in v0.1.1+)
@@ -476,10 +471,10 @@ Expected performance characteristics:
 |--------------|--------------|-----------------|-------|
 | <1,000 records | <50 MB | <1 second | Direct processing |
 | 1K-10K records | <100 MB | 1-5 seconds | Efficient batching |
-| 10K-100K records | <200 MB | 5-30 seconds | Streaming pipeline |
+| 10K-100K records | <200 MB | 5-30 seconds | Streaming |
 | >100K records | <300 MB | 30s-5min | Streaming + chunks |
 
-**Note**: PDF generation adds overhead due to Chrome rendering. JSON is fastest format.
+**Note**: PDF generation uses Typst for high-quality output. JSON is fastest format.
 
 ---
 
@@ -532,7 +527,7 @@ Built with:
 - [Spark](https://github.com/ash-project/spark) - DSL creation library
 - [Contex](https://github.com/mindok/contex) - Chart generation
 - [CLDR](https://github.com/elixir-cldr/cldr) - Internationalization
-- [ChromicPDF](https://github.com/bitcrowd/chromic_pdf) - PDF generation
+- [Typst](https://typst.app/) - Document typesetting for PDF generation
 
 ---
 
