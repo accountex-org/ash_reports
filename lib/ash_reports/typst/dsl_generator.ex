@@ -977,6 +977,15 @@ defmodule AshReports.Typst.DSLGenerator do
     Atom.to_string(expression)
   end
 
+  # Handle Ash.Query.Ref (from expr(field_name))
+  defp extract_group_field_name(%Ash.Query.Ref{attribute: %{name: field_name}}) when is_atom(field_name) do
+    Atom.to_string(field_name)
+  end
+
+  defp extract_group_field_name(%Ash.Query.Ref{attribute: field_name}) when is_atom(field_name) do
+    Atom.to_string(field_name)
+  end
+
   defp extract_group_field_name(%{expression: {:ref, [], field}}) when is_atom(field) do
     Atom.to_string(field)
   end
