@@ -848,9 +848,9 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The main Ash resource that drives the report data."
       ],
-      scope: [
+      base_filter: [
         type: :any,
-        doc: "An Ash query expression to scope the report data."
+        doc: "A function that takes params and returns an Ash.Query with base filters applied. This runs before parameter filters and sets the foundation for what data is loaded."
       ],
       permissions: [
         type: :any,
@@ -981,6 +981,65 @@ defmodule AshReports.Dsl do
         doc: """
         For page_header and group_header bands, whether to repeat the header on each page.
         Defaults to true. Only applies to page_header and group_header band types.
+        """
+      ],
+      padding: [
+        type: :keyword_list,
+        doc: """
+        Padding for the band content. Controls the spacing inside table cells for this band.
+
+        Accepts either:
+        - A keyword list with directional values: `[left: "20pt", top: "10pt"]`
+        - A single string value: `"10pt"` (applies to all sides)
+
+        Directional options:
+        - `left`: Left padding (e.g., "20pt")
+        - `right`: Right padding (e.g., "15pt")
+        - `top`: Top padding (e.g., "8pt")
+        - `bottom`: Bottom padding (e.g., "8pt")
+
+        Unspecified sides default to "5pt".
+
+        Common use cases:
+        - Indent detail rows in grouped reports: `padding left: "20pt"`
+        - Add vertical spacing: `padding top: "10pt", bottom: "10pt"`
+        - Remove padding: `padding "0pt"`
+
+        Examples:
+        ```elixir
+        # Indent detail rows 20pt from the left
+        band :customer_detail do
+          type :detail
+          padding left: "20pt"
+
+          field :name do
+            source :customer_name
+          end
+        end
+
+        # Add vertical spacing to section headers
+        band :section_header do
+          type :group_header
+          padding top: "15pt", bottom: "5pt"
+
+          label :title do
+            text("Section Title")
+          end
+        end
+
+        # Apply uniform padding on all sides
+        band :summary do
+          type :summary
+          padding "15pt"
+
+          expression :total do
+            expression :grand_total
+          end
+        end
+        ```
+
+        Implementation: Uses Typst's table `inset` property to control padding
+        inside table cells. This is the recommended way to add spacing within bands.
         """
       ]
     ]
@@ -1240,10 +1299,10 @@ defmodule AshReports.Dsl do
           required: true,
           doc: "The field or expression to aggregate."
         ],
-        scope: [
+        reset_on: [
           type: {:in, [:band, :group, :page, :report]},
           default: :band,
-          doc: "The scope over which to calculate the aggregate."
+          doc: "When to reset the aggregate calculation. :band resets for each record, :group resets when the group changes, :page resets for each page, :report accumulates across the entire report."
         ],
         format: [
           type: :any,
@@ -1407,25 +1466,6 @@ defmodule AshReports.Dsl do
     }
   end
 
-  defp filter_entity do
-    %Entity{
-      name: :filter,
-      describe: "A filter condition to apply before aggregation.",
-      target: AshReports.Charts.FilterSpec,
-      args: [:field, :value],
-      schema: []
-    }
-  end
-
-  defp aggregate_entity do
-    %Entity{
-      name: :aggregate,
-      describe: "An aggregation operation (count, sum, avg, min, max).",
-      target: AshReports.Charts.AggregateSpec,
-      schema: aggregate_entity_schema()
-    }
-  end
-
   defp bar_chart_schema do
     [
       name: [
@@ -1438,7 +1478,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1508,7 +1548,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1573,7 +1613,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1628,7 +1668,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1693,7 +1733,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1748,7 +1788,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1808,7 +1848,7 @@ defmodule AshReports.Dsl do
         required: true,
         doc: "The Ash resource module to query for chart data."
       ],
-      scope: [
+      base_filter: [
         type: {:fun, 1},
         required: false,
         doc: "Function that takes params and returns an Ash.Query for filtering."
@@ -1921,25 +1961,6 @@ defmodule AshReports.Dsl do
       as_values: [
         type: :atom,
         doc: "Map to values field for sparklines."
-      ]
-    ]
-  end
-
-  defp aggregate_entity_schema do
-    [
-      type: [
-        type: {:in, [:count, :sum, :avg, :min, :max]},
-        required: true,
-        doc: "The type of aggregation to perform."
-      ],
-      field: [
-        type: :atom,
-        doc: "The field to aggregate (not needed for :count)."
-      ],
-      as: [
-        type: :atom,
-        required: true,
-        doc: "The name to use for the aggregate result."
       ]
     ]
   end

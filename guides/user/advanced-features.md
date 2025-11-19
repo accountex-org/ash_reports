@@ -187,7 +187,7 @@ band :summary do
   aggregate :grand_total do
     function :sum
     source :total
-    scope :report
+    reset_on :report
     format_spec :usd_currency
   end
 end

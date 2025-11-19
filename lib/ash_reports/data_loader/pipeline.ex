@@ -318,10 +318,9 @@ defmodule AshReports.DataLoader.Pipeline do
         config.executor,
         query,
         config.domain,
-        stream_chunk_size: config.options.chunk_size,
-        timeout: config.options.timeout,
-        actor: config.options.actor,
-        domain: config.domain
+        batch_size: config.options.chunk_size,
+        stream_strategy: :keyset,
+        actor: config.options.actor
       )
 
     {:ok, stream}

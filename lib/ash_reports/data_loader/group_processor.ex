@@ -155,10 +155,13 @@ defmodule AshReports.GroupProcessor do
     |> Enum.map(fn group ->
       # Try to get the calculated group value first (added by QueryBuilder)
       calc_name = :"__group_#{group.level}_#{group.name}"
-      value = case Map.get(record, calc_name) do
-        nil -> evaluate_group_expression(group.expression, record)
-        calculated_value -> calculated_value
-      end
+
+      value =
+        case Map.get(record, calc_name) do
+          nil -> evaluate_group_expression(group.expression, record)
+          calculated_value -> calculated_value
+        end
+
       {group.level, value}
     end)
     |> Enum.into(%{})
@@ -342,6 +345,28 @@ defmodule AshReports.GroupProcessor do
       # Simple field reference
       field when is_atom(field) ->
         Map.get(record, field)
+
+      # Ash.Query.Ref - field or aggregate reference (e.g., expr(region))
+      %Ash.Query.Ref{} = ref_expr ->
+        # Extract field name from the Ref
+        field_name =
+          case ref_expr do
+            %{attribute: %{name: name}} ->
+              name
+
+            %{attribute: name} when is_atom(name) ->
+              name
+
+            _ ->
+              nil
+          end
+
+        if field_name do
+          value = Map.get(record, field_name)
+          value
+        else
+          nil
+        end
 
       # Ash.Expr expressions - evaluate using the record data
       %{__struct__: Ash.Expr} = ash_expr ->

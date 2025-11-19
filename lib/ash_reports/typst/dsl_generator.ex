@@ -446,6 +446,9 @@ defmodule AshReports.Typst.DSLGenerator do
     # Check if any element has spacing_after or bottom padding for band-level spacing
     band_spacing_after = extract_band_spacing_after(elements)
 
+    # Build inset parameter based on band padding
+    inset_param = build_table_inset(band)
+
     # For column headers: use table.header()
     table_output = if band.type == :column_header do
       """
@@ -453,7 +456,7 @@ defmodule AshReports.Typst.DSLGenerator do
           columns: #{column_spec},
           align: (left, left, left),
           stroke: none,
-          inset: 5pt,
+          inset: #{inset_param},
 
           table.header(
             #{cells}
@@ -467,7 +470,7 @@ defmodule AshReports.Typst.DSLGenerator do
           columns: #{column_spec},
           align: (left, left, left),
           stroke: none,
-          inset: 5pt,
+          inset: #{inset_param},
 
           #{cells}
         )]
@@ -488,6 +491,27 @@ defmodule AshReports.Typst.DSLGenerator do
       """
     end
   end
+
+  # Build Typst inset parameter from band padding
+  defp build_table_inset(%Band{padding: nil}), do: "5pt"
+
+  defp build_table_inset(%Band{padding: padding}) when is_list(padding) do
+    # Convert padding keyword list to Typst inset format
+    # Default to 5pt for unspecified sides
+    left = Keyword.get(padding, :left, "5pt")
+    right = Keyword.get(padding, :right, "5pt")
+    top = Keyword.get(padding, :top, "5pt")
+    bottom = Keyword.get(padding, :bottom, "5pt")
+
+    "(left: #{left}, right: #{right}, top: #{top}, bottom: #{bottom})"
+  end
+
+  defp build_table_inset(%Band{padding: value}) when is_binary(value) do
+    # Single value applies to all sides
+    value
+  end
+
+  defp build_table_inset(_band), do: "5pt"
 
   # Extract spacing_after or bottom padding from elements to apply at band level
   defp extract_band_spacing_after(elements) do
@@ -754,13 +778,19 @@ defmodule AshReports.Typst.DSLGenerator do
   defp extract_field_from_expression(_), do: :error
 
   defp generate_label_element(%{text: text} = label, context) do
-    # Replace group value placeholders if in group header/footer
+    # Step 1: Replace group value placeholders if in group header/footer
     processed_text = if Map.get(context, :is_group_header) || Map.get(context, :is_group_footer) do
       # Replace [group_value] with actual Typst code to access the group key
       String.replace(text, "[group_value]", "#group.key")
     else
       text
     end
+
+    # Step 2: Replace variable placeholders like [variable_name]
+    # Matches patterns like [group_total_credit_limit] and replaces with #data.variables.group_total_credit_limit
+    processed_text = Regex.replace(~r/\[([a-z_][a-z0-9_]*)\]/i, processed_text, fn _full_match, var_name ->
+      "#data.variables.#{var_name}"
+    end)
 
     content = "[#{processed_text}]"
     apply_element_wrappers(content, label)
@@ -971,6 +1001,15 @@ defmodule AshReports.Typst.DSLGenerator do
     Atom.to_string(expression)
   end
 
+  # Handle Ash.Query.Ref (from expr(field_name))
+  defp extract_group_field_name(%Ash.Query.Ref{attribute: %{name: field_name}}) when is_atom(field_name) do
+    Atom.to_string(field_name)
+  end
+
+  defp extract_group_field_name(%Ash.Query.Ref{attribute: field_name}) when is_atom(field_name) do
+    Atom.to_string(field_name)
+  end
+
   defp extract_group_field_name(%{expression: {:ref, [], field}}) when is_atom(field) do
     Atom.to_string(field)
   end
@@ -981,27 +1020,6 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   defp extract_group_field_name(_), do: "unknown"
-
-  defp generate_field_accessor(%{expression: {:get_path, _, [%{expression: {:ref, [], rel}}, field]}}) do
-    # Handle relationship traversal like addresses.state
-    # Since addresses is an array, we need to access the first element
-    "if record.at(\"#{rel}\", default: none) != none and record.at(\"#{rel}\").len() > 0 { record.at(\"#{rel}\").at(0).#{field} } else { none }"
-  end
-
-  defp generate_field_accessor(expression) when is_atom(expression) do
-    # Simple field reference
-    "record.at(\"#{Atom.to_string(expression)}\", default: none)"
-  end
-
-  defp generate_field_accessor(%{expression: {:ref, [], field}}) when is_atom(field) do
-    # Simple field reference from Ash expression
-    "record.at(\"#{Atom.to_string(field)}\", default: none)"
-  end
-
-  defp generate_field_accessor(_) do
-    # Fallback for unknown expression types
-    "none"
-  end
 
   defp generate_nested_group_loops(groups, group_header_bands, detail_bands, group_footer_bands, context, level) do
     if level >= length(groups) do
@@ -1033,7 +1051,7 @@ defmodule AshReports.Typst.DSLGenerator do
 
       # For level 0, we use a simple approach: track group value changes
       if level == 0 do
-        # Use the calculated field name that QueryBuilder adds
+        # Try direct field name first (for simple fields/aggregates), then calculated field (for complex expressions)
         calc_field_name = "__group_#{group_level}_#{current_group.name}"
 
         """
@@ -1043,7 +1061,12 @@ defmodule AshReports.Typst.DSLGenerator do
           let group_records = ()
 
           for record in data.records {
-            let current_group_value = record.at("#{calc_field_name}", default: none)
+            // Try direct field first, fall back to calculated field
+            let current_group_value = if "#{group_field}" in record {
+              record.at("#{group_field}", default: none)
+            } else {
+              record.at("#{calc_field_name}", default: none)
+            }
 
             // Check for group break
             if prev_group_value != none and prev_group_value != current_group_value {
@@ -1141,15 +1164,22 @@ defmodule AshReports.Typst.DSLGenerator do
 
   # Private Functions - Data Serialization
 
-  defp serialize_context_data(%{context: %{records: records}}) when is_list(records) do
-    # Serialize records from RenderContext
+  defp serialize_context_data(%{context: %{records: records, variables: variables}}) when is_list(records) do
+    # Serialize records and variables from RenderContext
     serialized_records = serialize_records(records)
-    "#let report_data = (records: #{serialized_records})"
+    serialized_variables = serialize_variables(variables)
+    "#let report_data = (records: #{serialized_records}, variables: #{serialized_variables})"
+  end
+
+  defp serialize_context_data(%{context: %{records: records}}) when is_list(records) do
+    # Serialize records from RenderContext (no variables)
+    serialized_records = serialize_records(records)
+    "#let report_data = (records: #{serialized_records}, variables: (:))"
   end
 
   defp serialize_context_data(_context) do
     # No context or no records - use empty data
-    "#let report_data = (records: ())"
+    "#let report_data = (records: (), variables: (:))"
   end
 
   defp serialize_records([]), do: "()"
@@ -1163,6 +1193,21 @@ defmodule AshReports.Typst.DSLGenerator do
 
     "(#{serialized})"
   end
+
+  defp serialize_variables(variables) when is_map(variables) do
+    if map_size(variables) == 0 do
+      "(:)"
+    else
+      fields =
+        variables
+        |> Enum.map(fn {key, value} -> "#{key}: #{serialize_value(value)}" end)
+        |> Enum.join(", ")
+
+      "(#{fields})"
+    end
+  end
+
+  defp serialize_variables(_), do: "(:)"
 
   defp serialize_record(%_{} = struct) do
     # Convert struct to map and serialize
@@ -1231,18 +1276,6 @@ defmodule AshReports.Typst.DSLGenerator do
   @doc false
   defp extract_style(element) when is_map(element) do
     Map.get(element, :style, [])
-  end
-
-  @doc false
-  defp has_position?(element) when is_map(element) do
-    position = extract_position(element)
-    is_list(position) and position != []
-  end
-
-  @doc false
-  defp has_style?(element) when is_map(element) do
-    style = extract_style(element)
-    is_list(style) and style != []
   end
 
   @doc false

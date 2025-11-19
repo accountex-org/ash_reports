@@ -5,7 +5,7 @@ defmodule AshReports.Charts.DataExtractor do
   This module provides a unified interface for extracting data from Ash queries
   with smart routing based on dataset size:
   - Small datasets (<10K records): Direct query execution
-  - Large datasets (≥10K records): GenStage streaming with aggregation
+  - Large datasets (≥10K records): Ash.stream! with keyset pagination and aggregation
 
   ## Features
 
@@ -68,11 +68,10 @@ defmodule AshReports.Charts.DataExtractor do
   ## Performance Characteristics
 
   - **Direct Query** (<10K): 10-100ms typical
-  - **Streaming** (≥10K): ~1-5 seconds for 1M records → 1K datapoints
-  - **Memory**: Constant ~200KB regardless of dataset size (streaming mode)
+  - **Streaming with Ash.stream!** (≥10K): ~1-5 seconds for 1M records → 1K datapoints
+  - **Memory**: Constant ~200KB regardless of dataset size (keyset pagination)
   """
 
-  alias AshReports.Typst.StreamingPipeline
   require Logger
 
   @default_threshold 10_000
@@ -157,34 +156,31 @@ defmodule AshReports.Charts.DataExtractor do
     domain = Keyword.fetch!(opts, :domain)
     chunk_size = Keyword.get(opts, :chunk_size, @default_chunk_size)
 
-    resource = query.resource
+    try do
+      # Use Ash.stream! for memory-efficient streaming with keyset pagination
+      stream = Ash.stream!(
+        query,
+        batch_size: chunk_size,
+        stream_with: :keyset,
+        domain: domain
+      )
 
-    # Start streaming pipeline
-    pipeline_opts = [
-      domain: domain,
-      resource: resource,
-      query: query,
-      chunk_size: chunk_size
-    ]
+      # Apply transformations to stream
+      transformed_stream =
+        stream
+        |> Stream.map(fn record ->
+          case transform_record(record, opts) do
+            {:ok, transformed} -> transformed
+            {:error, _} -> nil
+          end
+        end)
+        |> Stream.reject(&is_nil/1)
 
-    case StreamingPipeline.start_pipeline(pipeline_opts) do
-      {:ok, stream} ->
-        # Apply transformations to stream
-        transformed_stream =
-          stream
-          |> Stream.map(fn record ->
-            case transform_record(record, opts) do
-              {:ok, transformed} -> transformed
-              {:error, _} -> nil
-            end
-          end)
-          |> Stream.reject(&is_nil/1)
-
-        {:ok, transformed_stream}
-
-      {:error, reason} = error ->
-        Logger.error("Failed to start streaming pipeline: #{inspect(reason)}")
-        error
+      {:ok, transformed_stream}
+    rescue
+      error ->
+        Logger.error("Failed to start streaming: #{inspect(error)}")
+        {:error, error}
     end
   end
 

@@ -149,31 +149,63 @@ defmodule AshReports.DataLoader.Executor do
   end
 
   @doc """
-  Executes a query and returns a stream for large datasets.
+  Executes a query and returns a stream for large datasets using Ash.stream!.
 
   This method provides memory-efficient processing for large datasets by
-  streaming results in configurable chunks.
+  leveraging Ash's native streaming with keyset pagination (O(n) performance)
+  instead of offset-based pagination (O(n²) performance).
+
+  ## Streaming Strategies
+
+  Ash.stream! supports three strategies that can be specified via `:stream_strategy`:
+
+  - `:keyset` (default) - Uses cursor-based pagination for optimal O(n) performance
+  - `:offset` - Falls back to offset-based pagination when keyset unavailable
+  - `:full_read` - Loads entire result set (for small datasets)
+
+  The strategy is automatically selected based on the data layer's capabilities,
+  with :keyset preferred when available.
 
   ## Examples
 
+      # Default keyset streaming
       query = Ash.Query.new(MyApp.Order)
-      stream = Executor.stream_query(executor, query, domain, chunk_size: 500)
+      stream = Executor.stream_query(executor, query, domain, batch_size: 500)
 
+      # Explicit strategy selection
+      stream = Executor.stream_query(executor, query, domain,
+        batch_size: 1000,
+        stream_strategy: :keyset
+      )
+
+      # Process the stream
       results =
         stream
-        |> Stream.map(&process_chunk/1)
+        |> Stream.map(&process_record/1)
         |> Enum.to_list()
+
+  ## Options
+
+  - `:batch_size` - Number of records per batch (default: executor.batch_size)
+  - `:stream_strategy` - Streaming strategy (:keyset, :offset, or :full_read)
+  - `:actor` - Actor for authorization
+  - `:timeout` - Query timeout in milliseconds
 
   """
   @spec stream_query(executor_state(), Ash.Query.t(), module(), execution_options()) ::
           Enumerable.t()
   def stream_query(executor, query, domain, opts \\ []) do
-    chunk_size = Keyword.get(opts, :stream_chunk_size, executor.batch_size)
+    batch_size = Keyword.get(opts, :batch_size, executor.batch_size)
+    strategy = Keyword.get(opts, :stream_strategy, :keyset)
+    actor = Keyword.get(opts, :actor)
 
-    Stream.resource(
-      fn -> initialize_stream(query, domain, opts) end,
-      fn state -> fetch_next_chunk(state, chunk_size, executor, opts) end,
-      fn state -> cleanup_stream(state) end
+    # Use Ash's native streaming with keyset pagination for O(n) performance
+    Ash.stream!(
+      query,
+      batch_size: batch_size,
+      stream_with: strategy,
+      domain: domain,
+      actor: actor
     )
   end
 
@@ -423,48 +455,5 @@ defmodule AshReports.DataLoader.Executor do
 
   defp validate_query_structure(query) do
     {:error, {:invalid_query_structure, query}}
-  end
-
-  # Stream processing helpers
-
-  defp initialize_stream(query, domain, opts) do
-    %{
-      query: query,
-      domain: domain,
-      opts: opts,
-      offset: 0,
-      finished?: false
-    }
-  end
-
-  defp fetch_next_chunk(%{finished?: true}, _chunk_size, _executor, _opts) do
-    {:halt, nil}
-  end
-
-  defp fetch_next_chunk(state, chunk_size, executor, opts) do
-    query_with_limit =
-      state.query
-      |> Ash.Query.limit(chunk_size)
-      |> Ash.Query.offset(state.offset)
-
-    case execute_query(executor, query_with_limit, state.domain, opts) do
-      {:ok, %{records: records}} when length(records) < chunk_size ->
-        # Last chunk
-        updated_state = %{state | finished?: true}
-        {[records], updated_state}
-
-      {:ok, %{records: records}} ->
-        # More chunks available
-        updated_state = %{state | offset: state.offset + chunk_size}
-        {[records], updated_state}
-
-      {:error, reason} ->
-        {:halt, {:error, reason}}
-    end
-  end
-
-  defp cleanup_stream(_state) do
-    # Cleanup any resources if needed
-    :ok
   end
 end

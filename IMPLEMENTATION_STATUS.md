@@ -128,9 +128,9 @@ See [SECURITY.md](SECURITY.md) for detailed information about security vulnerabi
    - Customizable styling
 
 3. **Stream Large Datasets**
-   - GenStage-based streaming pipeline
+   - Ash.stream! with keyset pagination
    - Memory-efficient processing
-   - Backpressure handling
+   - Automatic batch size management
    - Aggregation during streaming
 
 4. **Load Data from Ash Resources**

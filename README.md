@@ -30,9 +30,9 @@ AshReports is a **declarative reporting framework** built on the Ash Framework t
 - 📝 **Declarative DSL** - Define reports using Spark-powered DSL
 - 📊 **Band-Based Layout** - Report/page headers/footers, detail, group sections
 - 📈 **Chart Generation** - Bar, line, pie, area, scatter charts with Contex
-- 🌊 **Streaming Pipeline** - Memory-efficient processing of large datasets
+- 🌊 **Streaming Data** - Memory-efficient processing via Ash.stream!
 - 🌍 **Internationalization** - CLDR-based formatting for numbers, dates, currencies
-- 📄 **Multiple Formats** - HTML, PDF, JSON, HEEX/LiveView output
+- 📄 **Multiple Formats** - HTML, PDF (Typst), JSON, HEEX/LiveView output
 - ⚡ **LiveView Integration** - Real-time interactive reports
 - 🔐 **Security Hardened** - Safe against atom exhaustion attacks
 
@@ -47,7 +47,7 @@ Quick overview of what's production-ready:
 | Core DSL | ✅ Production-Ready | 75 passing tests |
 | Band System | ✅ Production-Ready | Full hierarchy support |
 | Chart Generation | ✅ Production-Ready | SVG output via Contex |
-| Streaming | ✅ Production-Ready | Memory-efficient GenStage |
+| Streaming | ✅ Production-Ready | Ash.stream! with keyset pagination |
 | Data Loading | ✅ Production-Ready | Ash query integration |
 | Internationalization | ✅ Production-Ready | CLDR formatting |
 | HTML Renderer | ⚠️ Untested | Implemented, needs tests |
@@ -291,6 +291,80 @@ report :sales_by_category do
 end
 ```
 
+### Band Padding and Spacing
+
+Control the spacing within bands using the `padding` option. This is particularly useful for indenting detail rows in grouped reports or adding vertical spacing to section headers.
+
+```elixir
+report :sales_by_region do
+  title("Sales by Region")
+  driving_resource(MyApp.Sales.Order)
+
+  group :region do
+    level 1
+    expression :region_name
+  end
+
+  # Group header - no padding
+  band :group_header do
+    type :group_header
+    group_level(1)
+
+    field :region_name do
+      source :region_name
+      style(font_weight: :bold, font_size: 14)
+    end
+  end
+
+  # Detail records - indented 20pt from left
+  band :detail do
+    type :detail
+    padding left: "20pt"  # Indent detail rows
+
+    field :order_id do
+      source :order_id
+    end
+
+    field :customer_name do
+      source :customer_name
+    end
+
+    field :amount do
+      source :amount
+      format :currency
+    end
+  end
+
+  # Group footer with subtotal - moderate indent
+  band :group_footer do
+    type :group_footer
+    group_level(1)
+    padding left: "10pt", top: "5pt"  # Slight indent and top spacing
+
+    label :total_label do
+      text("Region Total:")
+      style(font_weight: :bold)
+    end
+
+    expression :region_total do
+      expression :region_total_var
+      format :currency
+    end
+  end
+end
+```
+
+**Padding Options:**
+
+- **Directional padding**: `padding left: "20pt", right: "10pt", top: "5pt", bottom: "5pt"`
+- **Uniform padding**: `padding "15pt"` (applies to all sides)
+- **Unspecified sides default to "5pt"**
+
+**Common use cases:**
+- Indent detail rows under group headers
+- Add vertical spacing between sections
+- Create visual hierarchy in reports
+
 ### Charts in Reports
 
 Charts use a two-level architecture: define charts at the reports level, then reference them in bands.
@@ -339,7 +413,7 @@ end
 
 ```elixir
 # AshReports has streaming infrastructure for large datasets
-# using a GenStage-based pipeline for memory efficiency
+# using Ash.stream! with keyset pagination for memory efficiency
 
 {:ok, result} = AshReports.generate(
   MyApp.Reports.HugeReport,
@@ -407,7 +481,6 @@ AshReports takes security seriously. We have:
 - **Erlang/OTP**: 25 or later
 - **Ash Framework**: 3.0 or later
 - **PostgreSQL**: 13+ (if using AshPostgres)
-- **Chrome/Chromium**: Required for PDF generation (ChromicPDF dependency)
 
 ---
 
@@ -420,10 +493,6 @@ AshReports takes security seriously. We have:
 - Compile dependencies: `mix deps.compile`
 - Try cleaning: `mix clean && mix compile`
 
-**Q: PDF generation fails**
-- Install Chrome or Chromium
-- Ensure ChromicPDF dependency is configured
-- Check system resources (memory)
 
 **Q: Atom exhaustion warnings**
 - Update to latest version (fixed in v0.1.1+)
@@ -436,8 +505,8 @@ AshReports takes security seriously. We have:
 
 **Q: Memory issues with large reports**
 - Use streaming for datasets >10,000 records (automatic)
-- Monitor GenStage backpressure
-- Adjust chunk sizes in streaming configuration
+- Adjust batch_size in streaming configuration
+- Consider using keyset pagination for optimal performance
 
 **For more troubleshooting help**, see user guides or open an issue.
 
@@ -476,10 +545,10 @@ Expected performance characteristics:
 |--------------|--------------|-----------------|-------|
 | <1,000 records | <50 MB | <1 second | Direct processing |
 | 1K-10K records | <100 MB | 1-5 seconds | Efficient batching |
-| 10K-100K records | <200 MB | 5-30 seconds | Streaming pipeline |
+| 10K-100K records | <200 MB | 5-30 seconds | Streaming |
 | >100K records | <300 MB | 30s-5min | Streaming + chunks |
 
-**Note**: PDF generation adds overhead due to Chrome rendering. JSON is fastest format.
+**Note**: PDF generation uses Typst for high-quality output. JSON is fastest format.
 
 ---
 
@@ -532,8 +601,7 @@ Built with:
 - [Spark](https://github.com/ash-project/spark) - DSL creation library
 - [Contex](https://github.com/mindok/contex) - Chart generation
 - [CLDR](https://github.com/elixir-cldr/cldr) - Internationalization
-- [ChromicPDF](https://github.com/bitcrowd/chromic_pdf) - PDF generation
-- [GenStage](https://github.com/elixir-lang/gen_stage) - Streaming pipeline
+- [Typst](https://typst.app/) - Document typesetting for PDF generation
 
 ---
 
