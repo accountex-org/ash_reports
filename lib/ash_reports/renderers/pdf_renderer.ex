@@ -53,8 +53,9 @@ defmodule AshReports.PdfRenderer do
          {:ok, typst_template} <- generate_typst_template(pdf_context),
          {:ok, pdf_binary} <- compile_to_pdf(typst_template, pdf_context),
          {:ok, metadata} <- build_pdf_metadata(pdf_context, start_time) do
-      # Include the Typst template in metadata for debugging/viewing
-      metadata_with_template = Map.put(metadata, :typst_template, typst_template)
+      # Strip report data from template before storing in metadata to avoid memory bloat
+      template_without_data = strip_report_data(typst_template)
+      metadata_with_template = Map.put(metadata, :typst_template, template_without_data)
 
       result = %{
         content: pdf_binary,
@@ -223,5 +224,60 @@ defmodule AshReports.PdfRenderer do
 
   defp get_working_directory(%RenderContext{} = context) do
     get_in(context.config, [:pdf, :working_dir]) || System.tmp_dir()
+  end
+
+  defp strip_report_data(template) do
+    # Remove the #let report_data = (...) section to avoid storing large datasets in metadata
+    # This regex matches from "#let report_data" to the closing parenthesis, handling nested parens
+    case Regex.run(~r/#let report_data = \(/s, template) do
+      nil ->
+        # No report_data found, return template as-is
+        template
+
+      _ ->
+        # Find the report_data section and replace it with a placeholder
+        case find_matching_paren(template, "#let report_data = (") do
+          {start_pos, end_pos} ->
+            before = String.slice(template, 0, start_pos)
+            after_section = String.slice(template, end_pos, String.length(template))
+
+            placeholder = "#let report_data = (\n  // Data removed to reduce memory usage\n  // This template shows the structure without the actual records\n)\n"
+
+            before <> placeholder <> after_section
+
+          nil ->
+            template
+        end
+    end
+  end
+
+  defp find_matching_paren(template, search_str) do
+    case :binary.match(template, search_str) do
+      {start_idx, len} ->
+        # Start counting parens after the opening paren
+        paren_start = start_idx + len
+        find_closing_paren(template, paren_start, 1, paren_start)
+
+      :nomatch ->
+        nil
+    end
+  end
+
+  defp find_closing_paren(_template, pos, 0, start_pos) do
+    # Found matching closing paren
+    {start_pos - String.length("#let report_data = ("), pos}
+  end
+
+  defp find_closing_paren(template, pos, depth, start_pos) when pos >= byte_size(template) do
+    # Reached end without finding match
+    nil
+  end
+
+  defp find_closing_paren(template, pos, depth, start_pos) do
+    case :binary.at(template, pos) do
+      ?(  -> find_closing_paren(template, pos + 1, depth + 1, start_pos)
+      ?)  -> find_closing_paren(template, pos + 1, depth - 1, start_pos)
+      _   -> find_closing_paren(template, pos + 1, depth, start_pos)
+    end
   end
 end
