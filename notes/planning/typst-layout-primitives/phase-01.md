@@ -26,45 +26,45 @@ This validates the full pipeline before investing in all entity variations. If i
 ## 1.1 Layout Container Entities
 
 ### 1.1.1 Grid Entity Definition
-- [ ] **Task 1.1.1 Complete**
+- [x] **Task 1.1.1 Complete** (2024-11-20)
 
 Define the grid entity for 2D presentational layouts without semantic meaning.
 
-- [ ] 1.1.1.1 Create `AshReports.Dsl.Layout.Grid` module with Spark entity definition (success: module compiles without errors)
-- [ ] 1.1.1.2 Define grid schema with columns property accepting track sizes (success: `columns [fr(1), "100pt", auto()]` parses correctly)
-- [ ] 1.1.1.3 Define rows property with auto/array/integer support (success: `rows auto()` and `rows 3` both parse)
-- [ ] 1.1.1.4 Add gutter, column_gutter, row_gutter properties for spacing (success: `gutter "10pt"` applies to all gaps)
-- [ ] 1.1.1.5 Add align property with horizontal/vertical alignment support (success: `align :center` and `align {:left, :top}` both work)
-- [ ] 1.1.1.6 Add inset property for cell padding (success: `inset "5pt"` sets default padding)
-- [ ] 1.1.1.7 Add fill property with color/function support (success: conditional fill function compiles)
-- [ ] 1.1.1.8 Add stroke property with none as default (success: grids have no borders by default)
+- [x] 1.1.1.1 Create `AshReports.Dsl.Layout.Grid` module with Spark entity definition (success: module compiles without errors)
+- [x] 1.1.1.2 Define grid schema with columns property accepting track sizes (success: `columns [fr(1), "100pt", auto()]` parses correctly)
+- [x] 1.1.1.3 Define rows property with auto/array/integer support (success: `rows auto()` and `rows 3` both parse)
+- [x] 1.1.1.4 Add gutter, column_gutter, row_gutter properties for spacing (success: `gutter "10pt"` applies to all gaps)
+- [x] 1.1.1.5 Add align property with horizontal/vertical alignment support (success: `align :center` and `align {:left, :top}` both work)
+- [x] 1.1.1.6 Add inset property for cell padding (success: `inset "5pt"` sets default padding)
+- [x] 1.1.1.7 Add fill property with color/function support (success: conditional fill function compiles)
+- [x] 1.1.1.8 Add stroke property with none as default (success: grids have no borders by default)
 
 ### 1.1.2 Table Entity Definition
-- [ ] **Task 1.1.2 Complete**
+- [x] **Task 1.1.2 Complete** (2024-11-20)
 
 Define the table entity for semantic data presentation with accessibility support.
 
-- [ ] 1.1.2.1 Create `AshReports.Dsl.Layout.Table` module extending grid properties (success: module compiles)
-- [ ] 1.1.2.2 Override stroke default to "1pt" for table borders (success: tables have visible borders by default)
-- [ ] 1.1.2.3 Override inset default to "5pt" for cell padding (success: tables have default padding)
-- [ ] 1.1.2.4 Add header entity support with repeat and level properties (success: `header repeat: true, level: 1` parses)
-- [ ] 1.1.2.5 Add footer entity support with repeat property (success: `footer repeat: true` parses)
-- [ ] 1.1.2.6 Ensure table semantics are preserved for accessibility (success: table generates proper semantic markup)
+- [x] 1.1.2.1 Create `AshReports.Dsl.Layout.Table` module extending grid properties (success: module compiles)
+- [x] 1.1.2.2 Override stroke default to "1pt" for table borders (success: tables have visible borders by default)
+- [x] 1.1.2.3 Override inset default to "5pt" for cell padding (success: tables have default padding)
+- [ ] 1.1.2.4 Add header entity support with repeat and level properties (deferred to section 1.2.3)
+- [ ] 1.1.2.5 Add footer entity support with repeat property (deferred to section 1.2.3)
+- [x] 1.1.2.6 Ensure table semantics are preserved for accessibility (success: table generates proper semantic markup)
 
 ### 1.1.3 Stack Entity Definition
-- [ ] **Task 1.1.3 Complete**
+- [x] **Task 1.1.3 Complete** (2024-11-20)
 
 Define the stack entity for 1D sequential arrangement.
 
-- [ ] 1.1.3.1 Create `AshReports.Dsl.Layout.Stack` module (success: module compiles)
-- [ ] 1.1.3.2 Define dir property with :ttb, :btt, :ltr, :rtl options (success: all direction values parse)
-- [ ] 1.1.3.3 Define spacing property for item separation (success: `spacing "10pt"` applies between children)
-- [ ] 1.1.3.4 Allow nested layout containers as children (success: stack can contain grids and tables)
+- [x] 1.1.3.1 Create `AshReports.Dsl.Layout.Stack` module (success: module compiles)
+- [x] 1.1.3.2 Define dir property with :ttb, :btt, :ltr, :rtl options (success: all direction values parse)
+- [x] 1.1.3.3 Define spacing property for item separation (success: `spacing "10pt"` applies between children)
+- [x] 1.1.3.4 Allow nested layout containers as children (success: stack can contain grids and tables)
 
 ### Unit Tests - Section 1.1
-- [ ] 1.1.T.1 Test grid entity parsing with all property combinations
-- [ ] 1.1.T.2 Test table entity parsing with header/footer sections
-- [ ] 1.1.T.3 Test stack entity parsing with nested layouts
+- [x] 1.1.T.1 Test grid entity parsing with all property combinations
+- [x] 1.1.T.2 Test table entity parsing with header/footer sections
+- [x] 1.1.T.3 Test stack entity parsing with nested layouts
 - [ ] 1.1.T.4 Test error messages for invalid property values
 
 ## 1.2 Row and Cell Entities

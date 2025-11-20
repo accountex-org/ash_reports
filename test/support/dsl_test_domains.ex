@@ -192,7 +192,7 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
           aggregate :total_count do
             function(:count)
             source :id
-            scope(:report)
+            reset_on(:report)
           end
         end
       end
@@ -281,6 +281,248 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
           field :amount do
             source :total_amount
             format_spec(:currency_format)
+          end
+        end
+      end
+    end
+  end
+
+  # Layout container test domains
+
+  defmodule AshReports.Test.GridLayoutDomain do
+    @moduledoc "Report with grid layout containers"
+    use Ash.Domain, extensions: [AshReports.Domain]
+
+    reports do
+      report :grid_report do
+        title("Grid Report")
+        driving_resource(AshReports.Test.Customer)
+
+        band :detail do
+          type :detail
+
+          grid :metrics_grid do
+            columns [1, 1, 1]
+            gutter "10pt"
+            align :center
+            inset "5pt"
+            stroke "0.5pt"
+
+            label :revenue_label do
+              text("Revenue")
+            end
+
+            label :costs_label do
+              text("Costs")
+            end
+
+            label :profit_label do
+              text("Profit")
+            end
+          end
+        end
+      end
+    end
+  end
+
+  defmodule AshReports.Test.GridAllOptionsLayoutDomain do
+    @moduledoc "Grid with all available options"
+    use Ash.Domain, extensions: [AshReports.Domain]
+
+    reports do
+      report :grid_all_options_report do
+        title("Grid All Options Report")
+        driving_resource(AshReports.Test.Customer)
+
+        band :detail do
+          type :detail
+
+          grid :full_grid do
+            columns 3
+            rows 2
+            gutter "5pt"
+            column_gutter "8pt"
+            row_gutter "12pt"
+            align {:left, :top}
+            inset "10pt"
+            fill "#f0f0f0"
+            stroke :none
+
+            label :item do
+              text("Item")
+            end
+          end
+        end
+      end
+    end
+  end
+
+  defmodule AshReports.Test.TableLayoutDomain do
+    @moduledoc "Report with table layout containers"
+    use Ash.Domain, extensions: [AshReports.Domain]
+
+    reports do
+      report :table_report do
+        title("Table Report")
+        driving_resource(AshReports.Test.Customer)
+
+        band :detail do
+          type :detail
+
+          table :data_table do
+            columns [1, 2, 1]
+            stroke "0.5pt"
+            inset "5pt"
+
+            label :name_col do
+              text("Name")
+            end
+
+            label :desc_col do
+              text("Description")
+            end
+
+            label :value_col do
+              text("Value")
+            end
+          end
+        end
+      end
+    end
+  end
+
+  defmodule AshReports.Test.TableDefaultsDomain do
+    @moduledoc "Table to verify defaults are correct"
+    use Ash.Domain, extensions: [AshReports.Domain]
+
+    reports do
+      report :table_defaults_report do
+        title("Table Defaults Report")
+        driving_resource(AshReports.Test.Customer)
+
+        band :detail do
+          type :detail
+
+          table :default_table do
+            columns 2
+
+            label :col1 do
+              text("Column 1")
+            end
+          end
+        end
+      end
+    end
+  end
+
+  defmodule AshReports.Test.StackLayoutDomain do
+    @moduledoc "Report with stack layout containers"
+    use Ash.Domain, extensions: [AshReports.Domain]
+
+    reports do
+      report :stack_report do
+        title("Stack Report")
+        driving_resource(AshReports.Test.Customer)
+
+        band :detail do
+          type :detail
+
+          stack :address_stack do
+            dir :ttb
+            spacing "3pt"
+
+            label :street do
+              text("123 Main St")
+            end
+
+            label :city do
+              text("City, State 12345")
+            end
+          end
+        end
+      end
+    end
+  end
+
+  defmodule AshReports.Test.StackDirectionsDomain do
+    @moduledoc "Stack with all direction options"
+    use Ash.Domain, extensions: [AshReports.Domain]
+
+    reports do
+      report :stack_directions_report do
+        title("Stack Directions Report")
+        driving_resource(AshReports.Test.Customer)
+
+        band :detail do
+          type :detail
+
+          stack :ttb_stack do
+            dir :ttb
+
+            label :item do
+              text("Top to Bottom")
+            end
+          end
+
+          stack :btt_stack do
+            dir :btt
+
+            label :item do
+              text("Bottom to Top")
+            end
+          end
+
+          stack :ltr_stack do
+            dir :ltr
+
+            label :item do
+              text("Left to Right")
+            end
+          end
+
+          stack :rtl_stack do
+            dir :rtl
+
+            label :item do
+              text("Right to Left")
+            end
+          end
+        end
+      end
+    end
+  end
+
+  defmodule AshReports.Test.NestedLayoutDomain do
+    @moduledoc "Report with nested layout containers"
+    use Ash.Domain, extensions: [AshReports.Domain]
+
+    reports do
+      report :nested_layout_report do
+        title("Nested Layout Report")
+        driving_resource(AshReports.Test.Customer)
+
+        band :detail do
+          type :detail
+
+          stack :outer_stack do
+            dir :ttb
+            spacing "10pt"
+
+            label :header do
+              text("Header")
+            end
+          end
+
+          grid :inner_grid do
+            columns 2
+
+            label :col1 do
+              text("Column 1")
+            end
+
+            label :col2 do
+              text("Column 2")
+            end
           end
         end
       end

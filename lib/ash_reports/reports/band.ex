@@ -23,7 +23,10 @@ defmodule AshReports.Band do
     :repeat_on_pages,
     :padding,
     :elements,
-    :bands
+    :bands,
+    :grids,
+    :tables,
+    :stacks
   ]
 
   @type band_type ::
@@ -56,7 +59,10 @@ defmodule AshReports.Band do
           repeat_on_pages: boolean() | nil,
           padding: keyword() | nil,
           elements: [AshReports.Element.t()],
-          bands: [t()] | nil
+          bands: [t()] | nil,
+          grids: [AshReports.Layout.Grid.t()] | nil,
+          tables: [AshReports.Layout.Table.t()] | nil,
+          stacks: [AshReports.Layout.Stack.t()] | nil
         }
 
   @doc """

@@ -187,7 +187,10 @@ defmodule AshReports.Dsl do
           scatter_chart_element_entity(),
           gantt_chart_element_entity(),
           sparkline_element_entity()
-        ]
+        ],
+        grids: [grid_entity()],
+        tables: [table_entity()],
+        stacks: [stack_entity()]
       ],
       recursive_as: :bands
     }
@@ -441,6 +444,170 @@ defmodule AshReports.Dsl do
       target: AshReports.Element.SparklineElement,
       args: [:chart_name],
       schema: sparkline_element_schema()
+    }
+  end
+
+  # Layout container entities
+
+  @doc """
+  The grid layout container entity definition.
+  """
+  def grid_entity do
+    %Entity{
+      name: :grid,
+      describe: """
+      A grid layout container for 2D presentational layouts.
+
+      Grids provide flexible layout capabilities with configurable columns and rows.
+      Use grids for layout/presentation purposes where the arrangement itself
+      doesn't convey tabular data semantics.
+      """,
+      examples: [
+        """
+        grid :metrics_grid do
+          columns [fr(1), fr(1), fr(1)]
+          gutter "10pt"
+          align :center
+
+          label :label1 do
+            text "Revenue"
+          end
+
+          field :revenue do
+            source :total_revenue
+            format :currency
+          end
+        end
+        """
+      ],
+      target: AshReports.Layout.Grid,
+      args: [:name],
+      schema: grid_schema(),
+      entities: [
+        elements: [
+          label_element_entity(),
+          field_element_entity(),
+          expression_element_entity(),
+          aggregate_element_entity(),
+          line_element_entity(),
+          box_element_entity(),
+          image_element_entity(),
+          bar_chart_element_entity(),
+          line_chart_element_entity(),
+          pie_chart_element_entity(),
+          area_chart_element_entity(),
+          scatter_chart_element_entity(),
+          gantt_chart_element_entity(),
+          sparkline_element_entity()
+        ]
+      ]
+    }
+  end
+
+  @doc """
+  The table layout container entity definition.
+  """
+  def table_entity do
+    %Entity{
+      name: :table,
+      describe: """
+      A table layout container for semantic data presentation.
+
+      Tables carry semantic meaning and are accessible to assistive technologies.
+      Unlike grids, tables default to having visible borders (stroke: "1pt") and
+      cell padding (inset: "5pt").
+      """,
+      examples: [
+        """
+        table :data_table do
+          columns [fr(1), fr(2), fr(1)]
+          stroke "0.5pt"
+          inset "5pt"
+
+          label :col1 do
+            text "Name"
+          end
+
+          label :col2 do
+            text "Description"
+          end
+        end
+        """
+      ],
+      target: AshReports.Layout.Table,
+      args: [:name],
+      schema: table_schema(),
+      entities: [
+        elements: [
+          label_element_entity(),
+          field_element_entity(),
+          expression_element_entity(),
+          aggregate_element_entity(),
+          line_element_entity(),
+          box_element_entity(),
+          image_element_entity(),
+          bar_chart_element_entity(),
+          line_chart_element_entity(),
+          pie_chart_element_entity(),
+          area_chart_element_entity(),
+          scatter_chart_element_entity(),
+          gantt_chart_element_entity(),
+          sparkline_element_entity()
+        ]
+      ]
+    }
+  end
+
+  @doc """
+  The stack layout container entity definition.
+  """
+  def stack_entity do
+    %Entity{
+      name: :stack,
+      describe: """
+      A stack layout container for 1D sequential arrangement.
+
+      Stacks arrange elements in a single direction with configurable spacing.
+      Supports top-to-bottom (:ttb), bottom-to-top (:btt), left-to-right (:ltr),
+      and right-to-left (:rtl) directions.
+      """,
+      examples: [
+        """
+        stack :address_info do
+          dir :ttb
+          spacing "3pt"
+
+          label :street do
+            text "[street_address]"
+          end
+
+          label :city_state do
+            text "[city], [state] [zip]"
+          end
+        end
+        """
+      ],
+      target: AshReports.Layout.Stack,
+      args: [:name],
+      schema: stack_schema(),
+      entities: [
+        elements: [
+          label_element_entity(),
+          field_element_entity(),
+          expression_element_entity(),
+          aggregate_element_entity(),
+          line_element_entity(),
+          box_element_entity(),
+          image_element_entity(),
+          bar_chart_element_entity(),
+          line_chart_element_entity(),
+          pie_chart_element_entity(),
+          area_chart_element_entity(),
+          scatter_chart_element_entity(),
+          gantt_chart_element_entity(),
+          sparkline_element_entity()
+        ]
+      ]
     }
   end
 
@@ -1447,6 +1614,164 @@ defmodule AshReports.Dsl do
           doc: "The name of the sparkline definition to reference."
         ]
       ]
+  end
+
+  # Layout container schemas
+
+  defp grid_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The grid identifier."
+      ],
+      columns: [
+        type: {:or, [:pos_integer, {:list, :any}]},
+        default: 1,
+        doc: """
+        Column track sizes. Can be:
+        - Integer: Number of auto columns (e.g., 3)
+        - List: Track sizes using auto(), fr(n), or strings (e.g., [fr(1), "100pt", auto()])
+        """
+      ],
+      rows: [
+        type: {:or, [:pos_integer, {:list, :any}, {:in, [:auto]}]},
+        doc: """
+        Row track sizes. Can be:
+        - Integer: Number of rows
+        - List: Track sizes
+        - :auto: Rows expand as needed (default)
+        """
+      ],
+      gutter: [
+        type: :string,
+        doc: "Spacing between all cells (e.g., '10pt'). Applies to both columns and rows."
+      ],
+      column_gutter: [
+        type: :string,
+        doc: "Horizontal spacing between columns. Overrides gutter for columns."
+      ],
+      row_gutter: [
+        type: :string,
+        doc: "Vertical spacing between rows. Overrides gutter for rows."
+      ],
+      align: [
+        type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+        doc: """
+        Cell alignment. Can be:
+        - Atom: Horizontal alignment (:left, :center, :right)
+        - Tuple: {horizontal, vertical} (e.g., {:left, :top})
+        """
+      ],
+      inset: [
+        type: :string,
+        doc: "Default cell padding (e.g., '5pt')."
+      ],
+      fill: [
+        type: {:or, [:string, {:fun, 2}]},
+        doc: """
+        Cell background fill. Can be:
+        - String: Color for all cells (e.g., '#f0f0f0')
+        - Function: (column, row) -> color for conditional fills
+        """
+      ],
+      stroke: [
+        type: {:or, [:string, {:in, [:none]}]},
+        default: :none,
+        doc: "Cell border stroke (e.g., '1pt'). Defaults to :none for grids."
+      ]
+    ]
+  end
+
+  defp table_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The table identifier."
+      ],
+      columns: [
+        type: {:or, [:pos_integer, {:list, :any}]},
+        default: 1,
+        doc: """
+        Column track sizes. Can be:
+        - Integer: Number of auto columns (e.g., 3)
+        - List: Track sizes using auto(), fr(n), or strings (e.g., [fr(1), "100pt", auto()])
+        """
+      ],
+      rows: [
+        type: {:or, [:pos_integer, {:list, :any}, {:in, [:auto]}]},
+        doc: """
+        Row track sizes. Can be:
+        - Integer: Number of rows
+        - List: Track sizes
+        - :auto: Rows expand as needed (default)
+        """
+      ],
+      gutter: [
+        type: :string,
+        doc: "Spacing between all cells (e.g., '10pt'). Applies to both columns and rows."
+      ],
+      column_gutter: [
+        type: :string,
+        doc: "Horizontal spacing between columns. Overrides gutter for columns."
+      ],
+      row_gutter: [
+        type: :string,
+        doc: "Vertical spacing between rows. Overrides gutter for rows."
+      ],
+      align: [
+        type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+        doc: """
+        Cell alignment. Can be:
+        - Atom: Horizontal alignment (:left, :center, :right)
+        - Tuple: {horizontal, vertical} (e.g., {:left, :top})
+        """
+      ],
+      inset: [
+        type: :string,
+        default: "5pt",
+        doc: "Default cell padding (e.g., '5pt'). Tables default to '5pt'."
+      ],
+      fill: [
+        type: {:or, [:string, {:fun, 2}]},
+        doc: """
+        Cell background fill. Can be:
+        - String: Color for all cells (e.g., '#f0f0f0')
+        - Function: (column, row) -> color for conditional fills
+        """
+      ],
+      stroke: [
+        type: {:or, [:string, {:in, [:none]}]},
+        default: "1pt",
+        doc: "Cell border stroke (e.g., '1pt'). Tables default to '1pt' for visible borders."
+      ]
+    ]
+  end
+
+  defp stack_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The stack identifier."
+      ],
+      dir: [
+        type: {:in, [:ttb, :btt, :ltr, :rtl]},
+        default: :ttb,
+        doc: """
+        Stack direction:
+        - :ttb - Top to bottom (default)
+        - :btt - Bottom to top
+        - :ltr - Left to right
+        - :rtl - Right to left
+        """
+      ],
+      spacing: [
+        type: :string,
+        doc: "Spacing between child elements (e.g., '10pt')."
+      ]
+    ]
   end
 
   @doc """
