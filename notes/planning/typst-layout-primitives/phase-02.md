@@ -61,54 +61,54 @@ Define IR types for supporting elements.
 ## 2.2 DSL to IR Transformers
 
 ### 2.2.1 Grid Transformer
-- [ ] **Task 2.2.1 Complete**
+- [x] **Task 2.2.1 Complete**
 
 Transform grid DSL entities to GridIR.
 
-- [ ] 2.2.1.1 Create `AshReports.Layout.Transformer.Grid` module (success: module compiles)
-- [ ] 2.2.1.2 Transform columns property to normalized track sizes (success: all track types normalize)
-- [ ] 2.2.1.3 Transform rows property to normalized track sizes (success: rows normalize)
-- [ ] 2.2.1.4 Calculate grid dimensions from children (success: dimensions computed correctly)
-- [ ] 2.2.1.5 Transform gutter/column_gutter/row_gutter to spacing values (success: gutters resolve)
-- [ ] 2.2.1.6 Transform fill function to IR representation (success: conditional fills preserved)
+- [x] 2.2.1.1 Create `AshReports.Layout.Transformer.Grid` module (success: module compiles)
+- [x] 2.2.1.2 Transform columns property to normalized track sizes (success: all track types normalize)
+- [x] 2.2.1.3 Transform rows property to normalized track sizes (success: rows normalize)
+- [x] 2.2.1.4 Calculate grid dimensions from children (success: dimensions computed correctly)
+- [x] 2.2.1.5 Transform gutter/column_gutter/row_gutter to spacing values (success: gutters resolve)
+- [x] 2.2.1.6 Transform fill function to IR representation (success: conditional fills preserved)
 
 ### 2.2.2 Table Transformer
-- [ ] **Task 2.2.2 Complete**
+- [x] **Task 2.2.2 Complete**
 
 Transform table DSL entities to TableIR.
 
-- [ ] 2.2.2.1 Create `AshReports.Layout.Transformer.Table` module (success: module compiles)
-- [ ] 2.2.2.2 Extend grid transformer for table-specific properties (success: table extends grid)
-- [ ] 2.2.2.3 Transform header sections to HeaderIR (success: headers transform)
-- [ ] 2.2.2.4 Transform footer sections to FooterIR (success: footers transform)
-- [ ] 2.2.2.5 Apply table defaults (stroke: "1pt", inset: "5pt") (success: defaults applied)
+- [x] 2.2.2.1 Create `AshReports.Layout.Transformer.Table` module (success: module compiles)
+- [x] 2.2.2.2 Extend grid transformer for table-specific properties (success: table extends grid)
+- [x] 2.2.2.3 Transform header sections to HeaderIR (success: headers transform)
+- [x] 2.2.2.4 Transform footer sections to FooterIR (success: footers transform)
+- [x] 2.2.2.5 Apply table defaults (stroke: "1pt", inset: "5pt") (success: defaults applied)
 
 ### 2.2.3 Stack Transformer
-- [ ] **Task 2.2.3 Complete**
+- [x] **Task 2.2.3 Complete**
 
 Transform stack DSL entities to StackIR.
 
-- [ ] 2.2.3.1 Create `AshReports.Layout.Transformer.Stack` module (success: module compiles)
-- [ ] 2.2.3.2 Transform dir property to direction enum (success: direction normalizes)
-- [ ] 2.2.3.3 Transform spacing property to length value (success: spacing normalizes)
-- [ ] 2.2.3.4 Recursively transform child layouts (success: nested layouts transform)
+- [x] 2.2.3.1 Create `AshReports.Layout.Transformer.Stack` module (success: module compiles)
+- [x] 2.2.3.2 Transform dir property to direction enum (success: direction normalizes)
+- [x] 2.2.3.3 Transform spacing property to length value (success: spacing normalizes)
+- [x] 2.2.3.4 Recursively transform child layouts (success: nested layouts transform)
 
 ### 2.2.4 Cell and Row Transformers
-- [ ] **Task 2.2.4 Complete**
+- [x] **Task 2.2.4 Complete**
 
 Transform row and cell DSL entities to IR.
 
-- [ ] 2.2.4.1 Create `AshReports.Layout.Transformer.Row` module (success: module compiles)
-- [ ] 2.2.4.2 Create `AshReports.Layout.Transformer.Cell` module (success: module compiles)
-- [ ] 2.2.4.3 Transform cell content to ContentIR list (success: content transforms)
-- [ ] 2.2.4.4 Preserve property inheritance chain (row -> cell -> content) (success: inheritance works)
+- [x] 2.2.4.1 Create `AshReports.Layout.Transformer.Row` module (success: module compiles)
+- [x] 2.2.4.2 Create `AshReports.Layout.Transformer.Cell` module (success: module compiles)
+- [x] 2.2.4.3 Transform cell content to ContentIR list (success: content transforms)
+- [x] 2.2.4.4 Preserve property inheritance chain (row -> cell -> content) (success: inheritance works)
 
 ### Unit Tests - Section 2.2
-- [ ] 2.2.T.1 Test grid transformer with all property combinations
-- [ ] 2.2.T.2 Test table transformer with header/footer
-- [ ] 2.2.T.3 Test stack transformer with nested layouts
-- [ ] 2.2.T.4 Test cell transformer with content
-- [ ] 2.2.T.5 Test property inheritance
+- [x] 2.2.T.1 Test grid transformer with all property combinations
+- [x] 2.2.T.2 Test table transformer with header/footer
+- [x] 2.2.T.3 Test stack transformer with nested layouts
+- [x] 2.2.T.4 Test cell transformer with content
+- [x] 2.2.T.5 Test property inheritance
 
 ## 2.3 Cell Positioning Engine
 
