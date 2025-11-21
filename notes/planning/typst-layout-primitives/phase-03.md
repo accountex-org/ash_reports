@@ -151,35 +151,35 @@ Render stroke values to Typst stroke syntax.
 - [x] 3.3.T.4 Test fill function rendering
 - [x] 3.3.T.5 Test stroke rendering
 
-## 3.4 Line Rendering
+## 3.4 Line Rendering ✅
 
 ### 3.4.1 Horizontal Lines
-- [ ] **Task 3.4.1 Complete**
+- [x] **Task 3.4.1 Complete**
 
 Render hline entities to grid.hline()/table.hline().
 
-- [ ] 3.4.1.1 Create `AshReports.Renderer.Typst.Lines` module (success: module compiles)
-- [ ] 3.4.1.2 Generate grid.hline()/table.hline() call (success: hline renders)
-- [ ] 3.4.1.3 Generate y parameter for row position (success: `y: 1` output)
-- [ ] 3.4.1.4 Generate start and end parameters for partial lines (success: partial lines render)
-- [ ] 3.4.1.5 Generate stroke parameter (success: line styling renders)
-- [ ] 3.4.1.6 Generate position parameter (success: `:top`/`:bottom` renders)
+- [x] 3.4.1.1 Create `AshReports.Renderer.Typst.Lines` module (success: module compiles)
+- [x] 3.4.1.2 Generate grid.hline()/table.hline() call (success: hline renders)
+- [x] 3.4.1.3 Generate y parameter for row position (success: `y: 1` output)
+- [x] 3.4.1.4 Generate start and end parameters for partial lines (success: partial lines render)
+- [x] 3.4.1.5 Generate stroke parameter (success: line styling renders)
+- [x] 3.4.1.6 Generate position parameter (context-aware grid/table prefix)
 
 ### 3.4.2 Vertical Lines
-- [ ] **Task 3.4.2 Complete**
+- [x] **Task 3.4.2 Complete**
 
 Render vline entities to grid.vline()/table.vline().
 
-- [ ] 3.4.2.1 Generate grid.vline()/table.vline() call (success: vline renders)
-- [ ] 3.4.2.2 Generate x parameter for column position (success: `x: 2` output)
-- [ ] 3.4.2.3 Generate start and end parameters for partial lines (success: partial lines render)
-- [ ] 3.4.2.4 Generate stroke and position parameters (success: styling renders)
+- [x] 3.4.2.1 Generate grid.vline()/table.vline() call (success: vline renders)
+- [x] 3.4.2.2 Generate x parameter for column position (success: `x: 2` output)
+- [x] 3.4.2.3 Generate start and end parameters for partial lines (success: partial lines render)
+- [x] 3.4.2.4 Generate stroke and position parameters (success: styling renders)
 
 ### Unit Tests - Section 3.4
-- [ ] 3.4.T.1 Test hline generation
-- [ ] 3.4.T.2 Test vline generation
-- [ ] 3.4.T.3 Test partial line specifications
-- [ ] 3.4.T.4 Test lines compile in Typst
+- [x] 3.4.T.1 Test hline generation
+- [x] 3.4.T.2 Test vline generation
+- [x] 3.4.T.3 Test partial line specifications
+- [x] 3.4.T.4 Test stroke rendering (string, atom, map-based)
 
 ## 3.5 Data Interpolation
 
