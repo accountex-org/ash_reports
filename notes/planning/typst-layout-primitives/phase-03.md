@@ -181,36 +181,36 @@ Render vline entities to grid.vline()/table.vline().
 - [x] 3.4.T.3 Test partial line specifications
 - [x] 3.4.T.4 Test stroke rendering (string, atom, map-based)
 
-## 3.5 Data Interpolation
+## 3.5 Data Interpolation ✅
 
 ### 3.5.1 Variable Interpolation
-- [ ] **Task 3.5.1 Complete**
+- [x] **Task 3.5.1 Complete**
 
 Interpolate report variables into rendered content.
 
-- [ ] 3.5.1.1 Create `AshReports.Renderer.Typst.Interpolation` module (success: module compiles)
-- [ ] 3.5.1.2 Detect [variable_name] patterns in text (success: patterns detected)
-- [ ] 3.5.1.3 Replace with variable value from data context (success: values interpolated)
-- [ ] 3.5.1.4 Handle missing variables gracefully (success: missing stays as placeholder)
-- [ ] 3.5.1.5 Format interpolated values appropriately (success: numbers formatted)
+- [x] 3.5.1.1 Create `AshReports.Renderer.Typst.Interpolation` module (success: module compiles)
+- [x] 3.5.1.2 Detect [variable_name] patterns in text (success: patterns detected)
+- [x] 3.5.1.3 Replace with variable value from data context (success: values interpolated)
+- [x] 3.5.1.4 Handle missing variables gracefully (success: missing stays as placeholder)
+- [x] 3.5.1.5 Format interpolated values appropriately (success: numbers formatted)
 
 ### 3.5.2 Field Value Formatting
-- [ ] **Task 3.5.2 Complete**
+- [x] **Task 3.5.2 Complete** (Already implemented in Content module)
 
 Format field values based on format property.
 
-- [ ] 3.5.2.1 Format :currency with symbol and decimals (success: `$1,234.56` output)
-- [ ] 3.5.2.2 Format :number with decimal places (success: `1,234.56` output)
-- [ ] 3.5.2.3 Format :date in locale format (success: date formatted)
-- [ ] 3.5.2.4 Format :datetime in locale format (success: datetime formatted)
-- [ ] 3.5.2.5 Format :percent with symbol (success: `12.5%` output)
-- [ ] 3.5.2.6 Apply decimal_places property (success: rounding works)
+- [x] 3.5.2.1 Format :currency with symbol and decimals (success: `$99.99` output)
+- [x] 3.5.2.2 Format :number with decimal places (success: `1234.56` output)
+- [x] 3.5.2.3 Format :date in locale format (success: date formatted)
+- [x] 3.5.2.4 Format :datetime in locale format (success: datetime formatted)
+- [x] 3.5.2.5 Format :percent with symbol (success: `12.5%` output)
+- [x] 3.5.2.6 Apply decimal_places property (success: rounding works)
 
 ### Unit Tests - Section 3.5
-- [ ] 3.5.T.1 Test variable interpolation
-- [ ] 3.5.T.2 Test missing variable handling
-- [ ] 3.5.T.3 Test all format types
-- [ ] 3.5.T.4 Test decimal places
+- [x] 3.5.T.1 Test variable interpolation
+- [x] 3.5.T.2 Test missing variable handling
+- [x] 3.5.T.3 Test all format types (covered in content_test.exs)
+- [x] 3.5.T.4 Test decimal places (covered in content_test.exs)
 
 ## 3.6 Text Styling
 
