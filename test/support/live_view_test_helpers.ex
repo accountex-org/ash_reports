@@ -144,7 +144,7 @@ defmodule AshReports.LiveViewTestHelpers do
       assert_component_state(view, report_id: "test", loading: false)
   """
   def assert_component_state(view, expected_assigns) do
-    actual_assigns =
+    _actual_assigns =
       view
       |> element("body")
       |> render()
@@ -155,7 +155,7 @@ defmodule AshReports.LiveViewTestHelpers do
         :ok
       end)
 
-    Enum.each(expected_assigns, fn {key, expected_value} ->
+    Enum.each(expected_assigns, fn {_key, _expected_value} ->
       # This would need actual implementation based on how you access LiveView state
       # For now, this is a placeholder that would need to be adapted
       :ok
@@ -265,7 +265,7 @@ defmodule AshReports.LiveViewTestHelpers do
 
       assert_component_event_sent(view, "report_generated", %{report_id: "test"})
   """
-  def assert_component_event_sent(view, event_name, payload \\ %{}) do
+  def assert_component_event_sent(_view, _event_name, _payload \\ %{}) do
     # This is a placeholder. Actual implementation would depend on
     # how events are tracked in your LiveView components
     :ok
@@ -281,11 +281,11 @@ defmodule AshReports.LiveViewTestHelpers do
         data: chart_data
       )
   """
-  def render_chart_component(conn, opts \\ []) do
+  def render_chart_component(_conn, opts \\ []) do
     type = Keyword.get(opts, :type, :bar)
     data = Keyword.get(opts, :data, build_mock_chart_data(type: type))
 
-    session = %{
+    _session = %{
       chart_type: type,
       chart_data: data
     }

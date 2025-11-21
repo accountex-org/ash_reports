@@ -9,8 +9,6 @@ unless Code.ensure_loaded?(AshReports.TestHelpers) do
 
     import ExUnit.Assertions
 
-    alias Spark.Dsl.Extension
-
     @doc """
     Parses DSL content and returns the DSL module.
 
@@ -88,8 +86,6 @@ unless Code.ensure_loaded?(AshReports.TestHelpers) do
         {:ok, module_name}
       rescue
         error -> {:error, error}
-      catch
-        :error, value -> {:error, value}
       end
     end
 

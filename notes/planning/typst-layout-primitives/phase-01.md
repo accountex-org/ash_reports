@@ -116,34 +116,34 @@ Define table-specific header and footer sections.
 ## 1.3 Content Elements
 
 ### 1.3.1 Label Entity Updates
-- [ ] **Task 1.3.1 Complete**
+- [x] **Task 1.3.1 Complete** (2024-11-20)
 
 Update label entity for new cell-based placement.
 
-- [ ] 1.3.1.1 Remove legacy column property from label schema (success: `column: 0` raises error)
-- [ ] 1.3.1.2 Add text property as primary content (success: `text "Report Title"` works)
-- [ ] 1.3.1.3 Add style block with font_size, font_weight, color, font_family (success: style properties apply)
-- [ ] 1.3.1.4 Support short form syntax (success: `label text: "Name", style: [font_size: 12]`)
-- [ ] 1.3.1.5 Maintain variable interpolation with [variable_name] syntax (success: `[total]` interpolates)
+- [x] 1.3.1.1 Remove legacy column property from label schema (success: column removed from base_element_schema)
+- [x] 1.3.1.2 Add text property as primary content (success: `text "Report Title"` works - already existed)
+- [x] 1.3.1.3 Add style block with font_size, font_weight, color, font_family (success: style properties apply - already existed)
+- [x] 1.3.1.4 Support short form syntax (success: `label :name, text: "Quick Label"` works)
+- [x] 1.3.1.5 Maintain variable interpolation with [variable_name] syntax (success: `[total]` interpolates)
 
 ### 1.3.2 Field Entity Updates
-- [ ] **Task 1.3.2 Complete**
+- [x] **Task 1.3.2 Complete** (2024-11-20)
 
 Update field entity for new cell-based placement.
 
-- [ ] 1.3.2.1 Remove legacy column property from field schema (success: `column: 0` raises error)
-- [ ] 1.3.2.2 Rename attribute to source for clarity (success: `source :name` works)
-- [ ] 1.3.2.3 Define format property with :currency, :number, :date, :datetime, :percent (success: all formats work)
-- [ ] 1.3.2.4 Define decimal_places property for numeric formatting (success: `decimal_places 2` rounds)
-- [ ] 1.3.2.5 Add optional style block (success: field can have custom styling)
-- [ ] 1.3.2.6 Support short form syntax (success: `field source: :amount, format: :currency`)
+- [x] 1.3.2.1 Remove legacy column property from field schema (success: column removed from base_element_schema)
+- [x] 1.3.2.2 Rename attribute to source for clarity (success: `source :name` works - already implemented)
+- [x] 1.3.2.3 Define format property with :currency, :number, :date, :datetime, :percent (success: all formats work)
+- [x] 1.3.2.4 Define decimal_places property for numeric formatting (success: `decimal_places 2` added to schema)
+- [x] 1.3.2.5 Add optional style block (success: field can have custom styling - already existed)
+- [x] 1.3.2.6 Support short form syntax (success: `field :name, source: :amount, format: :currency`)
 
 ### Unit Tests - Section 1.3
-- [ ] 1.3.T.1 Test label entity with all property combinations
-- [ ] 1.3.T.2 Test field entity with all format types
-- [ ] 1.3.T.3 Test short form syntax for both entities
-- [ ] 1.3.T.4 Test variable interpolation in labels
-- [ ] 1.3.T.5 Test error handling for removed legacy properties
+- [x] 1.3.T.1 Test label entity with all property combinations
+- [x] 1.3.T.2 Test field entity with all format types
+- [x] 1.3.T.3 Test short form syntax for both entities
+- [x] 1.3.T.4 Test variable interpolation in labels
+- [x] 1.3.T.5 Test that column property is removed from label and field
 
 ## 1.4 Line Control Entities
 

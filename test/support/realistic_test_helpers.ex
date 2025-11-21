@@ -136,9 +136,11 @@ defmodule AshReports.RealisticTestHelpers do
   alias AshReportsDemo.{DataGenerator, Domain}
   alias AshReportsDemo.EtsDataLayer
 
-  # Import query helpers from Ash
-  import Ash.Query
+  # Require query helpers from Ash
   require Ash.Query
+
+  # Suppress unused function warnings for helper functions intended for future use
+  @compile :nowarn_unused_function
 
   @doc """
   Sets up ETS tables and generates realistic test data.

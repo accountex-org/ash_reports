@@ -268,7 +268,7 @@ defmodule AshReports.PdfRenderer do
     {start_pos - String.length("#let report_data = ("), pos}
   end
 
-  defp find_closing_paren(template, pos, depth, start_pos) when pos >= byte_size(template) do
+  defp find_closing_paren(template, pos, _depth, _start_pos) when pos >= byte_size(template) do
     # Reached end without finding match
     nil
   end

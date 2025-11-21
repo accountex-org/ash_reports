@@ -1558,10 +1558,6 @@ defmodule AshReports.Dsl do
         default: [],
         doc: "Position properties (x, y, width, height). For absolute positioning only."
       ],
-      column: [
-        type: :non_neg_integer,
-        doc: "Zero-indexed column position for this element (0 = first column). Used for column-based layout."
-      ],
       style: [
         type: :keyword_list,
         default: [],
@@ -1624,7 +1620,11 @@ defmodule AshReports.Dsl do
         format: [
           type: :any,
           doc:
-            "Format specification for the field value. Can be a format type atom (:number, :currency, :date), a custom pattern string, or a format specification name."
+            "Format specification for the field value. Can be a format type atom (:number, :currency, :date, :datetime, :percent), a custom pattern string, or a format specification name."
+        ],
+        decimal_places: [
+          type: :non_neg_integer,
+          doc: "Number of decimal places for numeric formatting."
         ],
         format_spec: [
           type: :atom,
@@ -1682,10 +1682,10 @@ defmodule AshReports.Dsl do
           required: true,
           doc: "The field or expression to aggregate."
         ],
-        reset_on: [
+        scope: [
           type: {:in, [:band, :group, :page, :report]},
           default: :band,
-          doc: "When to reset the aggregate calculation. :band resets for each record, :group resets when the group changes, :page resets for each page, :report accumulates across the entire report."
+          doc: "The scope of the aggregate calculation. :band resets for each record, :group resets when the group changes, :page resets for each page, :report accumulates across the entire report."
         ],
         format: [
           type: :any,

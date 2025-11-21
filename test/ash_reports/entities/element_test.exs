@@ -134,4 +134,183 @@ defmodule AshReports.Entities.ElementTest do
       assert length(summary_elements) > 0
     end
   end
+
+  # Section 1.3 tests - Content Element Updates
+
+  describe "Label element properties" do
+    test "parses label with style properties" do
+      reports = Info.reports(AshReports.Test.LabelPropertiesDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      label = Enum.find(elements, &(&1.name == :styled_label))
+      assert label != nil
+      assert label.text == "Styled Text"
+      assert label.style[:font_size] == 14
+      assert label.style[:font_weight] == :bold
+      assert label.style[:color] == "#333333"
+      assert label.align == :center
+      assert label.padding == "5pt"
+      assert label.margin == "3pt"
+    end
+
+    test "parses label with position properties" do
+      reports = Info.reports(AshReports.Test.LabelPropertiesDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      label = Enum.find(elements, &(&1.name == :positioned_label))
+      assert label != nil
+      assert label.position[:x] == 10
+      assert label.position[:y] == 20
+      assert label.position[:width] == 100
+      assert label.position[:height] == 30
+    end
+
+    test "parses label with variable interpolation syntax" do
+      reports = Info.reports(AshReports.Test.LabelPropertiesDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      label = Enum.find(elements, &(&1.name == :interpolated_label))
+      assert label != nil
+      assert label.text == "Total: [total_amount]"
+    end
+
+    test "label does not have column property" do
+      reports = Info.reports(AshReports.Test.LabelPropertiesDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      label = Enum.find(elements, &(&1.name == :styled_label))
+      assert label != nil
+      refute Map.has_key?(label, :column)
+    end
+  end
+
+  describe "Field element formats" do
+    test "parses field with currency format" do
+      reports = Info.reports(AshReports.Test.FieldFormatsDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      field = Enum.find(elements, &(&1.name == :currency_field))
+      assert field != nil
+      assert field.source == :total_amount
+      assert field.format == :currency
+      assert field.decimal_places == 2
+    end
+
+    test "parses field with number format" do
+      reports = Info.reports(AshReports.Test.FieldFormatsDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      field = Enum.find(elements, &(&1.name == :number_field))
+      assert field != nil
+      assert field.format == :number
+      assert field.decimal_places == 0
+    end
+
+    test "parses field with date format" do
+      reports = Info.reports(AshReports.Test.FieldFormatsDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      field = Enum.find(elements, &(&1.name == :date_field))
+      assert field != nil
+      assert field.format == :date
+    end
+
+    test "parses field with datetime format" do
+      reports = Info.reports(AshReports.Test.FieldFormatsDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      field = Enum.find(elements, &(&1.name == :datetime_field))
+      assert field != nil
+      assert field.format == :datetime
+    end
+
+    test "parses field with percent format" do
+      reports = Info.reports(AshReports.Test.FieldFormatsDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      field = Enum.find(elements, &(&1.name == :percent_field))
+      assert field != nil
+      assert field.format == :percent
+      assert field.decimal_places == 1
+    end
+
+    test "parses field with style properties" do
+      reports = Info.reports(AshReports.Test.FieldFormatsDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      field = Enum.find(elements, &(&1.name == :styled_field))
+      assert field != nil
+      assert field.style[:font_size] == 12
+      assert field.style[:color] == "#000000"
+      assert field.align == :left
+    end
+
+    test "field does not have column property" do
+      reports = Info.reports(AshReports.Test.FieldFormatsDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      field = Enum.find(elements, &(&1.name == :currency_field))
+      assert field != nil
+      refute Map.has_key?(field, :column)
+    end
+  end
+
+  describe "Short form syntax" do
+    test "parses label with short form syntax" do
+      reports = Info.reports(AshReports.Test.ShortFormSyntaxDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      label = Enum.find(elements, &(&1.name == :short_label))
+      assert label != nil
+      assert label.text == "Quick Label"
+    end
+
+    test "parses field with short form syntax" do
+      reports = Info.reports(AshReports.Test.ShortFormSyntaxDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      elements = Map.get(detail_band, :elements, [])
+
+      field = Enum.find(elements, &(&1.name == :short_field))
+      assert field != nil
+      assert field.source == :name
+    end
+  end
 end
