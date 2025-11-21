@@ -677,4 +677,249 @@ defmodule AshReports.Layout.TransformerTest do
       assert content.decimal_places == 4
     end
   end
+
+  describe "Pipeline Orchestration" do
+    test "full pipeline transforms entity with positioning and resolution" do
+      grid = %Grid{
+        name: :pipeline_test,
+        columns: 2,
+        align: "center",
+        inset: "5pt",
+        row_entities: [
+          %Row{
+            elements: [
+              %GridCell{x: nil, y: nil, elements: [%Label{text: "A"}]},
+              %GridCell{x: nil, y: nil, elements: [%Label{text: "B"}]}
+            ]
+          }
+        ]
+      }
+
+      assert {:ok, ir} = Transformer.transform(grid)
+      assert ir.type == :grid
+
+      # Check that rows are positioned
+      [row] = ir.children
+      assert %IR.Row{} = row
+
+      # Check that cells within row have positions
+      [cell1, cell2] = row.cells
+      assert cell1.position == {0, 0}
+      assert cell2.position == {1, 0}
+
+      # Check property resolution occurred
+      assert cell1.properties.align == "center"
+      assert cell1.properties.inset == "5pt"
+    end
+
+    test "pipeline applies positioning to loose cells" do
+      grid = %Grid{
+        name: :loose_cells,
+        columns: 3,
+        grid_cells: [
+          %GridCell{x: nil, y: nil, elements: [%Label{text: "1"}]},
+          %GridCell{x: nil, y: nil, elements: [%Label{text: "2"}]},
+          %GridCell{x: nil, y: nil, elements: [%Label{text: "3"}]},
+          %GridCell{x: nil, y: nil, elements: [%Label{text: "4"}]}
+        ]
+      }
+
+      assert {:ok, ir} = Transformer.transform(grid)
+
+      # Should have 4 cells positioned in row-major order
+      cells = ir.children
+      assert length(cells) == 4
+
+      positions = Enum.map(cells, & &1.position)
+      assert {0, 0} in positions
+      assert {1, 0} in positions
+      assert {2, 0} in positions
+      assert {0, 1} in positions
+    end
+
+    test "pipeline can skip positioning with option" do
+      grid = %Grid{
+        name: :no_position,
+        columns: 2,
+        grid_cells: [
+          %GridCell{x: nil, y: nil, elements: [%Label{text: "A"}]}
+        ]
+      }
+
+      assert {:ok, ir} = Transformer.transform(grid, position: false)
+
+      # Cell should still have nil position
+      [cell] = ir.children
+      assert cell.position == {nil, nil}
+    end
+
+    test "pipeline can skip resolution with option" do
+      grid = %Grid{
+        name: :no_resolve,
+        columns: 2,
+        align: "center",
+        grid_cells: [
+          %GridCell{x: nil, y: nil, elements: [%Label{text: "A"}]}
+        ]
+      }
+
+      assert {:ok, ir} = Transformer.transform(grid, resolve: false)
+
+      # Cell properties should not have inherited align
+      [cell] = ir.children
+      refute Map.has_key?(cell.properties, :align)
+    end
+
+    test "pipeline handles table with headers and footers" do
+      table = %Table{
+        name: :full_table,
+        columns: 2,
+        headers: [
+          %{repeat: true, elements: [%{text: "H1"}, %{text: "H2"}]}
+        ],
+        footers: [
+          %{repeat: false, elements: [%{text: "F1"}, %{text: "F2"}]}
+        ],
+        row_entities: [
+          %Row{elements: [
+            %TableCell{x: nil, y: nil, elements: [%Label{text: "D1"}]},
+            %TableCell{x: nil, y: nil, elements: [%Label{text: "D2"}]}
+          ]}
+        ]
+      }
+
+      assert {:ok, ir} = Transformer.transform(table)
+      assert ir.type == :table
+      assert length(ir.headers) == 1
+      assert length(ir.footers) == 1
+      assert length(ir.children) == 1
+    end
+
+    test "pipeline handles nested layouts" do
+      stack = %Stack{
+        name: :outer,
+        dir: :ttb,
+        elements: [
+          %Grid{
+            name: :inner,
+            columns: 2,
+            grid_cells: [
+              %GridCell{x: nil, y: nil, elements: [%Label{text: "A"}]},
+              %GridCell{x: nil, y: nil, elements: [%Label{text: "B"}]}
+            ]
+          }
+        ]
+      }
+
+      assert {:ok, ir} = Transformer.transform(stack)
+      assert ir.type == :stack
+      assert length(ir.children) == 1
+    end
+
+    test "pipeline resolves properties through inheritance chain" do
+      grid = %Grid{
+        name: :inheritance,
+        columns: 2,
+        align: "left",
+        fill: "white",
+        row_entities: [
+          %Row{
+            fill: "gray",
+            elements: [
+              %GridCell{x: nil, y: nil, align: "right", elements: [%Label{text: "Cell"}]}
+            ]
+          }
+        ]
+      }
+
+      assert {:ok, ir} = Transformer.transform(grid)
+      [row] = ir.children
+      [cell] = row.cells
+
+      # Cell should have its own align (right), row's fill (gray), grid's inset (inherited default)
+      assert cell.properties.align == "right"
+      assert cell.properties.fill == "gray"
+    end
+  end
+
+  describe "Band Integration" do
+    test "transform_band_layout extracts and transforms layout from band" do
+      band = %{
+        layout: %Grid{name: :band_grid, columns: 3}
+      }
+
+      assert {:ok, ir} = Transformer.transform_band_layout(band)
+      assert ir.type == :grid
+      assert ir.properties.columns == ["auto", "auto", "auto"]
+    end
+
+    test "transform_band_layout handles band with table" do
+      band = %{
+        layout: %Table{name: :band_table, columns: 2}
+      }
+
+      assert {:ok, ir} = Transformer.transform_band_layout(band)
+      assert ir.type == :table
+    end
+
+    test "transform_band_layout handles band with grid key fallback" do
+      band = %{
+        grid: %Grid{name: :fallback_grid, columns: 2}
+      }
+
+      assert {:ok, ir} = Transformer.transform_band_layout(band)
+      assert ir.type == :grid
+    end
+
+    test "transform_band_layout handles band with table key fallback" do
+      band = %{
+        table: %Table{name: :fallback_table, columns: 3}
+      }
+
+      assert {:ok, ir} = Transformer.transform_band_layout(band)
+      assert ir.type == :table
+    end
+
+    test "transform_band_layout returns error for band without layout" do
+      band = %{name: :no_layout}
+
+      assert {:error, {:no_layout_in_band, _}} = Transformer.transform_band_layout(band)
+    end
+
+    test "transform_band_layout applies full pipeline" do
+      band = %{
+        layout: %Grid{
+          name: :full_pipeline_band,
+          columns: 2,
+          align: "center",
+          grid_cells: [
+            %GridCell{x: nil, y: nil, elements: [%Label{text: "A"}]},
+            %GridCell{x: nil, y: nil, elements: [%Label{text: "B"}]}
+          ]
+        }
+      }
+
+      assert {:ok, ir} = Transformer.transform_band_layout(band)
+
+      # Should have positioning applied
+      [cell1, cell2] = ir.children
+      assert cell1.position == {0, 0}
+      assert cell2.position == {1, 0}
+
+      # Should have resolution applied
+      assert cell1.properties.align == "center"
+    end
+  end
+
+  describe "Error Handling" do
+    test "returns error for unsupported entity type" do
+      assert {:error, {:unsupported_layout_type, _}} = Transformer.transform(%{invalid: true})
+    end
+
+    test "handles nil layout in band" do
+      band = %{layout: nil, name: :nil_layout}
+
+      assert {:error, {:no_layout_in_band, _}} = Transformer.transform_band_layout(band)
+    end
+  end
 end

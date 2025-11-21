@@ -204,31 +204,31 @@ Normalize length values to consistent format.
 ## 2.5 Transformer Pipeline
 
 ### 2.5.1 Pipeline Orchestration
-- [ ] **Task 2.5.1 Complete**
+- [x] **Task 2.5.1 Complete**
 
 Create main transformer pipeline.
 
-- [ ] 2.5.1.1 Create `AshReports.Layout.Transformer` main module (success: module compiles)
-- [ ] 2.5.1.2 Implement transform/1 entry point (success: DSL entity transforms to IR)
-- [ ] 2.5.1.3 Dispatch to appropriate type transformer (success: grid/table/stack dispatch works)
-- [ ] 2.5.1.4 Handle recursive transformation for nested layouts (success: nested layouts transform)
-- [ ] 2.5.1.5 Integrate positioning engine after entity transformation (success: positions calculated)
-- [ ] 2.5.1.6 Integrate property resolver after positioning (success: properties resolved)
+- [x] 2.5.1.1 Create `AshReports.Layout.Transformer` main module (success: module compiles)
+- [x] 2.5.1.2 Implement transform/1 entry point (success: DSL entity transforms to IR)
+- [x] 2.5.1.3 Dispatch to appropriate type transformer (success: grid/table/stack dispatch works)
+- [x] 2.5.1.4 Handle recursive transformation for nested layouts (success: nested layouts transform)
+- [x] 2.5.1.5 Integrate positioning engine after entity transformation (success: positions calculated)
+- [x] 2.5.1.6 Integrate property resolver after positioning (success: properties resolved)
 
 ### 2.5.2 Band Integration
-- [ ] **Task 2.5.2 Complete**
+- [x] **Task 2.5.2 Complete**
 
 Integrate transformer with band processing.
 
-- [ ] 2.5.2.1 Extract layout from band entity (success: layout extracted)
-- [ ] 2.5.2.2 Transform band layout to IR (success: band layout transforms)
-- [ ] 2.5.2.3 Attach IR to band for renderer access (success: IR accessible from band)
+- [x] 2.5.2.1 Extract layout from band entity (success: layout extracted)
+- [x] 2.5.2.2 Transform band layout to IR (success: band layout transforms)
+- [x] 2.5.2.3 Attach IR to band for renderer access (success: IR accessible from band)
 
 ### Unit Tests - Section 2.5
-- [ ] 2.5.T.1 Test full pipeline transformation
-- [ ] 2.5.T.2 Test nested layout transformation
-- [ ] 2.5.T.3 Test band integration
-- [ ] 2.5.T.4 Test error handling throughout pipeline
+- [x] 2.5.T.1 Test full pipeline transformation
+- [x] 2.5.T.2 Test nested layout transformation
+- [x] 2.5.T.3 Test band integration
+- [x] 2.5.T.4 Test error handling throughout pipeline
 
 ## 2.6 Error Handling and Validation
 
