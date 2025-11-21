@@ -14,6 +14,7 @@ defmodule AshReports.Renderer.Typst.Stack do
   """
 
   alias AshReports.Layout.IR
+  alias AshReports.Renderer.Typst.Cell
 
   @doc """
   Renders a StackIR to Typst stack() markup.
@@ -137,14 +138,9 @@ defmodule AshReports.Renderer.Typst.Stack do
     render(nested_ir, indent: indent)
   end
 
-  defp render_child(%IR.Cell{content: content}, indent_str, _indent) do
-    # Render cell content directly
-    text =
-      content
-      |> Enum.map(&extract_text/1)
-      |> Enum.join(" ")
-
-    "#{indent_str}[#{text}]"
+  defp render_child(%IR.Cell{} = cell, _indent_str, indent) do
+    # Use Cell renderer for cells
+    Cell.render(cell, indent: indent, context: :grid)
   end
 
   defp render_child(%{text: text}, indent_str, _indent) do
@@ -158,8 +154,4 @@ defmodule AshReports.Renderer.Typst.Stack do
   end
 
   defp render_child(_, indent_str, _indent), do: "#{indent_str}[]"
-
-  defp extract_text(%{text: text}), do: text
-  defp extract_text(%{value: value}), do: to_string(value)
-  defp extract_text(_), do: ""
 end

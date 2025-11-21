@@ -16,7 +16,7 @@ defmodule AshReports.Renderer.Typst.Table do
   """
 
   alias AshReports.Layout.IR
-  alias AshReports.Renderer.Typst.Grid
+  alias AshReports.Renderer.Typst.{Cell, Grid}
 
   @default_stroke "1pt"
 
@@ -111,11 +111,11 @@ defmodule AshReports.Renderer.Typst.Table do
   defp render_header_rows([], _indent), do: ""
 
   defp render_header_rows(rows, indent) do
-    indent_str = String.duplicate("  ", indent)
+    opts = [indent: indent, context: :table]
 
     rows
     |> Enum.flat_map(fn row -> extract_row_cells(row) end)
-    |> Enum.map(fn cell -> render_cell_simple(cell, indent_str) end)
+    |> Enum.map(fn cell -> Cell.render(cell, opts) end)
     |> Enum.join("\n")
   end
 
@@ -163,11 +163,11 @@ defmodule AshReports.Renderer.Typst.Table do
   defp render_footer_rows([], _indent), do: ""
 
   defp render_footer_rows(rows, indent) do
-    indent_str = String.duplicate("  ", indent)
+    opts = [indent: indent, context: :table]
 
     rows
     |> Enum.flat_map(fn row -> extract_row_cells(row) end)
-    |> Enum.map(fn cell -> render_cell_simple(cell, indent_str) end)
+    |> Enum.map(fn cell -> Cell.render(cell, opts) end)
     |> Enum.join("\n")
   end
 
@@ -176,43 +176,32 @@ defmodule AshReports.Renderer.Typst.Table do
   defp render_children([], _indent), do: ""
 
   defp render_children(children, indent) do
-    indent_str = String.duplicate("  ", indent)
+    opts = [indent: indent, context: :table]
 
     children
-    |> Enum.map(fn child -> render_child(child, indent_str) end)
+    |> Enum.map(fn child -> render_child(child, opts) end)
     |> Enum.join("\n")
   end
 
-  defp render_child(%IR.Cell{} = cell, indent_str) do
-    render_cell_simple(cell, indent_str)
+  defp render_child(%IR.Cell{} = cell, opts) do
+    Cell.render(cell, opts)
   end
 
-  defp render_child(%IR.Row{cells: cells}, indent_str) do
+  defp render_child(%IR.Row{cells: cells}, opts) do
     cells
-    |> Enum.map(fn cell -> render_cell_simple(cell, indent_str) end)
+    |> Enum.map(fn cell -> Cell.render(cell, opts) end)
     |> Enum.join("\n")
   end
 
-  defp render_child(_, indent_str), do: "#{indent_str}[]"
+  defp render_child(_, opts) do
+    indent = Keyword.get(opts, :indent, 0)
+    indent_str = String.duplicate("  ", indent)
+    "#{indent_str}[]"
+  end
 
   # Helper functions
 
   defp extract_row_cells(%IR.Row{cells: cells}), do: cells
   defp extract_row_cells(%{cells: cells}), do: cells
   defp extract_row_cells(_), do: []
-
-  defp render_cell_simple(%IR.Cell{content: content}, indent_str) do
-    text =
-      content
-      |> Enum.map(&extract_text/1)
-      |> Enum.join(" ")
-
-    "#{indent_str}[#{text}]"
-  end
-
-  defp render_cell_simple(_, indent_str), do: "#{indent_str}[]"
-
-  defp extract_text(%{text: text}), do: text
-  defp extract_text(%{value: value}), do: to_string(value)
-  defp extract_text(_), do: ""
 end
