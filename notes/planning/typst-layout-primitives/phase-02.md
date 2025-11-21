@@ -233,41 +233,41 @@ Integrate transformer with band processing.
 ## 2.6 Error Handling and Validation
 
 ### 2.6.1 DSL Validation Errors
-- [ ] **Task 2.6.1 Complete**
+- [x] **Task 2.6.1 Complete**
 
 Provide clear error messages for DSL validation failures.
 
-- [ ] 2.6.1.1 Create `AshReports.Layout.Errors` module (success: module compiles)
-- [ ] 2.6.1.2 Error for invalid property values with expected types (success: "Expected length, got :invalid")
-- [ ] 2.6.1.3 Error for incorrect entity nesting (success: "cell cannot contain cell directly")
-- [ ] 2.6.1.4 Error for missing required properties (success: "columns is required for grid")
-- [ ] 2.6.1.5 Include file/line information in errors (success: errors show location)
+- [x] 2.6.1.1 Create `AshReports.Layout.Errors` module (success: module compiles)
+- [x] 2.6.1.2 Error for invalid property values with expected types (success: "Expected length, got :invalid")
+- [x] 2.6.1.3 Error for incorrect entity nesting (success: "cell cannot contain cell directly")
+- [x] 2.6.1.4 Error for missing required properties (success: "columns is required for grid")
+- [x] 2.6.1.5 Include file/line information in errors (success: errors show location)
 
 ### 2.6.2 Positioning Errors
-- [ ] **Task 2.6.2 Complete**
+- [x] **Task 2.6.2 Complete**
 
 Provide clear errors for cell positioning problems.
 
-- [ ] 2.6.2.1 Error for cell position conflicts (success: "Cell at (2,1) conflicts with existing cell")
-- [ ] 2.6.2.2 Error for span overflow (success: "colspan 3 at column 2 exceeds grid width of 4")
-- [ ] 2.6.2.3 Error for invalid explicit positions (success: "Position (5,0) outside grid bounds")
-- [ ] 2.6.2.4 Warning for gaps in grid (success: "No cell at position (1,2)")
+- [x] 2.6.2.1 Error for cell position conflicts (success: "Cell at (2,1) conflicts with existing cell")
+- [x] 2.6.2.2 Error for span overflow (success: "colspan 3 at column 2 exceeds grid width of 4")
+- [x] 2.6.2.3 Error for invalid explicit positions (success: "Position (5,0) outside grid bounds")
+- [x] 2.6.2.4 Warning for gaps in grid (success: "No cell at position (1,2)")
 
 ### 2.6.3 Property Validation
-- [ ] **Task 2.6.3 Complete**
+- [x] **Task 2.6.3 Complete**
 
 Validate property values during transformation.
 
-- [ ] 2.6.3.1 Validate track size formats (success: "Invalid track size: 'abc'")
-- [ ] 2.6.3.2 Validate color formats (success: "Invalid color: 'not-a-color'")
-- [ ] 2.6.3.3 Validate alignment values (success: "Invalid alignment: :diagonal")
-- [ ] 2.6.3.4 Validate length units (success: "Unknown unit in '10px'")
+- [x] 2.6.3.1 Validate track size formats (success: "Invalid track size: 'abc'")
+- [x] 2.6.3.2 Validate color formats (success: "Invalid color: 'not-a-color'")
+- [x] 2.6.3.3 Validate alignment values (success: "Invalid alignment: :diagonal")
+- [x] 2.6.3.4 Validate length units (success: "Unknown unit in '10px'")
 
 ### Unit Tests - Section 2.6
-- [ ] 2.6.T.1 Test all validation error messages
-- [ ] 2.6.T.2 Test positioning error detection
-- [ ] 2.6.T.3 Test property validation
-- [ ] 2.6.T.4 Test error message formatting with locations
+- [x] 2.6.T.1 Test all validation error messages
+- [x] 2.6.T.2 Test positioning error detection
+- [x] 2.6.T.3 Test property validation
+- [x] 2.6.T.4 Test error message formatting with locations
 
 ## Success Criteria
 
