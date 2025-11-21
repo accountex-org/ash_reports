@@ -232,35 +232,35 @@ Apply font styling to rendered text.
 - [x] 3.6.T.2 Test combined styles
 - [x] 3.6.T.3 Test font weight and color rendering
 
-## 3.7 Renderer Integration
+## 3.7 Renderer Integration ✅
 
 ### 3.7.1 Main Renderer Module
-- [ ] **Task 3.7.1 Complete**
+- [x] **Task 3.7.1 Complete**
 
 Create main Typst renderer entry point.
 
-- [ ] 3.7.1.1 Create `AshReports.Renderer.Typst` main module (success: module compiles)
-- [ ] 3.7.1.2 Implement render/2 accepting IR and data (success: render entry point works)
-- [ ] 3.7.1.3 Dispatch to appropriate layout renderer (success: grid/table/stack dispatch)
-- [ ] 3.7.1.4 Combine all generated markup into document (success: complete .typ output)
-- [ ] 3.7.1.5 Handle multiple bands/layouts in sequence (success: full report renders)
+- [x] 3.7.1.1 Create `AshReports.Renderer.Typst` main module (success: module compiles)
+- [x] 3.7.1.2 Implement render/2 accepting IR and data (success: render entry point works)
+- [x] 3.7.1.3 Dispatch to appropriate layout renderer (success: grid/table/stack dispatch)
+- [x] 3.7.1.4 Combine all generated markup into document (success: complete .typ output)
+- [x] 3.7.1.5 Handle multiple bands/layouts in sequence (success: full report renders)
 
 ### 3.7.2 Report Pipeline Integration
-- [ ] **Task 3.7.2 Complete**
+- [x] **Task 3.7.2 Complete**
 
 Integrate Typst renderer with report pipeline.
 
-- [ ] 3.7.2.1 Register Typst renderer for :pdf format (success: pdf format uses Typst)
-- [ ] 3.7.2.2 Accept report IR from transformer pipeline (success: IR flows to renderer)
-- [ ] 3.7.2.3 Pass data context for interpolation (success: data available during render)
-- [ ] 3.7.2.4 Return complete Typst markup (success: .typ content returned)
-- [ ] 3.7.2.5 Integrate with Typst compilation (success: PDF generated from .typ)
+- [x] 3.7.2.1 Register Typst renderer for :pdf format (success: pdf format uses Typst)
+- [x] 3.7.2.2 Accept report IR from transformer pipeline (success: IR flows to renderer)
+- [x] 3.7.2.3 Pass data context for interpolation (success: data available during render)
+- [x] 3.7.2.4 Return complete Typst markup (success: .typ content returned)
+- [ ] 3.7.2.5 Integrate with Typst compilation (success: PDF generated from .typ) - Deferred to integration phase
 
 ### Unit Tests - Section 3.7
-- [ ] 3.7.T.1 Test main renderer with complete IR
-- [ ] 3.7.T.2 Test multi-band reports
-- [ ] 3.7.T.3 Test pipeline integration
-- [ ] 3.7.T.4 Test PDF generation end-to-end
+- [x] 3.7.T.1 Test main renderer with complete IR
+- [x] 3.7.T.2 Test multi-band reports
+- [x] 3.7.T.3 Test pipeline integration
+- [ ] 3.7.T.4 Test PDF generation end-to-end - Deferred to integration phase
 
 ## 3.8 Internationalization
 
