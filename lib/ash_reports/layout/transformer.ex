@@ -26,7 +26,7 @@ defmodule AshReports.Layout.Transformer do
       {:ok, ir} = AshReports.Layout.Transformer.transform(grid_dsl, position: true, resolve: true)
   """
 
-  alias AshReports.Layout.{Positioning, PropertyResolver}
+  alias AshReports.Layout.{Errors, Positioning, PropertyResolver}
 
   @doc """
   Transforms a DSL layout entity to its IR representation.
@@ -77,7 +77,7 @@ defmodule AshReports.Layout.Transformer do
     if layout do
       transform(layout)
     else
-      {:error, {:no_layout_in_band, band}}
+      {:error, Errors.no_layout_in_band(band)}
     end
   end
 
@@ -111,7 +111,7 @@ defmodule AshReports.Layout.Transformer do
   end
 
   defp transform_entity(other) do
-    {:error, {:unsupported_layout_type, other}}
+    {:error, Errors.unsupported_layout_type(other)}
   end
 
   # Positioning stage

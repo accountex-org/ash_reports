@@ -45,6 +45,7 @@ defmodule AshReports.Layout.Errors do
           | {:no_layout_in_band, any()}
 
   # Validation constants
+  @track_size_units ["fr", "pt", "cm", "mm", "in", "%", "em"]
   @valid_alignments [:left, :center, :right, :top, :horizon, :bottom, :start, :end]
   @valid_alignment_strings ["left", "center", "right", "top", "horizon", "bottom", "start", "end"]
   @named_colors [
@@ -375,15 +376,9 @@ defmodule AshReports.Layout.Errors do
   def validate_track_size(value) when is_number(value), do: :ok
 
   def validate_track_size(value) when is_binary(value) do
-    cond do
-      String.ends_with?(value, "fr") -> validate_numeric_prefix(value, "fr")
-      String.ends_with?(value, "pt") -> validate_numeric_prefix(value, "pt")
-      String.ends_with?(value, "cm") -> validate_numeric_prefix(value, "cm")
-      String.ends_with?(value, "mm") -> validate_numeric_prefix(value, "mm")
-      String.ends_with?(value, "in") -> validate_numeric_prefix(value, "in")
-      String.ends_with?(value, "%") -> validate_numeric_prefix(value, "%")
-      String.ends_with?(value, "em") -> validate_numeric_prefix(value, "em")
-      true -> {:error, invalid_track_size(value)}
+    case find_matching_unit(value, @track_size_units) do
+      {:ok, unit} -> validate_numeric_prefix(value, unit)
+      :none -> {:error, invalid_track_size(value)}
     end
   end
 
@@ -414,10 +409,8 @@ defmodule AshReports.Layout.Errors do
 
   def validate_color(value) when is_binary(value) do
     cond do
-      # Hex color
-      Regex.match?(~r/^#[0-9a-fA-F]{3}$/, value) -> :ok
-      Regex.match?(~r/^#[0-9a-fA-F]{6}$/, value) -> :ok
-      Regex.match?(~r/^#[0-9a-fA-F]{8}$/, value) -> :ok
+      # Hex color (3, 6, or 8 digits)
+      Regex.match?(~r/^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{5})?$/, value) -> :ok
       # RGB/RGBA
       Regex.match?(~r/^rgba?\s*\(/, value) -> :ok
       # Named colors (common ones)
@@ -512,6 +505,12 @@ defmodule AshReports.Layout.Errors do
   def validate_length(value), do: {:error, invalid_length(inspect(value))}
 
   # Private helpers
+
+  defp find_matching_unit(value, units) do
+    Enum.find_value(units, :none, fn unit ->
+      if String.ends_with?(value, unit), do: {:ok, unit}
+    end)
+  end
 
   defp validate_numeric_prefix(value, suffix) do
     num_str = String.trim_trailing(value, suffix)

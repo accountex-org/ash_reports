@@ -174,7 +174,7 @@ defmodule AshReports.Layout.PositioningTest do
         %{x: 2, y: 0, colspan: 2, content: "Too Wide"}
       ]
 
-      assert {:error, {:span_overflow, _, _}} = Positioning.position_cells(cells, columns: 3)
+      assert {:error, {:span_overflow, _, _, _}} = Positioning.position_cells(cells, columns: 3)
     end
   end
 
@@ -402,8 +402,8 @@ defmodule AshReports.Layout.PositioningTest do
     end
 
     test "returns error for span overflow" do
-      assert {:error, {:span_overflow, _, _}} = Positioning.validate_span({2, 0}, {2, 1}, 3)
-      assert {:error, {:span_overflow, _, _}} = Positioning.validate_span({0, 0}, {4, 1}, 3)
+      assert {:error, {:span_overflow, _, _, _}} = Positioning.validate_span({2, 0}, {2, 1}, 3)
+      assert {:error, {:span_overflow, _, _, _}} = Positioning.validate_span({0, 0}, {4, 1}, 3)
     end
 
     test "validates single column span at edge" do

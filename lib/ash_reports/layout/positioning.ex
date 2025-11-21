@@ -35,7 +35,7 @@ defmodule AshReports.Layout.Positioning do
       {:ok, positioned} = Positioning.position_cells(cells, columns: 3)
   """
 
-  alias AshReports.Layout.IR
+  alias AshReports.Layout.{Errors, IR}
 
   @doc """
   Positions cells within a grid layout.
@@ -134,9 +134,9 @@ defmodule AshReports.Layout.Positioning do
       {:error, {:span_overflow, {2, 0}, {2, 1}, 3}}
   """
   @spec validate_span({integer(), integer()}, {integer(), integer()}, integer()) :: :ok | {:error, term()}
-  def validate_span({x, _y}, {colspan, _rowspan}, columns) do
+  def validate_span({x, y}, {colspan, rowspan}, columns) do
     if x + colspan > columns do
-      {:error, {:span_overflow, {x, colspan}, columns}}
+      {:error, Errors.span_overflow({x, y}, {colspan, rowspan}, columns)}
     else
       :ok
     end
@@ -198,7 +198,7 @@ defmodule AshReports.Layout.Positioning do
           conflicts = Enum.filter(new_positions, &MapSet.member?(occupied, &1))
 
           if conflicts != [] do
-            {:halt, {:error, {:position_conflict, position, conflicts}}}
+            {:halt, {:error, Errors.position_conflict(position, :existing_cell)}}
           else
             # Update cell with position
             positioned_cell = update_cell_position(cell, position)

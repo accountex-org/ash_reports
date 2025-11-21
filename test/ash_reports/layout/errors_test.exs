@@ -111,6 +111,12 @@ defmodule AshReports.Layout.ErrorsTest do
       assert message =~ "Cell at (3, 2) conflicts with spanning cell"
     end
 
+    test "formats position_conflict with explicit_cell" do
+      error = {:position_conflict, {1, 0}, :explicit_cell}
+      message = Errors.format(error)
+      assert message =~ "Cell at (1, 0) conflicts with explicitly positioned cell"
+    end
+
     test "formats span_overflow" do
       error = {:span_overflow, {2, 0}, {3, 1}, 4}
       message = Errors.format(error)
@@ -256,6 +262,23 @@ defmodule AshReports.Layout.ErrorsTest do
     test "rejects non-numeric prefix" do
       assert {:error, {:invalid_track_size, "abcfr"}} = Errors.validate_track_size("abcfr")
     end
+
+    test "accepts negative numbers" do
+      assert :ok = Errors.validate_track_size("-10pt")
+      assert :ok = Errors.validate_track_size("-1fr")
+    end
+
+    test "handles decimal numbers" do
+      assert :ok = Errors.validate_track_size("0.5fr")
+      assert :ok = Errors.validate_track_size("2.0pt")
+      assert :ok = Errors.validate_track_size("0.5pt")
+    end
+
+    test "rejects decimal edge cases without leading/trailing digits" do
+      # Float.parse doesn't handle these edge cases
+      assert {:error, {:invalid_track_size, ".5fr"}} = Errors.validate_track_size(".5fr")
+      assert {:error, {:invalid_track_size, "2.fr"}} = Errors.validate_track_size("2.fr")
+    end
   end
 
   describe "validate_color/1" do
@@ -395,6 +418,27 @@ defmodule AshReports.Layout.ErrorsTest do
 
     test "rejects non-numeric strings" do
       assert {:error, {:invalid_length, "abc"}} = Errors.validate_length("abc")
+    end
+
+    test "accepts negative numbers" do
+      assert :ok = Errors.validate_length("-10pt")
+      assert :ok = Errors.validate_length("-5mm")
+    end
+
+    test "handles decimal numbers" do
+      assert :ok = Errors.validate_length("0.5em")
+      assert :ok = Errors.validate_length("2.0pt")
+      assert :ok = Errors.validate_length("0.5in")
+    end
+
+    test "rejects values without leading digit before decimal" do
+      # The regex patterns require at least one digit before the decimal
+      assert {:error, {:invalid_length, ".5em"}} = Errors.validate_length(".5em")
+    end
+
+    test "accepts trailing decimal" do
+      # The regex pattern ~r/^-?\d+\.?\d*pt$/ accepts trailing dot
+      assert :ok = Errors.validate_length("2.pt")
     end
   end
 end

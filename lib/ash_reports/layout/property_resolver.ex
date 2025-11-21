@@ -28,6 +28,8 @@ defmodule AshReports.Layout.PropertyResolver do
       # => {:ok, {10.0, :pt}}
   """
 
+  alias AshReports.Layout.Errors
+
   @doc """
   Resolves properties by merging child with parent, child taking precedence.
 
@@ -231,12 +233,12 @@ defmodule AshReports.Layout.PropertyResolver do
         # Try to parse as plain number (default to pt)
         case Float.parse(value) do
           {num, ""} -> {:ok, {num, :pt}}
-          _ -> {:error, {:invalid_length, value}}
+          _ -> {:error, Errors.invalid_length(value)}
         end
     end
   end
 
-  def parse_length(value), do: {:error, {:invalid_length, value}}
+  def parse_length(value), do: {:error, Errors.invalid_length(inspect(value))}
 
   @doc """
   Normalizes a length value to points.
@@ -363,7 +365,7 @@ defmodule AshReports.Layout.PropertyResolver do
     num_str = String.trim_trailing(value, suffix)
     case Float.parse(num_str) do
       {num, ""} -> {:ok, {num, unit}}
-      _ -> {:error, {:invalid_length, value}}
+      _ -> {:error, Errors.invalid_length(value)}
     end
   end
 end
