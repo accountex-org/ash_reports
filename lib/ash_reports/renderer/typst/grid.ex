@@ -18,6 +18,7 @@ defmodule AshReports.Renderer.Typst.Grid do
   """
 
   alias AshReports.Layout.IR
+  alias AshReports.Renderer.Typst.Cell
 
   @doc """
   Renders a GridIR to Typst grid() markup.
@@ -273,37 +274,31 @@ defmodule AshReports.Renderer.Typst.Grid do
   def render_stroke(stroke) when is_binary(stroke), do: stroke
   def render_stroke(stroke) when is_atom(stroke), do: Atom.to_string(stroke)
 
-  # Children rendering (placeholder for phase 3.2)
+  # Children rendering
 
   defp render_children([], _indent), do: ""
 
   defp render_children(children, indent) do
-    indent_str = String.duplicate("  ", indent)
+    opts = [indent: indent, context: :grid]
 
     children
-    |> Enum.map(fn child -> render_child(child, indent_str) end)
+    |> Enum.map(fn child -> render_child(child, opts) end)
     |> Enum.join("\n")
   end
 
-  defp render_child(%IR.Cell{content: content}, indent_str) do
-    # Simple placeholder - will be expanded in phase 3.2
-    text =
-      content
-      |> Enum.map(&extract_text/1)
-      |> Enum.join(" ")
-
-    "#{indent_str}[#{text}]"
+  defp render_child(%IR.Cell{} = cell, opts) do
+    Cell.render(cell, opts)
   end
 
-  defp render_child(%IR.Row{cells: cells}, indent_str) do
+  defp render_child(%IR.Row{cells: cells}, opts) do
     cells
-    |> Enum.map(fn cell -> render_child(cell, indent_str) end)
+    |> Enum.map(fn cell -> render_child(cell, opts) end)
     |> Enum.join("\n")
   end
 
-  defp render_child(_, indent_str), do: "#{indent_str}[]"
-
-  defp extract_text(%{text: text}), do: text
-  defp extract_text(%{value: value}), do: to_string(value)
-  defp extract_text(_), do: ""
+  defp render_child(_, opts) do
+    indent = Keyword.get(opts, :indent, 0)
+    indent_str = String.duplicate("  ", indent)
+    "#{indent_str}[]"
+  end
 end

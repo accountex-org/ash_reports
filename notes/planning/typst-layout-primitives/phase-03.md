@@ -56,49 +56,49 @@ Generate Typst stack() function calls from StackIR.
 - [x] 3.1.T.3 Test stack markup with nested layouts
 - [ ] 3.1.T.4 Test generated Typst compiles without errors (deferred to integration tests)
 
-## 3.2 Cell and Content Rendering
+## 3.2 Cell and Content Rendering ✅
 
 ### 3.2.1 Cell Markup Generation
-- [ ] **Task 3.2.1 Complete**
+- [x] **Task 3.2.1 Complete**
 
 Generate grid.cell() and table.cell() calls from CellIR.
 
-- [ ] 3.2.1.1 Create `AshReports.Renderer.Typst.Cell` module (success: module compiles)
-- [ ] 3.2.1.2 Generate colspan parameter when > 1 (success: `colspan: 2` output)
-- [ ] 3.2.1.3 Generate rowspan parameter when > 1 (success: `rowspan: 3` output)
-- [ ] 3.2.1.4 Generate align override (success: cell-specific align renders)
-- [ ] 3.2.1.5 Generate fill override (success: cell-specific fill renders)
-- [ ] 3.2.1.6 Generate inset override (success: cell-specific inset renders)
-- [ ] 3.2.1.7 Generate breakable parameter when false (success: `breakable: false` output)
-- [ ] 3.2.1.8 Use simple bracket syntax when no overrides (success: `[content]` for simple cells)
+- [x] 3.2.1.1 Create `AshReports.Renderer.Typst.Cell` module (success: module compiles)
+- [x] 3.2.1.2 Generate colspan parameter when > 1 (success: `colspan: 2` output)
+- [x] 3.2.1.3 Generate rowspan parameter when > 1 (success: `rowspan: 3` output)
+- [x] 3.2.1.4 Generate align override (success: cell-specific align renders)
+- [x] 3.2.1.5 Generate fill override (success: cell-specific fill renders)
+- [x] 3.2.1.6 Generate inset override (success: cell-specific inset renders)
+- [x] 3.2.1.7 Generate breakable parameter when false (success: `breakable: false` output)
+- [x] 3.2.1.8 Use simple bracket syntax when no overrides (success: `[content]` for simple cells)
 
 ### 3.2.2 Content Rendering
-- [ ] **Task 3.2.2 Complete**
+- [x] **Task 3.2.2 Complete**
 
 Render label and field content within cells.
 
-- [ ] 3.2.2.1 Create `AshReports.Renderer.Typst.Content` module (success: module compiles)
-- [ ] 3.2.2.2 Render label text as Typst text (success: text renders)
-- [ ] 3.2.2.3 Render field value with data interpolation (success: field value renders)
-- [ ] 3.2.2.4 Apply content styling (font_size, font_weight, color) (success: styles apply)
-- [ ] 3.2.2.5 Escape special Typst characters in text (success: special chars safe)
+- [x] 3.2.2.1 Create `AshReports.Renderer.Typst.Content` module (success: module compiles)
+- [x] 3.2.2.2 Render label text as Typst text (success: text renders)
+- [x] 3.2.2.3 Render field value with data interpolation (success: field value renders)
+- [x] 3.2.2.4 Apply content styling (font_size, font_weight, color) (success: styles apply)
+- [x] 3.2.2.5 Escape special Typst characters in text (success: special chars safe)
 
 ### 3.2.3 Nested Layout Rendering
-- [ ] **Task 3.2.3 Complete**
+- [x] **Task 3.2.3 Complete**
 
 Render nested layouts within cells.
 
-- [ ] 3.2.3.1 Detect nested LayoutIR in cell content (success: nested layouts detected)
-- [ ] 3.2.3.2 Recursively render nested grid/table/stack (success: nested layouts render)
-- [ ] 3.2.3.3 Properly nest Typst function calls (success: nesting syntax correct)
+- [x] 3.2.3.1 Detect nested LayoutIR in cell content (success: nested layouts detected)
+- [x] 3.2.3.2 Recursively render nested grid/table/stack (success: nested layouts render)
+- [x] 3.2.3.3 Properly nest Typst function calls (success: nesting syntax correct)
 
 ### Unit Tests - Section 3.2
-- [ ] 3.2.T.1 Test cell markup with spanning
-- [ ] 3.2.T.2 Test cell markup with overrides
-- [ ] 3.2.T.3 Test simple cell bracket syntax
-- [ ] 3.2.T.4 Test label content rendering
-- [ ] 3.2.T.5 Test field content with styling
-- [ ] 3.2.T.6 Test nested layout rendering
+- [x] 3.2.T.1 Test cell markup with spanning
+- [x] 3.2.T.2 Test cell markup with overrides
+- [x] 3.2.T.3 Test simple cell bracket syntax
+- [x] 3.2.T.4 Test label content rendering
+- [x] 3.2.T.5 Test field content with styling
+- [x] 3.2.T.6 Test nested layout rendering
 
 ## 3.3 Property Rendering
 
