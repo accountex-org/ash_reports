@@ -44,6 +44,16 @@ defmodule AshReports.Layout.Errors do
           | {:unsupported_layout_type, any()}
           | {:no_layout_in_band, any()}
 
+  # Validation constants
+  @valid_alignments [:left, :center, :right, :top, :horizon, :bottom, :start, :end]
+  @valid_alignment_strings ["left", "center", "right", "top", "horizon", "bottom", "start", "end"]
+  @named_colors [
+    "black", "white", "red", "green", "blue", "yellow", "cyan", "magenta",
+    "gray", "grey", "orange", "purple", "pink", "brown", "navy", "teal",
+    "maroon", "olive", "lime", "aqua", "fuchsia", "silver", "transparent",
+    "lightgray", "lightgrey", "darkgray", "darkgrey"
+  ]
+
   # DSL Validation Errors
 
   @doc """
@@ -191,6 +201,47 @@ defmodule AshReports.Layout.Errors do
   @spec invalid_length(String.t()) :: t()
   def invalid_length(value) do
     {:invalid_length, value}
+  end
+
+  # Transformation Errors
+
+  @doc """
+  Creates an error for unknown element types.
+
+  ## Examples
+
+      iex> Errors.unknown_element_type(%{bad: :data})
+      {:unknown_element_type, %{bad: :data}}
+  """
+  @spec unknown_element_type(any()) :: t()
+  def unknown_element_type(value) do
+    {:unknown_element_type, value}
+  end
+
+  @doc """
+  Creates an error for unsupported layout types.
+
+  ## Examples
+
+      iex> Errors.unsupported_layout_type(%{type: :unknown})
+      {:unsupported_layout_type, %{type: :unknown}}
+  """
+  @spec unsupported_layout_type(any()) :: t()
+  def unsupported_layout_type(value) do
+    {:unsupported_layout_type, value}
+  end
+
+  @doc """
+  Creates an error for bands without layouts.
+
+  ## Examples
+
+      iex> Errors.no_layout_in_band(%{name: :test})
+      {:no_layout_in_band, %{name: :test}}
+  """
+  @spec no_layout_in_band(any()) :: t()
+  def no_layout_in_band(band) do
+    {:no_layout_in_band, band}
   end
 
   # Formatting
@@ -370,7 +421,7 @@ defmodule AshReports.Layout.Errors do
       # RGB/RGBA
       Regex.match?(~r/^rgba?\s*\(/, value) -> :ok
       # Named colors (common ones)
-      value in named_colors() -> :ok
+      value in @named_colors -> :ok
       # Typst color functions
       String.starts_with?(value, "luma(") -> :ok
       String.starts_with?(value, "oklab(") -> :ok
@@ -402,7 +453,7 @@ defmodule AshReports.Layout.Errors do
       {:error, {:invalid_alignment, :diagonal}}
   """
   @spec validate_alignment(any()) :: :ok | {:error, t()}
-  def validate_alignment(value) when value in [:left, :center, :right, :top, :horizon, :bottom, :start, :end] do
+  def validate_alignment(value) when value in @valid_alignments do
     :ok
   end
 
@@ -411,7 +462,7 @@ defmodule AshReports.Layout.Errors do
 
     valid_parts =
       Enum.all?(parts, fn part ->
-        part in ["left", "center", "right", "top", "horizon", "bottom", "start", "end"]
+        part in @valid_alignment_strings
       end)
 
     if valid_parts and length(parts) <= 2 do
@@ -475,13 +526,4 @@ defmodule AshReports.Layout.Errors do
   defp format_reason(:spanning_cell), do: "spanning cell"
   defp format_reason(:explicit_cell), do: "explicitly positioned cell"
   defp format_reason(other), do: inspect(other)
-
-  defp named_colors do
-    [
-      "black", "white", "red", "green", "blue", "yellow", "cyan", "magenta",
-      "gray", "grey", "orange", "purple", "pink", "brown", "navy", "teal",
-      "maroon", "olive", "lime", "aqua", "fuchsia", "silver", "transparent",
-      "lightgray", "lightgrey", "darkgray", "darkgrey"
-    ]
-  end
 end
