@@ -10,51 +10,51 @@ This phase implements the Typst renderer that generates `.typ` markup from the I
 
 **Parallelization**: This phase can run concurrently with Phase 4 (HTML Renderer) once Phase 2 is complete. If multiple developers are available, this reduces total elapsed time by 1.5-2 weeks.
 
-## 3.1 Core Typst Generation
+## 3.1 Core Typst Generation ✅
 
 ### 3.1.1 Grid Markup Generation
-- [ ] **Task 3.1.1 Complete**
+- [x] **Task 3.1.1 Complete**
 
 Generate Typst grid() function calls from GridIR.
 
-- [ ] 3.1.1.1 Create `AshReports.Renderer.Typst.Grid` module (success: module compiles)
-- [ ] 3.1.1.2 Generate columns parameter with track sizes (success: `columns: (100pt, 1fr, auto)` output)
-- [ ] 3.1.1.3 Generate rows parameter when not auto (success: explicit rows render)
-- [ ] 3.1.1.4 Generate gutter parameter (success: `gutter: 10pt` output)
-- [ ] 3.1.1.5 Generate column-gutter and row-gutter overrides (success: specific gutters render)
-- [ ] 3.1.1.6 Generate align parameter (success: `align: center` output)
-- [ ] 3.1.1.7 Generate inset parameter (success: `inset: 5pt` output)
-- [ ] 3.1.1.8 Generate fill parameter with static or function value (success: fill renders)
-- [ ] 3.1.1.9 Generate stroke parameter (success: `stroke: none` output)
+- [x] 3.1.1.1 Create `AshReports.Renderer.Typst.Grid` module (success: module compiles)
+- [x] 3.1.1.2 Generate columns parameter with track sizes (success: `columns: (100pt, 1fr, auto)` output)
+- [x] 3.1.1.3 Generate rows parameter when not auto (success: explicit rows render)
+- [x] 3.1.1.4 Generate gutter parameter (success: `gutter: 10pt` output)
+- [x] 3.1.1.5 Generate column-gutter and row-gutter overrides (success: specific gutters render)
+- [x] 3.1.1.6 Generate align parameter (success: `align: center` output)
+- [x] 3.1.1.7 Generate inset parameter (success: `inset: 5pt` output)
+- [x] 3.1.1.8 Generate fill parameter with static or function value (success: fill renders)
+- [x] 3.1.1.9 Generate stroke parameter (success: `stroke: none` output)
 
 ### 3.1.2 Table Markup Generation
-- [ ] **Task 3.1.2 Complete**
+- [x] **Task 3.1.2 Complete**
 
 Generate Typst table() function calls from TableIR.
 
-- [ ] 3.1.2.1 Create `AshReports.Renderer.Typst.Table` module (success: module compiles)
-- [ ] 3.1.2.2 Extend grid generation for table-specific defaults (success: table uses grid code)
-- [ ] 3.1.2.3 Generate table.header() for header sections (success: header renders)
-- [ ] 3.1.2.4 Generate repeat parameter for headers (success: `repeat: true` output)
-- [ ] 3.1.2.5 Generate table.footer() for footer sections (success: footer renders)
-- [ ] 3.1.2.6 Apply default stroke "1pt" for tables (success: tables have borders)
+- [x] 3.1.2.1 Create `AshReports.Renderer.Typst.Table` module (success: module compiles)
+- [x] 3.1.2.2 Extend grid generation for table-specific defaults (success: table uses grid code)
+- [x] 3.1.2.3 Generate table.header() for header sections (success: header renders)
+- [x] 3.1.2.4 Generate repeat parameter for headers (success: `repeat: true` output)
+- [x] 3.1.2.5 Generate table.footer() for footer sections (success: footer renders)
+- [x] 3.1.2.6 Apply default stroke "1pt" for tables (success: tables have borders)
 
 ### 3.1.3 Stack Markup Generation
-- [ ] **Task 3.1.3 Complete**
+- [x] **Task 3.1.3 Complete**
 
 Generate Typst stack() function calls from StackIR.
 
-- [ ] 3.1.3.1 Create `AshReports.Renderer.Typst.Stack` module (success: module compiles)
-- [ ] 3.1.3.2 Generate dir parameter with Typst direction values (success: `dir: ttb` output)
-- [ ] 3.1.3.3 Generate spacing parameter (success: `spacing: 10pt` output)
-- [ ] 3.1.3.4 Recursively render child layouts (success: nested layouts render)
-- [ ] 3.1.3.5 Render direct content children (labels, fields) (success: content renders)
+- [x] 3.1.3.1 Create `AshReports.Renderer.Typst.Stack` module (success: module compiles)
+- [x] 3.1.3.2 Generate dir parameter with Typst direction values (success: `dir: ttb` output)
+- [x] 3.1.3.3 Generate spacing parameter (success: `spacing: 10pt` output)
+- [x] 3.1.3.4 Recursively render child layouts (success: nested layouts render)
+- [x] 3.1.3.5 Render direct content children (labels, fields) (success: content renders)
 
 ### Unit Tests - Section 3.1
-- [ ] 3.1.T.1 Test grid markup generation with all parameters
-- [ ] 3.1.T.2 Test table markup with header/footer
-- [ ] 3.1.T.3 Test stack markup with nested layouts
-- [ ] 3.1.T.4 Test generated Typst compiles without errors
+- [x] 3.1.T.1 Test grid markup generation with all parameters
+- [x] 3.1.T.2 Test table markup with header/footer
+- [x] 3.1.T.3 Test stack markup with nested layouts
+- [ ] 3.1.T.4 Test generated Typst compiles without errors (deferred to integration tests)
 
 ## 3.2 Cell and Content Rendering
 
