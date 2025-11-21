@@ -262,34 +262,34 @@ Integrate Typst renderer with report pipeline.
 - [x] 3.7.T.3 Test pipeline integration
 - [ ] 3.7.T.4 Test PDF generation end-to-end - Deferred to integration phase
 
-## 3.8 Internationalization
+## 3.8 Internationalization ✅
 
 ### 3.8.1 Locale-Aware Formatting
-- [ ] **Task 3.8.1 Complete**
+- [x] **Task 3.8.1 Complete**
 
 Support locale-specific formatting for values.
 
-- [ ] 3.8.1.1 Create `AshReports.Renderer.I18n` module (success: module compiles)
-- [ ] 3.8.1.2 Support configurable locale per report (success: `locale: "de-DE"` option)
-- [ ] 3.8.1.3 Format currency with locale symbol and separators (success: €1.234,56 for German)
-- [ ] 3.8.1.4 Format numbers with locale decimal/thousand separators (success: 1.234,56 for German)
-- [ ] 3.8.1.5 Format dates with locale date format (success: 20.11.2025 for German)
-- [ ] 3.8.1.6 Format times with locale time format (success: 14:30 vs 2:30 PM)
-- [ ] 3.8.1.7 Default to system/application locale (success: sensible default)
+- [x] 3.8.1.1 Create `AshReports.Renderer.I18n` module (success: module compiles)
+- [x] 3.8.1.2 Support configurable locale per report (success: `locale: "de-DE"` option)
+- [x] 3.8.1.3 Format currency with locale symbol and separators (success: €1.234,56 for German)
+- [x] 3.8.1.4 Format numbers with locale decimal/thousand separators (success: 1.234,56 for German)
+- [x] 3.8.1.5 Format dates with locale date format (success: 15.01.2025 for German)
+- [x] 3.8.1.6 Format times with locale time format (success: 14:30 vs 2:30 PM)
+- [x] 3.8.1.7 Default to system/application locale (success: en-US default)
 
 ### 3.8.2 Currency Symbol Handling
-- [ ] **Task 3.8.2 Complete**
+- [x] **Task 3.8.2 Complete**
 
 Handle currency symbols for different locales.
 
-- [ ] 3.8.2.1 Support currency code property on field (success: `currency: :EUR`)
-- [ ] 3.8.2.2 Place symbol correctly for locale (success: €100 vs 100€)
-- [ ] 3.8.2.3 Use correct decimal places for currency (success: JPY has no decimals)
+- [x] 3.8.2.1 Support currency code property on field (success: `currency: "EUR"`)
+- [x] 3.8.2.2 Place symbol correctly for locale (success: €100 vs 100 €)
+- [x] 3.8.2.3 Use correct decimal places for currency (success: JPY has no decimals)
 
 ### Unit Tests - Section 3.8
-- [ ] 3.8.T.1 Test formatting with different locales
-- [ ] 3.8.T.2 Test currency symbol placement
-- [ ] 3.8.T.3 Test date/time formatting
+- [x] 3.8.T.1 Test formatting with different locales
+- [x] 3.8.T.2 Test currency symbol placement
+- [x] 3.8.T.3 Test date/time formatting
 
 ## Success Criteria
 
