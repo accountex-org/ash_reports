@@ -113,54 +113,54 @@ Transform row and cell DSL entities to IR.
 ## 2.3 Cell Positioning Engine
 
 ### 2.3.1 Automatic Flow Positioning
-- [ ] **Task 2.3.1 Complete**
+- [x] **Task 2.3.1 Complete**
 
 Calculate cell positions for row-major automatic flow.
 
-- [ ] 2.3.1.1 Create `AshReports.Layout.Positioning` module (success: module compiles)
-- [ ] 2.3.1.2 Implement row-major cell placement algorithm (success: cells fill left-to-right, top-to-bottom)
-- [ ] 2.3.1.3 Track occupied cells during placement (success: occupied set maintained)
-- [ ] 2.3.1.4 Skip occupied positions when placing cells (success: no cell overlap)
-- [ ] 2.3.1.5 Calculate next available position after spanning cell (success: spans handled correctly)
+- [x] 2.3.1.1 Create `AshReports.Layout.Positioning` module (success: module compiles)
+- [x] 2.3.1.2 Implement row-major cell placement algorithm (success: cells fill left-to-right, top-to-bottom)
+- [x] 2.3.1.3 Track occupied cells during placement (success: occupied set maintained)
+- [x] 2.3.1.4 Skip occupied positions when placing cells (success: no cell overlap)
+- [x] 2.3.1.5 Calculate next available position after spanning cell (success: spans handled correctly)
 
 ### 2.3.2 Explicit Positioning
-- [ ] **Task 2.3.2 Complete**
+- [x] **Task 2.3.2 Complete**
 
 Handle explicitly positioned cells with x/y coordinates.
 
-- [ ] 2.3.2.1 Detect cells with explicit x/y positions (success: explicit cells identified)
-- [ ] 2.3.2.2 Place explicit cells before flow calculation (success: explicit cells placed first)
-- [ ] 2.3.2.3 Mark explicit cell positions as occupied (success: occupancy updated)
-- [ ] 2.3.2.4 Validate no position conflicts (success: overlap raises error)
+- [x] 2.3.2.1 Detect cells with explicit x/y positions (success: explicit cells identified)
+- [x] 2.3.2.2 Place explicit cells before flow calculation (success: explicit cells placed first)
+- [x] 2.3.2.3 Mark explicit cell positions as occupied (success: occupancy updated)
+- [x] 2.3.2.4 Validate no position conflicts (success: overlap raises error)
 
 ### 2.3.3 Spanning Calculations
-- [ ] **Task 2.3.3 Complete**
+- [x] **Task 2.3.3 Complete**
 
 Calculate occupied positions for spanning cells.
 
-- [ ] 2.3.3.1 Calculate all positions occupied by colspan (success: horizontal span works)
-- [ ] 2.3.3.2 Calculate all positions occupied by rowspan (success: vertical span works)
-- [ ] 2.3.3.3 Calculate all positions for colspan + rowspan (success: 2D span works)
-- [ ] 2.3.3.4 Validate spans don't exceed grid bounds (success: overflow raises error)
+- [x] 2.3.3.1 Calculate all positions occupied by colspan (success: horizontal span works)
+- [x] 2.3.3.2 Calculate all positions occupied by rowspan (success: vertical span works)
+- [x] 2.3.3.3 Calculate all positions for colspan + rowspan (success: 2D span works)
+- [x] 2.3.3.4 Validate spans don't exceed grid bounds (success: overflow raises error)
 
 ### 2.3.4 Row-Based Positioning
-- [ ] **Task 2.3.4 Complete**
+- [x] **Task 2.3.4 Complete**
 
 Handle positioning for explicit row containers.
 
-- [ ] 2.3.4.1 Reset column counter for each row (success: rows start at column 0)
-- [ ] 2.3.4.2 Track row index for each row container (success: row indices assigned)
-- [ ] 2.3.4.3 Place cells within row at sequential columns (success: cells fill row)
-- [ ] 2.3.4.4 Handle row-level spanning that extends to next rows (success: rowspan crosses rows)
+- [x] 2.3.4.1 Reset column counter for each row (success: rows start at column 0)
+- [x] 2.3.4.2 Track row index for each row container (success: row indices assigned)
+- [x] 2.3.4.3 Place cells within row at sequential columns (success: cells fill row)
+- [x] 2.3.4.4 Handle row-level spanning that extends to next rows (success: rowspan crosses rows)
 
 ### Unit Tests - Section 2.3
-- [ ] 2.3.T.1 Test automatic flow positioning
-- [ ] 2.3.T.2 Test explicit positioning
-- [ ] 2.3.T.3 Test colspan calculations
-- [ ] 2.3.T.4 Test rowspan calculations
-- [ ] 2.3.T.5 Test mixed spanning scenarios
-- [ ] 2.3.T.6 Test row-based positioning
-- [ ] 2.3.T.7 Test error handling for conflicts
+- [x] 2.3.T.1 Test automatic flow positioning
+- [x] 2.3.T.2 Test explicit positioning
+- [x] 2.3.T.3 Test colspan calculations
+- [x] 2.3.T.4 Test rowspan calculations
+- [x] 2.3.T.5 Test mixed spanning scenarios
+- [x] 2.3.T.6 Test row-based positioning
+- [x] 2.3.T.7 Test error handling for conflicts
 
 ## 2.4 Property Resolution
 
