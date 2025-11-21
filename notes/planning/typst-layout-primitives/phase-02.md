@@ -11,52 +11,52 @@ This phase creates the Intermediate Representation (IR) layer that transforms pa
 ## 2.1 IR Data Structures
 
 ### 2.1.1 Layout IR Types
-- [ ] **Task 2.1.1 Complete**
+- [x] **Task 2.1.1 Complete**
 
 Define core IR type structures for layout containers.
 
-- [ ] 2.1.1.1 Create `AshReports.Layout.IR` module with type definitions (success: module compiles)
-- [ ] 2.1.1.2 Define LayoutIR struct with type, properties, children, lines fields (success: struct creation works)
-- [ ] 2.1.1.3 Define type field as :grid | :table | :stack enum (success: all types representable)
-- [ ] 2.1.1.4 Define properties map with normalized property values (success: properties accessible)
-- [ ] 2.1.1.5 Define children as list of CellIR | RowIR | ContentIR (success: heterogeneous children)
-- [ ] 2.1.1.6 Define lines as list of LineIR for hline/vline (success: lines stored separately)
+- [x] 2.1.1.1 Create `AshReports.Layout.IR` module with type definitions (success: module compiles)
+- [x] 2.1.1.2 Define LayoutIR struct with type, properties, children, lines fields (success: struct creation works)
+- [x] 2.1.1.3 Define type field as :grid | :table | :stack enum (success: all types representable)
+- [x] 2.1.1.4 Define properties map with normalized property values (success: properties accessible)
+- [x] 2.1.1.5 Define children as list of CellIR | RowIR | ContentIR (success: heterogeneous children)
+- [x] 2.1.1.6 Define lines as list of LineIR for hline/vline (success: lines stored separately)
 
 ### 2.1.2 Cell and Row IR Types
-- [ ] **Task 2.1.2 Complete**
+- [x] **Task 2.1.2 Complete**
 
 Define IR types for cells and rows.
 
-- [ ] 2.1.2.1 Define CellIR struct with position, span, properties, content (success: struct creation works)
-- [ ] 2.1.2.2 Define position as {x, y} tuple (0-indexed) (success: position tuple works)
-- [ ] 2.1.2.3 Define span as {colspan, rowspan} tuple (success: span tuple works)
-- [ ] 2.1.2.4 Define content as list of ContentIR (success: multiple content items per cell)
-- [ ] 2.1.2.5 Define RowIR struct with properties and cells (success: row contains cells)
+- [x] 2.1.2.1 Define CellIR struct with position, span, properties, content (success: struct creation works)
+- [x] 2.1.2.2 Define position as {x, y} tuple (0-indexed) (success: position tuple works)
+- [x] 2.1.2.3 Define span as {colspan, rowspan} tuple (success: span tuple works)
+- [x] 2.1.2.4 Define content as list of ContentIR (success: multiple content items per cell)
+- [x] 2.1.2.5 Define RowIR struct with properties and cells (success: row contains cells)
 
 ### 2.1.3 Content IR Types
-- [ ] **Task 2.1.3 Complete**
+- [x] **Task 2.1.3 Complete**
 
 Define IR types for content elements.
 
-- [ ] 2.1.3.1 Define LabelIR with text, style fields (success: label IR created)
-- [ ] 2.1.3.2 Define FieldIR with source, format, decimal_places, style fields (success: field IR created)
-- [ ] 2.1.3.3 Define NestedLayoutIR for layouts within cells (success: nested layouts representable)
-- [ ] 2.1.3.4 Create ContentIR union type of all content types (success: content is polymorphic)
+- [x] 2.1.3.1 Define LabelIR with text, style fields (success: label IR created)
+- [x] 2.1.3.2 Define FieldIR with source, format, decimal_places, style fields (success: field IR created)
+- [x] 2.1.3.3 Define NestedLayoutIR for layouts within cells (success: nested layouts representable)
+- [x] 2.1.3.4 Create ContentIR union type of all content types (success: content is polymorphic)
 
 ### 2.1.4 Supporting IR Types
-- [ ] **Task 2.1.4 Complete**
+- [x] **Task 2.1.4 Complete**
 
 Define IR types for supporting elements.
 
-- [ ] 2.1.4.1 Define LineIR with orientation, position, start, end, stroke (success: line IR created)
-- [ ] 2.1.4.2 Define HeaderIR with repeat, level, rows (success: header IR created)
-- [ ] 2.1.4.3 Define FooterIR with repeat, rows (success: footer IR created)
-- [ ] 2.1.4.4 Define StyleIR with font_size, font_weight, color, font_family (success: style IR created)
+- [x] 2.1.4.1 Define LineIR with orientation, position, start, end, stroke (success: line IR created)
+- [x] 2.1.4.2 Define HeaderIR with repeat, level, rows (success: header IR created)
+- [x] 2.1.4.3 Define FooterIR with repeat, rows (success: footer IR created)
+- [x] 2.1.4.4 Define StyleIR with font_size, font_weight, color, font_family (success: style IR created)
 
 ### Unit Tests - Section 2.1
-- [ ] 2.1.T.1 Test all IR struct creation
-- [ ] 2.1.T.2 Test nested IR structures
-- [ ] 2.1.T.3 Test IR serialization/deserialization
+- [x] 2.1.T.1 Test all IR struct creation
+- [x] 2.1.T.2 Test nested IR structures
+- [ ] 2.1.T.3 Test IR serialization/deserialization (deferred to Phase 3)
 
 ## 2.2 DSL to IR Transformers
 
