@@ -165,41 +165,41 @@ Handle positioning for explicit row containers.
 ## 2.4 Property Resolution
 
 ### 2.4.1 Property Inheritance
-- [ ] **Task 2.4.1 Complete**
+- [x] **Task 2.4.1 Complete**
 
 Resolve property inheritance from parent to child.
 
-- [ ] 2.4.1.1 Create `AshReports.Layout.PropertyResolver` module (success: module compiles)
-- [ ] 2.4.1.2 Implement inheritance chain: grid/table -> row -> cell (success: properties inherit)
-- [ ] 2.4.1.3 Handle property override at each level (success: child overrides parent)
-- [ ] 2.4.1.4 Resolve align property with default fallback (success: alignment resolves)
-- [ ] 2.4.1.5 Resolve inset property with default fallback (success: inset resolves)
+- [x] 2.4.1.1 Create `AshReports.Layout.PropertyResolver` module (success: module compiles)
+- [x] 2.4.1.2 Implement inheritance chain: grid/table -> row -> cell (success: properties inherit)
+- [x] 2.4.1.3 Handle property override at each level (success: child overrides parent)
+- [x] 2.4.1.4 Resolve align property with default fallback (success: alignment resolves)
+- [x] 2.4.1.5 Resolve inset property with default fallback (success: inset resolves)
 
 ### 2.4.2 Conditional Property Evaluation
-- [ ] **Task 2.4.2 Complete**
+- [x] **Task 2.4.2 Complete**
 
 Evaluate conditional properties like fill functions.
 
-- [ ] 2.4.2.1 Detect function-based fill properties (success: functions identified)
-- [ ] 2.4.2.2 Preserve function in IR for renderer evaluation (success: function preserved)
-- [ ] 2.4.2.3 Support position-based fill function signature (x, y) (success: function receives position)
-- [ ] 2.4.2.4 Handle static vs dynamic property distinction (success: static/dynamic separated)
+- [x] 2.4.2.1 Detect function-based fill properties (success: functions identified)
+- [x] 2.4.2.2 Preserve function in IR for renderer evaluation (success: function preserved)
+- [x] 2.4.2.3 Support position-based fill function signature (x, y) (success: function receives position)
+- [x] 2.4.2.4 Handle static vs dynamic property distinction (success: static/dynamic separated)
 
 ### 2.4.3 Length Normalization
-- [ ] **Task 2.4.3 Complete**
+- [x] **Task 2.4.3 Complete**
 
 Normalize length values to consistent format.
 
-- [ ] 2.4.3.1 Parse "100pt" string format (success: pt unit parsed)
-- [ ] 2.4.3.2 Parse "2cm" string format (success: cm unit parsed)
-- [ ] 2.4.3.3 Parse "20%" percentage format (success: percentage parsed)
-- [ ] 2.4.3.4 Normalize to internal length representation (success: all lengths normalize)
+- [x] 2.4.3.1 Parse "100pt" string format (success: pt unit parsed)
+- [x] 2.4.3.2 Parse "2cm" string format (success: cm unit parsed)
+- [x] 2.4.3.3 Parse "20%" percentage format (success: percentage parsed)
+- [x] 2.4.3.4 Normalize to internal length representation (success: all lengths normalize)
 
 ### Unit Tests - Section 2.4
-- [ ] 2.4.T.1 Test property inheritance chain
-- [ ] 2.4.T.2 Test property override
-- [ ] 2.4.T.3 Test conditional fill preservation
-- [ ] 2.4.T.4 Test length normalization
+- [x] 2.4.T.1 Test property inheritance chain
+- [x] 2.4.T.2 Test property override
+- [x] 2.4.T.3 Test conditional fill preservation
+- [x] 2.4.T.4 Test length normalization
 
 ## 2.5 Transformer Pipeline
 
