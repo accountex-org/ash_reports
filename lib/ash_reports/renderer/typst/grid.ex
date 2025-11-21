@@ -180,10 +180,14 @@ defmodule AshReports.Renderer.Typst.Grid do
 
       iex> render_track_size("100pt")
       "100pt"
+
+      iex> render_track_size({:fr, 2})
+      "2fr"
   """
-  @spec render_track_size(String.t() | atom() | number()) :: String.t()
+  @spec render_track_size(String.t() | atom() | number() | tuple()) :: String.t()
   def render_track_size(:auto), do: "auto"
   def render_track_size("auto"), do: "auto"
+  def render_track_size({:fr, n}), do: "#{n}fr"
   def render_track_size(size) when is_binary(size), do: size
   def render_track_size(size) when is_number(size), do: "#{size}pt"
 
@@ -255,6 +259,29 @@ defmodule AshReports.Renderer.Typst.Grid do
     "(x, y) => none"
   end
 
+  # Map-based fill specification for conditional fills
+  def render_fill(%{function: func_body}) when is_binary(func_body) do
+    func_body
+  end
+
+  def render_fill(%{alternating: colors}) when is_list(colors) do
+    first_color = List.first(colors) |> render_fill_color()
+    last_color = List.last(colors) |> render_fill_color()
+    "((x, y) => if calc.rem(y, #{length(colors)}) == 0 { #{first_color} } else { #{last_color} })"
+  end
+
+  # Helper for rendering colors in fill functions
+  defp render_fill_color(color) when is_binary(color) do
+    if String.starts_with?(color, "#") do
+      "rgb(\"#{color}\")"
+    else
+      color
+    end
+  end
+
+  defp render_fill_color(color) when is_atom(color), do: Atom.to_string(color)
+  defp render_fill_color(:none), do: "none"
+
   # Stroke rendering
 
   @doc """
@@ -267,12 +294,43 @@ defmodule AshReports.Renderer.Typst.Grid do
 
       iex> render_stroke("1pt")
       "1pt"
+
+      iex> render_stroke(%{thickness: "1pt", paint: "black"})
+      "1pt + black"
+
+      iex> render_stroke(%{thickness: "2pt", paint: "red", dash: "dashed"})
+      "(thickness: 2pt, paint: red, dash: \\"dashed\\")"
   """
-  @spec render_stroke(atom() | String.t()) :: String.t()
+  @spec render_stroke(atom() | String.t() | map()) :: String.t()
   def render_stroke(:none), do: "none"
   def render_stroke(nil), do: "none"
   def render_stroke(stroke) when is_binary(stroke), do: stroke
   def render_stroke(stroke) when is_atom(stroke), do: Atom.to_string(stroke)
+
+  def render_stroke(%{thickness: thickness, paint: paint, dash: dash}) do
+    paint_str = render_color_value(paint)
+    "(thickness: #{thickness}, paint: #{paint_str}, dash: \"#{dash}\")"
+  end
+
+  def render_stroke(%{thickness: thickness, paint: paint}) do
+    paint_str = render_color_value(paint)
+    "#{thickness} + #{paint_str}"
+  end
+
+  def render_stroke(%{thickness: thickness}) do
+    thickness
+  end
+
+  # Helper to render color values for stroke
+  defp render_color_value(color) when is_binary(color) do
+    if String.starts_with?(color, "#") do
+      "rgb(\"#{color}\")"
+    else
+      color
+    end
+  end
+
+  defp render_color_value(color) when is_atom(color), do: Atom.to_string(color)
 
   # Children rendering
 

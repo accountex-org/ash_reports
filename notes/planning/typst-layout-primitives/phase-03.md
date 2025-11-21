@@ -100,56 +100,56 @@ Render nested layouts within cells.
 - [x] 3.2.T.5 Test field content with styling
 - [x] 3.2.T.6 Test nested layout rendering
 
-## 3.3 Property Rendering
+## 3.3 Property Rendering ✅
 
 ### 3.3.1 Track Size Rendering
-- [ ] **Task 3.3.1 Complete**
+- [x] **Task 3.3.1 Complete**
 
 Render track sizes to Typst column/row syntax.
 
-- [ ] 3.3.1.1 Render :auto as `auto` (success: auto renders)
-- [ ] 3.3.1.2 Render {:fr, n} as `nfr` (success: `1fr`, `2fr` render)
-- [ ] 3.3.1.3 Render length strings directly (success: `100pt`, `2cm` render)
-- [ ] 3.3.1.4 Render arrays as Typst arrays (success: `(100pt, 1fr, auto)` output)
-- [ ] 3.3.1.5 Render integer as repeated auto (success: `3` becomes `(auto, auto, auto)`)
+- [x] 3.3.1.1 Render :auto as `auto` (success: auto renders)
+- [x] 3.3.1.2 Render {:fr, n} as `nfr` (success: `1fr`, `2fr` render)
+- [x] 3.3.1.3 Render length strings directly (success: `100pt`, `2cm` render)
+- [x] 3.3.1.4 Render arrays as Typst arrays (success: `(100pt, 1fr, auto)` output)
+- [x] 3.3.1.5 Render integer as column count (success: `3` renders as `columns: 3`)
 
 ### 3.3.2 Alignment Rendering
-- [ ] **Task 3.3.2 Complete**
+- [x] **Task 3.3.2 Complete**
 
 Render alignment values to Typst alignment syntax.
 
-- [ ] 3.3.2.1 Render :left as `left` (success: horizontal align renders)
-- [ ] 3.3.2.2 Render :center as `center` (success: center renders)
-- [ ] 3.3.2.3 Render :right as `right` (success: right renders)
-- [ ] 3.3.2.4 Render :top as `top` (success: vertical align renders)
-- [ ] 3.3.2.5 Render combined alignment {:left, :top} as `left + top` (success: combined renders)
+- [x] 3.3.2.1 Render :left as `left` (success: horizontal align renders)
+- [x] 3.3.2.2 Render :center as `center` (success: center renders)
+- [x] 3.3.2.3 Render :right as `right` (success: right renders)
+- [x] 3.3.2.4 Render :top as `top` (success: vertical align renders)
+- [x] 3.3.2.5 Render combined alignment {:left, :top} as `left + top` (success: combined renders)
 
 ### 3.3.3 Color and Fill Rendering
-- [ ] **Task 3.3.3 Complete**
+- [x] **Task 3.3.3 Complete**
 
 Render colors and fill values to Typst syntax.
 
-- [ ] 3.3.3.1 Render hex colors as Typst rgb() (success: `#ffffff` becomes `rgb("#ffffff")`)
-- [ ] 3.3.3.2 Render :none as `none` (success: no fill renders)
-- [ ] 3.3.3.3 Render function fills as Typst functions (success: conditional fills render)
-- [ ] 3.3.3.4 Generate position-based fill function syntax (success: `(x, y) => ...` output)
+- [x] 3.3.3.1 Render hex colors as Typst rgb() (success: `#ffffff` becomes `rgb("#ffffff")`)
+- [x] 3.3.3.2 Render :none as `none` (success: no fill renders)
+- [x] 3.3.3.3 Render function fills as Typst functions (success: conditional fills render)
+- [x] 3.3.3.4 Generate position-based fill function syntax (success: `(x, y) => ...` output)
 
 ### 3.3.4 Stroke Rendering
-- [ ] **Task 3.3.4 Complete**
+- [x] **Task 3.3.4 Complete**
 
 Render stroke values to Typst stroke syntax.
 
-- [ ] 3.3.4.1 Render :none as `none` (success: no stroke renders)
-- [ ] 3.3.4.2 Render simple width as length (success: `1pt` renders)
-- [ ] 3.3.4.3 Render width + color as stroke spec (success: `1pt + black` renders)
-- [ ] 3.3.4.4 Render full stroke spec with dash (success: dashed strokes render)
+- [x] 3.3.4.1 Render :none as `none` (success: no stroke renders)
+- [x] 3.3.4.2 Render simple width as length (success: `1pt` renders)
+- [x] 3.3.4.3 Render width + color as stroke spec (success: `1pt + black` renders)
+- [x] 3.3.4.4 Render full stroke spec with dash (success: dashed strokes render)
 
 ### Unit Tests - Section 3.3
-- [ ] 3.3.T.1 Test all track size formats
-- [ ] 3.3.T.2 Test all alignment combinations
-- [ ] 3.3.T.3 Test color rendering
-- [ ] 3.3.T.4 Test fill function rendering
-- [ ] 3.3.T.5 Test stroke rendering
+- [x] 3.3.T.1 Test all track size formats
+- [x] 3.3.T.2 Test all alignment combinations
+- [x] 3.3.T.3 Test color rendering
+- [x] 3.3.T.4 Test fill function rendering
+- [x] 3.3.T.5 Test stroke rendering
 
 ## 3.4 Line Rendering
 
