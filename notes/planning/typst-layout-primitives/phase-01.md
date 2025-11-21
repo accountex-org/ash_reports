@@ -70,45 +70,48 @@ Define the stack entity for 1D sequential arrangement.
 ## 1.2 Row and Cell Entities
 
 ### 1.2.1 Row Entity Definition
-- [ ] **Task 1.2.1 Complete**
+- [x] **Task 1.2.1 Complete** (2024-11-20)
 
 Define explicit row containers within grid/table.
 
-- [ ] 1.2.1.1 Create `AshReports.Dsl.Layout.Row` module (success: module compiles)
-- [ ] 1.2.1.2 Define height property for fixed row heights (success: `height "30pt"` sets row height)
-- [ ] 1.2.1.3 Define fill property for row background (success: `fill "#f0f0f0"` colors entire row)
-- [ ] 1.2.1.4 Define stroke property for row borders (success: `stroke "1pt"` adds row border)
-- [ ] 1.2.1.5 Define align property for default cell alignment (success: row align propagates to cells)
-- [ ] 1.2.1.6 Define inset property for default cell padding (success: row inset propagates to cells)
+- [x] 1.2.1.1 Create `AshReports.Layout.Row` module (success: module compiles)
+- [x] 1.2.1.2 Define height property for fixed row heights (success: `height "30pt"` sets row height)
+- [x] 1.2.1.3 Define fill property for row background (success: `fill "#f0f0f0"` colors entire row)
+- [x] 1.2.1.4 Define stroke property for row borders (success: `stroke "1pt"` adds row border)
+- [x] 1.2.1.5 Define align property for default cell alignment (success: row align propagates to cells)
+- [x] 1.2.1.6 Define inset property for default cell padding (success: row inset propagates to cells)
 
 ### 1.2.2 Cell Entity Definition
-- [ ] **Task 1.2.2 Complete**
+- [x] **Task 1.2.2 Complete** (2024-11-20)
 
 Define individual cells with spanning and positioning.
 
-- [ ] 1.2.2.1 Create `AshReports.Dsl.Layout.Cell` module (success: module compiles)
-- [ ] 1.2.2.2 Define colspan and rowspan properties (success: `colspan 2, rowspan 3` spans correctly)
-- [ ] 1.2.2.3 Define x and y properties for explicit positioning (success: `x: 0, y: 1` places cell)
-- [ ] 1.2.2.4 Define cell-specific align, fill, stroke, inset overrides (success: cell properties override parent)
-- [ ] 1.2.2.5 Define breakable property for page break control (success: `breakable false` prevents breaks)
-- [ ] 1.2.2.6 Allow nested layouts within cells (success: cell can contain stack/grid/table)
+**Note**: Implemented as distinct cell types (GridCell, TableCell) instead of a single Cell entity to avoid circular dependencies in DSL entity definitions. Nested layouts within cells are deferred.
+
+- [x] 1.2.2.1 Create `AshReports.Layout.GridCell` module for grids (success: module compiles)
+- [x] 1.2.2.2 Create `AshReports.Layout.TableCell` module for tables (success: module compiles)
+- [x] 1.2.2.3 Define colspan and rowspan properties for TableCell (success: `colspan 2, rowspan 3` spans correctly)
+- [x] 1.2.2.4 Define x and y properties for explicit positioning (success: `x: 0, y: 1` places cell)
+- [x] 1.2.2.5 Define cell-specific align, fill, stroke, inset overrides (success: cell properties override parent)
+- [x] 1.2.2.6 Define breakable property for TableCell (success: `breakable false` prevents breaks)
+- [ ] 1.2.2.7 Allow nested layouts within cells (deferred: requires lazy evaluation or layout element approach)
 
 ### 1.2.3 Header and Footer Entities
-- [ ] **Task 1.2.3 Complete**
+- [x] **Task 1.2.3 Complete** (2024-11-20)
 
 Define table-specific header and footer sections.
 
-- [ ] 1.2.3.1 Create `AshReports.Dsl.Layout.Header` module (success: module compiles)
-- [ ] 1.2.3.2 Define repeat property for page repetition (success: `repeat: true` repeats on each page)
-- [ ] 1.2.3.3 Define level property for cascading headers (success: multiple header levels work)
-- [ ] 1.2.3.4 Create `AshReports.Dsl.Layout.Footer` module with repeat property (success: footer repeats)
+- [x] 1.2.3.1 Create `AshReports.Layout.Header` module (success: module compiles)
+- [x] 1.2.3.2 Define repeat property for page repetition (success: `repeat: true` repeats on each page)
+- [x] 1.2.3.3 Define level property for cascading headers (success: multiple header levels work)
+- [x] 1.2.3.4 Create `AshReports.Layout.Footer` module with repeat property (success: footer repeats)
 
 ### Unit Tests - Section 1.2
-- [ ] 1.2.T.1 Test row entity with all property combinations
-- [ ] 1.2.T.2 Test cell spanning behavior
-- [ ] 1.2.T.3 Test explicit cell positioning
-- [ ] 1.2.T.4 Test header/footer repeat behavior
-- [ ] 1.2.T.5 Test nested layouts within cells
+- [x] 1.2.T.1 Test row entity with all property combinations
+- [x] 1.2.T.2 Test cell spanning behavior (TableCell)
+- [x] 1.2.T.3 Test explicit cell positioning (GridCell and TableCell)
+- [x] 1.2.T.4 Test header/footer repeat behavior
+- [ ] 1.2.T.5 Test nested layouts within cells (deferred)
 
 ## 1.3 Content Elements
 

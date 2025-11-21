@@ -529,6 +529,202 @@ unless Code.ensure_loaded?(AshReports.Test.MinimalDomain) do
     end
   end
 
+  # Cell entity test domains
+
+  defmodule AshReports.Test.GridCellDomain do
+    @moduledoc "Report with grid cells"
+    use Ash.Domain, extensions: [AshReports.Domain]
+
+    reports do
+      report :grid_cell_report do
+        title("Grid Cell Report")
+        driving_resource(AshReports.Test.Customer)
+
+        band :detail do
+          type :detail
+
+          grid :cell_grid do
+            columns 3
+
+            grid_cell do
+              x 0
+              y 0
+              align :left
+              fill "#f0f0f0"
+
+              label :cell1 do
+                text("Cell 1")
+              end
+            end
+
+            grid_cell do
+              x 1
+              y 0
+              align :center
+
+              label :cell2 do
+                text("Cell 2")
+              end
+            end
+
+            grid_cell do
+              x 2
+              y 0
+              align :right
+              stroke "1pt"
+              inset "10pt"
+
+              field :value do
+                source :name
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  defmodule AshReports.Test.TableCellDomain do
+    @moduledoc "Report with table cells"
+    use Ash.Domain, extensions: [AshReports.Domain]
+
+    reports do
+      report :table_cell_report do
+        title("Table Cell Report")
+        driving_resource(AshReports.Test.Customer)
+
+        band :detail do
+          type :detail
+
+          table :cell_table do
+            columns 3
+
+            table_cell do
+              colspan 2
+              align :left
+              fill "#e0e0e0"
+
+              label :merged_cell do
+                text("Merged Cell")
+              end
+            end
+
+            table_cell do
+              rowspan 1
+              align :right
+
+              field :value do
+                source :name
+              end
+            end
+
+            table_cell do
+              x 0
+              y 1
+              breakable false
+              inset "8pt"
+
+              label :positioned do
+                text("Positioned")
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  defmodule AshReports.Test.TableHeaderFooterDomain do
+    @moduledoc "Report with table headers and footers"
+    use Ash.Domain, extensions: [AshReports.Domain]
+
+    reports do
+      report :header_footer_report do
+        title("Header Footer Report")
+        driving_resource(AshReports.Test.Customer)
+
+        band :detail do
+          type :detail
+
+          table :data_table do
+            columns 3
+
+            header repeat: true do
+              table_cell do
+                label :name_header do
+                  text("Name")
+                end
+              end
+
+              table_cell do
+                label :desc_header do
+                  text("Description")
+                end
+              end
+
+              table_cell do
+                label :value_header do
+                  text("Value")
+                end
+              end
+            end
+
+            footer repeat: true do
+              table_cell do
+                colspan 2
+
+                label :total_label do
+                  text("Total")
+                end
+              end
+
+              table_cell do
+                field :total do
+                  source :total_amount
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  defmodule AshReports.Test.RowEntityDomain do
+    @moduledoc "Report with row entities"
+    use Ash.Domain, extensions: [AshReports.Domain]
+
+    reports do
+      report :row_entity_report do
+        title("Row Entity Report")
+        driving_resource(AshReports.Test.Customer)
+
+        band :detail do
+          type :detail
+
+          grid :row_grid do
+            columns 2
+
+            row :header_row do
+              height "30pt"
+              fill "#f0f0f0"
+              align :center
+              inset "5pt"
+
+              label :col1 do
+                text("Column 1")
+              end
+
+              label :col2 do
+                text("Column 2")
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
   # Invalid/error cases for validation testing
   # Note: These are commented out because they fail at compile-time.
   # Validation errors should be tested differently (e.g., with verifier tests)

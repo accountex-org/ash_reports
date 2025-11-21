@@ -49,8 +49,10 @@ defmodule AshReports.Layout.Table do
           fill: String.t() | (integer(), integer() -> String.t()) | nil,
           stroke: String.t() | nil,
           elements: [map()],
-          headers: [map()],
-          footers: [map()]
+          row_entities: [AshReports.Layout.Row.t()],
+          table_cells: [AshReports.Layout.TableCell.t()],
+          headers: [AshReports.Layout.Header.t()],
+          footers: [AshReports.Layout.Footer.t()]
         }
 
   defstruct [
@@ -65,6 +67,8 @@ defmodule AshReports.Layout.Table do
     inset: "5pt",
     stroke: "1pt",
     elements: [],
+    row_entities: [],
+    table_cells: [],
     headers: [],
     footers: []
   ]

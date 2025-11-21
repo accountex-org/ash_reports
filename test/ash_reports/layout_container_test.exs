@@ -234,4 +234,249 @@ defmodule AshReports.LayoutContainerTest do
       assert %AshReports.Layout.Stack{} = stack
     end
   end
+
+  describe "grid cell entity parsing" do
+    test "parses grid cells with positioning" do
+      reports = Info.reports(AshReports.Test.GridCellDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      grids = Map.get(detail_band, :grids, [])
+      grid = hd(grids)
+      grid_cells = Map.get(grid, :grid_cells, [])
+
+      assert length(grid_cells) == 3
+
+      cell1 = Enum.at(grid_cells, 0)
+      assert cell1.x == 0
+      assert cell1.y == 0
+      assert cell1.align == :left
+      assert cell1.fill == "#f0f0f0"
+
+      cell2 = Enum.at(grid_cells, 1)
+      assert cell2.x == 1
+      assert cell2.y == 0
+      assert cell2.align == :center
+
+      cell3 = Enum.at(grid_cells, 2)
+      assert cell3.x == 2
+      assert cell3.y == 0
+      assert cell3.align == :right
+      assert cell3.stroke == "1pt"
+      assert cell3.inset == "10pt"
+    end
+
+    test "grid cell returns correct struct type" do
+      reports = Info.reports(AshReports.Test.GridCellDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      grids = Map.get(detail_band, :grids, [])
+      grid = hd(grids)
+      grid_cells = Map.get(grid, :grid_cells, [])
+      cell = hd(grid_cells)
+
+      assert %AshReports.Layout.GridCell{} = cell
+    end
+
+    test "grid cell contains elements" do
+      reports = Info.reports(AshReports.Test.GridCellDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      grids = Map.get(detail_band, :grids, [])
+      grid = hd(grids)
+      grid_cells = Map.get(grid, :grid_cells, [])
+      cell = hd(grid_cells)
+
+      elements = Map.get(cell, :elements, [])
+      assert length(elements) == 1
+
+      label = hd(elements)
+      assert label.name == :cell1
+      assert label.text == "Cell 1"
+    end
+  end
+
+  describe "table cell entity parsing" do
+    test "parses table cells with spanning" do
+      reports = Info.reports(AshReports.Test.TableCellDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      tables = Map.get(detail_band, :tables, [])
+      table = hd(tables)
+      table_cells = Map.get(table, :table_cells, [])
+
+      assert length(table_cells) == 3
+
+      cell1 = Enum.at(table_cells, 0)
+      assert cell1.colspan == 2
+      assert cell1.align == :left
+      assert cell1.fill == "#e0e0e0"
+
+      cell2 = Enum.at(table_cells, 1)
+      assert cell2.rowspan == 1
+      assert cell2.align == :right
+
+      cell3 = Enum.at(table_cells, 2)
+      assert cell3.x == 0
+      assert cell3.y == 1
+      assert cell3.breakable == false
+      assert cell3.inset == "8pt"
+    end
+
+    test "table cell returns correct struct type" do
+      reports = Info.reports(AshReports.Test.TableCellDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      tables = Map.get(detail_band, :tables, [])
+      table = hd(tables)
+      table_cells = Map.get(table, :table_cells, [])
+      cell = hd(table_cells)
+
+      assert %AshReports.Layout.TableCell{} = cell
+    end
+
+    test "table cell contains elements" do
+      reports = Info.reports(AshReports.Test.TableCellDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      tables = Map.get(detail_band, :tables, [])
+      table = hd(tables)
+      table_cells = Map.get(table, :table_cells, [])
+      cell = hd(table_cells)
+
+      elements = Map.get(cell, :elements, [])
+      assert length(elements) == 1
+
+      label = hd(elements)
+      assert label.name == :merged_cell
+      assert label.text == "Merged Cell"
+    end
+  end
+
+  describe "header and footer entity parsing" do
+    test "parses table headers with cells" do
+      reports = Info.reports(AshReports.Test.TableHeaderFooterDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      tables = Map.get(detail_band, :tables, [])
+      table = hd(tables)
+      headers = Map.get(table, :headers, [])
+
+      assert length(headers) == 1
+
+      header = hd(headers)
+      assert header.repeat == true
+
+      table_cells = Map.get(header, :table_cells, [])
+      assert length(table_cells) == 3
+    end
+
+    test "parses table footers with cells" do
+      reports = Info.reports(AshReports.Test.TableHeaderFooterDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      tables = Map.get(detail_band, :tables, [])
+      table = hd(tables)
+      footers = Map.get(table, :footers, [])
+
+      assert length(footers) == 1
+
+      footer = hd(footers)
+      assert footer.repeat == true
+
+      table_cells = Map.get(footer, :table_cells, [])
+      assert length(table_cells) == 2
+
+      # First cell has colspan
+      cell = hd(table_cells)
+      assert cell.colspan == 2
+    end
+
+    test "header returns correct struct type" do
+      reports = Info.reports(AshReports.Test.TableHeaderFooterDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      tables = Map.get(detail_band, :tables, [])
+      table = hd(tables)
+      headers = Map.get(table, :headers, [])
+      header = hd(headers)
+
+      assert %AshReports.Layout.Header{} = header
+    end
+
+    test "footer returns correct struct type" do
+      reports = Info.reports(AshReports.Test.TableHeaderFooterDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      tables = Map.get(detail_band, :tables, [])
+      table = hd(tables)
+      footers = Map.get(table, :footers, [])
+      footer = hd(footers)
+
+      assert %AshReports.Layout.Footer{} = footer
+    end
+  end
+
+  describe "row entity parsing" do
+    test "parses row with properties" do
+      reports = Info.reports(AshReports.Test.RowEntityDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      grids = Map.get(detail_band, :grids, [])
+      grid = hd(grids)
+      row_entities = Map.get(grid, :row_entities, [])
+
+      assert length(row_entities) == 1
+
+      row = hd(row_entities)
+      assert row.name == :header_row
+      assert row.height == "30pt"
+      assert row.fill == "#f0f0f0"
+      assert row.align == :center
+      assert row.inset == "5pt"
+    end
+
+    test "row returns correct struct type" do
+      reports = Info.reports(AshReports.Test.RowEntityDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      grids = Map.get(detail_band, :grids, [])
+      grid = hd(grids)
+      row_entities = Map.get(grid, :row_entities, [])
+      row = hd(row_entities)
+
+      assert %AshReports.Layout.Row{} = row
+    end
+
+    test "row contains elements" do
+      reports = Info.reports(AshReports.Test.RowEntityDomain)
+      report = hd(reports)
+
+      detail_band = Enum.find(report.bands, &(&1.type == :detail))
+      grids = Map.get(detail_band, :grids, [])
+      grid = hd(grids)
+      row_entities = Map.get(grid, :row_entities, [])
+      row = hd(row_entities)
+
+      elements = Map.get(row, :elements, [])
+      assert length(elements) == 2
+
+      col1 = Enum.find(elements, &(&1.name == :col1))
+      assert col1.text == "Column 1"
+
+      col2 = Enum.find(elements, &(&1.name == :col2))
+      assert col2.text == "Column 2"
+    end
+  end
 end

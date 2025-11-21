@@ -499,7 +499,9 @@ defmodule AshReports.Dsl do
           scatter_chart_element_entity(),
           gantt_chart_element_entity(),
           sparkline_element_entity()
-        ]
+        ],
+        row_entities: [row_entity()],
+        grid_cells: [grid_cell_entity()]
       ]
     }
   end
@@ -524,12 +526,14 @@ defmodule AshReports.Dsl do
           stroke "0.5pt"
           inset "5pt"
 
-          label :col1 do
-            text "Name"
+          header repeat: true do
+            cell do
+              label text: "Name"
+            end
           end
 
-          label :col2 do
-            text "Description"
+          cell do
+            field source: :name
           end
         end
         """
@@ -553,7 +557,11 @@ defmodule AshReports.Dsl do
           scatter_chart_element_entity(),
           gantt_chart_element_entity(),
           sparkline_element_entity()
-        ]
+        ],
+        row_entities: [row_entity()],
+        table_cells: [table_cell_entity()],
+        headers: [header_entity()],
+        footers: [footer_entity()]
       ]
     }
   end
@@ -607,6 +615,214 @@ defmodule AshReports.Dsl do
           gantt_chart_element_entity(),
           sparkline_element_entity()
         ]
+      ]
+    }
+  end
+
+  @doc """
+  The row entity for explicit row containers within grid/table.
+  """
+  def row_entity do
+    %Entity{
+      name: :row,
+      describe: """
+      An explicit row container within grid/table layouts.
+
+      Rows allow grouping cells with shared properties like height, fill, stroke,
+      and default alignment/padding that propagate to child cells.
+      """,
+      examples: [
+        """
+        row :header_row do
+          height "30pt"
+          fill "#f0f0f0"
+          align :center
+
+          cell do
+            label text: "Name"
+          end
+        end
+        """
+      ],
+      target: AshReports.Layout.Row,
+      args: [:name],
+      schema: row_schema(),
+      entities: [
+        elements: [
+          label_element_entity(),
+          field_element_entity(),
+          expression_element_entity(),
+          aggregate_element_entity(),
+          line_element_entity(),
+          box_element_entity(),
+          image_element_entity(),
+          bar_chart_element_entity(),
+          line_chart_element_entity(),
+          pie_chart_element_entity(),
+          area_chart_element_entity(),
+          scatter_chart_element_entity(),
+          gantt_chart_element_entity(),
+          sparkline_element_entity()
+        ]
+      ]
+    }
+  end
+
+  @doc """
+  The grid cell entity for individual cells within grids.
+  """
+  def grid_cell_entity do
+    %Entity{
+      name: :grid_cell,
+      describe: """
+      An individual cell within grid layouts.
+
+      Grid cells can be positioned using x/y coordinates and override parent properties.
+      They contain only leaf elements (no nested containers).
+      """,
+      examples: [
+        """
+        grid_cell do
+          x 0
+          y 1
+          align :right
+
+          field source: :total, format: :currency
+        end
+        """
+      ],
+      target: AshReports.Layout.GridCell,
+      args: [],
+      schema: grid_cell_schema(),
+      entities: [
+        elements: [
+          label_element_entity(),
+          field_element_entity(),
+          expression_element_entity(),
+          aggregate_element_entity(),
+          line_element_entity(),
+          box_element_entity(),
+          image_element_entity(),
+          bar_chart_element_entity(),
+          line_chart_element_entity(),
+          pie_chart_element_entity(),
+          area_chart_element_entity(),
+          scatter_chart_element_entity(),
+          gantt_chart_element_entity(),
+          sparkline_element_entity()
+        ]
+      ]
+    }
+  end
+
+  @doc """
+  The table cell entity for individual cells within tables.
+  """
+  def table_cell_entity do
+    %Entity{
+      name: :table_cell,
+      describe: """
+      An individual cell within table layouts.
+
+      Table cells can span multiple columns/rows and override parent properties.
+      They contain only leaf elements (no nested containers).
+      """,
+      examples: [
+        """
+        table_cell do
+          colspan 2
+          align :right
+
+          field source: :total, format: :currency
+        end
+        """
+      ],
+      target: AshReports.Layout.TableCell,
+      args: [],
+      schema: table_cell_schema(),
+      entities: [
+        elements: [
+          label_element_entity(),
+          field_element_entity(),
+          expression_element_entity(),
+          aggregate_element_entity(),
+          line_element_entity(),
+          box_element_entity(),
+          image_element_entity(),
+          bar_chart_element_entity(),
+          line_chart_element_entity(),
+          pie_chart_element_entity(),
+          area_chart_element_entity(),
+          scatter_chart_element_entity(),
+          gantt_chart_element_entity(),
+          sparkline_element_entity()
+        ]
+      ]
+    }
+  end
+
+  @doc """
+  The header entity for table header sections.
+  """
+  def header_entity do
+    %Entity{
+      name: :header,
+      describe: """
+      A table header section that can repeat on each page.
+
+      Headers are semantic table sections supporting accessibility requirements.
+      """,
+      examples: [
+        """
+        header repeat: true do
+          cell do
+            label text: "Name"
+          end
+
+          cell do
+            label text: "Value"
+          end
+        end
+        """
+      ],
+      target: AshReports.Layout.Header,
+      args: [],
+      schema: header_schema(),
+      entities: [
+        table_cells: [table_cell_entity()]
+      ]
+    }
+  end
+
+  @doc """
+  The footer entity for table footer sections.
+  """
+  def footer_entity do
+    %Entity{
+      name: :footer,
+      describe: """
+      A table footer section that can repeat on each page.
+
+      Footers are semantic table sections supporting accessibility requirements.
+      """,
+      examples: [
+        """
+        footer repeat: true do
+          cell colspan: 2 do
+            label text: "Total"
+          end
+
+          cell do
+            field source: :grand_total, format: :currency
+          end
+        end
+        """
+      ],
+      target: AshReports.Layout.Footer,
+      args: [],
+      schema: footer_schema(),
+      entities: [
+        table_cells: [table_cell_entity()]
       ]
     }
   end
@@ -1770,6 +1986,150 @@ defmodule AshReports.Dsl do
       spacing: [
         type: :string,
         doc: "Spacing between child elements (e.g., '10pt')."
+      ]
+    ]
+  end
+
+  defp row_schema do
+    [
+      name: [
+        type: :atom,
+        required: true,
+        doc: "The row identifier."
+      ],
+      height: [
+        type: :string,
+        doc: "Fixed row height (e.g., '30pt')."
+      ],
+      fill: [
+        type: :string,
+        doc: "Row background color (e.g., '#f0f0f0')."
+      ],
+      stroke: [
+        type: :string,
+        doc: "Row border stroke (e.g., '1pt')."
+      ],
+      align: [
+        type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+        doc: "Default cell alignment. Propagates to child cells."
+      ],
+      inset: [
+        type: :string,
+        doc: "Default cell padding. Propagates to child cells."
+      ]
+    ]
+  end
+
+  defp grid_cell_schema do
+    [
+      name: [
+        type: :atom,
+        doc: "Optional cell identifier."
+      ],
+      x: [
+        type: :non_neg_integer,
+        doc: "Explicit column position (0-indexed)."
+      ],
+      y: [
+        type: :non_neg_integer,
+        doc: "Explicit row position (0-indexed)."
+      ],
+      align: [
+        type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+        doc: "Cell alignment. Overrides parent grid alignment."
+      ],
+      fill: [
+        type: :string,
+        doc: "Cell background color. Overrides parent."
+      ],
+      stroke: [
+        type: :string,
+        doc: "Cell border stroke. Overrides parent."
+      ],
+      inset: [
+        type: :string,
+        doc: "Cell padding. Overrides parent."
+      ]
+    ]
+  end
+
+  defp table_cell_schema do
+    [
+      name: [
+        type: :atom,
+        doc: "Optional cell identifier."
+      ],
+      colspan: [
+        type: :pos_integer,
+        default: 1,
+        doc: "Number of columns this cell spans."
+      ],
+      rowspan: [
+        type: :pos_integer,
+        default: 1,
+        doc: "Number of rows this cell spans."
+      ],
+      x: [
+        type: :non_neg_integer,
+        doc: "Explicit column position (0-indexed)."
+      ],
+      y: [
+        type: :non_neg_integer,
+        doc: "Explicit row position (0-indexed)."
+      ],
+      align: [
+        type: {:or, [:atom, {:tuple, [:atom, :atom]}]},
+        doc: "Cell alignment. Overrides parent table alignment."
+      ],
+      fill: [
+        type: :string,
+        doc: "Cell background color. Overrides parent."
+      ],
+      stroke: [
+        type: :string,
+        doc: "Cell border stroke. Overrides parent."
+      ],
+      inset: [
+        type: :string,
+        doc: "Cell padding. Overrides parent."
+      ],
+      breakable: [
+        type: :boolean,
+        default: true,
+        doc: "Whether the cell can be broken across pages."
+      ]
+    ]
+  end
+
+  defp header_schema do
+    [
+      name: [
+        type: :atom,
+        doc: "Optional header identifier."
+      ],
+      repeat: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to repeat header on each page when table spans pages."
+      ],
+      level: [
+        type: :pos_integer,
+        default: 1,
+        doc: "Header level for cascading headers (1 = primary, 2 = secondary, etc.)."
+      ]
+    ]
+  end
+
+  defp footer_schema do
+    [
+      name: [
+        type: :atom,
+        doc: "Optional footer identifier."
+      ],
+      repeat: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to repeat footer on each page when table spans pages."
       ]
     ]
   end

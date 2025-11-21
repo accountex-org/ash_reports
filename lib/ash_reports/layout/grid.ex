@@ -57,7 +57,9 @@ defmodule AshReports.Layout.Grid do
           inset: String.t() | nil,
           fill: String.t() | (integer(), integer() -> String.t()) | nil,
           stroke: String.t() | nil,
-          elements: [map()]
+          elements: [map()],
+          row_entities: [AshReports.Layout.Row.t()],
+          grid_cells: [AshReports.Layout.GridCell.t()]
         }
 
   defstruct [
@@ -71,6 +73,8 @@ defmodule AshReports.Layout.Grid do
     align: nil,
     inset: nil,
     stroke: :none,
-    elements: []
+    elements: [],
+    row_entities: [],
+    grid_cells: []
   ]
 end

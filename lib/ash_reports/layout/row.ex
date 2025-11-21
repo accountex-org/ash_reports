@@ -1,35 +1,47 @@
 defmodule AshReports.Layout.Row do
   @moduledoc """
-  A row layout container for organizing elements horizontally within a band.
+  An explicit row container within grid/table layouts.
 
-  Rows are converted to Typst grid cells, where each element in the row
-  occupies a column position.
+  Rows allow explicit grouping of cells with shared properties like height,
+  fill, stroke, and default alignment/padding that propagate to child cells.
 
   ## Example
 
-      row :summary_row do
-        spacing "5pt"
+      row :header_row do
+        height "30pt"
+        fill "#f0f0f0"
+        align :center
 
-        label :count do
-          text "Count: [group_count]"
+        cell do
+          label text: "Name"
         end
 
-        label :total do
-          text "Total: [group_total]"
+        cell do
+          label text: "Value"
         end
       end
 
   """
 
+  @type alignment :: atom() | {atom(), atom()} | nil
+
   @type t :: %__MODULE__{
           name: atom(),
-          spacing: String.t() | nil,
+          height: String.t() | nil,
+          fill: String.t() | nil,
+          stroke: String.t() | nil,
+          align: alignment(),
+          inset: String.t() | nil,
           elements: [map()]
         }
 
   defstruct [
     :name,
-    spacing: "5pt",
+    :height,
+    :fill,
+    :stroke,
+    :align,
+    :inset,
     elements: []
   ]
 end
