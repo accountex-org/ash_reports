@@ -212,25 +212,25 @@ Format field values based on format property.
 - [x] 3.5.T.3 Test all format types (covered in content_test.exs)
 - [x] 3.5.T.4 Test decimal places (covered in content_test.exs)
 
-## 3.6 Text Styling
+## 3.6 Text Styling ✅
 
 ### 3.6.1 Font Styling
-- [ ] **Task 3.6.1 Complete**
+- [x] **Task 3.6.1 Complete**
 
 Apply font styling to rendered text.
 
-- [ ] 3.6.1.1 Create `AshReports.Renderer.Typst.Styling` module (success: module compiles)
-- [ ] 3.6.1.2 Wrap text with #text() for styling (success: styled text renders)
-- [ ] 3.6.1.3 Apply font_size with size parameter (success: `size: 24pt` output)
-- [ ] 3.6.1.4 Apply font_weight with weight parameter (success: `weight: "bold"` output)
-- [ ] 3.6.1.5 Apply color with fill parameter (success: `fill: rgb("#000")` output)
-- [ ] 3.6.1.6 Apply font_family with font parameter (success: `font: "Arial"` output)
-- [ ] 3.6.1.7 Combine multiple styles efficiently (success: single #text() call)
+- [x] 3.6.1.1 Create `AshReports.Renderer.Typst.Styling` module (success: module compiles)
+- [x] 3.6.1.2 Wrap text with #text() for styling (success: styled text renders)
+- [x] 3.6.1.3 Apply font_size with size parameter (success: `size: 24pt` output)
+- [x] 3.6.1.4 Apply font_weight with weight parameter (success: `weight: "bold"` output)
+- [x] 3.6.1.5 Apply color with fill parameter (success: `fill: rgb("#000")` output)
+- [x] 3.6.1.6 Apply font_family with font parameter (success: `font: "Arial"` output)
+- [x] 3.6.1.7 Combine multiple styles efficiently (success: single #text() call)
 
 ### Unit Tests - Section 3.6
-- [ ] 3.6.T.1 Test individual style properties
-- [ ] 3.6.T.2 Test combined styles
-- [ ] 3.6.T.3 Test styled text compiles
+- [x] 3.6.T.1 Test individual style properties
+- [x] 3.6.T.2 Test combined styles
+- [x] 3.6.T.3 Test font weight and color rendering
 
 ## 3.7 Renderer Integration
 
