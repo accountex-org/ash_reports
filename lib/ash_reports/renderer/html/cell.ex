@@ -7,8 +7,20 @@ defmodule AshReports.Renderer.Html.Cell do
   - Table header cells → th elements
   - Table body/footer cells → td elements
 
-  This is a minimal implementation for Phase 4.1.
-  Full implementation will be added in Phase 4.2.
+  ## CSS Grid Cell Properties
+
+  - `grid-column: span N` for colspan
+  - `grid-row: span N` for rowspan
+  - `grid-column: X` and `grid-row: Y` for explicit positioning
+  - `text-align`, `vertical-align` for alignment
+  - `background-color` for fill
+  - `border` for stroke
+  - `padding` for inset
+
+  ## Table Cell Properties
+
+  - `colspan` and `rowspan` attributes
+  - Inline styles for alignment, fill, stroke, inset
   """
 
   alias AshReports.Layout.IR
@@ -53,6 +65,7 @@ defmodule AshReports.Renderer.Html.Cell do
   defp build_grid_cell_styles(%IR.Cell{} = cell) do
     styles = []
 
+    styles = maybe_add_explicit_position(styles, cell)
     styles = maybe_add_colspan(styles, cell)
     styles = maybe_add_rowspan(styles, cell)
     styles = maybe_add_cell_styles(styles, cell)
@@ -61,6 +74,14 @@ defmodule AshReports.Renderer.Html.Cell do
     |> Enum.reverse()
     |> Enum.join("; ")
   end
+
+  # Add explicit grid position when position is set (not at 0,0 default)
+  defp maybe_add_explicit_position(styles, %IR.Cell{position: {x, y}}) when x > 0 or y > 0 do
+    # CSS Grid uses 1-based indexing
+    styles = if x > 0, do: ["grid-column: #{x + 1}" | styles], else: styles
+    if y > 0, do: ["grid-row: #{y + 1}" | styles], else: styles
+  end
+  defp maybe_add_explicit_position(styles, _), do: styles
 
   defp maybe_add_colspan(styles, %IR.Cell{span: {colspan, _rowspan}}) when colspan > 1 do
     ["grid-column: span #{colspan}" | styles]
@@ -78,6 +99,7 @@ defmodule AshReports.Renderer.Html.Cell do
     |> maybe_add_background(properties)
     |> maybe_add_border(properties)
     |> maybe_add_text_align(properties)
+    |> maybe_add_vertical_align(properties)
   end
   defp maybe_add_cell_styles(styles, _), do: styles
 
@@ -120,6 +142,7 @@ defmodule AshReports.Renderer.Html.Cell do
     |> maybe_add_background(properties)
     |> maybe_add_border(properties)
     |> maybe_add_text_align(properties)
+    |> maybe_add_vertical_align(properties)
     |> Enum.reverse()
     |> Enum.join("; ")
   end
@@ -146,6 +169,14 @@ defmodule AshReports.Renderer.Html.Cell do
     ["text-align: #{render_text_align(align)}" | styles]
   end
   defp maybe_add_text_align(styles, _), do: styles
+
+  defp maybe_add_vertical_align(styles, %{vertical_align: valign}) when not is_nil(valign) do
+    ["vertical-align: #{render_vertical_align(valign)}" | styles]
+  end
+  defp maybe_add_vertical_align(styles, %{align: {_h, v}}) when not is_nil(v) do
+    ["vertical-align: #{render_vertical_align(v)}" | styles]
+  end
+  defp maybe_add_vertical_align(styles, _), do: styles
 
   # Content rendering
 
@@ -204,6 +235,12 @@ defmodule AshReports.Renderer.Html.Cell do
   defp render_text_align({h, _v}), do: render_text_align(h)
   defp render_text_align(align) when is_binary(align), do: align
   defp render_text_align(_), do: "left"
+
+  defp render_vertical_align(:top), do: "top"
+  defp render_vertical_align(:middle), do: "middle"
+  defp render_vertical_align(:bottom), do: "bottom"
+  defp render_vertical_align(valign) when is_binary(valign), do: valign
+  defp render_vertical_align(_), do: "middle"
 
   @doc """
   Escapes HTML special characters to prevent XSS.
