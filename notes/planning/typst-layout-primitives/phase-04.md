@@ -186,32 +186,32 @@ Format field values for HTML display.
 ## 4.5 Styling
 
 ### 4.5.1 Inline Styles
-- [ ] **Task 4.5.1 Complete**
+- [x] **Task 4.5.1 Complete**
 
 Generate inline CSS styles for elements.
 
-- [ ] 4.5.1.1 Create `AshReports.Renderer.Html.Styling` module (success: module compiles)
-- [ ] 4.5.1.2 Build style attribute from style properties (success: style attribute generated)
-- [ ] 4.5.1.3 Map font_size to font-size CSS (success: font size applies)
-- [ ] 4.5.1.4 Map font_weight to font-weight CSS (success: font weight applies)
-- [ ] 4.5.1.5 Map color to color CSS (success: text color applies)
-- [ ] 4.5.1.6 Map font_family to font-family CSS (success: font family applies)
-- [ ] 4.5.1.7 Combine multiple styles efficiently (success: single style attribute)
+- [x] 4.5.1.1 Create `AshReports.Renderer.Html.Styling` module (success: module compiles)
+- [x] 4.5.1.2 Build style attribute from style properties (success: style attribute generated)
+- [x] 4.5.1.3 Map font_size to font-size CSS (success: font size applies)
+- [x] 4.5.1.4 Map font_weight to font-weight CSS (success: font weight applies)
+- [x] 4.5.1.5 Map color to color CSS (success: text color applies)
+- [x] 4.5.1.6 Map font_family to font-family CSS (success: font family applies)
+- [x] 4.5.1.7 Combine multiple styles efficiently (success: single style attribute)
 
 ### 4.5.2 CSS Classes
-- [ ] **Task 4.5.2 Complete**
+- [x] **Task 4.5.2 Complete**
 
 Apply consistent CSS classes for styling hooks.
 
-- [ ] 4.5.2.1 Apply ash-grid, ash-table, ash-stack classes (success: container classes)
-- [ ] 4.5.2.2 Apply ash-cell class to all cells (success: cell class)
-- [ ] 4.5.2.3 Apply ash-header, ash-footer classes (success: section classes)
-- [ ] 4.5.2.4 Apply ash-label, ash-field classes to content (success: content classes)
+- [x] 4.5.2.1 Apply ash-grid, ash-table, ash-stack classes (success: container classes)
+- [x] 4.5.2.2 Apply ash-cell class to all cells (success: cell class)
+- [x] 4.5.2.3 Apply ash-header, ash-footer classes (success: section classes)
+- [x] 4.5.2.4 Apply ash-label, ash-field classes to content (success: content classes)
 
 ### Unit Tests - Section 4.5
-- [ ] 4.5.T.1 Test inline style generation
-- [ ] 4.5.T.2 Test CSS classes applied
-- [ ] 4.5.T.3 Test combined styling
+- [x] 4.5.T.1 Test inline style generation
+- [x] 4.5.T.2 Test CSS classes applied
+- [x] 4.5.T.3 Test combined styling
 
 ## 4.6 Renderer Integration
 

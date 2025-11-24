@@ -67,7 +67,7 @@ defmodule AshReports.Renderer.Html.TableTest do
       )
       result = Table.render(ir)
 
-      assert String.contains?(result, "<thead>")
+      assert String.contains?(result, ~s(<thead class="ash-header">))
       assert String.contains?(result, "<th")
       assert String.contains?(result, "</thead>")
     end
@@ -89,7 +89,7 @@ defmodule AshReports.Renderer.Html.TableTest do
       )
       result = Table.render(ir)
 
-      assert String.contains?(result, "<tfoot>")
+      assert String.contains?(result, ~s(<tfoot class="ash-footer">))
       assert String.contains?(result, "</tfoot>")
     end
 
@@ -132,12 +132,16 @@ defmodule AshReports.Renderer.Html.TableTest do
       result = Table.render(ir)
 
       # Check order: thead, tbody, tfoot
-      thead_pos = :binary.match(result, "<thead>") |> elem(0)
+      thead_pos = :binary.match(result, "<thead") |> elem(0)
       tbody_pos = :binary.match(result, "<tbody>") |> elem(0)
-      tfoot_pos = :binary.match(result, "<tfoot>") |> elem(0)
+      tfoot_pos = :binary.match(result, "<tfoot") |> elem(0)
 
       assert thead_pos < tbody_pos
       assert tbody_pos < tfoot_pos
+
+      # Check CSS classes
+      assert String.contains?(result, ~s(<thead class="ash-header">))
+      assert String.contains?(result, ~s(<tfoot class="ash-footer">))
     end
   end
 
