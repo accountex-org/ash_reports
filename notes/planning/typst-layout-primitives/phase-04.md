@@ -254,20 +254,20 @@ Integrate with LiveView HEEX rendering.
 ## 4.7 JSON Renderer
 
 ### 4.7.1 JSON Output
-- [ ] **Task 4.7.1 Complete**
+- [x] **Task 4.7.1 Complete**
 
 Generate JSON representation of IR for client-side rendering.
 
-- [ ] 4.7.1.1 Create `AshReports.Renderer.Json` module (success: module compiles)
-- [ ] 4.7.1.2 Serialize LayoutIR to JSON-compatible map (success: IR serializes)
-- [ ] 4.7.1.3 Serialize all nested structures (success: full structure)
-- [ ] 4.7.1.4 Include resolved data values (success: data included)
-- [ ] 4.7.1.5 Register for :json format (success: json format works)
+- [x] 4.7.1.1 Create `AshReports.Renderer.Json` module (success: module compiles)
+- [x] 4.7.1.2 Serialize LayoutIR to JSON-compatible map (success: IR serializes)
+- [x] 4.7.1.3 Serialize all nested structures (success: full structure)
+- [x] 4.7.1.4 Include resolved data values (success: data included)
+- [x] 4.7.1.5 Register for :json format (success: json format works)
 
 ### Unit Tests - Section 4.7
-- [ ] 4.7.T.1 Test JSON serialization
-- [ ] 4.7.T.2 Test nested structure serialization
-- [ ] 4.7.T.3 Test data inclusion
+- [x] 4.7.T.1 Test JSON serialization
+- [x] 4.7.T.2 Test nested structure serialization
+- [x] 4.7.T.3 Test data inclusion
 
 ## Success Criteria
 
