@@ -1,11 +1,11 @@
-defmodule AshReports.Renderer.I18nTest do
+defmodule AshReports.Renderer.Typst.I18nTest do
   @moduledoc """
   Tests for the internationalization module.
   """
 
   use ExUnit.Case, async: true
 
-  alias AshReports.Renderer.I18n
+  alias AshReports.Renderer.Typst.I18n
 
   describe "default_locale/0" do
     test "returns en-US as default" do

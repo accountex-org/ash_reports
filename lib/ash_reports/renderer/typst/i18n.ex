@@ -1,4 +1,4 @@
-defmodule AshReports.Renderer.I18n do
+defmodule AshReports.Renderer.Typst.I18n do
   @moduledoc """
   Internationalization module for locale-aware formatting.
 
@@ -139,7 +139,7 @@ defmodule AshReports.Renderer.I18n do
   @spec format_number(number(), keyword()) :: String.t()
   def format_number(number, opts \\ []) do
     locale = Keyword.get(opts, :locale, @default_locale)
-    decimal_places = Keyword.get(opts, :decimal_places, 2)
+    decimal_places = opts |> Keyword.get(:decimal_places, 2) |> clamp_decimal_places()
     config = get_locale_config(locale)
 
     format_with_separators(number, decimal_places, config)
@@ -276,7 +276,7 @@ defmodule AshReports.Renderer.I18n do
   @spec format_percent(number(), keyword()) :: String.t()
   def format_percent(value, opts \\ []) do
     locale = Keyword.get(opts, :locale, @default_locale)
-    decimal_places = Keyword.get(opts, :decimal_places, 1)
+    decimal_places = opts |> Keyword.get(:decimal_places, 1) |> clamp_decimal_places()
     config = get_locale_config(locale)
 
     percentage = value * 100
@@ -342,9 +342,12 @@ defmodule AshReports.Renderer.I18n do
     Map.get(@currency_config, currency_code, %{symbol: currency_code, decimal_places: 2})
   end
 
+  defp clamp_decimal_places(value) when is_integer(value), do: max(0, min(value, 20))
+  defp clamp_decimal_places(_value), do: 2
+
   defp format_with_separators(number, decimal_places, config) do
     # Round to specified decimal places
-    rounded = Float.round(number / 1, decimal_places)
+    rounded = Float.round(number * 1.0, decimal_places)
 
     # Split into integer and decimal parts
     {integer_part, decimal_part} = split_number(rounded, decimal_places)
