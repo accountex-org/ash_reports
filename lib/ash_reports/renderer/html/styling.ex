@@ -466,6 +466,9 @@ defmodule AshReports.Renderer.Html.Styling do
   @doc """
   Escapes HTML special characters to prevent XSS.
 
+  Optimized single-pass implementation using IO lists for better performance
+  than multiple String.replace/2 calls.
+
   ## Examples
 
       iex> escape_html("<script>alert('XSS')</script>")
@@ -477,12 +480,30 @@ defmodule AshReports.Renderer.Html.Styling do
   @spec escape_html(String.t() | any()) :: String.t()
   def escape_html(text) when is_binary(text) do
     text
-    |> String.replace("&", "&amp;")
-    |> String.replace("<", "&lt;")
-    |> String.replace(">", "&gt;")
-    |> String.replace("\"", "&quot;")
-    |> String.replace("'", "&#39;")
+    |> escape_html_iodata([])
+    |> IO.iodata_to_binary()
   end
 
   def escape_html(text), do: escape_html(to_string(text))
+
+  # Single-pass escape using IO lists for performance
+  defp escape_html_iodata(<<>>, acc), do: Enum.reverse(acc)
+
+  defp escape_html_iodata(<<"&", rest::binary>>, acc),
+    do: escape_html_iodata(rest, ["&amp;" | acc])
+
+  defp escape_html_iodata(<<"<", rest::binary>>, acc),
+    do: escape_html_iodata(rest, ["&lt;" | acc])
+
+  defp escape_html_iodata(<<">", rest::binary>>, acc),
+    do: escape_html_iodata(rest, ["&gt;" | acc])
+
+  defp escape_html_iodata(<<"\"", rest::binary>>, acc),
+    do: escape_html_iodata(rest, ["&quot;" | acc])
+
+  defp escape_html_iodata(<<"'", rest::binary>>, acc),
+    do: escape_html_iodata(rest, ["&#39;" | acc])
+
+  defp escape_html_iodata(<<char::utf8, rest::binary>>, acc),
+    do: escape_html_iodata(rest, [<<char::utf8>> | acc])
 end
