@@ -342,7 +342,7 @@ defmodule AshReports.Renderer.Typst.I18n do
     Map.get(@currency_config, currency_code, %{symbol: currency_code, decimal_places: 2})
   end
 
-  defp clamp_decimal_places(value) when is_integer(value), do: max(0, min(value, 20))
+  defp clamp_decimal_places(value) when is_integer(value), do: max(0, min(value, 15))
   defp clamp_decimal_places(_value), do: 2
 
   defp format_with_separators(number, decimal_places, config) do
