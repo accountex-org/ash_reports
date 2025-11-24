@@ -159,29 +159,29 @@ Map stroke values to CSS border properties.
 ## 4.4 Data Interpolation
 
 ### 4.4.1 Variable Interpolation
-- [ ] **Task 4.4.1 Complete**
+- [x] **Task 4.4.1 Complete**
 
 Interpolate report variables into HTML content.
 
-- [ ] 4.4.1.1 Create `AshReports.Renderer.Html.Interpolation` module (success: module compiles)
-- [ ] 4.4.1.2 Share interpolation logic with Typst renderer (success: code reuse)
-- [ ] 4.4.1.3 Escape interpolated values for HTML (success: XSS safe)
-- [ ] 4.4.1.4 Handle missing variables gracefully (success: missing handled)
+- [x] 4.4.1.1 Create `AshReports.Renderer.Html.Interpolation` module (success: module compiles)
+- [x] 4.4.1.2 Share interpolation logic with Typst renderer (success: code reuse)
+- [x] 4.4.1.3 Escape interpolated values for HTML (success: XSS safe)
+- [x] 4.4.1.4 Handle missing variables gracefully (success: missing handled)
 
 ### 4.4.2 Field Value Formatting
-- [ ] **Task 4.4.2 Complete**
+- [x] **Task 4.4.2 Complete**
 
 Format field values for HTML display.
 
-- [ ] 4.4.2.1 Share formatting logic with Typst renderer (success: code reuse)
-- [ ] 4.4.2.2 Format currency, number, date, datetime, percent (success: all formats work)
-- [ ] 4.4.2.3 Apply decimal_places property (success: rounding works)
-- [ ] 4.4.2.4 Escape formatted output for HTML (success: XSS safe)
+- [x] 4.4.2.1 Share formatting logic with Typst renderer (success: code reuse)
+- [x] 4.4.2.2 Format currency, number, date, datetime, percent (success: all formats work)
+- [x] 4.4.2.3 Apply decimal_places property (success: rounding works)
+- [x] 4.4.2.4 Escape formatted output for HTML (success: XSS safe)
 
 ### Unit Tests - Section 4.4
-- [ ] 4.4.T.1 Test variable interpolation with escaping
-- [ ] 4.4.T.2 Test field formatting
-- [ ] 4.4.T.3 Test XSS prevention
+- [x] 4.4.T.1 Test variable interpolation with escaping
+- [x] 4.4.T.2 Test field formatting
+- [x] 4.4.T.3 Test XSS prevention
 
 ## 4.5 Styling
 
