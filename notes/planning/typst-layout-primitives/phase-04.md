@@ -63,46 +63,46 @@ Generate Flexbox HTML from StackIR.
 ## 4.2 Cell and Content Rendering
 
 ### 4.2.1 Grid Cell HTML Generation
-- [ ] **Task 4.2.1 Complete**
+- [x] **Task 4.2.1 Complete**
 
 Generate grid cells as divs with CSS Grid properties.
 
-- [ ] 4.2.1.1 Create `AshReports.Renderer.Html.Cell` module (success: module compiles)
-- [ ] 4.2.1.2 Generate div with class="ash-cell" for grid cells (success: cell rendered)
-- [ ] 4.2.1.3 Generate grid-column: span N for colspan (success: colspan renders)
-- [ ] 4.2.1.4 Generate grid-row: span N for rowspan (success: rowspan renders)
-- [ ] 4.2.1.5 Generate explicit grid-column and grid-row for x/y positioning (success: explicit position)
-- [ ] 4.2.1.6 Generate text-align from align property (success: alignment renders)
-- [ ] 4.2.1.7 Generate background-color from fill (success: fill renders)
-- [ ] 4.2.1.8 Generate border from stroke (success: stroke renders)
-- [ ] 4.2.1.9 Generate padding from inset (success: inset renders)
+- [x] 4.2.1.1 Create `AshReports.Renderer.Html.Cell` module (success: module compiles)
+- [x] 4.2.1.2 Generate div with class="ash-cell" for grid cells (success: cell rendered)
+- [x] 4.2.1.3 Generate grid-column: span N for colspan (success: colspan renders)
+- [x] 4.2.1.4 Generate grid-row: span N for rowspan (success: rowspan renders)
+- [x] 4.2.1.5 Generate explicit grid-column and grid-row for x/y positioning (success: explicit position)
+- [x] 4.2.1.6 Generate text-align from align property (success: alignment renders)
+- [x] 4.2.1.7 Generate background-color from fill (success: fill renders)
+- [x] 4.2.1.8 Generate border from stroke (success: stroke renders)
+- [x] 4.2.1.9 Generate padding from inset (success: inset renders)
 
 ### 4.2.2 Table Cell HTML Generation
-- [ ] **Task 4.2.2 Complete**
+- [x] **Task 4.2.2 Complete**
 
 Generate table cells as td/th elements.
 
-- [ ] 4.2.2.1 Generate th for header cells, td for data cells (success: correct elements)
-- [ ] 4.2.2.2 Generate colspan attribute for column spanning (success: colspan works)
-- [ ] 4.2.2.3 Generate rowspan attribute for row spanning (success: rowspan works)
-- [ ] 4.2.2.4 Apply inline styles for alignment, fill, stroke, inset (success: styles apply)
+- [x] 4.2.2.1 Generate th for header cells, td for data cells (success: correct elements)
+- [x] 4.2.2.2 Generate colspan attribute for column spanning (success: colspan works)
+- [x] 4.2.2.3 Generate rowspan attribute for row spanning (success: rowspan works)
+- [x] 4.2.2.4 Apply inline styles for alignment, fill, stroke, inset (success: styles apply)
 
 ### 4.2.3 Content HTML Generation
-- [ ] **Task 4.2.3 Complete**
+- [x] **Task 4.2.3 Complete**
 
 Generate HTML for label and field content.
 
-- [ ] 4.2.3.1 Create `AshReports.Renderer.Html.Content` module (success: module compiles)
-- [ ] 4.2.3.2 Generate span for labels with text content (success: label renders)
-- [ ] 4.2.3.3 Generate span for fields with formatted value (success: field renders)
-- [ ] 4.2.3.4 Apply inline styles for font_size, font_weight, color (success: styles apply)
-- [ ] 4.2.3.5 Escape HTML special characters (success: XSS prevention)
+- [x] 4.2.3.1 Create `AshReports.Renderer.Html.Content` module (success: module compiles)
+- [x] 4.2.3.2 Generate span for labels with text content (success: label renders)
+- [x] 4.2.3.3 Generate span for fields with formatted value (success: field renders)
+- [x] 4.2.3.4 Apply inline styles for font_size, font_weight, color (success: styles apply)
+- [x] 4.2.3.5 Escape HTML special characters (success: XSS prevention)
 
 ### Unit Tests - Section 4.2
-- [ ] 4.2.T.1 Test grid cell with spanning
-- [ ] 4.2.T.2 Test table cell elements
-- [ ] 4.2.T.3 Test content rendering
-- [ ] 4.2.T.4 Test HTML escaping
+- [x] 4.2.T.1 Test grid cell with spanning
+- [x] 4.2.T.2 Test table cell elements
+- [x] 4.2.T.3 Test content rendering
+- [x] 4.2.T.4 Test HTML escaping
 
 ## 4.3 CSS Property Mapping
 
