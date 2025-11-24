@@ -311,4 +311,78 @@ defmodule AshReports.Renderer.Html.InterpolationTest do
       assert String.contains?(result, "&quot;")
     end
   end
+
+  describe "atom safety" do
+    test "does not create atoms for unknown variable names" do
+      # Get atom count before
+      atom_count_before = :erlang.system_info(:atom_count)
+
+      # Interpolate with many unique variable names that don't exist as atoms
+      unique_vars = for i <- 1..100, do: "nonexistent_var_#{:rand.uniform(1_000_000)}_#{i}"
+
+      for var <- unique_vars do
+        Interpolation.interpolate("[#{var}]", %{})
+      end
+
+      # Atom count should not have increased significantly
+      atom_count_after = :erlang.system_info(:atom_count)
+
+      # Allow for some variance but not 100 new atoms
+      assert atom_count_after - atom_count_before < 10,
+        "Created #{atom_count_after - atom_count_before} new atoms, expected < 10"
+    end
+
+    test "works with atom keys in data" do
+      result = Interpolation.interpolate("Hello [name]!", %{name: "World"})
+      assert result == "Hello World!"
+    end
+
+    test "works with string keys in data" do
+      result = Interpolation.interpolate("Hello [name]!", %{"name" => "World"})
+      assert result == "Hello World!"
+    end
+
+    test "works with mixed atom and string keys" do
+      data = %{"age" => 30, name: "Alice"}
+      result = Interpolation.interpolate("[name] is [age]", data)
+      assert result == "Alice is 30"
+    end
+
+    test "works with nested atom keys" do
+      data = %{user: %{profile: %{name: "Bob"}}}
+      result = Interpolation.interpolate("[user.profile.name]", data)
+      assert result == "Bob"
+    end
+
+    test "works with nested string keys" do
+      data = %{"user" => %{"profile" => %{"name" => "Charlie"}}}
+      result = Interpolation.interpolate("[user.profile.name]", data)
+      assert result == "Charlie"
+    end
+
+    test "works with nested mixed keys" do
+      data = %{user: %{"profile" => %{name: "Dana"}}}
+      result = Interpolation.interpolate("[user.profile.name]", data)
+      assert result == "Dana"
+    end
+
+    test "returns placeholder for completely unknown nested path" do
+      result = Interpolation.interpolate("[unknown.deep.path]", %{})
+      assert result == "[unknown.deep.path]"
+    end
+
+    test "handles malicious variable names safely" do
+      # Attempt to exhaust atoms with adversarial input
+      malicious_names = [
+        "#{System.unique_integer()}_hack1",
+        "#{System.unique_integer()}_hack2",
+        "__very_long_unique_variable_name_#{System.unique_integer()}__"
+      ]
+
+      for name <- malicious_names do
+        result = Interpolation.interpolate("[#{name}]", %{})
+        assert result == "[#{name}]"
+      end
+    end
+  end
 end

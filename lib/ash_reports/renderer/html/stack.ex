@@ -21,6 +21,7 @@ defmodule AshReports.Renderer.Html.Stack do
   """
 
   alias AshReports.Layout.IR
+  alias AshReports.Renderer.Html.Styling
 
   @doc """
   Renders a StackIR to HTML with CSS Flexbox.
@@ -65,7 +66,7 @@ defmodule AshReports.Renderer.Html.Stack do
   # Style builders
 
   defp maybe_add_direction(styles, %{dir: dir}) when not is_nil(dir) do
-    ["flex-direction: #{render_direction(dir)}" | styles]
+    ["flex-direction: #{Styling.render_direction(dir)}" | styles]
   end
 
   defp maybe_add_direction(styles, _) do
@@ -74,60 +75,10 @@ defmodule AshReports.Renderer.Html.Stack do
   end
 
   defp maybe_add_spacing(styles, %{spacing: spacing}) when not is_nil(spacing) do
-    ["gap: #{render_length(spacing)}" | styles]
+    ["gap: #{Styling.render_length(spacing)}" | styles]
   end
 
   defp maybe_add_spacing(styles, _), do: styles
-
-  # Direction rendering
-
-  @doc """
-  Renders a direction value to CSS flex-direction.
-
-  ## Directions
-
-  - `:ttb` - Top to bottom → column
-  - `:btt` - Bottom to top → column-reverse
-  - `:ltr` - Left to right → row
-  - `:rtl` - Right to left → row-reverse
-
-  ## Examples
-
-      iex> render_direction(:ttb)
-      "column"
-
-      iex> render_direction(:ltr)
-      "row"
-  """
-  @spec render_direction(atom() | String.t()) :: String.t()
-  def render_direction(:ttb), do: "column"
-  def render_direction(:btt), do: "column-reverse"
-  def render_direction(:ltr), do: "row"
-  def render_direction(:rtl), do: "row-reverse"
-  def render_direction("ttb"), do: "column"
-  def render_direction("btt"), do: "column-reverse"
-  def render_direction("ltr"), do: "row"
-  def render_direction("rtl"), do: "row-reverse"
-  # Default to column for unknown directions
-  def render_direction(_), do: "column"
-
-  # Length rendering
-
-  @doc """
-  Renders a length value to CSS syntax.
-  """
-  @spec render_length(String.t() | number() | atom()) :: String.t()
-  def render_length(:auto), do: "auto"
-  def render_length("auto"), do: "auto"
-  def render_length(length) when is_binary(length) do
-    # Convert pt to px
-    if String.ends_with?(length, "pt") do
-      String.replace(length, "pt", "px")
-    else
-      length
-    end
-  end
-  def render_length(length) when is_number(length), do: "#{length}px"
 
   # Children rendering
 
@@ -161,34 +112,17 @@ defmodule AshReports.Renderer.Html.Stack do
 
   defp render_child(%{text: text}, _opts) do
     # Direct label content
-    escaped = escape_html(text)
+    escaped = Styling.escape_html(text)
     ~s(<span class="ash-label">#{escaped}</span>)
   end
 
   defp render_child(%{value: value}, _opts) do
     # Direct field content
-    escaped = escape_html(to_string(value))
+    escaped = Styling.escape_html(to_string(value))
     ~s(<span class="ash-field">#{escaped}</span>)
   end
 
   defp render_child(_, _opts) do
     ~s(<div class="ash-item"></div>)
   end
-
-  # HTML escaping
-
-  @doc """
-  Escapes HTML special characters to prevent XSS.
-  """
-  @spec escape_html(String.t()) :: String.t()
-  def escape_html(text) when is_binary(text) do
-    text
-    |> String.replace("&", "&amp;")
-    |> String.replace("<", "&lt;")
-    |> String.replace(">", "&gt;")
-    |> String.replace("\"", "&quot;")
-    |> String.replace("'", "&#39;")
-  end
-
-  def escape_html(text), do: escape_html(to_string(text))
 end

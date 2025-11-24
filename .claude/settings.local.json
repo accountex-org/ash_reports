@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout:*)",
+      "Bash(mix test:*)",
+      "Bash(set MIX_ENV=test)",
+      "Bash(mix clean:*)",
+      "Bash(mix compile:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

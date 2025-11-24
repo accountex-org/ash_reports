@@ -370,4 +370,82 @@ defmodule AshReports.Renderer.Html.StylingTest do
       assert Styling.escape_html(:atom) == "atom"
     end
   end
+
+  describe "sanitize_css_value/1" do
+    test "passes through safe CSS values" do
+      assert Styling.sanitize_css_value("#ff0000") == "#ff0000"
+      assert Styling.sanitize_css_value("10px") == "10px"
+      assert Styling.sanitize_css_value("red") == "red"
+      assert Styling.sanitize_css_value("1fr") == "1fr"
+      assert Styling.sanitize_css_value("100%") == "100%"
+    end
+
+    test "passes through CSS functions" do
+      assert Styling.sanitize_css_value("rgb(255, 0, 0)") == "rgb(255, 0, 0)"
+      assert Styling.sanitize_css_value("rgba(0, 0, 0, 0.5)") == "rgba(0, 0, 0, 0.5)"
+    end
+
+    test "removes semicolons to prevent property injection" do
+      assert Styling.sanitize_css_value("red; display: none") == "red display none"
+    end
+
+    test "removes curly braces to prevent rule injection" do
+      assert Styling.sanitize_css_value("red } .admin { display: none") == "red  .admin  display none"
+    end
+
+    test "removes colons in values" do
+      assert Styling.sanitize_css_value("url(javascript:alert(1))") == "url(javascriptalert(1))"
+    end
+
+    test "removes angle brackets" do
+      assert Styling.sanitize_css_value("<style>") == "style"
+      assert Styling.sanitize_css_value("</style>") == "/style"
+    end
+
+    test "removes CSS comment markers" do
+      assert Styling.sanitize_css_value("red /* comment */ blue") == "red  comment  blue"
+    end
+
+    test "removes backslashes" do
+      assert Styling.sanitize_css_value("\\0041") == "0041"
+    end
+
+    test "handles complex injection attempts" do
+      # Attempt to inject new CSS rule
+      malicious = "red; } .admin { display: none; } .x {"
+      sanitized = Styling.sanitize_css_value(malicious)
+      refute String.contains?(sanitized, ";")
+      refute String.contains?(sanitized, "{")
+      refute String.contains?(sanitized, "}")
+    end
+
+    test "sanitization is applied by render_color" do
+      # render_color should sanitize string colors
+      result = Styling.render_color("red; display: none")
+      refute String.contains?(result, ";")
+    end
+
+    test "sanitization is applied by render_stroke" do
+      # render_stroke should sanitize string strokes
+      result = Styling.render_stroke("1px solid black; display: none")
+      refute String.contains?(result, ";")
+    end
+
+    test "sanitization is applied by render_length" do
+      # render_length should sanitize string lengths
+      result = Styling.render_length("10px; display: none")
+      refute String.contains?(result, ";")
+    end
+
+    test "sanitization is applied by render_track_size" do
+      # render_track_size should sanitize string sizes
+      result = Styling.render_track_size("1fr; display: none")
+      refute String.contains?(result, ";")
+    end
+
+    test "handles non-string input" do
+      assert Styling.sanitize_css_value(123) == "123"
+      assert Styling.sanitize_css_value(:atom) == "atom"
+    end
+  end
 end

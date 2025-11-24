@@ -77,6 +77,18 @@ defmodule AshReports.Renderer.HtmlTest do
       assert String.contains?(result, ~s(<div class="my-report">))
     end
 
+    test "escapes malicious class values" do
+      grid = IR.grid(properties: %{columns: ["1fr"]})
+      # Attempt to inject attributes via class
+      malicious_class = ~s[foo" onclick="alert(1)]
+      result = Html.render_all([grid], wrap: true, class: malicious_class)
+
+      # Quotes should be escaped, preventing attribute injection
+      # The raw quote should not appear - it should be &quot;
+      refute String.contains?(result, ~s[class="foo" onclick])
+      assert String.contains?(result, "foo&quot; onclick=&quot;alert(1)")
+    end
+
     test "does not wrap by default" do
       grid = IR.grid(properties: %{columns: ["1fr"]})
       result = Html.render_all([grid])

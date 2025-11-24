@@ -176,23 +176,33 @@ defmodule AshReports.Renderer.Html.Interpolation do
     end
   end
 
-  # Parse variable path like "user.name" into [:user, :name]
+  # Parse variable path like "user.name" into ["user", "name"]
+  # Keep as strings to avoid atom table exhaustion from user input
   defp parse_variable_path(variable_name) do
-    variable_name
-    |> String.split(".")
-    |> Enum.map(&String.to_atom/1)
+    String.split(variable_name, ".")
   end
 
   # Get nested value from map following the path
   defp get_nested_value(data, []), do: data
 
   defp get_nested_value(data, [key | rest]) when is_map(data) do
-    value = Map.get(data, key) || Map.get(data, to_string(key))
+    # Try string key first, then safely try atom key
+    value = Map.get(data, key) || get_with_existing_atom(data, key)
     get_nested_value(value, rest)
   end
 
   defp get_nested_value(nil, _path), do: nil
   defp get_nested_value(_data, _path), do: nil
+
+  # Safely get value using atom key without creating new atoms
+  defp get_with_existing_atom(data, key) when is_binary(key) do
+    try do
+      atom_key = String.to_existing_atom(key)
+      Map.get(data, atom_key)
+    rescue
+      ArgumentError -> nil
+    end
+  end
 
   # Format interpolated values appropriately
   defp format_interpolated_value(value) when is_binary(value), do: value

@@ -79,7 +79,7 @@ defmodule AshReports.Renderer.Html do
   @spec render_all([IR.t()], keyword()) :: String.t()
   def render_all(layouts, opts \\ []) when is_list(layouts) do
     wrap = Keyword.get(opts, :wrap, false)
-    class = Keyword.get(opts, :class, "ash-report")
+    class = opts |> Keyword.get(:class, "ash-report") |> escape_html()
 
     content =
       layouts

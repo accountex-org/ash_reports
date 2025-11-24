@@ -64,7 +64,7 @@ defmodule AshReports.Renderer.Html.Styling do
   def render_track_size({:min_content}), do: "min-content"
   def render_track_size({:max_content}), do: "max-content"
   def render_track_size({:fit_content, size}), do: "fit-content(#{render_length(size)})"
-  def render_track_size(size) when is_binary(size), do: size
+  def render_track_size(size) when is_binary(size), do: sanitize_css_value(size)
   def render_track_size(size) when is_number(size), do: "#{size}px"
 
   @doc """
@@ -109,11 +109,12 @@ defmodule AshReports.Renderer.Html.Styling do
   def render_length("auto"), do: "auto"
 
   def render_length(length) when is_binary(length) do
-    if String.ends_with?(length, "pt") do
+    result = if String.ends_with?(length, "pt") do
       String.replace(length, "pt", "px")
     else
       length
     end
+    sanitize_css_value(result)
   end
 
   def render_length(length) when is_number(length), do: "#{length}px"
@@ -254,7 +255,7 @@ defmodule AshReports.Renderer.Html.Styling do
   @spec render_color(atom() | String.t() | nil) :: String.t()
   def render_color(:none), do: "transparent"
   def render_color(nil), do: "transparent"
-  def render_color(color) when is_binary(color), do: color
+  def render_color(color) when is_binary(color), do: sanitize_css_value(color)
   def render_color(color) when is_atom(color), do: Atom.to_string(color)
 
   @doc """
@@ -315,7 +316,7 @@ defmodule AshReports.Renderer.Html.Styling do
   @spec render_stroke(atom() | String.t() | map()) :: String.t()
   def render_stroke(:none), do: "none"
   def render_stroke(nil), do: "none"
-  def render_stroke(stroke) when is_binary(stroke), do: stroke
+  def render_stroke(stroke) when is_binary(stroke), do: sanitize_css_value(stroke)
 
   def render_stroke(%{thickness: thickness, paint: paint, dash: dash}) do
     "#{render_length(thickness)} #{render_dash_style(dash)} #{render_color(paint)}"
@@ -424,6 +425,41 @@ defmodule AshReports.Renderer.Html.Styling do
   def render_direction("ltr"), do: "row"
   def render_direction("rtl"), do: "row-reverse"
   def render_direction(_), do: "column"
+
+  # CSS Sanitization
+
+  @doc """
+  Sanitizes a CSS value to prevent CSS injection attacks.
+
+  Removes dangerous characters that could be used to break out of CSS
+  property values and inject malicious styles.
+
+  ## Examples
+
+      iex> sanitize_css_value("#ff0000")
+      "#ff0000"
+
+      iex> sanitize_css_value("10px")
+      "10px"
+
+      iex> sanitize_css_value("red; } .admin { display: none; } .x {")
+      "red  .admin  display none  .x "
+
+      iex> sanitize_css_value("url(javascript:alert(1))")
+      "url(javascript:alert(1))"
+  """
+  @spec sanitize_css_value(String.t() | any()) :: String.t()
+  def sanitize_css_value(value) when is_binary(value) do
+    # Remove characters that can break out of CSS values or inject new rules
+    # Allowed: alphanumeric, #, %, ., -, space, (, ), comma, /
+    value
+    |> String.replace(~r/[;{}:<>]/, "")
+    |> String.replace(~r/\/\*/, "")
+    |> String.replace(~r/\*\//, "")
+    |> String.replace(~r/\\/, "")
+  end
+
+  def sanitize_css_value(value), do: sanitize_css_value(to_string(value))
 
   # HTML Escaping
 

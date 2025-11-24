@@ -17,6 +17,7 @@ defmodule AshReports.Renderer.Html.Table do
   """
 
   alias AshReports.Layout.IR
+  alias AshReports.Renderer.Html.Styling
 
   @default_stroke "1px solid #000"
 
@@ -73,13 +74,13 @@ defmodule AshReports.Renderer.Html.Table do
   end
 
   defp maybe_add_border(styles, %{stroke: stroke}) when not is_nil(stroke) and stroke != :none do
-    ["border: #{render_stroke(stroke)}" | styles]
+    ["border: #{Styling.render_stroke(stroke)}" | styles]
   end
 
   defp maybe_add_border(styles, _), do: styles
 
   defp maybe_add_fill(styles, %{fill: fill}) when not is_nil(fill) and fill != :none do
-    ["background-color: #{render_color(fill)}" | styles]
+    ["background-color: #{Styling.render_color(fill)}" | styles]
   end
 
   defp maybe_add_fill(styles, _), do: styles
@@ -260,55 +261,4 @@ defmodule AshReports.Renderer.Html.Table do
   end
 
   defp render_footer_cell(_, _properties, _opts), do: "<td></td>"
-
-  # Helper rendering functions
-
-  @doc """
-  Renders a stroke value to CSS border.
-  """
-  @spec render_stroke(atom() | String.t() | map()) :: String.t()
-  def render_stroke(:none), do: "none"
-  def render_stroke(nil), do: "none"
-  def render_stroke(stroke) when is_binary(stroke), do: stroke
-
-  def render_stroke(%{thickness: thickness, paint: paint, dash: dash}) do
-    border_style = dash_to_css(dash)
-    "#{render_length(thickness)} #{border_style} #{render_color(paint)}"
-  end
-
-  def render_stroke(%{thickness: thickness, paint: paint}) do
-    "#{render_length(thickness)} solid #{render_color(paint)}"
-  end
-
-  def render_stroke(%{thickness: thickness}) do
-    "#{render_length(thickness)} solid currentColor"
-  end
-
-  def render_stroke(stroke) when is_atom(stroke), do: Atom.to_string(stroke)
-
-  defp dash_to_css("dashed"), do: "dashed"
-  defp dash_to_css("dotted"), do: "dotted"
-  defp dash_to_css(_), do: "solid"
-
-  @doc """
-  Renders a length value to CSS syntax.
-  """
-  @spec render_length(String.t() | number()) :: String.t()
-  def render_length(length) when is_binary(length) do
-    if String.ends_with?(length, "pt") do
-      String.replace(length, "pt", "px")
-    else
-      length
-    end
-  end
-  def render_length(length) when is_number(length), do: "#{length}px"
-
-  @doc """
-  Renders a color value to CSS.
-  """
-  @spec render_color(atom() | String.t()) :: String.t()
-  def render_color(:none), do: "transparent"
-  def render_color(nil), do: "transparent"
-  def render_color(color) when is_binary(color), do: color
-  def render_color(color) when is_atom(color), do: Atom.to_string(color)
 end

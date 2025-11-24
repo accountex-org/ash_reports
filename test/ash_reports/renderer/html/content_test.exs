@@ -250,18 +250,4 @@ defmodule AshReports.Renderer.Html.ContentTest do
       assert String.contains?(result, "14:30:00")
     end
   end
-
-  describe "escape_html/1" do
-    test "escapes all special characters" do
-      input = "<div class=\"test\" data='value'>A & B</div>"
-      result = Content.escape_html(input)
-
-      assert result == "&lt;div class=&quot;test&quot; data=&#39;value&#39;&gt;A &amp; B&lt;/div&gt;"
-    end
-
-    test "handles non-string input" do
-      assert Content.escape_html(123) == "123"
-      assert Content.escape_html(:atom) == "atom"
-    end
-  end
 end

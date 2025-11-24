@@ -251,38 +251,6 @@ defmodule AshReports.Renderer.Html.CellTest do
     end
   end
 
-  describe "escape_html/1" do
-    test "escapes ampersand" do
-      assert Cell.escape_html("A & B") == "A &amp; B"
-    end
-
-    test "escapes less than" do
-      assert Cell.escape_html("a < b") == "a &lt; b"
-    end
-
-    test "escapes greater than" do
-      assert Cell.escape_html("a > b") == "a &gt; b"
-    end
-
-    test "escapes double quotes" do
-      assert Cell.escape_html(~s("hello")) == "&quot;hello&quot;"
-    end
-
-    test "escapes single quotes" do
-      assert Cell.escape_html("it's") == "it&#39;s"
-    end
-
-    test "escapes multiple special characters" do
-      input = "<script>alert('XSS & attack')</script>"
-      expected = "&lt;script&gt;alert(&#39;XSS &amp; attack&#39;)&lt;/script&gt;"
-      assert Cell.escape_html(input) == expected
-    end
-
-    test "handles non-string input" do
-      assert Cell.escape_html(123) == "123"
-    end
-  end
-
   describe "stroke rendering" do
     test "renders stroke as border with thickness and paint" do
       cell = IR.Cell.new(

@@ -24,7 +24,7 @@ defmodule AshReports.Renderer.Html.Cell do
   """
 
   alias AshReports.Layout.IR
-  alias AshReports.Renderer.Html.Interpolation
+  alias AshReports.Renderer.Html.{Interpolation, Styling}
 
   @doc """
   Renders a CellIR to HTML.
@@ -152,30 +152,30 @@ defmodule AshReports.Renderer.Html.Cell do
   # Common style helpers
 
   defp maybe_add_padding(styles, %{inset: inset}) when not is_nil(inset) do
-    ["padding: #{render_length(inset)}" | styles]
+    ["padding: #{Styling.render_length(inset)}" | styles]
   end
   defp maybe_add_padding(styles, _), do: styles
 
   defp maybe_add_background(styles, %{fill: fill}) when not is_nil(fill) and fill != :none do
-    ["background-color: #{render_color(fill)}" | styles]
+    ["background-color: #{Styling.render_color(fill)}" | styles]
   end
   defp maybe_add_background(styles, _), do: styles
 
   defp maybe_add_border(styles, %{stroke: stroke}) when not is_nil(stroke) and stroke != :none do
-    ["border: #{render_stroke(stroke)}" | styles]
+    ["border: #{Styling.render_stroke(stroke)}" | styles]
   end
   defp maybe_add_border(styles, _), do: styles
 
   defp maybe_add_text_align(styles, %{align: align}) when not is_nil(align) do
-    ["text-align: #{render_text_align(align)}" | styles]
+    ["text-align: #{Styling.render_text_align(align)}" | styles]
   end
   defp maybe_add_text_align(styles, _), do: styles
 
   defp maybe_add_vertical_align(styles, %{vertical_align: valign}) when not is_nil(valign) do
-    ["vertical-align: #{render_vertical_align(valign)}" | styles]
+    ["vertical-align: #{Styling.render_vertical_align(valign)}" | styles]
   end
   defp maybe_add_vertical_align(styles, %{align: {_h, v}}) when not is_nil(v) do
-    ["vertical-align: #{render_vertical_align(v)}" | styles]
+    ["vertical-align: #{Styling.render_vertical_align(v)}" | styles]
   end
   defp maybe_add_vertical_align(styles, _), do: styles
 
@@ -196,73 +196,21 @@ defmodule AshReports.Renderer.Html.Cell do
     data = Keyword.get(opts, :data, %{})
     # First escape the literal text, then interpolate variables (which also escapes their values)
     text
-    |> escape_html()
+    |> Styling.escape_html()
     |> Interpolation.interpolate(data)
   end
 
   defp render_content_item(%{value: value}, _opts) do
-    escape_html(to_string(value))
+    Styling.escape_html(to_string(value))
   end
 
   defp render_content_item(text, opts) when is_binary(text) do
     data = Keyword.get(opts, :data, %{})
     # First escape the literal text, then interpolate variables (which also escapes their values)
     text
-    |> escape_html()
+    |> Styling.escape_html()
     |> Interpolation.interpolate(data)
   end
 
   defp render_content_item(_, _opts), do: ""
-
-  # Helper functions
-
-  defp render_length(length) when is_binary(length) do
-    if String.ends_with?(length, "pt") do
-      String.replace(length, "pt", "px")
-    else
-      length
-    end
-  end
-  defp render_length(length) when is_number(length), do: "#{length}px"
-
-  defp render_color(:none), do: "transparent"
-  defp render_color(nil), do: "transparent"
-  defp render_color(color) when is_binary(color), do: color
-  defp render_color(color) when is_atom(color), do: Atom.to_string(color)
-
-  defp render_stroke(:none), do: "none"
-  defp render_stroke(stroke) when is_binary(stroke), do: stroke
-  defp render_stroke(%{thickness: thickness, paint: paint}) do
-    "#{render_length(thickness)} solid #{render_color(paint)}"
-  end
-  defp render_stroke(%{thickness: thickness}), do: "#{render_length(thickness)} solid currentColor"
-  defp render_stroke(_), do: "1px solid currentColor"
-
-  defp render_text_align(:left), do: "left"
-  defp render_text_align(:center), do: "center"
-  defp render_text_align(:right), do: "right"
-  defp render_text_align({h, _v}), do: render_text_align(h)
-  defp render_text_align(align) when is_binary(align), do: align
-  defp render_text_align(_), do: "left"
-
-  defp render_vertical_align(:top), do: "top"
-  defp render_vertical_align(:middle), do: "middle"
-  defp render_vertical_align(:bottom), do: "bottom"
-  defp render_vertical_align(valign) when is_binary(valign), do: valign
-  defp render_vertical_align(_), do: "middle"
-
-  @doc """
-  Escapes HTML special characters to prevent XSS.
-  """
-  @spec escape_html(String.t()) :: String.t()
-  def escape_html(text) when is_binary(text) do
-    text
-    |> String.replace("&", "&amp;")
-    |> String.replace("<", "&lt;")
-    |> String.replace(">", "&gt;")
-    |> String.replace("\"", "&quot;")
-    |> String.replace("'", "&#39;")
-  end
-
-  def escape_html(text), do: escape_html(to_string(text))
 end
