@@ -240,6 +240,7 @@ defmodule AshReports.Renderer.Html.Grid do
 
   # Children rendering
 
+  defp render_children(nil, _properties, _opts), do: ""
   defp render_children([], _properties, _opts), do: ""
 
   defp render_children(children, properties, opts) do

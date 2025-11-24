@@ -53,6 +53,7 @@ defmodule AshReports.Renderer.Html do
       :grid -> Grid.render(ir, opts)
       :table -> Table.render(ir, opts)
       :stack -> Stack.render(ir, opts)
+      _ -> ""  # Unknown types return empty string
     end
   end
 

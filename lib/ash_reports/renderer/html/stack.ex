@@ -82,6 +82,7 @@ defmodule AshReports.Renderer.Html.Stack do
 
   # Children rendering
 
+  defp render_children(nil, _opts), do: ""
   defp render_children([], _opts), do: ""
 
   defp render_children(children, opts) do

@@ -318,4 +318,111 @@ defmodule AshReports.Renderer.HtmlTest do
       assert String.contains?(html, "Test Content")
     end
   end
+
+  describe "error scenarios and edge cases" do
+    test "handles unknown IR type gracefully" do
+      # Create IR with unknown type
+      ir = %IR{type: :unknown, properties: %{}, children: []}
+
+      # Should not crash, might return empty or handle gracefully
+      result = Html.render(ir)
+
+      # At minimum, should return a string
+      assert is_binary(result)
+    end
+
+    test "handles nil IR properties" do
+      ir = %IR{type: :grid, properties: nil, children: []}
+      result = Html.render(ir)
+
+      assert is_binary(result)
+      assert String.contains?(result, "ash-grid")
+    end
+
+    test "handles empty children list" do
+      ir = IR.grid(properties: %{columns: ["1fr"]}, children: [])
+      result = Html.render(ir)
+
+      assert String.contains?(result, "ash-grid")
+    end
+
+    test "handles nil children" do
+      ir = %IR{type: :grid, properties: %{columns: ["1fr"]}, children: nil}
+      result = Html.render(ir)
+
+      assert is_binary(result)
+    end
+
+    test "render_all handles empty list" do
+      result = Html.render_all([])
+
+      assert result == ""
+    end
+
+    test "render_all handles single layout" do
+      ir = IR.grid(properties: %{columns: ["1fr"]})
+      result = Html.render_all([ir])
+
+      assert String.contains?(result, "ash-grid")
+    end
+
+    test "render_all handles very large list" do
+      layouts = for _ <- 1..100, do: IR.grid(properties: %{columns: ["1fr"]})
+      result = Html.render_all(layouts)
+
+      # Should render all 100 grids
+      count = result |> String.split("ash-grid") |> length()
+      assert count == 101  # split creates n+1 parts for n matches
+    end
+
+    test "handles deeply nested layouts" do
+      # Create nested structure: stack -> grid -> cell
+      cell = IR.Cell.new(content: [%{text: "Deep"}])
+      grid = IR.grid(properties: %{columns: ["1fr"]}, children: [cell])
+      stack = IR.stack(properties: %{dir: :ttb}, children: [grid])
+
+      result = Html.render(stack)
+
+      assert String.contains?(result, "ash-stack")
+      assert String.contains?(result, "ash-grid")
+      assert String.contains?(result, "Deep")
+    end
+
+    test "handles unicode in options" do
+      ir = IR.grid(properties: %{columns: ["1fr"]})
+      result = Html.render_all([ir], wrap: true, class: "报告-类")
+
+      assert String.contains?(result, "报告-类")
+    end
+
+    test "render_document handles special characters in title" do
+      ir = IR.grid(properties: %{columns: ["1fr"]})
+      result = Html.render_document(ir, title: "<script>alert('XSS')</script>")
+
+      # Title should be escaped
+      assert String.contains?(result, "&lt;script&gt;")
+      refute String.contains?(result, "<script>alert")
+    end
+
+    test "handles malformed data context" do
+      cell = IR.Cell.new(content: [%{text: "[name]"}])
+      ir = IR.grid(properties: %{columns: ["1fr"]}, children: [cell])
+
+      # Pass non-map data
+      result = Html.render(ir, data: "not a map")
+
+      # Should handle gracefully, variable stays uninterpolated
+      assert String.contains?(result, "[name]")
+    end
+
+    test "handles nil data context" do
+      cell = IR.Cell.new(content: [%{text: "[name]"}])
+      ir = IR.grid(properties: %{columns: ["1fr"]}, children: [cell])
+
+      result = Html.render(ir, data: nil)
+
+      # Variable should remain uninterpolated
+      assert String.contains?(result, "[name]")
+    end
+  end
 end
