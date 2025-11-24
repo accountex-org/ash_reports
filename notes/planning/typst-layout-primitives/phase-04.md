@@ -216,40 +216,40 @@ Apply consistent CSS classes for styling hooks.
 ## 4.6 Renderer Integration
 
 ### 4.6.1 Main HTML Renderer
-- [ ] **Task 4.6.1 Complete**
+- [x] **Task 4.6.1 Complete**
 
 Create main HTML renderer entry point.
 
-- [ ] 4.6.1.1 Create `AshReports.Renderer.Html` main module (success: module compiles)
-- [ ] 4.6.1.2 Implement render/2 accepting IR and data (success: render entry point works)
-- [ ] 4.6.1.3 Dispatch to appropriate layout renderer (success: grid/table/stack dispatch)
-- [ ] 4.6.1.4 Combine all generated HTML (success: complete HTML output)
-- [ ] 4.6.1.5 Handle multiple bands/layouts in sequence (success: full report renders)
+- [x] 4.6.1.1 Create `AshReports.Renderer.Html` main module (success: module compiles)
+- [x] 4.6.1.2 Implement render/2 accepting IR and data (success: render entry point works)
+- [x] 4.6.1.3 Dispatch to appropriate layout renderer (success: grid/table/stack dispatch)
+- [x] 4.6.1.4 Combine all generated HTML (success: complete HTML output)
+- [x] 4.6.1.5 Handle multiple bands/layouts in sequence (success: full report renders)
 
 ### 4.6.2 Report Pipeline Integration
-- [ ] **Task 4.6.2 Complete**
+- [x] **Task 4.6.2 Complete**
 
 Integrate HTML renderer with report pipeline.
 
-- [ ] 4.6.2.1 Register HTML renderer for :html format (success: html format uses renderer)
-- [ ] 4.6.2.2 Accept report IR from transformer pipeline (success: IR flows to renderer)
-- [ ] 4.6.2.3 Pass data context for interpolation (success: data available)
-- [ ] 4.6.2.4 Return complete HTML string (success: HTML returned)
+- [x] 4.6.2.1 Register HTML renderer for :html format (success: html format uses renderer)
+- [x] 4.6.2.2 Accept report IR from transformer pipeline (success: IR flows to renderer)
+- [x] 4.6.2.3 Pass data context for interpolation (success: data available)
+- [x] 4.6.2.4 Return complete HTML string (success: HTML returned)
 
 ### 4.6.3 HEEX Integration
-- [ ] **Task 4.6.3 Complete**
+- [x] **Task 4.6.3 Complete**
 
 Integrate with LiveView HEEX rendering.
 
-- [ ] 4.6.3.1 Register HEEX renderer for :heex format (success: heex format works)
-- [ ] 4.6.3.2 Generate Phoenix.HTML safe output (success: safe HTML)
-- [ ] 4.6.3.3 Support LiveView event bindings if needed (success: interactive features)
+- [x] 4.6.3.1 Register HEEX renderer for :heex format (success: heex format works)
+- [x] 4.6.3.2 Generate Phoenix.HTML safe output (success: safe HTML)
+- [x] 4.6.3.3 Support LiveView event bindings if needed (success: interactive features)
 
 ### Unit Tests - Section 4.6
-- [ ] 4.6.T.1 Test main HTML renderer
-- [ ] 4.6.T.2 Test multi-band reports
-- [ ] 4.6.T.3 Test pipeline integration
-- [ ] 4.6.T.4 Test HEEX output
+- [x] 4.6.T.1 Test main HTML renderer
+- [x] 4.6.T.2 Test multi-band reports
+- [x] 4.6.T.3 Test pipeline integration
+- [x] 4.6.T.4 Test HEEX output
 
 ## 4.7 JSON Renderer
 

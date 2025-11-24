@@ -24,6 +24,7 @@ defmodule AshReports.Renderer.Html.Cell do
   """
 
   alias AshReports.Layout.IR
+  alias AshReports.Renderer.Html.Interpolation
 
   @doc """
   Renders a CellIR to HTML.
@@ -53,9 +54,9 @@ defmodule AshReports.Renderer.Html.Cell do
 
   # Grid cell rendering
 
-  defp render_grid_cell(%IR.Cell{} = cell, _opts) do
+  defp render_grid_cell(%IR.Cell{} = cell, opts) do
     styles = build_grid_cell_styles(cell)
-    content = render_content(cell.content)
+    content = render_content(cell.content, opts)
 
     style_attr = if styles == "", do: "", else: ~s( style="#{styles}")
 
@@ -105,9 +106,9 @@ defmodule AshReports.Renderer.Html.Cell do
 
   # Table header cell rendering
 
-  defp render_table_header_cell(%IR.Cell{} = cell, _opts) do
+  defp render_table_header_cell(%IR.Cell{} = cell, opts) do
     styles = build_table_cell_styles(cell)
-    content = render_content(cell.content)
+    content = render_content(cell.content, opts)
     attrs = build_table_cell_attrs(cell)
 
     style_attr = if styles == "", do: "", else: ~s( style="#{styles}")
@@ -117,9 +118,9 @@ defmodule AshReports.Renderer.Html.Cell do
 
   # Table body cell rendering
 
-  defp render_table_body_cell(%IR.Cell{} = cell, _opts) do
+  defp render_table_body_cell(%IR.Cell{} = cell, opts) do
     styles = build_table_cell_styles(cell)
-    content = render_content(cell.content)
+    content = render_content(cell.content, opts)
     attrs = build_table_cell_attrs(cell)
 
     style_attr = if styles == "", do: "", else: ~s( style="#{styles}")
@@ -180,30 +181,38 @@ defmodule AshReports.Renderer.Html.Cell do
 
   # Content rendering
 
-  defp render_content(nil), do: ""
-  defp render_content([]), do: ""
+  defp render_content(nil, _opts), do: ""
+  defp render_content([], _opts), do: ""
 
-  defp render_content(content) when is_list(content) do
+  defp render_content(content, opts) when is_list(content) do
     content
-    |> Enum.map(&render_content_item/1)
+    |> Enum.map(&render_content_item(&1, opts))
     |> Enum.join("")
   end
 
-  defp render_content(content), do: render_content_item(content)
+  defp render_content(content, opts), do: render_content_item(content, opts)
 
-  defp render_content_item(%{text: text}) do
-    escape_html(text)
+  defp render_content_item(%{text: text}, opts) do
+    data = Keyword.get(opts, :data, %{})
+    # First escape the literal text, then interpolate variables (which also escapes their values)
+    text
+    |> escape_html()
+    |> Interpolation.interpolate(data)
   end
 
-  defp render_content_item(%{value: value}) do
+  defp render_content_item(%{value: value}, _opts) do
     escape_html(to_string(value))
   end
 
-  defp render_content_item(text) when is_binary(text) do
-    escape_html(text)
+  defp render_content_item(text, opts) when is_binary(text) do
+    data = Keyword.get(opts, :data, %{})
+    # First escape the literal text, then interpolate variables (which also escapes their values)
+    text
+    |> escape_html()
+    |> Interpolation.interpolate(data)
   end
 
-  defp render_content_item(_), do: ""
+  defp render_content_item(_, _opts), do: ""
 
   # Helper functions
 
