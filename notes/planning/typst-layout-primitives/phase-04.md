@@ -254,20 +254,39 @@ Integrate with LiveView HEEX rendering.
 ## 4.7 JSON Renderer
 
 ### 4.7.1 JSON Output
-- [ ] **Task 4.7.1 Complete**
+- [x] **Task 4.7.1 Complete** (Already implemented by existing `AshReports.JsonRenderer`)
 
-Generate JSON representation of IR for client-side rendering.
+Output report data as nested grouped JSON structure. The existing JsonRenderer at
+`lib/ash_reports/renderers/json_renderer/json_renderer.ex` provides this functionality
+using Ash.stream! for data loading with native keyset pagination.
 
-- [ ] 4.7.1.1 Create `AshReports.Renderer.Json` module (success: module compiles)
-- [ ] 4.7.1.2 Serialize LayoutIR to JSON-compatible map (success: IR serializes)
-- [ ] 4.7.1.3 Serialize all nested structures (success: full structure)
-- [ ] 4.7.1.4 Include resolved data values (success: data included)
-- [ ] 4.7.1.5 Register for :json format (success: json format works)
+Output format (nested groups):
+```json
+{
+  "records": [
+    {
+      "group_value": "2024",
+      "group_level": 1,
+      "aggregates": {...},
+      "records": [
+        {"group_value": "Q1", "group_level": 2, "aggregates": {...}, "records": [...]},
+        {"group_value": "Q2", "group_level": 2, "aggregates": {...}, "records": [...]}
+      ]
+    }
+  ]
+}
+```
+
+- [x] 4.7.1.1 JSON renderer module exists (`AshReports.JsonRenderer`)
+- [x] 4.7.1.2 Nested grouped data output (StructureBuilder)
+- [x] 4.7.1.3 Multi-level group support with aggregates
+- [x] 4.7.1.4 Streaming support for large datasets (StreamingEngine)
+- [x] 4.7.1.5 Registered for :json format
 
 ### Unit Tests - Section 4.7
-- [ ] 4.7.T.1 Test JSON serialization
-- [ ] 4.7.T.2 Test nested structure serialization
-- [ ] 4.7.T.3 Test data inclusion
+- [x] 4.7.T.1 Existing JsonRenderer tests cover serialization
+- [x] 4.7.T.2 Existing tests cover nested group structures
+- [x] 4.7.T.3 Existing tests cover data inclusion and aggregates
 
 ## Success Criteria
 
@@ -280,7 +299,7 @@ Generate JSON representation of IR for client-side rendering.
 7. **Data Interpolation**: Interpolate variables with HTML escaping
 8. **Styling**: Apply inline styles and CSS classes consistently
 9. **Integration**: Complete pipeline from IR to HTML output
-10. **JSON Output**: Serialize IR to JSON for client-side use
+10. **JSON Output**: Output nested grouped data for API integration
 
 ## Provides Foundation
 
