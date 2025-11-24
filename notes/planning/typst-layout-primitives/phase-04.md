@@ -10,55 +10,55 @@ This phase implements the HTML renderer that generates CSS Grid and Flexbox-base
 
 **Parallelization**: This phase can run concurrently with Phase 3 (Typst Renderer) once Phase 2 is complete. If multiple developers are available, this reduces total elapsed time by 1.5-2 weeks.
 
-## 4.1 Core HTML Generation
+## 4.1 Core HTML Generation ✅
 
 ### 4.1.1 Grid HTML Generation
-- [ ] **Task 4.1.1 Complete**
+- [x] **Task 4.1.1 Complete**
 
 Generate CSS Grid HTML from GridIR.
 
-- [ ] 4.1.1.1 Create `AshReports.Renderer.Html.Grid` module (success: module compiles)
-- [ ] 4.1.1.2 Generate div with class="ash-grid" (success: grid container rendered)
-- [ ] 4.1.1.3 Generate display: grid CSS property (success: grid display set)
-- [ ] 4.1.1.4 Generate grid-template-columns from track sizes (success: columns render)
-- [ ] 4.1.1.5 Generate grid-template-rows when explicit (success: rows render)
-- [ ] 4.1.1.6 Generate gap CSS property from gutter (success: gap renders)
-- [ ] 4.1.1.7 Generate column-gap and row-gap overrides (success: specific gaps render)
-- [ ] 4.1.1.8 Generate align-items and justify-items from align (success: alignment renders)
-- [ ] 4.1.1.9 Generate padding from inset (not directly mapped, apply to cells) (success: inset handled)
+- [x] 4.1.1.1 Create `AshReports.Renderer.Html.Grid` module (success: module compiles)
+- [x] 4.1.1.2 Generate div with class="ash-grid" (success: grid container rendered)
+- [x] 4.1.1.3 Generate display: grid CSS property (success: grid display set)
+- [x] 4.1.1.4 Generate grid-template-columns from track sizes (success: columns render)
+- [x] 4.1.1.5 Generate grid-template-rows when explicit (success: rows render)
+- [x] 4.1.1.6 Generate gap CSS property from gutter (success: gap renders)
+- [x] 4.1.1.7 Generate column-gap and row-gap overrides (success: specific gaps render)
+- [x] 4.1.1.8 Generate align-items and justify-items from align (success: alignment renders)
+- [x] 4.1.1.9 Generate padding from inset (not directly mapped, apply to cells) (success: inset handled)
 
 ### 4.1.2 Table HTML Generation
-- [ ] **Task 4.1.2 Complete**
+- [x] **Task 4.1.2 Complete**
 
 Generate semantic HTML table from TableIR.
 
-- [ ] 4.1.2.1 Create `AshReports.Renderer.Html.Table` module (success: module compiles)
-- [ ] 4.1.2.2 Generate table element with class="ash-table" (success: table rendered)
-- [ ] 4.1.2.3 Generate thead for header sections (success: thead rendered)
-- [ ] 4.1.2.4 Generate tbody for data rows (success: tbody rendered)
-- [ ] 4.1.2.5 Generate tfoot for footer sections (success: tfoot rendered)
-- [ ] 4.1.2.6 Apply border-collapse and default styling (success: table styled)
-- [ ] 4.1.2.7 Generate tr for rows, th for headers, td for data (success: proper elements)
+- [x] 4.1.2.1 Create `AshReports.Renderer.Html.Table` module (success: module compiles)
+- [x] 4.1.2.2 Generate table element with class="ash-table" (success: table rendered)
+- [x] 4.1.2.3 Generate thead for header sections (success: thead rendered)
+- [x] 4.1.2.4 Generate tbody for data rows (success: tbody rendered)
+- [x] 4.1.2.5 Generate tfoot for footer sections (success: tfoot rendered)
+- [x] 4.1.2.6 Apply border-collapse and default styling (success: table styled)
+- [x] 4.1.2.7 Generate tr for rows, th for headers, td for data (success: proper elements)
 
 ### 4.1.3 Stack HTML Generation
-- [ ] **Task 4.1.3 Complete**
+- [x] **Task 4.1.3 Complete**
 
 Generate Flexbox HTML from StackIR.
 
-- [ ] 4.1.3.1 Create `AshReports.Renderer.Html.Stack` module (success: module compiles)
-- [ ] 4.1.3.2 Generate div with class="ash-stack" (success: stack container rendered)
-- [ ] 4.1.3.3 Generate display: flex CSS property (success: flex display set)
-- [ ] 4.1.3.4 Map :ttb to flex-direction: column (success: vertical stack renders)
-- [ ] 4.1.3.5 Map :btt to flex-direction: column-reverse (success: reverse vertical renders)
-- [ ] 4.1.3.6 Map :ltr to flex-direction: row (success: horizontal stack renders)
-- [ ] 4.1.3.7 Map :rtl to flex-direction: row-reverse (success: reverse horizontal renders)
-- [ ] 4.1.3.8 Generate gap CSS property from spacing (success: spacing renders)
+- [x] 4.1.3.1 Create `AshReports.Renderer.Html.Stack` module (success: module compiles)
+- [x] 4.1.3.2 Generate div with class="ash-stack" (success: stack container rendered)
+- [x] 4.1.3.3 Generate display: flex CSS property (success: flex display set)
+- [x] 4.1.3.4 Map :ttb to flex-direction: column (success: vertical stack renders)
+- [x] 4.1.3.5 Map :btt to flex-direction: column-reverse (success: reverse vertical renders)
+- [x] 4.1.3.6 Map :ltr to flex-direction: row (success: horizontal stack renders)
+- [x] 4.1.3.7 Map :rtl to flex-direction: row-reverse (success: reverse horizontal renders)
+- [x] 4.1.3.8 Generate gap CSS property from spacing (success: spacing renders)
 
 ### Unit Tests - Section 4.1
-- [ ] 4.1.T.1 Test grid HTML generation
-- [ ] 4.1.T.2 Test table HTML with thead/tbody/tfoot
-- [ ] 4.1.T.3 Test stack HTML with all directions
-- [ ] 4.1.T.4 Test generated HTML is valid
+- [x] 4.1.T.1 Test grid HTML generation
+- [x] 4.1.T.2 Test table HTML with thead/tbody/tfoot
+- [x] 4.1.T.3 Test stack HTML with all directions
+- [x] 4.1.T.4 Test generated HTML is valid
 
 ## 4.2 Cell and Content Rendering
 
