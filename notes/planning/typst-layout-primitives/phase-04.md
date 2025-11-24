@@ -107,54 +107,54 @@ Generate HTML for label and field content.
 ## 4.3 CSS Property Mapping
 
 ### 4.3.1 Track Size to CSS
-- [ ] **Task 4.3.1 Complete**
+- [x] **Task 4.3.1 Complete**
 
 Map track sizes to CSS grid-template-columns/rows.
 
-- [ ] 4.3.1.1 Map :auto to `auto` (success: auto maps)
-- [ ] 4.3.1.2 Map {:fr, n} to `nfr` (success: fractional units map)
-- [ ] 4.3.1.3 Map length strings directly (success: `100pt`, `20%` pass through)
-- [ ] 4.3.1.4 Convert pt to px where needed (success: unit conversion)
-- [ ] 4.3.1.5 Join array into space-separated string (success: `100px 1fr auto`)
+- [x] 4.3.1.1 Map :auto to `auto` (success: auto maps)
+- [x] 4.3.1.2 Map {:fr, n} to `nfr` (success: fractional units map)
+- [x] 4.3.1.3 Map length strings directly (success: `100pt`, `20%` pass through)
+- [x] 4.3.1.4 Convert pt to px where needed (success: unit conversion)
+- [x] 4.3.1.5 Join array into space-separated string (success: `100px 1fr auto`)
 
 ### 4.3.2 Alignment to CSS
-- [ ] **Task 4.3.2 Complete**
+- [x] **Task 4.3.2 Complete**
 
 Map alignment values to CSS properties.
 
-- [ ] 4.3.2.1 Map :left to text-align: left (success: left aligns)
-- [ ] 4.3.2.2 Map :center to text-align: center (success: center aligns)
-- [ ] 4.3.2.3 Map :right to text-align: right (success: right aligns)
-- [ ] 4.3.2.4 Map :top to vertical-align: top (success: top aligns)
-- [ ] 4.3.2.5 Map :middle to vertical-align: middle (success: middle aligns)
-- [ ] 4.3.2.6 Map :bottom to vertical-align: bottom (success: bottom aligns)
-- [ ] 4.3.2.7 Handle combined alignments (success: both axes set)
+- [x] 4.3.2.1 Map :left to text-align: left (success: left aligns)
+- [x] 4.3.2.2 Map :center to text-align: center (success: center aligns)
+- [x] 4.3.2.3 Map :right to text-align: right (success: right aligns)
+- [x] 4.3.2.4 Map :top to vertical-align: top (success: top aligns)
+- [x] 4.3.2.5 Map :middle to vertical-align: middle (success: middle aligns)
+- [x] 4.3.2.6 Map :bottom to vertical-align: bottom (success: bottom aligns)
+- [x] 4.3.2.7 Handle combined alignments (success: both axes set)
 
 ### 4.3.3 Color and Fill to CSS
-- [ ] **Task 4.3.3 Complete**
+- [x] **Task 4.3.3 Complete**
 
 Map color and fill values to CSS.
 
-- [ ] 4.3.3.1 Pass hex colors directly (success: `#ffffff` works)
-- [ ] 4.3.3.2 Map :none to transparent or no style (success: none handled)
-- [ ] 4.3.3.3 Evaluate fill functions for each cell (success: conditional fills work)
-- [ ] 4.3.3.4 Set background-color CSS property (success: backgrounds render)
+- [x] 4.3.3.1 Pass hex colors directly (success: `#ffffff` works)
+- [x] 4.3.3.2 Map :none to transparent or no style (success: none handled)
+- [x] 4.3.3.3 Evaluate fill functions for each cell (success: conditional fills work)
+- [x] 4.3.3.4 Set background-color CSS property (success: backgrounds render)
 
 ### 4.3.4 Stroke to CSS
-- [ ] **Task 4.3.4 Complete**
+- [x] **Task 4.3.4 Complete**
 
 Map stroke values to CSS border properties.
 
-- [ ] 4.3.4.1 Map :none to border: none (success: no border)
-- [ ] 4.3.4.2 Map simple width to border: width solid currentColor (success: simple border)
-- [ ] 4.3.4.3 Map width + color to full border specification (success: colored border)
-- [ ] 4.3.4.4 Map dash styles to border-style (success: dashed/dotted borders)
+- [x] 4.3.4.1 Map :none to border: none (success: no border)
+- [x] 4.3.4.2 Map simple width to border: width solid currentColor (success: simple border)
+- [x] 4.3.4.3 Map width + color to full border specification (success: colored border)
+- [x] 4.3.4.4 Map dash styles to border-style (success: dashed/dotted borders)
 
 ### Unit Tests - Section 4.3
-- [ ] 4.3.T.1 Test track size CSS mapping
-- [ ] 4.3.T.2 Test alignment CSS mapping
-- [ ] 4.3.T.3 Test color CSS mapping
-- [ ] 4.3.T.4 Test stroke CSS mapping
+- [x] 4.3.T.1 Test track size CSS mapping
+- [x] 4.3.T.2 Test alignment CSS mapping
+- [x] 4.3.T.3 Test color CSS mapping
+- [x] 4.3.T.4 Test stroke CSS mapping
 
 ## 4.4 Data Interpolation
 
