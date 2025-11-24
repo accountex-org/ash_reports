@@ -249,6 +249,60 @@ defmodule AshReports.Renderer.Html.CellTest do
       assert String.contains?(result, ~s(class="ash-cell"))
       assert String.contains?(result, "><")  # Empty content
     end
+
+    test "renders cell with nil content" do
+      cell = IR.Cell.new(content: nil)
+      result = Cell.render(cell)
+
+      assert String.contains?(result, ~s(class="ash-cell"))
+      assert String.contains?(result, "><")  # Empty content
+    end
+
+    test "renders cell with mixed content types" do
+      cell = IR.Cell.new(content: [
+        %{text: "Name: "},
+        %{value: "Alice"},
+        %{text: " (age: "},
+        %{value: 30},
+        %{text: ")"}
+      ])
+      result = Cell.render(cell)
+
+      assert String.contains?(result, "Name: ")
+      assert String.contains?(result, "Alice")
+      assert String.contains?(result, "age: ")
+      assert String.contains?(result, "30")
+    end
+
+    test "renders binary content directly" do
+      cell = IR.Cell.new(content: "Plain text")
+      result = Cell.render(cell)
+
+      assert String.contains?(result, "Plain text")
+    end
+
+    test "escapes binary content" do
+      cell = IR.Cell.new(content: "<b>bold</b>")
+      result = Cell.render(cell)
+
+      assert String.contains?(result, "&lt;b&gt;")
+      refute String.contains?(result, "<b>")
+    end
+
+    test "handles unicode in content" do
+      cell = IR.Cell.new(content: [%{text: "Hello 世界 🌍"}])
+      result = Cell.render(cell)
+
+      assert String.contains?(result, "Hello 世界 🌍")
+    end
+
+    test "handles very long content" do
+      long_text = String.duplicate("A", 10000)
+      cell = IR.Cell.new(content: [%{text: long_text}])
+      result = Cell.render(cell)
+
+      assert String.contains?(result, long_text)
+    end
   end
 
   describe "stroke rendering" do
