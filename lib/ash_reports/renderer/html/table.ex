@@ -111,7 +111,7 @@ defmodule AshReports.Renderer.Html.Table do
     if rows == "" do
       ""
     else
-      "<thead>#{rows}</thead>"
+      ~s(<thead class="ash-header">#{rows}</thead>)
     end
   end
 
@@ -222,7 +222,7 @@ defmodule AshReports.Renderer.Html.Table do
     if rows == "" do
       ""
     else
-      "<tfoot>#{rows}</tfoot>"
+      ~s(<tfoot class="ash-footer">#{rows}</tfoot>)
     end
   end
 
