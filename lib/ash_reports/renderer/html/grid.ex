@@ -17,6 +17,8 @@ defmodule AshReports.Renderer.Html.Grid do
       ~s(<div class="ash-grid" style="display: grid; grid-template-columns: 1fr 2fr;"></div>)
   """
 
+  @behaviour AshReports.Renderer.Html.Behaviour
+
   alias AshReports.Layout.IR
 
   @doc """
@@ -31,6 +33,7 @@ defmodule AshReports.Renderer.Html.Grid do
 
   String containing the HTML with CSS Grid styling.
   """
+  @impl true
   @spec render(IR.t(), keyword()) :: String.t()
   def render(%IR{type: :grid} = ir, opts \\ []) do
     styles = build_styles(ir.properties)
@@ -48,6 +51,7 @@ defmodule AshReports.Renderer.Html.Grid do
   @doc """
   Builds the CSS style string for a grid container.
   """
+  @impl true
   @spec build_styles(map()) :: String.t()
   def build_styles(properties) do
     styles =

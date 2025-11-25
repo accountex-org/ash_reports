@@ -20,6 +20,8 @@ defmodule AshReports.Renderer.Html.Stack do
       ~s(<div class="ash-stack" style="display: flex; flex-direction: column; gap: 10px;"></div>)
   """
 
+  @behaviour AshReports.Renderer.Html.Behaviour
+
   alias AshReports.Layout.IR
   alias AshReports.Renderer.Html.Styling
 
@@ -35,6 +37,7 @@ defmodule AshReports.Renderer.Html.Stack do
 
   String containing the HTML with Flexbox styling.
   """
+  @impl true
   @spec render(IR.t(), keyword()) :: String.t()
   def render(%IR{type: :stack} = ir, opts \\ []) do
     styles = build_styles(ir.properties)
@@ -52,6 +55,7 @@ defmodule AshReports.Renderer.Html.Stack do
   @doc """
   Builds the CSS style string for a stack container.
   """
+  @impl true
   @spec build_styles(map()) :: String.t()
   def build_styles(properties) do
     styles =

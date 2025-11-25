@@ -16,6 +16,8 @@ defmodule AshReports.Renderer.Html.Table do
       ~s(<table class="ash-table" style="border-collapse: collapse; width: 100%;"><tbody></tbody></table>)
   """
 
+  @behaviour AshReports.Renderer.Html.Behaviour
+
   alias AshReports.Layout.IR
   alias AshReports.Renderer.Html.Styling
 
@@ -33,10 +35,11 @@ defmodule AshReports.Renderer.Html.Table do
 
   String containing the HTML table markup.
   """
+  @impl true
   @spec render(IR.t(), keyword()) :: String.t()
   def render(%IR{type: :table} = ir, opts \\ []) do
     properties = apply_table_defaults(ir.properties)
-    styles = build_table_styles(properties)
+    styles = build_styles(properties)
 
     style_attr = if styles == "", do: "", else: ~s( style="#{styles}")
 
@@ -62,8 +65,9 @@ defmodule AshReports.Renderer.Html.Table do
   @doc """
   Builds the CSS style string for a table element.
   """
-  @spec build_table_styles(map()) :: String.t()
-  def build_table_styles(properties) do
+  @impl true
+  @spec build_styles(map()) :: String.t()
+  def build_styles(properties) do
     styles =
       ["border-collapse: collapse", "width: 100%"]
       |> maybe_add_border(properties)
