@@ -52,7 +52,7 @@ defmodule AshReports.QueryBuilderTest do
       report = %Report{
         name: :test_report,
         driving_resource: AshReports.Test.Customer,
-        scope: scope_fn,
+        base_filter: scope_fn,
         parameters: [],
         bands: [],
         variables: [],
@@ -218,7 +218,7 @@ defmodule AshReports.QueryBuilderTest do
       report = %Report{
         name: :test_report,
         driving_resource: AshReports.Test.Customer,
-        scope: failing_scope,
+        base_filter: failing_scope,
         parameters: [],
         bands: [],
         variables: [],

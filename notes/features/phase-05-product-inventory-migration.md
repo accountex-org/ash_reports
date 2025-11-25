@@ -35,7 +35,8 @@ Migrate the existing `product_inventory` report from the legacy band-based DSL t
 ## Technical Details
 
 ### Files to Modify
-- `test/data/domain.ex` - Contains product_inventory report definition (lines 253-351)
+- **ash_reports_demo**: `lib/ash_reports_demo/domain.ex` - Contains product_inventory report definition (main production migration)
+- **ash_reports** (test data): `test/data/domain.ex` - Contains test report definitions (already migrated)
 
 ### Current Report Structure
 ```elixir
@@ -203,9 +204,14 @@ end
 
 ## Current Status
 
-- **What Works**: Full migration complete with 15 passing tests
+- **What Works**:
+  - Full migration complete in ash_reports test data (15 tests passing)
+  - Full migration complete in ash_reports_demo production domain
+  - Removed invalid `column N` attributes from all reports
 - **What's Next**: Conditional styling for low stock (future enhancement)
-- **How to Run**: `mix test test/ash_reports/migration/product_inventory_migration_test.exs`
+- **How to Run**:
+  - ash_reports tests: `mix test test/ash_reports/migration/product_inventory_migration_test.exs`
+  - ash_reports_demo: `cd ../ash_reports_demo && mix compile && mix phx.server`
 
 ## Discoveries During Implementation
 
@@ -214,6 +220,8 @@ end
 2. **Transformer Return Values**: Layout transformers return `{:ok, ir}` tuples, not raw IR structs.
 
 3. **Column Conversion**: Integer column widths like `[2, 1, 1, 1]` are converted to string format `["2pt", "1pt", "1pt", "1pt"]` during transformation.
+
+4. **Invalid `column N` Attribute**: The legacy `column 0`, `column 1`, etc. syntax on labels/fields is NOT valid in the current DSL. Elements are positioned by their order within the band/table, not by explicit column indices. This attribute needed to be removed from all reports (customer_summary, invoice_details, financial_summary) for compilation to succeed.
 
 ## Notes
 

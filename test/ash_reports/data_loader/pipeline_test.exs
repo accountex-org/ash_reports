@@ -345,7 +345,6 @@ defmodule AshReports.DataLoader.PipelineTest do
       name: :test_report,
       title: "Test Report",
       driving_resource: TestResource,
-      scope: nil,
       parameters: [],
       variables: [],
       groups: [],

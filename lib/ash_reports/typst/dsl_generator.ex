@@ -395,339 +395,85 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   defp generate_band_content(%Band{} = band, context) do
-    elements = band.elements || []
-
-    if length(elements) > 0 do
-      # Use table-based layout for all bands with elements
-      generate_table_based_band(band, context)
-    else
-      # Empty band with default content based on type
-      generate_default_band_content(band, context)
-    end
-  end
-
-  # Table-based band generation
-  defp generate_table_based_band(%Band{} = band, context) do
-    elements = band.elements || []
-
-    # If elements don't have column attributes, assign them sequentially
-    elements_with_columns = elements
-    |> Enum.with_index()
-    |> Enum.map(fn {element, index} ->
-      if Map.get(element, :column) == nil do
-        Map.put(element, :column, index)
-      else
-        element
-      end
-    end)
-
-    # Determine column spec based on band.columns or number of elements
-    column_spec = if band.columns && band.columns != 1 do
-      generate_column_spec(band.columns)
-    else
-      # Default: equal-width columns based on number of elements
-      generate_column_spec(length(elements_with_columns))
-    end
-
-    # Sort elements by column number
-    sorted_elements = Enum.sort_by(elements_with_columns, fn el ->
-      Map.get(el, :column, 0)
-    end)
-
-    # Get max column index
-    max_column = case Enum.max_by(sorted_elements, & Map.get(&1, :column, 0), fn -> %{column: 0} end) do
-      element when is_map(element) -> Map.get(element, :column, 0)
-      _ -> 0
-    end
-
-    # Generate table cells
-    cells = generate_table_cells(sorted_elements, max_column, context)
-
-    # Check if any element has spacing_after or bottom padding for band-level spacing
-    band_spacing_after = extract_band_spacing_after(elements)
-
-    # Build inset parameter based on band padding
-    inset_param = build_table_inset(band)
-
-    # For column headers: use table.header()
-    table_output = if band.type == :column_header do
-      """
-        [#table(
-          columns: #{column_spec},
-          align: (left, left, left),
-          stroke: none,
-          inset: #{inset_param},
-
-          table.header(
-            #{cells}
-          )
-        )]
-      """
-    else
-      # For detail and other bands: regular table
-      """
-        [#table(
-          columns: #{column_spec},
-          align: (left, left, left),
-          stroke: none,
-          inset: #{inset_param},
-
-          #{cells}
-        )]
-      """
-    end
-
-    # Add vertical spacing after table if any element specified it
-    if band_spacing_after do
-      """
-      #{table_output}
-        [#v(#{band_spacing_after})]
-        parbreak()
-      """
-    else
-      """
-      #{table_output}
-        parbreak()
-      """
-    end
-  end
-
-  # Build Typst inset parameter from band padding
-  defp build_table_inset(%Band{padding: nil}), do: "5pt"
-
-  defp build_table_inset(%Band{padding: padding}) when is_list(padding) do
-    # Convert padding keyword list to Typst inset format
-    # Default to 5pt for unspecified sides
-    left = Keyword.get(padding, :left, "5pt")
-    right = Keyword.get(padding, :right, "5pt")
-    top = Keyword.get(padding, :top, "5pt")
-    bottom = Keyword.get(padding, :bottom, "5pt")
-
-    "(left: #{left}, right: #{right}, top: #{top}, bottom: #{bottom})"
-  end
-
-  defp build_table_inset(%Band{padding: value}) when is_binary(value) do
-    # Single value applies to all sides
-    value
-  end
-
-  defp build_table_inset(_band), do: "5pt"
-
-  # Extract spacing_after or bottom padding from elements to apply at band level
-  defp extract_band_spacing_after(elements) do
-    # Check for explicit spacing_after on any element
-    spacing_after = Enum.find_value(elements, fn element ->
-      Map.get(element, :spacing_after)
-    end)
-
-    if spacing_after do
-      spacing_after
-    else
-      # Check for bottom padding on any element
-      Enum.find_value(elements, fn element ->
-        case Map.get(element, :padding) do
-          opts when is_list(opts) -> Keyword.get(opts, :bottom)
-          _ -> nil
-        end
-      end)
-    end
-  end
-
-  # Generate Typst column specification
-  defp generate_column_spec(columns) when is_integer(columns) do
-    if columns == 1 do
-      # Single column uses full page width
-      "(100%)"
-    else
-      # Multiple equal-width columns
-      "#{columns}"
-    end
-  end
-
-  defp generate_column_spec(columns) when is_binary(columns) do
-    # Direct Typst expression (e.g., "(150pt, 1fr, 80pt)")
-    columns
-  end
-
-  defp generate_column_spec(columns) when is_list(columns) do
-    # List of column widths
-    widths = Enum.join(columns, ", ")
-    "(#{widths})"
-  end
-
-  defp generate_column_spec(_), do: "(100%)"  # Default: single full-width column
-
-  # Generate table cells in column order
-  defp generate_table_cells(elements, max_column, context) do
-    # Create array with placeholder for each column
-    cells = List.duplicate("[  ]", max_column + 1)
-
-    # Fill in actual element content
-    cells_with_content = Enum.reduce(elements, cells, fn element, acc ->
-      column_index = Map.get(element, :column, 0)
-      element_code = generate_table_cell_content(element, context)
-      List.replace_at(acc, column_index, element_code)
-    end)
-
-    Enum.join(cells_with_content, ",\n    ")
-  end
-
-  # Generate content for a table cell (strip position wrapper, keep style)
-  defp generate_table_cell_content(element, context) do
-    content = case element do
-      %{type: :field} -> generate_field_element(element, context)
-      %{type: :label} -> generate_label_element(element, context)
-      %{type: :expression} -> generate_expression_element(element, context)
-      %{type: :aggregate} -> generate_aggregate_element(element, context)
-      _ -> generate_element(element, context)
-    end
-
-    # For table cells, apply style but not position
-    apply_table_cell_style(content, element)
-  end
-
-  defp apply_table_cell_style(content, element) when is_map(element) do
-    # Strip outer brackets first
-    inner_content = strip_outer_brackets(content)
-
-    # Apply formatting, style, padding, margin, and alignment wrappers
-    wrapped =
-      inner_content
-      |> apply_numeric_formatting(element)
-      |> apply_style_only(element)
-      |> apply_padding_only(element)
-      |> apply_margin_only(element)
-      |> apply_alignment_only(element)
-
-    # Wrap in brackets for table cell
-    "[#{wrapped}]"
-  end
-
-  # Helper to apply only style wrapper without brackets
-  defp apply_style_only(content, element) do
-    style = extract_style(element)
-
-    if style != [] and is_list(style) do
-      params = build_style_params(style)
-      if params != "" do
-        "#text(#{params})[#{content}]"
-      else
-        content
-      end
-    else
-      content
-    end
-  end
-
-  # Helper to apply only padding wrapper without outer brackets
-  defp apply_padding_only(content, element) do
-    padding = Map.get(element, :padding)
-
-    case padding do
-      nil ->
-        content
-
-      value when is_binary(value) ->
-        "#pad(#{value})[#{content}]"
-
-      opts when is_list(opts) ->
-        params = build_padding_params(opts)
-        if params != "", do: "#pad(#{params})[#{content}]", else: content
-
-      _ ->
-        content
-    end
-  end
-
-  # Helper to apply only margin wrapper without outer brackets
-  defp apply_margin_only(content, element) do
-    margin = Map.get(element, :margin)
-
-    case margin do
-      nil ->
-        content
-
-      value when is_binary(value) ->
-        "#pad(#{value})[#{content}]"
-
-      opts when is_list(opts) ->
-        params = build_padding_params(opts)
-        if params != "", do: "#pad(#{params})[#{content}]", else: content
-
-      _ ->
-        content
-    end
-  end
-
-  # Helper to apply alignment wrapper without outer brackets
-  defp apply_alignment_only(content, element) do
-    align = Map.get(element, :align)
-
-    case align do
-      nil -> content
-      :left -> "#align(left)[#{content}]"
-      :center -> "#align(center)[#{content}]"
-      :right -> "#align(right)[#{content}]"
-      _ -> content
-    end
-  end
-
-  # Helper to apply numeric formatting
-  defp apply_numeric_formatting(content, element) do
-    decimal_places = Map.get(element, :decimal_places)
-    number_format = Map.get(element, :number_format)
+    # Check for layout primitives (new DSL format)
+    grids = band.grids || []
+    tables = band.tables || []
+    stacks = band.stacks || []
 
     cond do
-      # Use decimal_places if specified
-      decimal_places != nil && is_integer(decimal_places) ->
-        # Wrap the expression in calc.round()
-        rounded_content = String.replace(content, ~r/#\((.+)\)/, "#(calc.round(\\1, digits: #{decimal_places}))")
-        if rounded_content != content do
-          rounded_content
-        else
-          # If no expression found, try wrapping the whole thing
-          "#(calc.round(#{strip_hash(content)}, digits: #{decimal_places}))"
-        end
+      # Render grids
+      length(grids) > 0 ->
+        grids
+        |> Enum.map(&generate_grid_content(&1, context))
+        |> Enum.join("\n")
 
-      # Use number_format options if specified
-      number_format != nil && is_list(number_format) ->
-        decimal_places = Keyword.get(number_format, :decimal_places)
-        if decimal_places do
-          rounded_content = String.replace(content, ~r/#\((.+)\)/, "#(calc.round(\\1, digits: #{decimal_places}))")
-          if rounded_content != content do
-            rounded_content
-          else
-            "#(calc.round(#{strip_hash(content)}, digits: #{decimal_places}))"
-          end
-        else
-          content
-        end
+      # Render tables
+      length(tables) > 0 ->
+        tables
+        |> Enum.map(&generate_table_content(&1, context))
+        |> Enum.join("\n")
 
+      # Render stacks
+      length(stacks) > 0 ->
+        stacks
+        |> Enum.map(&generate_stack_content(&1, context))
+        |> Enum.join("\n")
+
+      # No layout primitives - empty band
       true ->
-        content
+        "// Empty band: #{band.name}"
     end
   end
 
-  # Helper to strip leading # from content
-  defp strip_hash(content) when is_binary(content) do
-    String.trim_leading(content, "#")
-    |> String.trim_leading("(")
-    |> String.trim_trailing(")")
+  # Generate Typst content from a Grid DSL entity
+  defp generate_grid_content(grid, context) do
+    alias AshReports.Layout.Transformer.Grid, as: GridTransformer
+    alias AshReports.Renderer.Typst.Grid, as: GridRenderer
+
+    case GridTransformer.transform(grid) do
+      {:ok, ir} ->
+        data = Map.get(context, :data, %{})
+        GridRenderer.render(ir, data: data)
+
+      {:error, reason} ->
+        Logger.warning("Failed to transform grid #{grid.name}: #{inspect(reason)}")
+        "// Grid transformation failed: #{grid.name}"
+    end
   end
 
-  defp generate_default_band_content(%Band{type: :title, name: name}, _context) do
-    "  = #{humanize_name(name)}"
+  # Generate Typst content from a Table DSL entity
+  defp generate_table_content(table, context) do
+    alias AshReports.Layout.Transformer.Table, as: TableTransformer
+    alias AshReports.Renderer.Typst.Table, as: TableRenderer
+
+    case TableTransformer.transform(table) do
+      {:ok, ir} ->
+        data = Map.get(context, :data, %{})
+        TableRenderer.render(ir, data: data)
+
+      {:error, reason} ->
+        Logger.warning("Failed to transform table #{table.name}: #{inspect(reason)}")
+        "// Table transformation failed: #{table.name}"
+    end
   end
 
-  defp generate_default_band_content(%Band{type: :detail}, _context) do
-    "  [Record: #record]"
+  # Generate Typst content from a Stack DSL entity
+  defp generate_stack_content(stack, context) do
+    alias AshReports.Layout.Transformer.Stack, as: StackTransformer
+    alias AshReports.Renderer.Typst.Stack, as: StackRenderer
+
+    case StackTransformer.transform(stack) do
+      {:ok, ir} ->
+        data = Map.get(context, :data, %{})
+        StackRenderer.render(ir, data: data)
+
+      {:error, reason} ->
+        Logger.warning("Failed to transform stack #{stack.name}: #{inspect(reason)}")
+        "// Stack transformation failed: #{stack.name}"
+    end
   end
 
-  defp generate_default_band_content(%Band{type: type}, _context) do
-    "  // #{type} band content"
-  end
-
-  # Private Functions - Element Generation
+  # Private Functions - Element Generation (kept for data iteration context)
 
   defp generate_field_element(%{source: source} = field, _context) do
     content =
@@ -1150,17 +896,6 @@ defmodule AshReports.Typst.DSLGenerator do
 
   defp get_paper_size(:pdf), do: "a4"
   defp get_paper_size(_), do: "a4"
-
-  defp humanize_name(name) when is_atom(name) do
-    name
-    |> Atom.to_string()
-    |> String.replace("_", " ")
-    |> String.split()
-    |> Enum.map(&String.capitalize/1)
-    |> Enum.join(" ")
-  end
-
-  defp humanize_name(name), do: to_string(name)
 
   # Private Functions - Data Serialization
 

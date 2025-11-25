@@ -24,7 +24,7 @@ defmodule AshReports.Entities.ReportTest do
         title: "Test Report",
         description: "A test report",
         driving_resource: AshReports.Test.Customer,
-        scope: {:filter, :active},
+        base_filter: nil,
         permissions: [:read_reports],
         formats: [:html, :pdf],
         parameters: [],
@@ -37,7 +37,7 @@ defmodule AshReports.Entities.ReportTest do
       assert report.title == "Test Report"
       assert report.description == "A test report"
       assert report.driving_resource == AshReports.Test.Customer
-      assert report.scope == {:filter, :active}
+      assert report.base_filter == nil
       assert report.permissions == [:read_reports]
       assert report.formats == [:html, :pdf]
       assert report.parameters == []
