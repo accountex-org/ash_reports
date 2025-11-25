@@ -309,43 +309,116 @@ defmodule AshReportsDemo.Domain do
         reset_on(:report)
       end
 
+      # Title band with grid layout for centered, styled title
       band :title do
         type :title
 
-        label :report_title do
-          text("Product Inventory Report")
+        grid :title_grid do
+          columns 1
+          align :center
+          inset "10pt"
+
+          label :report_title do
+            text("Product Inventory Report")
+            style font_size: 18, font_weight: :bold
+          end
         end
       end
 
+      # Column headers band with table layout
+      band :column_headers do
+        type :column_header
+
+        table :header_table do
+          columns [2, 1, 1, 1]
+          stroke "1pt"
+          fill "#f0f0f0"
+          inset "5pt"
+
+          label :name_header do
+            text("Product Name")
+            style font_weight: :bold
+          end
+
+          label :sku_header do
+            text("SKU")
+            style font_weight: :bold
+          end
+
+          label :price_header do
+            text("Price")
+            style font_weight: :bold
+          end
+
+          label :margin_header do
+            text("Margin %")
+            style font_weight: :bold
+          end
+        end
+      end
+
+      # Detail band with table layout for each data row
       band :product_detail do
         type :detail
 
-        field :product_name do
-          source :name
-        end
+        table :detail_table do
+          columns [2, 1, 1, 1]
+          stroke "0.5pt"
+          inset "5pt"
 
-        field :sku do
-          source :sku
-        end
+          field :product_name do
+            source :name
+          end
 
-        field :price do
-          source :price
-        end
+          field :sku do
+            source :sku
+          end
 
-        field :margin do
-          source :margin_percentage
+          field :price do
+            source :price
+            format :currency
+            decimal_places 2
+          end
+
+          field :margin do
+            source :margin_percentage
+            format :percent
+            decimal_places 1
+          end
         end
       end
 
+      # Summary band with grid layout for metrics display
       band :inventory_summary do
         type :summary
 
-        label :total_products_summary do
-          text("Total Products: [total_products]")
-        end
+        grid :summary_grid do
+          columns 2
+          rows 2
+          gutter "10pt"
+          align :center
+          inset "10pt"
+          fill "#e8e8e8"
 
-        label :inventory_value_summary do
-          text("Total Inventory Value: [total_inventory_value]")
+          label :products_label do
+            text("Total Products")
+            style font_weight: :bold
+          end
+
+          label :value_label do
+            text("Inventory Value")
+            style font_weight: :bold
+          end
+
+          label :products_value do
+            text("[total_products]")
+            style font_size: 16
+          end
+
+          label :value_amount do
+            text("$[total_inventory_value]")
+            style font_size: 16
+          end
         end
       end
     end
