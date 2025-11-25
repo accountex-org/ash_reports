@@ -26,6 +26,10 @@ defmodule AshReports.Renderer.Html.Cell do
   alias AshReports.Layout.IR
   alias AshReports.Renderer.Html.{Interpolation, Styling}
 
+  #############################################################################
+  # Public API
+  #############################################################################
+
   @doc """
   Renders a CellIR to HTML.
 
@@ -52,8 +56,14 @@ defmodule AshReports.Renderer.Html.Cell do
     end
   end
 
-  # Grid cell rendering
+  #############################################################################
+  # Private Functions
+  #############################################################################
 
+  # Grid cell rendering
+  #
+  # Renders a cell as a CSS Grid item using a div with grid positioning styles.
+  # Supports colspan/rowspan via grid-column/grid-row span properties.
   defp render_grid_cell(%IR.Cell{} = cell, opts) do
     styles = build_grid_cell_styles(cell)
     content = render_content(cell.content, opts)
@@ -63,6 +73,10 @@ defmodule AshReports.Renderer.Html.Cell do
     ~s(<div class="ash-cell"#{style_attr}>#{content}</div>)
   end
 
+  # Builds the CSS style string for a grid cell by combining:
+  # - Explicit position (grid-column/grid-row for non-default positions)
+  # - Span styles (grid-column/grid-row span for colspan/rowspan > 1)
+  # - Common cell styles (padding, background, border, alignment)
   defp build_grid_cell_styles(%IR.Cell{} = cell) do
     styles = []
 
@@ -76,7 +90,8 @@ defmodule AshReports.Renderer.Html.Cell do
     |> Enum.join("; ")
   end
 
-  # Add explicit grid position when position is set (not at 0,0 default)
+  # Adds explicit grid position when cell is not at default (0,0).
+  # CSS Grid uses 1-based indexing, so we add 1 to the 0-based position.
   defp maybe_add_explicit_position(styles, %IR.Cell{position: {x, y}}) when x > 0 or y > 0 do
     # CSS Grid uses 1-based indexing
     styles = if x > 0, do: ["grid-column: #{x + 1}" | styles], else: styles

@@ -23,6 +23,10 @@ defmodule AshReports.Renderer.Html.Table do
 
   @default_stroke "1px solid #000"
 
+  #############################################################################
+  # Public API
+  #############################################################################
+
   @doc """
   Renders a TableIR to semantic HTML table.
 
@@ -77,20 +81,6 @@ defmodule AshReports.Renderer.Html.Table do
     Enum.join(styles, "; ")
   end
 
-  defp maybe_add_border(styles, %{stroke: stroke}) when not is_nil(stroke) and stroke != :none do
-    ["border: #{Styling.render_stroke(stroke)}" | styles]
-  end
-
-  defp maybe_add_border(styles, _), do: styles
-
-  defp maybe_add_fill(styles, %{fill: fill}) when not is_nil(fill) and fill != :none do
-    ["background-color: #{Styling.render_color(fill)}" | styles]
-  end
-
-  defp maybe_add_fill(styles, _), do: styles
-
-  # Header rendering
-
   @doc """
   Renders table headers to HTML thead element.
 
@@ -119,6 +109,66 @@ defmodule AshReports.Renderer.Html.Table do
       ~s(<thead class="ash-header">#{rows}</thead>)
     end
   end
+
+  @doc """
+  Renders table body with tbody element.
+  """
+  @spec render_body([IR.Cell.t() | IR.Row.t()], map(), keyword()) :: String.t()
+  def render_body([], _properties, _opts), do: "<tbody></tbody>"
+
+  def render_body(children, properties, opts) do
+    rows = render_body_rows(children, properties, opts)
+    "<tbody>#{rows}</tbody>"
+  end
+
+  @doc """
+  Renders table footers to HTML tfoot element.
+
+  ## Parameters
+
+  - `footers` - List of FooterIR structs
+  - `properties` - Parent table properties
+  - `opts` - Rendering options
+
+  ## Returns
+
+  String containing HTML tfoot markup.
+  """
+  @spec render_footers([IR.Footer.t()], map(), keyword()) :: String.t()
+  def render_footers([], _properties, _opts), do: ""
+
+  def render_footers(footers, properties, opts) do
+    rows =
+      footers
+      |> Enum.map(fn footer -> render_footer_rows(footer, properties, opts) end)
+      |> Enum.join("")
+
+    if rows == "" do
+      ""
+    else
+      ~s(<tfoot class="ash-footer">#{rows}</tfoot>)
+    end
+  end
+
+  #############################################################################
+  # Private Functions
+  #############################################################################
+
+  # Style builders
+
+  defp maybe_add_border(styles, %{stroke: stroke}) when not is_nil(stroke) and stroke != :none do
+    ["border: #{Styling.render_stroke(stroke)}" | styles]
+  end
+
+  defp maybe_add_border(styles, _), do: styles
+
+  defp maybe_add_fill(styles, %{fill: fill}) when not is_nil(fill) and fill != :none do
+    ["background-color: #{Styling.render_color(fill)}" | styles]
+  end
+
+  defp maybe_add_fill(styles, _), do: styles
+
+  # Header rendering helpers
 
   defp render_header_rows(%IR.Header{rows: rows}, properties, opts) do
     rows
@@ -155,18 +205,7 @@ defmodule AshReports.Renderer.Html.Table do
 
   defp render_header_cell(_, _properties, _opts), do: "<th></th>"
 
-  # Body rendering
-
-  @doc """
-  Renders table body with tbody element.
-  """
-  @spec render_body([IR.Cell.t() | IR.Row.t()], map(), keyword()) :: String.t()
-  def render_body([], _properties, _opts), do: "<tbody></tbody>"
-
-  def render_body(children, properties, opts) do
-    rows = render_body_rows(children, properties, opts)
-    "<tbody>#{rows}</tbody>"
-  end
+  # Body rendering helpers
 
   defp render_body_rows(children, properties, opts) do
     children
@@ -200,36 +239,7 @@ defmodule AshReports.Renderer.Html.Table do
 
   defp render_body_cell(_, _properties, _opts), do: "<td></td>"
 
-  # Footer rendering
-
-  @doc """
-  Renders table footers to HTML tfoot element.
-
-  ## Parameters
-
-  - `footers` - List of FooterIR structs
-  - `properties` - Parent table properties
-  - `opts` - Rendering options
-
-  ## Returns
-
-  String containing HTML tfoot markup.
-  """
-  @spec render_footers([IR.Footer.t()], map(), keyword()) :: String.t()
-  def render_footers([], _properties, _opts), do: ""
-
-  def render_footers(footers, properties, opts) do
-    rows =
-      footers
-      |> Enum.map(fn footer -> render_footer_rows(footer, properties, opts) end)
-      |> Enum.join("")
-
-    if rows == "" do
-      ""
-    else
-      ~s(<tfoot class="ash-footer">#{rows}</tfoot>)
-    end
-  end
+  # Footer rendering helpers
 
   defp render_footer_rows(%IR.Footer{rows: rows}, properties, opts) do
     rows

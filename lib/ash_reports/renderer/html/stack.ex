@@ -25,6 +25,10 @@ defmodule AshReports.Renderer.Html.Stack do
   alias AshReports.Layout.IR
   alias AshReports.Renderer.Html.Styling
 
+  #############################################################################
+  # Public API
+  #############################################################################
+
   @doc """
   Renders a StackIR to HTML with CSS Flexbox.
 
@@ -66,6 +70,10 @@ defmodule AshReports.Renderer.Html.Stack do
 
     Enum.join(styles, "; ")
   end
+
+  #############################################################################
+  # Private Functions
+  #############################################################################
 
   # Style builders
 

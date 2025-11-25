@@ -37,6 +37,10 @@ defmodule AshReports.Renderer.Html.Styling do
   - `%{thickness: "1pt", dash: :dashed}` → `1px dashed currentColor`
   """
 
+  #############################################################################
+  # Public API
+  #############################################################################
+
   # Track Size Mapping
 
   @doc """
@@ -486,7 +490,13 @@ defmodule AshReports.Renderer.Html.Styling do
 
   def escape_html(text), do: escape_html(to_string(text))
 
-  # Single-pass escape using IO lists for performance
+  #############################################################################
+  # Private Functions
+  #############################################################################
+
+  # Single-pass escape using IO lists for performance.
+  # Processes each character once, building an IO list in reverse order.
+  # More efficient than multiple String.replace/2 calls (O(n) vs O(5n)).
   defp escape_html_iodata(<<>>, acc), do: Enum.reverse(acc)
 
   defp escape_html_iodata(<<"&", rest::binary>>, acc),

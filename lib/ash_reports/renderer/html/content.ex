@@ -24,6 +24,10 @@ defmodule AshReports.Renderer.Html.Content do
   alias AshReports.Layout.IR.Style
   alias AshReports.Renderer.Html.{Grid, Table, Stack, Styling}
 
+  #############################################################################
+  # Public API
+  #############################################################################
+
   @doc """
   Renders content IR to HTML.
 
@@ -79,8 +83,6 @@ defmodule AshReports.Renderer.Html.Content do
 
   def render(_, _opts), do: ""
 
-  # Style building
-
   @doc """
   Builds CSS style string from StyleIR.
 
@@ -108,58 +110,6 @@ defmodule AshReports.Renderer.Html.Content do
   end
 
   def build_text_styles(_), do: ""
-
-  defp maybe_add_font_size(styles, %Style{font_size: font_size}) when not is_nil(font_size) do
-    ["font-size: #{Styling.render_length(font_size)}" | styles]
-  end
-  defp maybe_add_font_size(styles, _), do: styles
-
-  defp maybe_add_font_weight(styles, %Style{font_weight: font_weight}) when not is_nil(font_weight) do
-    ["font-weight: #{Styling.render_font_weight(font_weight)}" | styles]
-  end
-  defp maybe_add_font_weight(styles, _), do: styles
-
-  defp maybe_add_font_style(styles, %Style{font_style: font_style}) when not is_nil(font_style) do
-    ["font-style: #{Styling.sanitize_css_value(font_style)}" | styles]
-  end
-  defp maybe_add_font_style(styles, _), do: styles
-
-  defp maybe_add_color(styles, %Style{color: color}) when not is_nil(color) do
-    ["color: #{Styling.sanitize_css_value(color)}" | styles]
-  end
-  defp maybe_add_color(styles, _), do: styles
-
-  defp maybe_add_background_color(styles, %Style{background_color: bg_color}) when not is_nil(bg_color) do
-    ["background-color: #{Styling.sanitize_css_value(bg_color)}" | styles]
-  end
-  defp maybe_add_background_color(styles, _), do: styles
-
-  defp maybe_add_font_family(styles, %Style{font_family: font_family}) when not is_nil(font_family) do
-    ["font-family: #{Styling.sanitize_css_value(font_family)}" | styles]
-  end
-  defp maybe_add_font_family(styles, _), do: styles
-
-  # Field value handling
-
-  defp get_field_value(data, source) when is_atom(source) do
-    Map.get(data, source) || Map.get(data, to_string(source))
-  end
-
-  defp get_field_value(data, source) when is_list(source) do
-    Enum.reduce_while(source, data, fn key, acc ->
-      case acc do
-        %{} ->
-          value = Map.get(acc, key) || Map.get(acc, to_string(key))
-          if value, do: {:cont, value}, else: {:halt, nil}
-        _ ->
-          {:halt, nil}
-      end
-    end)
-  end
-
-  defp get_field_value(_data, _source), do: nil
-
-  # Value formatting
 
   @doc """
   Formats a value according to the specified format.
@@ -213,6 +163,66 @@ defmodule AshReports.Renderer.Html.Content do
   def format_value(value, _format, _decimal_places) do
     to_string(value)
   end
+
+  #############################################################################
+  # Private Functions
+  #############################################################################
+
+  # Style builders
+
+  defp maybe_add_font_size(styles, %Style{font_size: font_size}) when not is_nil(font_size) do
+    ["font-size: #{Styling.render_length(font_size)}" | styles]
+  end
+  defp maybe_add_font_size(styles, _), do: styles
+
+  defp maybe_add_font_weight(styles, %Style{font_weight: font_weight}) when not is_nil(font_weight) do
+    ["font-weight: #{Styling.render_font_weight(font_weight)}" | styles]
+  end
+  defp maybe_add_font_weight(styles, _), do: styles
+
+  defp maybe_add_font_style(styles, %Style{font_style: font_style}) when not is_nil(font_style) do
+    ["font-style: #{Styling.sanitize_css_value(font_style)}" | styles]
+  end
+  defp maybe_add_font_style(styles, _), do: styles
+
+  defp maybe_add_color(styles, %Style{color: color}) when not is_nil(color) do
+    ["color: #{Styling.sanitize_css_value(color)}" | styles]
+  end
+  defp maybe_add_color(styles, _), do: styles
+
+  defp maybe_add_background_color(styles, %Style{background_color: bg_color}) when not is_nil(bg_color) do
+    ["background-color: #{Styling.sanitize_css_value(bg_color)}" | styles]
+  end
+  defp maybe_add_background_color(styles, _), do: styles
+
+  defp maybe_add_font_family(styles, %Style{font_family: font_family}) when not is_nil(font_family) do
+    ["font-family: #{Styling.sanitize_css_value(font_family)}" | styles]
+  end
+  defp maybe_add_font_family(styles, _), do: styles
+
+  # Field value handling
+  #
+  # Retrieves a field value from data using the source specification.
+  # Supports atom keys, string keys, and nested path access via lists.
+  defp get_field_value(data, source) when is_atom(source) do
+    Map.get(data, source) || Map.get(data, to_string(source))
+  end
+
+  # Handles nested path access by traversing the data map using the key list.
+  # Returns nil if any key in the path is not found.
+  defp get_field_value(data, source) when is_list(source) do
+    Enum.reduce_while(source, data, fn key, acc ->
+      case acc do
+        %{} ->
+          value = Map.get(acc, key) || Map.get(acc, to_string(key))
+          if value, do: {:cont, value}, else: {:halt, nil}
+        _ ->
+          {:halt, nil}
+      end
+    end)
+  end
+
+  defp get_field_value(_data, _source), do: nil
 
   # Nested layout rendering
 

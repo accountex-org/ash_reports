@@ -21,6 +21,10 @@ defmodule AshReports.Renderer.Html.Grid do
 
   alias AshReports.Layout.IR
 
+  #############################################################################
+  # Public API
+  #############################################################################
+
   @doc """
   Renders a GridIR to HTML with CSS Grid.
 
@@ -67,6 +71,101 @@ defmodule AshReports.Renderer.Html.Grid do
 
     Enum.join(styles, "; ")
   end
+
+  @doc """
+  Renders column track sizes to CSS grid-template-columns.
+
+  ## Examples
+
+      iex> render_columns(["1fr", "2fr", "auto"])
+      "grid-template-columns: 1fr 2fr auto"
+
+      iex> render_columns(3)
+      "grid-template-columns: repeat(3, 1fr)"
+  """
+  @spec render_columns(list() | integer()) :: String.t()
+  def render_columns(columns) when is_list(columns) do
+    tracks = Enum.map_join(columns, " ", &render_track_size/1)
+    "grid-template-columns: #{tracks}"
+  end
+
+  def render_columns(count) when is_integer(count) do
+    "grid-template-columns: repeat(#{count}, 1fr)"
+  end
+
+  @doc """
+  Renders row track sizes to CSS grid-template-rows.
+  """
+  @spec render_rows(list() | integer()) :: String.t()
+  def render_rows(rows) when is_list(rows) do
+    tracks = Enum.map_join(rows, " ", &render_track_size/1)
+    "grid-template-rows: #{tracks}"
+  end
+
+  def render_rows(count) when is_integer(count) do
+    "grid-template-rows: repeat(#{count}, auto)"
+  end
+
+  @doc """
+  Renders a single track size to CSS syntax.
+
+  ## Examples
+
+      iex> render_track_size("1fr")
+      "1fr"
+
+      iex> render_track_size(:auto)
+      "auto"
+
+      iex> render_track_size("100pt")
+      "100pt"
+
+      iex> render_track_size({:fr, 2})
+      "2fr"
+  """
+  @spec render_track_size(String.t() | atom() | number() | tuple()) :: String.t()
+  def render_track_size(:auto), do: "auto"
+  def render_track_size("auto"), do: "auto"
+  def render_track_size({:fr, n}), do: "#{n}fr"
+  def render_track_size(size) when is_binary(size), do: size
+  def render_track_size(size) when is_number(size), do: "#{size}px"
+
+  @doc """
+  Renders a length value to CSS syntax.
+  """
+  @spec render_length(String.t() | number() | atom()) :: String.t()
+  def render_length(:auto), do: "auto"
+  def render_length("auto"), do: "auto"
+  def render_length(length) when is_binary(length) do
+    # Convert pt to px if needed (1pt ≈ 1.333px, but we use 1:1 for simplicity)
+    if String.ends_with?(length, "pt") do
+      String.replace(length, "pt", "px")
+    else
+      length
+    end
+  end
+  def render_length(length) when is_number(length), do: "#{length}px"
+
+  @doc """
+  Renders a color value to CSS.
+
+  ## Examples
+
+      iex> render_color("#ff0000")
+      "#ff0000"
+
+      iex> render_color(:red)
+      "red"
+  """
+  @spec render_color(atom() | String.t()) :: String.t()
+  def render_color(:none), do: "transparent"
+  def render_color(nil), do: "transparent"
+  def render_color(color) when is_binary(color), do: color
+  def render_color(color) when is_atom(color), do: Atom.to_string(color)
+
+  #############################################################################
+  # Private Functions
+  #############################################################################
 
   # Style builders
 
@@ -128,86 +227,10 @@ defmodule AshReports.Renderer.Html.Grid do
 
   defp maybe_add_fill(styles, _), do: styles
 
-  # Track size rendering
-
-  @doc """
-  Renders column track sizes to CSS grid-template-columns.
-
-  ## Examples
-
-      iex> render_columns(["1fr", "2fr", "auto"])
-      "grid-template-columns: 1fr 2fr auto"
-
-      iex> render_columns(3)
-      "grid-template-columns: repeat(3, 1fr)"
-  """
-  @spec render_columns(list() | integer()) :: String.t()
-  def render_columns(columns) when is_list(columns) do
-    tracks = Enum.map_join(columns, " ", &render_track_size/1)
-    "grid-template-columns: #{tracks}"
-  end
-
-  def render_columns(count) when is_integer(count) do
-    "grid-template-columns: repeat(#{count}, 1fr)"
-  end
-
-  @doc """
-  Renders row track sizes to CSS grid-template-rows.
-  """
-  @spec render_rows(list() | integer()) :: String.t()
-  def render_rows(rows) when is_list(rows) do
-    tracks = Enum.map_join(rows, " ", &render_track_size/1)
-    "grid-template-rows: #{tracks}"
-  end
-
-  def render_rows(count) when is_integer(count) do
-    "grid-template-rows: repeat(#{count}, auto)"
-  end
-
-  @doc """
-  Renders a single track size to CSS syntax.
-
-  ## Examples
-
-      iex> render_track_size("1fr")
-      "1fr"
-
-      iex> render_track_size(:auto)
-      "auto"
-
-      iex> render_track_size("100pt")
-      "100pt"
-
-      iex> render_track_size({:fr, 2})
-      "2fr"
-  """
-  @spec render_track_size(String.t() | atom() | number() | tuple()) :: String.t()
-  def render_track_size(:auto), do: "auto"
-  def render_track_size("auto"), do: "auto"
-  def render_track_size({:fr, n}), do: "#{n}fr"
-  def render_track_size(size) when is_binary(size), do: size
-  def render_track_size(size) when is_number(size), do: "#{size}px"
-
-  # Length rendering
-
-  @doc """
-  Renders a length value to CSS syntax.
-  """
-  @spec render_length(String.t() | number() | atom()) :: String.t()
-  def render_length(:auto), do: "auto"
-  def render_length("auto"), do: "auto"
-  def render_length(length) when is_binary(length) do
-    # Convert pt to px if needed (1pt ≈ 1.333px, but we use 1:1 for simplicity)
-    if String.ends_with?(length, "pt") do
-      String.replace(length, "pt", "px")
-    else
-      length
-    end
-  end
-  def render_length(length) when is_number(length), do: "#{length}px"
-
   # Alignment helpers
-
+  #
+  # Parses alignment specification into horizontal and vertical components.
+  # Handles tuple format {h, v} and single values like :left, :center, :top.
   defp parse_alignment({h, v}), do: {h, v}
   defp parse_alignment(align) when align in [:left, :center, :right], do: {align, nil}
   defp parse_alignment(align) when align in [:top, :bottom], do: {nil, align}
@@ -223,27 +246,10 @@ defmodule AshReports.Renderer.Html.Grid do
   defp vertical_to_css(:bottom), do: "end"
   defp vertical_to_css(_), do: "start"
 
-  # Color rendering
-
-  @doc """
-  Renders a color value to CSS.
-
-  ## Examples
-
-      iex> render_color("#ff0000")
-      "#ff0000"
-
-      iex> render_color(:red)
-      "red"
-  """
-  @spec render_color(atom() | String.t()) :: String.t()
-  def render_color(:none), do: "transparent"
-  def render_color(nil), do: "transparent"
-  def render_color(color) when is_binary(color), do: color
-  def render_color(color) when is_atom(color), do: Atom.to_string(color)
-
   # Children rendering
-
+  #
+  # Renders grid children (cells and rows) to HTML.
+  # Passes parent grid properties and context to each child for inheritance.
   defp render_children(nil, _properties, _opts), do: ""
   defp render_children([], _properties, _opts), do: ""
 
