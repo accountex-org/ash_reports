@@ -34,7 +34,7 @@ defmodule AshReports.Renderer.Typst.Stack do
     indent_str = String.duplicate("  ", indent)
 
     params = build_parameters(ir.properties)
-    children = render_children(ir.children, indent + 1)
+    children = render_children(ir.children, indent + 1, opts)
 
     if children == "" do
       "#{indent_str}#stack(\n#{params}#{indent_str})"
@@ -113,45 +113,50 @@ defmodule AshReports.Renderer.Typst.Stack do
 
   # Children rendering
 
-  defp render_children([], _indent), do: ""
+  defp render_children([], _indent, _parent_opts), do: ""
 
-  defp render_children(children, indent) do
+  defp render_children(children, indent, parent_opts) do
     indent_str = String.duplicate("  ", indent)
 
     children
-    |> Enum.map(fn child -> render_child(child, indent_str, indent) end)
+    |> Enum.map(fn child -> render_child(child, indent_str, indent, parent_opts) end)
     |> Enum.join(",\n")
+    |> Kernel.<>(",")
   end
 
-  defp render_child(%IR{type: :grid} = nested_ir, _indent_str, indent) do
-    # Recursively render nested grid
-    AshReports.Renderer.Typst.Grid.render(nested_ir, indent: indent)
+  defp render_child(%IR{type: :grid} = nested_ir, _indent_str, indent, parent_opts) do
+    # Recursively render nested grid, preserving parent opts
+    opts = Keyword.merge(parent_opts, [indent: indent])
+    AshReports.Renderer.Typst.Grid.render(nested_ir, opts)
   end
 
-  defp render_child(%IR{type: :table} = nested_ir, _indent_str, indent) do
-    # Recursively render nested table
-    AshReports.Renderer.Typst.Table.render(nested_ir, indent: indent)
+  defp render_child(%IR{type: :table} = nested_ir, _indent_str, indent, parent_opts) do
+    # Recursively render nested table, preserving parent opts
+    opts = Keyword.merge(parent_opts, [indent: indent])
+    AshReports.Renderer.Typst.Table.render(nested_ir, opts)
   end
 
-  defp render_child(%IR{type: :stack} = nested_ir, _indent_str, indent) do
-    # Recursively render nested stack
-    render(nested_ir, indent: indent)
+  defp render_child(%IR{type: :stack} = nested_ir, _indent_str, indent, parent_opts) do
+    # Recursively render nested stack, preserving parent opts
+    opts = Keyword.merge(parent_opts, [indent: indent])
+    render(nested_ir, opts)
   end
 
-  defp render_child(%IR.Cell{} = cell, _indent_str, indent) do
-    # Use Cell renderer for cells
-    Cell.render(cell, indent: indent, context: :grid)
+  defp render_child(%IR.Cell{} = cell, _indent_str, indent, parent_opts) do
+    # Use Cell renderer for cells, preserving parent opts
+    opts = Keyword.merge(parent_opts, [indent: indent, context: :grid])
+    Cell.render(cell, opts)
   end
 
-  defp render_child(%{text: text}, indent_str, _indent) do
+  defp render_child(%{text: text}, indent_str, _indent, _parent_opts) do
     # Direct label content
     "#{indent_str}[#{text}]"
   end
 
-  defp render_child(%{value: value}, indent_str, _indent) do
+  defp render_child(%{value: value}, indent_str, _indent, _parent_opts) do
     # Direct field content
     "#{indent_str}[#{value}]"
   end
 
-  defp render_child(_, indent_str, _indent), do: "#{indent_str}[]"
+  defp render_child(_, indent_str, _indent, _parent_opts), do: "#{indent_str}[]"
 end

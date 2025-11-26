@@ -64,13 +64,18 @@ defmodule AshReports.Layout.Transformer.Grid do
 
   @doc """
   Normalizes a single track size to string format.
+
+  Integer values in lists are treated as fraction units (e.g., 2 -> "2fr").
+  Use strings with explicit units for point sizes (e.g., "100pt").
   """
   @spec normalize_track_size(term()) :: String.t()
   def normalize_track_size(:auto), do: "auto"
   def normalize_track_size({:fr, n}) when is_number(n), do: "#{n}fr"
+  def normalize_track_size({:pt, n}) when is_number(n), do: "#{n}pt"
   def normalize_track_size(size) when is_binary(size), do: size
-  def normalize_track_size(n) when is_integer(n), do: "#{n}pt"
-  def normalize_track_size(n) when is_float(n), do: "#{n}pt"
+  # Integers in lists are treated as fraction units for column/row proportions
+  def normalize_track_size(n) when is_integer(n), do: "#{n}fr"
+  def normalize_track_size(n) when is_float(n), do: "#{n}fr"
 
   # Private functions
 

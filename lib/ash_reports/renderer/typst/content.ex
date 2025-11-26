@@ -55,15 +55,26 @@ defmodule AshReports.Renderer.Typst.Content do
   end
 
   def render(%Field{source: source, format: format, decimal_places: decimal_places, style: style}, opts) do
-    data = Keyword.get(opts, :data, %{})
-    value = get_field_value(data, source)
-    formatted = format_value(value, format, decimal_places)
-    escaped = escape_typst(formatted)
+    data = Keyword.get(opts, :data)
+    generate_refs = Keyword.get(opts, :generate_refs, false)
+
+    # Check if we should render as a variable reference (for Typst code generation)
+    # or interpolate the actual value (for preview/testing)
+    content =
+      if generate_refs or is_nil(data) do
+        # Code generation mode - output Typst variable reference for runtime interpolation
+        render_field_reference(source, format, decimal_places)
+      else
+        # Data rendering mode - interpolate the actual value
+        value = get_field_value(data, source)
+        formatted = format_value(value, format, decimal_places)
+        escape_typst(formatted)
+      end
 
     if is_nil(style) or Style.empty?(style) do
-      escaped
+      content
     else
-      wrap_with_style(escaped, style)
+      wrap_with_style(content, style)
     end
   end
 
@@ -225,6 +236,58 @@ defmodule AshReports.Renderer.Typst.Content do
   def render_color(color) when is_atom(color), do: Atom.to_string(color)
 
   # Field value handling
+
+  @doc """
+  Renders a field reference as Typst code for runtime interpolation.
+
+  Generates code like `#record.field_name` that will be evaluated when the
+  band function is called with actual data.
+  """
+  @spec render_field_reference(atom() | list(), atom() | nil, non_neg_integer() | nil) :: String.t()
+  def render_field_reference(source, format, decimal_places) when is_atom(source) do
+    # Base reference without # prefix - the # is added by wrap_field_formatting
+    # when switching from markup mode to code mode
+    base_ref = "record.#{source}"
+    wrap_field_formatting(base_ref, format, decimal_places)
+  end
+
+  def render_field_reference(source, format, decimal_places) when is_list(source) do
+    # Nested path like [:product, :name]
+    path = Enum.map_join(source, ".", &to_string/1)
+    base_ref = "record.#{path}"
+    wrap_field_formatting(base_ref, format, decimal_places)
+  end
+
+  def render_field_reference(_source, _format, _decimal_places), do: ""
+
+  # Wrap field reference with formatting functions if needed
+  # The ref comes WITHOUT the # prefix. We add # when needed to switch to code mode.
+  # Inside function calls (already in code mode), we use the ref directly without #.
+  # We handle Typst 'none' values by displaying a dash "-" instead of 0 to avoid
+  # confusion and to make it clear the value is missing (not actually zero).
+  # This also prevents any potential division-by-zero if these values were ever
+  # used in calculations.
+  defp wrap_field_formatting(ref, nil, _decimal_places), do: "##{ref}"
+
+  defp wrap_field_formatting(ref, :currency, decimal_places) do
+    places = decimal_places || 2
+    # \$ outputs literal dollar sign, use code block to handle none values
+    # If the field is none, display dash to indicate missing value
+    "\\$\#{ let v = #{ref}; if v == none { \"-\" } else { calc.round(v, digits: #{places}) } }"
+  end
+
+  defp wrap_field_formatting(ref, :percent, decimal_places) do
+    places = decimal_places || 1
+    # Use code block to handle none values - display dash for missing values
+    "\#{ let v = #{ref}; if v == none { \"-\" } else { calc.round(v * 100, digits: #{places}) } }%"
+  end
+
+  defp wrap_field_formatting(ref, :number, decimal_places) when not is_nil(decimal_places) do
+    # Use code block to handle none values - display dash for missing values
+    "\#{ let v = #{ref}; if v == none { \"-\" } else { calc.round(v, digits: #{decimal_places}) } }"
+  end
+
+  defp wrap_field_formatting(ref, _format, _decimal_places), do: "##{ref}"
 
   defp get_field_value(data, source) when is_atom(source) do
     Map.get(data, source, "")

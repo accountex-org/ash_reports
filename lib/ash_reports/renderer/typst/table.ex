@@ -41,14 +41,14 @@ defmodule AshReports.Renderer.Typst.Table do
     properties = apply_table_defaults(ir.properties)
 
     params = Grid.build_parameters(properties)
-    headers = render_headers(ir.headers, indent + 1)
-    footers = render_footers(ir.footers, indent + 1)
-    children = render_children(ir.children, indent + 1)
+    headers = render_headers(ir.headers, indent + 1, opts)
+    footers = render_footers(ir.footers, indent + 1, opts)
+    children = render_children(ir.children, indent + 1, opts)
 
     content =
       [headers, children, footers]
       |> Enum.reject(&(&1 == ""))
-      |> Enum.join("\n")
+      |> Enum.join(",\n")
 
     if content == "" do
       "#{indent_str}#table(\n#{params}#{indent_str})"
@@ -81,20 +81,21 @@ defmodule AshReports.Renderer.Typst.Table do
 
   String containing Typst table.header() markup.
   """
-  @spec render_headers([IR.Header.t()], non_neg_integer()) :: String.t()
-  def render_headers([], _indent), do: ""
+  @spec render_headers([IR.Header.t()], non_neg_integer(), keyword()) :: String.t()
+  def render_headers(headers, indent, parent_opts \\ [])
+  def render_headers([], _indent, _parent_opts), do: ""
 
-  def render_headers(headers, indent) do
+  def render_headers(headers, indent, parent_opts) do
     indent_str = String.duplicate("  ", indent)
 
     headers
-    |> Enum.map(fn header -> render_header(header, indent_str, indent) end)
+    |> Enum.map(fn header -> render_header(header, indent_str, indent, parent_opts) end)
     |> Enum.join("\n")
   end
 
-  defp render_header(%IR.Header{repeat: repeat, rows: rows}, indent_str, indent) do
+  defp render_header(%IR.Header{repeat: repeat, rows: rows}, indent_str, indent, parent_opts) do
     repeat_param = if repeat, do: "repeat: true, ", else: ""
-    cells = render_header_rows(rows, indent + 1)
+    cells = render_header_rows(rows, indent + 1, parent_opts)
 
     if cells == "" do
       "#{indent_str}table.header(#{repeat_param})"
@@ -103,20 +104,21 @@ defmodule AshReports.Renderer.Typst.Table do
     end
   end
 
-  defp render_header(_header, indent_str, _indent) do
+  defp render_header(_header, indent_str, _indent, _parent_opts) do
     # Fallback for non-struct headers
     "#{indent_str}table.header()"
   end
 
-  defp render_header_rows([], _indent), do: ""
+  defp render_header_rows([], _indent, _parent_opts), do: ""
 
-  defp render_header_rows(rows, indent) do
-    opts = [indent: indent, context: :table]
+  defp render_header_rows(rows, indent, parent_opts) do
+    opts = Keyword.merge(parent_opts, [indent: indent, context: :table])
 
     rows
     |> Enum.flat_map(fn row -> extract_row_cells(row) end)
     |> Enum.map(fn cell -> Cell.render(cell, opts) end)
-    |> Enum.join("\n")
+    |> Enum.join(",\n")
+    |> Kernel.<>(",")
   end
 
   # Footer rendering
@@ -133,20 +135,21 @@ defmodule AshReports.Renderer.Typst.Table do
 
   String containing Typst table.footer() markup.
   """
-  @spec render_footers([IR.Footer.t()], non_neg_integer()) :: String.t()
-  def render_footers([], _indent), do: ""
+  @spec render_footers([IR.Footer.t()], non_neg_integer(), keyword()) :: String.t()
+  def render_footers(footers, indent, parent_opts \\ [])
+  def render_footers([], _indent, _parent_opts), do: ""
 
-  def render_footers(footers, indent) do
+  def render_footers(footers, indent, parent_opts) do
     indent_str = String.duplicate("  ", indent)
 
     footers
-    |> Enum.map(fn footer -> render_footer(footer, indent_str, indent) end)
+    |> Enum.map(fn footer -> render_footer(footer, indent_str, indent, parent_opts) end)
     |> Enum.join("\n")
   end
 
-  defp render_footer(%IR.Footer{repeat: repeat, rows: rows}, indent_str, indent) do
+  defp render_footer(%IR.Footer{repeat: repeat, rows: rows}, indent_str, indent, parent_opts) do
     repeat_param = if repeat, do: "repeat: true, ", else: ""
-    cells = render_footer_rows(rows, indent + 1)
+    cells = render_footer_rows(rows, indent + 1, parent_opts)
 
     if cells == "" do
       "#{indent_str}table.footer(#{repeat_param})"
@@ -155,32 +158,34 @@ defmodule AshReports.Renderer.Typst.Table do
     end
   end
 
-  defp render_footer(_footer, indent_str, _indent) do
+  defp render_footer(_footer, indent_str, _indent, _parent_opts) do
     # Fallback for non-struct footers
     "#{indent_str}table.footer()"
   end
 
-  defp render_footer_rows([], _indent), do: ""
+  defp render_footer_rows([], _indent, _parent_opts), do: ""
 
-  defp render_footer_rows(rows, indent) do
-    opts = [indent: indent, context: :table]
+  defp render_footer_rows(rows, indent, parent_opts) do
+    opts = Keyword.merge(parent_opts, [indent: indent, context: :table])
 
     rows
     |> Enum.flat_map(fn row -> extract_row_cells(row) end)
     |> Enum.map(fn cell -> Cell.render(cell, opts) end)
-    |> Enum.join("\n")
+    |> Enum.join(",\n")
+    |> Kernel.<>(",")
   end
 
   # Children rendering
 
-  defp render_children([], _indent), do: ""
+  defp render_children([], _indent, _parent_opts), do: ""
 
-  defp render_children(children, indent) do
-    opts = [indent: indent, context: :table]
+  defp render_children(children, indent, parent_opts) do
+    opts = Keyword.merge(parent_opts, [indent: indent, context: :table])
 
     children
     |> Enum.map(fn child -> render_child(child, opts) end)
-    |> Enum.join("\n")
+    |> Enum.join(",\n")
+    |> Kernel.<>(",")
   end
 
   defp render_child(%IR.Cell{} = cell, opts) do
@@ -190,7 +195,7 @@ defmodule AshReports.Renderer.Typst.Table do
   defp render_child(%IR.Row{cells: cells}, opts) do
     cells
     |> Enum.map(fn cell -> Cell.render(cell, opts) end)
-    |> Enum.join("\n")
+    |> Enum.join(",\n")
   end
 
   defp render_child(_, opts) do

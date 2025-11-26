@@ -426,14 +426,16 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   # Generate Typst content from a Grid DSL entity
-  defp generate_grid_content(grid, context) do
+  defp generate_grid_content(grid, _context) do
     alias AshReports.Layout.Transformer.Grid, as: GridTransformer
     alias AshReports.Renderer.Typst.Grid, as: GridRenderer
 
     case GridTransformer.transform(grid) do
       {:ok, ir} ->
-        data = Map.get(context, :data, %{})
-        GridRenderer.render(ir, data: data)
+        # Use generate_refs: true to output Typst variable references for fields
+        # The actual data will be passed at runtime when the band function is called
+        rendered = GridRenderer.render(ir, generate_refs: true)
+        "[#{rendered}]"
 
       {:error, reason} ->
         Logger.warning("Failed to transform grid #{grid.name}: #{inspect(reason)}")
@@ -442,14 +444,16 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   # Generate Typst content from a Table DSL entity
-  defp generate_table_content(table, context) do
+  defp generate_table_content(table, _context) do
     alias AshReports.Layout.Transformer.Table, as: TableTransformer
     alias AshReports.Renderer.Typst.Table, as: TableRenderer
 
     case TableTransformer.transform(table) do
       {:ok, ir} ->
-        data = Map.get(context, :data, %{})
-        TableRenderer.render(ir, data: data)
+        # Use generate_refs: true to output Typst variable references for fields
+        # The actual data will be passed at runtime when the band function is called
+        rendered = TableRenderer.render(ir, generate_refs: true)
+        "[#{rendered}]"
 
       {:error, reason} ->
         Logger.warning("Failed to transform table #{table.name}: #{inspect(reason)}")
@@ -458,14 +462,16 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   # Generate Typst content from a Stack DSL entity
-  defp generate_stack_content(stack, context) do
+  defp generate_stack_content(stack, _context) do
     alias AshReports.Layout.Transformer.Stack, as: StackTransformer
     alias AshReports.Renderer.Typst.Stack, as: StackRenderer
 
     case StackTransformer.transform(stack) do
       {:ok, ir} ->
-        data = Map.get(context, :data, %{})
-        StackRenderer.render(ir, data: data)
+        # Use generate_refs: true to output Typst variable references for fields
+        # The actual data will be passed at runtime when the band function is called
+        rendered = StackRenderer.render(ir, generate_refs: true)
+        "[#{rendered}]"
 
       {:error, reason} ->
         Logger.warning("Failed to transform stack #{stack.name}: #{inspect(reason)}")
@@ -550,13 +556,14 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   defp generate_aggregate_element(%{function: function, source: source} = aggregate, _context) do
-    # Generate aggregate calculation
+    # Generate aggregate calculation with division-by-zero protection
     content =
       case function do
         :sum -> "[Sum: #data.records.map(r => r.#{source}).sum()]"
         :count -> "[Count: #data.records.len()]"
-        :average -> "[Avg: #data.records.map(r => r.#{source}).sum() / #data.records.len()]"
-        :avg -> "[Avg: #data.records.map(r => r.#{source}).sum() / #data.records.len()]"
+        # Protect against division by zero in average calculations
+        :average -> "[Avg: \#{ let len = data.records.len(); if len == 0 { 0 } else { data.records.map(r => r.#{source}).sum() / len } }]"
+        :avg -> "[Avg: \#{ let len = data.records.len(); if len == 0 { 0 } else { data.records.map(r => r.#{source}).sum() / len } }]"
         :min -> "[Min: #calc.min(..data.records.map(r => r.#{source}))]"
         :max -> "[Max: #calc.max(..data.records.map(r => r.#{source}))]"
         _ -> "[Aggregate: #{function}]"

@@ -88,63 +88,75 @@ Band -> generate_band_content -> checks band.grids/tables/stacks -> transform to
 ### Step 6: Update Tests
 - [x] Updated tests to use new layout primitives format
 - [x] Tagged legacy element-based tests with `@tag :skip` for future migration
-- [x] 32 tests pass, 11 legacy tests skipped
+- [x] 43 tests pass, 11 legacy tests skipped
 
-### Step 7: Test with ash_reports_demo
-- [ ] Blocked by Windows file lock issue on `_build/dev/lib/file_system`
-- [ ] Manual testing required after file lock clears
+### Step 7: Fix Typst Mode Issues
+- [x] Fixed `#` prefix issue (markup mode inside code mode)
+- [x] Fixed comma requirement issue (content blocks in function args)
+- [x] Solution: Wrap rendered content in content block `[...]`
+
+### Step 8: Test with ash_reports_demo
+- [ ] ash_reports_demo has separate compilation issues (unrelated to Phase 6)
+- [ ] Manual PDF generation testing pending
 
 ## Success Criteria
 
 1. ✅ Product_inventory report definition uses layout primitives (completed in Phase 5)
 2. ✅ DSL generator detects and renders layout primitives
 3. ✅ Legacy element-based band code removed (~320 lines)
-4. ✅ Tests pass for new rendering path (32 pass, 11 legacy skipped)
-5. ⏳ PDF generation verification blocked by build issue
+4. ✅ Tests pass for new rendering path (43 pass, 11 legacy skipped)
+5. ✅ Typst mode handling fixed (content block wrapping)
+6. ⏳ PDF generation verification pending (ash_reports_demo has separate issues)
 
 ## Current Status
 
 - **What Works**:
   - DSL generator updated to handle layout primitives
   - Legacy code removed
-  - Tests updated and passing
+  - Tests updated and passing (43 pass, 11 skipped)
   - Code compiles without warnings
-- **What's Blocked**:
-  - ash_reports_demo compilation has file lock issue on Windows
-  - Manual PDF generation testing pending
+  - Typst mode handling fixed with content block wrapping
+- **What's Pending**:
+  - ash_reports_demo has unrelated compilation error (`undefined function column/1`)
+  - Manual PDF generation testing pending once demo is fixed
 - **How to Run**: `mix test test/ash_reports/typst/dsl_generator_test.exs`
 
 ## Code Changes Summary
 
 ### New Functions Added (dsl_generator.ex)
+
+The layout primitive rendering functions wrap content in `[...]` to preserve markup mode syntax:
+
 ```elixir
 defp generate_grid_content(grid, context) do
   alias AshReports.Layout.Transformer.Grid, as: GridTransformer
   alias AshReports.Renderer.Typst.Grid, as: GridRenderer
+
   case GridTransformer.transform(grid) do
-    {:ok, ir} -> GridRenderer.render(ir, data: Map.get(context, :data, %{}))
-    {:error, _} -> "// Grid transformation failed: #{grid.name}"
+    {:ok, ir} ->
+      data = Map.get(context, :data, %{})
+      # Wrap in content block to preserve markup mode syntax inside code block
+      rendered = GridRenderer.render(ir, data: data)
+      "[#{rendered}]"
+
+    {:error, reason} ->
+      Logger.warning("Failed to transform grid #{grid.name}: #{inspect(reason)}")
+      "// Grid transformation failed: #{grid.name}"
   end
 end
 
-defp generate_table_content(table, context) do
-  alias AshReports.Layout.Transformer.Table, as: TableTransformer
-  alias AshReports.Renderer.Typst.Table, as: TableRenderer
-  case TableTransformer.transform(table) do
-    {:ok, ir} -> TableRenderer.render(ir, data: Map.get(context, :data, %{}))
-    {:error, _} -> "// Table transformation failed: #{table.name}"
-  end
-end
-
-defp generate_stack_content(stack, context) do
-  alias AshReports.Layout.Transformer.Stack, as: StackTransformer
-  alias AshReports.Renderer.Typst.Stack, as: StackRenderer
-  case StackTransformer.transform(stack) do
-    {:ok, ir} -> StackRenderer.render(ir, data: Map.get(context, :data, %{}))
-    {:error, _} -> "// Stack transformation failed: #{stack.name}"
-  end
-end
+# Similar pattern for generate_table_content/2 and generate_stack_content/2
 ```
+
+### Typst Mode Handling
+
+**Problem**: The DSL generator outputs code inside `#let report_name(data, config) = { ... }` which is Typst **code mode**. The renderers output `#grid(...)` which is **markup mode** syntax.
+
+**Solution Attempts**:
+1. ~~Strip `#` prefixes with `markup_to_code_mode/1`~~ - Failed: content blocks like `[Product Name]` need commas between them in code mode
+2. **Wrap in content block `[...]`** - Success: `[#grid(...)]` keeps the content in markup mode where commas aren't required
+
+**Why it works**: Inside a code block `{ }`, a content block `[...]` switches back to markup mode. The `#grid(...)` inside the content block is valid markup mode syntax.
 
 ### Updated Function (dsl_generator.ex)
 ```elixir

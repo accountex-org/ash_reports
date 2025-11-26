@@ -38,7 +38,7 @@ defmodule AshReports.Renderer.Typst.Grid do
     indent_str = String.duplicate("  ", indent)
 
     params = build_parameters(ir.properties)
-    children = render_children(ir.children, indent + 1)
+    children = render_children(ir.children, indent + 1, opts)
 
     if children == "" do
       "#{indent_str}#grid(\n#{params}#{indent_str})"
@@ -334,14 +334,16 @@ defmodule AshReports.Renderer.Typst.Grid do
 
   # Children rendering
 
-  defp render_children([], _indent), do: ""
+  defp render_children([], _indent, _parent_opts), do: ""
 
-  defp render_children(children, indent) do
-    opts = [indent: indent, context: :grid]
+  defp render_children(children, indent, parent_opts) do
+    # Merge parent opts with child-specific opts, preserving generate_refs, data, etc.
+    opts = Keyword.merge(parent_opts, [indent: indent, context: :grid])
 
     children
     |> Enum.map(fn child -> render_child(child, opts) end)
-    |> Enum.join("\n")
+    |> Enum.join(",\n")
+    |> Kernel.<>(",")
   end
 
   defp render_child(%IR.Cell{} = cell, opts) do
@@ -351,7 +353,7 @@ defmodule AshReports.Renderer.Typst.Grid do
   defp render_child(%IR.Row{cells: cells}, opts) do
     cells
     |> Enum.map(fn cell -> render_child(cell, opts) end)
-    |> Enum.join("\n")
+    |> Enum.join(",\n")
   end
 
   defp render_child(_, opts) do

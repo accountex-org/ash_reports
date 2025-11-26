@@ -162,7 +162,7 @@ defmodule AshReports.Transformers.BuildReportModules do
         end
 
         @impl true
-        def supports_streaming?, do: unquote(format) != :json
+        def supports_streaming?, do: unquote(format != :json)
 
         @impl true
         def file_extension, do: unquote(get_file_extension(format))
