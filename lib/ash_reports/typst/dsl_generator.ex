@@ -435,7 +435,9 @@ defmodule AshReports.Typst.DSLGenerator do
         # Use generate_refs: true to output Typst variable references for fields
         # The actual data will be passed at runtime when the band function is called
         rendered = GridRenderer.render(ir, generate_refs: true)
-        "[#{rendered}]"
+        # Wrap in block with no spacing to prevent gaps between repeated grids
+        # in detail band loops. No # prefix since we're already in code mode.
+        "block(above: 0pt, below: 0pt)[#{rendered}]"
 
       {:error, reason} ->
         Logger.warning("Failed to transform grid #{grid.name}: #{inspect(reason)}")
@@ -453,7 +455,9 @@ defmodule AshReports.Typst.DSLGenerator do
         # Use generate_refs: true to output Typst variable references for fields
         # The actual data will be passed at runtime when the band function is called
         rendered = TableRenderer.render(ir, generate_refs: true)
-        "[#{rendered}]"
+        # Wrap in block with no spacing to prevent gaps between repeated tables
+        # in detail band loops. No # prefix since we're already in code mode.
+        "block(above: 0pt, below: 0pt)[#{rendered}]"
 
       {:error, reason} ->
         Logger.warning("Failed to transform table #{table.name}: #{inspect(reason)}")
@@ -471,7 +475,9 @@ defmodule AshReports.Typst.DSLGenerator do
         # Use generate_refs: true to output Typst variable references for fields
         # The actual data will be passed at runtime when the band function is called
         rendered = StackRenderer.render(ir, generate_refs: true)
-        "[#{rendered}]"
+        # Wrap in block with no spacing to prevent gaps between repeated stacks
+        # in detail band loops. No # prefix since we're already in code mode.
+        "block(above: 0pt, below: 0pt)[#{rendered}]"
 
       {:error, reason} ->
         Logger.warning("Failed to transform stack #{stack.name}: #{inspect(reason)}")
@@ -952,9 +958,12 @@ defmodule AshReports.Typst.DSLGenerator do
   defp serialize_variables(_), do: "(:)"
 
   defp serialize_record(%_{} = struct) do
-    # Convert struct to map and serialize
-    struct
-    |> Map.from_struct()
+    # Convert struct to map - Ash stores loaded calculations directly on the struct
+    base_map = Map.from_struct(struct)
+
+    # Remove internal Ash keys that shouldn't be serialized
+    base_map
+    |> Map.drop([:__meta__, :calculations, :aggregates, :__metadata__, :__lateral_join_source__, :__order__])
     |> serialize_map()
   end
 

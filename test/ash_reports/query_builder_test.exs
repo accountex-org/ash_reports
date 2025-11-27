@@ -226,7 +226,7 @@ defmodule AshReports.QueryBuilderTest do
       }
 
       assert {:error, {Ash.Error.Invalid, message}} = QueryBuilder.build(report, %{})
-      assert message =~ "Failed to apply scope"
+      assert message =~ "Failed to apply base_filter"
     end
 
     test "handles parameter filter errors gracefully" do

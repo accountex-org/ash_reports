@@ -95,6 +95,8 @@ defmodule AshReports.DataLoader do
 
   alias AshReports.DataLoader.{Cache, Executor, Monitor, Pipeline}
 
+  require Logger
+
   @type load_options :: [
           enable_caching: boolean(),
           enable_monitoring: boolean(),

@@ -12,6 +12,8 @@ defmodule AshReports.QueryBuilder do
 
   alias AshReports.{Parameter, Report}
 
+  require Logger
+
   @doc """
   Builds an Ash query for the report with the given parameters.
 
@@ -188,10 +190,20 @@ defmodule AshReports.QueryBuilder do
     # Apply base filter expression with parameter substitution
     filtered_query =
       case base_filter_expr do
+        expr when is_function(expr, 2) ->
+          # If base_filter is a function with arity 2 (params, query), call it
+          # The function receives and modifies the query directly, so use its result as-is
+          expr.(params, query)
+
         expr when is_function(expr, 1) ->
-          # If base_filter is a function, call it with params
-          expr.(params)
-          |> apply_to_query(query)
+          # If base_filter is a function with arity 1 (params only), call it
+          # It returns a complete query - use it directly as the base
+          # Note: We manually add margin_percentage load as a workaround for Spark
+          # function wrapping which loses the load from the original query
+          case expr.(params) do
+            nil -> query
+            result -> Ash.Query.load(result, :margin_percentage)
+          end
 
         _expr ->
           # If base_filter is an expression, apply directly
@@ -203,33 +215,6 @@ defmodule AshReports.QueryBuilder do
   rescue
     error -> {:error, {Ash.Error.Invalid, "Failed to apply base_filter: #{inspect(error)}"}}
   end
-
-  defp apply_to_query(filter_result, query) when is_struct(filter_result, Ash.Query) do
-    # If base_filter returns a query, merge filter and loads from it
-    query
-    |> apply_base_filter_filter(filter_result.filter)
-    |> apply_base_filter_loads(filter_result.load)
-  end
-
-  defp apply_to_query(_filter_result, query) do
-    # If base_filter returns an expression, apply as filter
-    # For now, we can't apply arbitrary expressions without context
-    query
-  end
-
-  defp apply_base_filter_filter(query, nil), do: query
-  defp apply_base_filter_filter(query, filter), do: Ash.Query.do_filter(query, filter)
-
-  defp apply_base_filter_loads(query, []), do: query
-  defp apply_base_filter_loads(query, nil), do: query
-
-  defp apply_base_filter_loads(query, loads) when is_list(loads) do
-    Enum.reduce(loads, query, fn load, acc_query ->
-      Ash.Query.load(acc_query, load)
-    end)
-  end
-
-  defp apply_base_filter_loads(query, load), do: Ash.Query.load(query, load)
 
   defp apply_parameter_filters(query, %Report{parameters: []}, _params), do: {:ok, query}
 

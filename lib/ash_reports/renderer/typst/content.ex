@@ -279,7 +279,10 @@ defmodule AshReports.Renderer.Typst.Content do
   defp wrap_field_formatting(ref, :percent, decimal_places) do
     places = decimal_places || 1
     # Use code block to handle none values - display dash for missing values
-    "\#{ let v = #{ref}; if v == none { \"-\" } else { calc.round(v * 100, digits: #{places}) } }%"
+    # Include % inside else branch so we don't get "-%" for none values
+    # Note: We assume the value is already a percentage (0-100 range), not a decimal (0-1 range)
+    # If the source data is in decimal form, multiply by 100 at the data layer, not here
+    "\#{ let v = #{ref}; if v == none { \"-\" } else { str(calc.round(v, digits: #{places})) + \"%\" } }"
   end
 
   defp wrap_field_formatting(ref, :number, decimal_places) when not is_nil(decimal_places) do
