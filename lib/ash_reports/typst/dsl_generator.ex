@@ -435,9 +435,14 @@ defmodule AshReports.Typst.DSLGenerator do
         # Use generate_refs: true to output Typst variable references for fields
         # The actual data will be passed at runtime when the band function is called
         rendered = GridRenderer.render(ir, generate_refs: true)
-        # Wrap in block with no spacing to prevent gaps between repeated grids
-        # in detail band loops. No # prefix since we're already in code mode.
-        "block(above: 0pt, below: 0pt)[#{rendered}]"
+        # Check if grid has center alignment - if so, wrap in align(center)
+        # No # prefix since we're already in code mode.
+        align = get_in(ir.properties, [:align])
+        if has_center_align?(align) do
+          "align(center)[#{rendered}]"
+        else
+          "block(width: 100%, above: 0pt, below: 0pt)[#{rendered}]"
+        end
 
       {:error, reason} ->
         Logger.warning("Failed to transform grid #{grid.name}: #{inspect(reason)}")
@@ -455,9 +460,9 @@ defmodule AshReports.Typst.DSLGenerator do
         # Use generate_refs: true to output Typst variable references for fields
         # The actual data will be passed at runtime when the band function is called
         rendered = TableRenderer.render(ir, generate_refs: true)
-        # Wrap in block with no spacing to prevent gaps between repeated tables
+        # Wrap in block with full width and no spacing to prevent gaps between repeated tables
         # in detail band loops. No # prefix since we're already in code mode.
-        "block(above: 0pt, below: 0pt)[#{rendered}]"
+        "block(width: 100%, above: 0pt, below: 0pt)[#{rendered}]"
 
       {:error, reason} ->
         Logger.warning("Failed to transform table #{table.name}: #{inspect(reason)}")
@@ -475,9 +480,9 @@ defmodule AshReports.Typst.DSLGenerator do
         # Use generate_refs: true to output Typst variable references for fields
         # The actual data will be passed at runtime when the band function is called
         rendered = StackRenderer.render(ir, generate_refs: true)
-        # Wrap in block with no spacing to prevent gaps between repeated stacks
+        # Wrap in block with full width and no spacing to prevent gaps between repeated stacks
         # in detail band loops. No # prefix since we're already in code mode.
-        "block(above: 0pt, below: 0pt)[#{rendered}]"
+        "block(width: 100%, above: 0pt, below: 0pt)[#{rendered}]"
 
       {:error, reason} ->
         Logger.warning("Failed to transform stack #{stack.name}: #{inspect(reason)}")
@@ -929,6 +934,14 @@ defmodule AshReports.Typst.DSLGenerator do
     # No context or no records - use empty data
     "#let report_data = (records: (), variables: (:))"
   end
+
+  # Helper to check if alignment includes center
+  defp has_center_align?(:center), do: true
+  defp has_center_align?({:center, _}), do: true
+  defp has_center_align?({_, :center}), do: true
+  defp has_center_align?("center"), do: true
+  defp has_center_align?(align) when is_binary(align), do: String.contains?(align, "center")
+  defp has_center_align?(_), do: false
 
   defp serialize_records([]), do: "()"
 

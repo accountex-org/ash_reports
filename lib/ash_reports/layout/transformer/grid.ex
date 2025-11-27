@@ -141,13 +141,17 @@ defmodule AshReports.Layout.Transformer.Grid do
   end
 
   defp build_element_style(element) do
+    # Style properties are nested under the :style key in the element
+    # Style can be a map or keyword list depending on how it was defined
+    style = Map.get(element, :style) || %{}
+
     style_props = [
-      font_size: Map.get(element, :font_size),
-      font_weight: Map.get(element, :font_weight),
-      font_style: Map.get(element, :font_style),
-      color: Map.get(element, :color),
-      font_family: Map.get(element, :font_family),
-      text_align: Map.get(element, :text_align)
+      font_size: get_style_prop(style, :font_size),
+      font_weight: get_style_prop(style, :font_weight),
+      font_style: get_style_prop(style, :font_style),
+      color: get_style_prop(style, :color),
+      font_family: get_style_prop(style, :font_family),
+      text_align: get_style_prop(style, :text_align)
     ]
 
     if Enum.all?(style_props, fn {_k, v} -> is_nil(v) end) do
@@ -156,6 +160,11 @@ defmodule AshReports.Layout.Transformer.Grid do
       IR.Style.new(style_props)
     end
   end
+
+  # Helper to get style property from either a map or keyword list
+  defp get_style_prop(style, key) when is_list(style), do: Keyword.get(style, key)
+  defp get_style_prop(style, key) when is_map(style), do: Map.get(style, key)
+  defp get_style_prop(_, _), do: nil
 
   defp build_properties(%Grid{} = grid, columns, rows) do
     properties = %{

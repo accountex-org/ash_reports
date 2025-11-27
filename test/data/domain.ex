@@ -314,13 +314,13 @@ defmodule AshReportsDemo.Domain do
         type :title
 
         grid :title_grid do
-          columns 1
-          align :center
+          columns ["1fr"]
+          align {:center, :horizon}
           inset "10pt"
 
           label :report_title do
             text("Product Inventory Report")
-            style font_size: 18, font_weight: :bold
+            style font_size: 18, font_weight: :bold, color: "blue"
           end
         end
       end

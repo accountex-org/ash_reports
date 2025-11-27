@@ -177,8 +177,18 @@ defmodule AshReports.Renderer.Typst.Content do
 
   defp maybe_add_font_size(params, %Style{font_size: nil}), do: params
 
-  defp maybe_add_font_size(params, %Style{font_size: size}) do
+  defp maybe_add_font_size(params, %Style{font_size: size}) when is_integer(size) do
+    ["size: #{size}pt" | params]
+  end
+
+  defp maybe_add_font_size(params, %Style{font_size: size}) when is_binary(size) do
+    # If already a string (e.g., "18pt", "1.5em"), use as-is
     ["size: #{size}" | params]
+  end
+
+  defp maybe_add_font_size(params, %Style{font_size: size}) do
+    # Fallback for other types - assume pt
+    ["size: #{size}pt" | params]
   end
 
   defp maybe_add_font_weight(params, %Style{font_weight: nil}), do: params
