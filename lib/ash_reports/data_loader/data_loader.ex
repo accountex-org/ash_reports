@@ -626,7 +626,7 @@ defmodule AshReports.DataLoader do
       result = %{
         records: Enum.reverse(records),
         variables: %{},
-        groups: %{},
+        groups: [],
         metadata: %{
           record_count: length(records),
           processing_time: 0,

@@ -198,11 +198,9 @@ defmodule AshReports.QueryBuilder do
         expr when is_function(expr, 1) ->
           # If base_filter is a function with arity 1 (params only), call it
           # It returns a complete query - use it directly as the base
-          # Note: We manually add margin_percentage load as a workaround for Spark
-          # function wrapping which loses the load from the original query
           case expr.(params) do
             nil -> query
-            result -> Ash.Query.load(result, :margin_percentage)
+            result -> result
           end
 
         _expr ->

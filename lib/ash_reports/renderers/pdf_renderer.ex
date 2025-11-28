@@ -186,13 +186,18 @@ defmodule AshReports.PdfRenderer do
       pdf_engine: :typst,
       record_count: length(context.records),
       variable_count: map_size(context.variables),
-      group_count: map_size(context.groups),
+      group_count: group_count(context.groups),
       locale: RenderContext.get_locale(context),
       renderer_version: "1.0.0-typst"
     }
 
     {:ok, metadata}
   end
+
+  # Helper to count groups regardless of format (list or map)
+  defp group_count(groups) when is_list(groups), do: length(groups)
+  defp group_count(groups) when is_map(groups), do: map_size(groups)
+  defp group_count(_), do: 0
 
   defp validate_report_exists(%RenderContext{report: nil}), do: {:error, :missing_report}
   defp validate_report_exists(_context), do: :ok

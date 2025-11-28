@@ -40,17 +40,19 @@ defmodule AshReports.Renderer.Typst.Content do
   @spec render(IR.Content.t(), keyword()) :: String.t()
   def render(content, opts \\ [])
 
-  def render(%Label{text: text, style: nil}, _opts) do
-    escape_typst(text)
+  def render(%Label{text: text, style: nil}, opts) do
+    generate_refs = Keyword.get(opts, :generate_refs, false)
+    interpolate_variables(text, generate_refs)
   end
 
-  def render(%Label{text: text, style: style}, _opts) do
-    escaped = escape_typst(text)
+  def render(%Label{text: text, style: style}, opts) do
+    generate_refs = Keyword.get(opts, :generate_refs, false)
+    content = interpolate_variables(text, generate_refs)
 
     if Style.empty?(style) do
-      escaped
+      content
     else
-      wrap_with_style(escaped, style)
+      wrap_with_style(content, style)
     end
   end
 
@@ -301,6 +303,38 @@ defmodule AshReports.Renderer.Typst.Content do
   end
 
   defp wrap_field_formatting(ref, _format, _decimal_places), do: "##{ref}"
+
+  # Variable interpolation for label text
+  # Replaces [variable_name] with Typst variable references
+  defp interpolate_variables(text, true) when is_binary(text) do
+    # In generate_refs mode, replace [var_name] with #data.variables.var_name
+    # The main template function receives 'data' as a parameter, which contains
+    # both 'records' and 'variables'. We use 'data' not 'report_data' because
+    # we're inside the function body where 'data' is the parameter name.
+    ~r/\[([a-zA-Z_][a-zA-Z0-9_]*)\]/
+    |> Regex.split(text, include_captures: true)
+    |> Enum.map(fn part ->
+      case Regex.run(~r/^\[([a-zA-Z_][a-zA-Z0-9_]*)\]$/, part) do
+        [_, var_name] ->
+          # This is a variable reference - output as Typst code
+          # Variables are stored in data.variables (the function parameter)
+          "#data.variables.#{var_name}"
+        _ ->
+          # Regular text - escape it
+          escape_typst(part)
+      end
+    end)
+    |> Enum.join("")
+  end
+
+  defp interpolate_variables(text, false) when is_binary(text) do
+    # Not in generate_refs mode - just escape the text
+    escape_typst(text)
+  end
+
+  defp interpolate_variables(text, _) when is_binary(text) do
+    escape_typst(text)
+  end
 
   defp get_field_value(data, source) when is_atom(source) do
     Map.get(data, source, "")

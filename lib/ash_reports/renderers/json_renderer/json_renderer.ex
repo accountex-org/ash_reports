@@ -423,7 +423,7 @@ defmodule AshReports.JsonRenderer do
       streaming_enabled: context.config[:streaming_enabled],
       record_count: length(context.records),
       variable_count: map_size(context.variables),
-      group_count: map_size(context.groups),
+      group_count: group_count(context.groups),
       json_size_bytes: estimate_json_size(context),
       phase: "4.1.0",
       # Phase 4.1 CLDR Integration metadata
@@ -444,6 +444,11 @@ defmodule AshReports.JsonRenderer do
 
     {:ok, metadata}
   end
+
+  # Helper to count groups regardless of format (list or map)
+  defp group_count(groups) when is_list(groups), do: length(groups)
+  defp group_count(groups) when is_map(groups), do: map_size(groups)
+  defp group_count(_), do: 0
 
   defp validate_json_requirements(%RenderContext{report: nil}) do
     {:error, :missing_report}

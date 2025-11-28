@@ -424,10 +424,15 @@ defmodule AshReports.RendererIntegration do
     %{
       record_count: length(context.records),
       variable_count: map_size(context.variables),
-      group_count: map_size(context.groups),
+      group_count: get_group_count(context.groups),
       data_processing_metadata: Map.get(context.metadata, :data_processing, %{})
     }
   end
+
+  # Groups can be either a list (new format) or a map (legacy format)
+  defp get_group_count(groups) when is_list(groups), do: length(groups)
+  defp get_group_count(groups) when is_map(groups), do: map_size(groups)
+  defp get_group_count(_), do: 0
 
   defp get_output_format(config) do
     if config.renderer do

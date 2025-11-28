@@ -140,7 +140,7 @@ defmodule AshReports.RenderContext do
     # Data context
     records: [],
     variables: %{},
-    groups: %{},
+    groups: [],
     metadata: %{},
 
     # Internationalization context

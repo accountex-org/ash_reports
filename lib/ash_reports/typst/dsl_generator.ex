@@ -399,6 +399,7 @@ defmodule AshReports.Typst.DSLGenerator do
     grids = band.grids || []
     tables = band.tables || []
     stacks = band.stacks || []
+    elements = band.elements || []
 
     cond do
       # Render grids
@@ -419,14 +420,20 @@ defmodule AshReports.Typst.DSLGenerator do
         |> Enum.map(&generate_stack_content(&1, context))
         |> Enum.join("\n")
 
-      # No layout primitives - empty band
+      # Render elements (labels, fields, etc.)
+      length(elements) > 0 ->
+        elements
+        |> Enum.map(&generate_element(&1, context))
+        |> Enum.join("\n")
+
+      # No layout primitives or elements - empty band
       true ->
         "// Empty band: #{band.name}"
     end
   end
 
   # Generate Typst content from a Grid DSL entity
-  defp generate_grid_content(grid, _context) do
+  defp generate_grid_content(grid, context) do
     alias AshReports.Layout.Transformer.Grid, as: GridTransformer
     alias AshReports.Renderer.Typst.Grid, as: GridRenderer
 
@@ -435,6 +442,11 @@ defmodule AshReports.Typst.DSLGenerator do
         # Use generate_refs: true to output Typst variable references for fields
         # The actual data will be passed at runtime when the band function is called
         rendered = GridRenderer.render(ir, generate_refs: true)
+
+        # If we're in a group context, post-process the output to replace
+        # group-level variable references with actual group calculations
+        rendered = maybe_replace_group_variables(rendered, context)
+
         # Check if grid has center alignment - if so, wrap in align(center)
         # No # prefix since we're already in code mode.
         align = get_in(ir.properties, [:align])
@@ -451,7 +463,7 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   # Generate Typst content from a Table DSL entity
-  defp generate_table_content(table, _context) do
+  defp generate_table_content(table, context) do
     alias AshReports.Layout.Transformer.Table, as: TableTransformer
     alias AshReports.Renderer.Typst.Table, as: TableRenderer
 
@@ -460,6 +472,11 @@ defmodule AshReports.Typst.DSLGenerator do
         # Use generate_refs: true to output Typst variable references for fields
         # The actual data will be passed at runtime when the band function is called
         rendered = TableRenderer.render(ir, generate_refs: true)
+
+        # If we're in a group context, post-process the output to replace
+        # group-level variable references with actual group calculations
+        rendered = maybe_replace_group_variables(rendered, context)
+
         # Wrap in block with full width and no spacing to prevent gaps between repeated tables
         # in detail band loops. No # prefix since we're already in code mode.
         "block(width: 100%, above: 0pt, below: 0pt)[#{rendered}]"
@@ -471,7 +488,7 @@ defmodule AshReports.Typst.DSLGenerator do
   end
 
   # Generate Typst content from a Stack DSL entity
-  defp generate_stack_content(stack, _context) do
+  defp generate_stack_content(stack, context) do
     alias AshReports.Layout.Transformer.Stack, as: StackTransformer
     alias AshReports.Renderer.Typst.Stack, as: StackRenderer
 
@@ -480,6 +497,11 @@ defmodule AshReports.Typst.DSLGenerator do
         # Use generate_refs: true to output Typst variable references for fields
         # The actual data will be passed at runtime when the band function is called
         rendered = StackRenderer.render(ir, generate_refs: true)
+
+        # If we're in a group context, post-process the output to replace
+        # group-level variable references with actual group calculations
+        rendered = maybe_replace_group_variables(rendered, context)
+
         # Wrap in block with full width and no spacing to prevent gaps between repeated stacks
         # in detail band loops. No # prefix since we're already in code mode.
         "block(width: 100%, above: 0pt, below: 0pt)[#{rendered}]"
@@ -487,6 +509,34 @@ defmodule AshReports.Typst.DSLGenerator do
       {:error, reason} ->
         Logger.warning("Failed to transform stack #{stack.name}: #{inspect(reason)}")
         "// Stack transformation failed: #{stack.name}"
+    end
+  end
+
+  # Post-process rendered content to replace group-level variable references
+  # with actual group calculations when in a group header/footer context
+  defp maybe_replace_group_variables(rendered, context) do
+    is_group_context = Map.get(context, :is_group_header) || Map.get(context, :is_group_footer)
+    report = Map.get(context, :report)
+
+    if is_group_context do
+      # First, replace the special group_value placeholder with group.key
+      rendered = String.replace(rendered, "#data.variables.group_value", "#group.key")
+
+      # Then, if we have report variables, replace group-level variable references
+      if report do
+        group_variables = Enum.filter(report.variables || [], fn v -> v.reset_on == :group end)
+
+        Enum.reduce(group_variables, rendered, fn variable, acc ->
+          # Replace #data.variables.variable_name with the group calculation
+          pattern = "#data.variables.#{variable.name}"
+          replacement = generate_group_variable_calculation(variable)
+          String.replace(acc, pattern, replacement)
+        end)
+      else
+        rendered
+      end
+    else
+      rendered
     end
   end
 
@@ -550,14 +600,77 @@ defmodule AshReports.Typst.DSLGenerator do
     end
 
     # Step 2: Replace variable placeholders like [variable_name]
-    # Matches patterns like [group_total_credit_limit] and replaces with #data.variables.group_total_credit_limit
+    # For group-level variables, calculate from group.records instead of using pre-computed values
+    is_group_context = Map.get(context, :is_group_header) || Map.get(context, :is_group_footer)
+    report = Map.get(context, :report)
+
     processed_text = Regex.replace(~r/\[([a-z_][a-z0-9_]*)\]/i, processed_text, fn _full_match, var_name ->
-      "#data.variables.#{var_name}"
+      var_atom = String.to_atom(var_name)
+
+      # Try to find variable definition in report
+      variable_def = if report do
+        Enum.find(report.variables || [], fn v -> v.name == var_atom end)
+      end
+
+      cond do
+        # Group-level variable in group context - calculate from group.records
+        is_group_context && variable_def && variable_def.reset_on == :group ->
+          generate_group_variable_calculation(variable_def)
+
+        # Regular variable - use data.variables
+        true ->
+          "#data.variables.#{var_name}"
+      end
     end)
 
     content = "[#{processed_text}]"
     apply_element_wrappers(content, label)
   end
+
+  # Generate Typst code to calculate group-level variable from group.records
+  defp generate_group_variable_calculation(variable_def) do
+    field_name = extract_variable_field_name(variable_def.expression)
+
+    case variable_def.type do
+      :count ->
+        "\#group.records.len()"
+
+      :sum ->
+        if field_name do
+          # Sum the field values from group records
+          "\#{ group.records.map(r => r." <> field_name <> ").fold(0, (a, b) => a + b) }"
+        else
+          "\#group.records.len()"
+        end
+
+      :average ->
+        if field_name do
+          # Calculate average: sum / count, with divide-by-zero protection
+          "\#{ let vals = group.records.map(r => r." <> field_name <> "); let sum = vals.fold(0, (a, b) => a + b); let count = vals.len(); if count == 0 { 0 } else { calc.round(sum / count, digits: 2) } }"
+        else
+          "0"
+        end
+
+      :avg ->
+        if field_name do
+          "\#{ let vals = group.records.map(r => r." <> field_name <> "); let sum = vals.fold(0, (a, b) => a + b); let count = vals.len(); if count == 0 { 0 } else { calc.round(sum / count, digits: 2) } }"
+        else
+          "0"
+        end
+
+      _ ->
+        "#data.variables.#{variable_def.name}"
+    end
+  end
+
+  # Extract field name from variable expression
+  defp extract_variable_field_name(expression) when is_atom(expression), do: Atom.to_string(expression)
+
+  defp extract_variable_field_name(%Ash.Query.Ref{attribute: %{name: name}}), do: Atom.to_string(name)
+
+  defp extract_variable_field_name(%Ash.Query.Ref{attribute: name}) when is_atom(name), do: Atom.to_string(name)
+
+  defp extract_variable_field_name(_), do: nil
 
   defp generate_expression_element(%{expression: expression} = expr, context) do
     # Convert AshReports expression to Typst expression
@@ -838,9 +951,11 @@ defmodule AshReports.Typst.DSLGenerator do
               if group_records.len() > 0 {
                 let group = (key: prev_group_value, records: group_records)
         #{indent_content(header_content, 4)}
+        #{indent_content("v(8pt)", 4)}
         #{indent_content("// Detail records", 4)}
         #{indent_content(generate_detail_records_loop(detail_bands, context), 4)}
         #{indent_content(footer_content, 4)}
+        #{indent_content("v(12pt)", 4)}
               }
               group_records = ()
             }
@@ -853,9 +968,11 @@ defmodule AshReports.Typst.DSLGenerator do
           if group_records.len() > 0 {
             let group = (key: prev_group_value, records: group_records)
         #{indent_content(header_content, 3)}
+        #{indent_content("v(8pt)", 3)}
         #{indent_content("// Detail records", 3)}
         #{indent_content(generate_detail_records_loop(detail_bands, context), 3)}
         #{indent_content(footer_content, 3)}
+        #{indent_content("v(12pt)", 3)}
           }
         }
         """
@@ -1083,7 +1200,8 @@ defmodule AshReports.Typst.DSLGenerator do
         align != nil ->
           alignment_str = build_alignment_string(align)
           if alignment_str != "" do
-            "#place(#{alignment_str})[#{content}]"
+            # No # prefix - we're in code mode inside function body
+            "place(#{alignment_str})[#{content}]"
           else
             content
           end
@@ -1101,7 +1219,8 @@ defmodule AshReports.Typst.DSLGenerator do
           dx_pt = "#{dx}pt"
           dy_pt = "#{dy}pt"
 
-          "#place(dx: #{dx_pt}, dy: #{dy_pt})[#{content}]"
+          # No # prefix - we're in code mode inside function body
+          "place(dx: #{dx_pt}, dy: #{dy_pt})[#{content}]"
 
         # No valid positioning attributes
         true ->
@@ -1121,8 +1240,8 @@ defmodule AshReports.Typst.DSLGenerator do
       params = build_style_params(style)
 
       if params != "" do
-        # Content-producing functions need # prefix even in code blocks
-        "#text(#{params})[#{content}]"
+        # No # prefix - we're in code mode inside function body
+        "text(#{params})[#{content}]"
       else
         content
       end
@@ -1222,14 +1341,16 @@ defmodule AshReports.Typst.DSLGenerator do
 
       # Single value padding (e.g., "10pt")
       value when is_binary(value) ->
-        "#pad(#{value})[#{content}]"
+        # No # prefix - we're in code mode inside function body
+        "pad(#{value})[#{content}]"
 
       # Keyword list padding (e.g., [top: "5pt", bottom: "10pt"])
       opts when is_list(opts) ->
         params = build_padding_params(opts)
 
         if params != "" do
-          "#pad(#{params})[#{content}]"
+          # No # prefix - we're in code mode inside function body
+          "pad(#{params})[#{content}]"
         else
           content
         end
@@ -1249,14 +1370,16 @@ defmodule AshReports.Typst.DSLGenerator do
 
       # Single value margin (e.g., "10pt")
       value when is_binary(value) ->
-        "#pad(#{value})[#{content}]"
+        # No # prefix - we're in code mode inside function body
+        "pad(#{value})[#{content}]"
 
       # Keyword list margin (e.g., [top: "5pt", bottom: "10pt"])
       opts when is_list(opts) ->
         params = build_padding_params(opts)
 
         if params != "" do
-          "#pad(#{params})[#{content}]"
+          # No # prefix - we're in code mode inside function body
+          "pad(#{params})[#{content}]"
         else
           content
         end

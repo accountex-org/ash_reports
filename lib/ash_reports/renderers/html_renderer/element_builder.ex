@@ -122,6 +122,10 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
   @doc """
   Builds HTML for all elements in the given context.
 
+  Handles both grouped and non-grouped reports. For grouped reports, iterates
+  over groups and renders group headers, detail records, and group footers
+  for each group.
+
   ## Examples
 
       {:ok, html_elements} = ElementBuilder.build_all_elements(context)
@@ -131,20 +135,230 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
           {:ok, [element_html()]} | {:error, term()}
   def build_all_elements(%RenderContext{} = context, options \\ []) do
     html_elements =
-      context.report.bands
-      |> Enum.flat_map(fn band ->
-        band_elements = band.elements || []
-
-        band_elements
-        |> Enum.map(&build_single_element(&1, context, options, band.name))
-        |> Enum.filter(&filter_successful_elements/1)
-      end)
+      if has_groups?(context) do
+        build_grouped_elements(context, options)
+      else
+        build_ungrouped_elements(context, options)
+      end
 
     {:ok, html_elements}
   rescue
     error ->
       {:error, {:element_building_failed, error}}
   end
+
+  defp has_groups?(%RenderContext{} = context) do
+    groups = context.groups
+
+    cond do
+      is_list(groups) and length(groups) > 0 -> true
+      is_map(groups) and map_size(groups) > 0 -> true
+      true -> false
+    end
+  end
+
+  defp build_ungrouped_elements(%RenderContext{} = context, options) do
+    context.report.bands
+    |> Enum.flat_map(fn band ->
+      build_band_elements(band, context, options)
+    end)
+  end
+
+  # Get all elements from a band, including those in tables, grids, and stacks
+  defp build_band_elements(band, context, options) do
+    # Get flat elements
+    flat_elements =
+      (band.elements || [])
+      |> Enum.map(&build_single_element(&1, context, options, band.name))
+      |> Enum.filter(&filter_successful_elements/1)
+
+    # Get elements from tables
+    table_elements =
+      (band.tables || [])
+      |> Enum.flat_map(fn table ->
+        build_table_elements(table, context, options, band.name)
+      end)
+
+    # Get elements from grids
+    grid_elements =
+      (band.grids || [])
+      |> Enum.flat_map(fn grid ->
+        build_grid_elements(grid, context, options, band.name)
+      end)
+
+    # Get elements from stacks
+    stack_elements =
+      (band.stacks || [])
+      |> Enum.flat_map(fn stack ->
+        build_stack_elements(stack, context, options, band.name)
+      end)
+
+    flat_elements ++ table_elements ++ grid_elements ++ stack_elements
+  end
+
+  defp build_table_elements(table, context, options, band_name) do
+    (table.elements || [])
+    |> Enum.map(&build_single_element(&1, context, options, band_name))
+    |> Enum.filter(&filter_successful_elements/1)
+  end
+
+  defp build_grid_elements(grid, context, options, band_name) do
+    (grid.elements || [])
+    |> Enum.map(&build_single_element(&1, context, options, band_name))
+    |> Enum.filter(&filter_successful_elements/1)
+  end
+
+  defp build_stack_elements(stack, context, options, band_name) do
+    (stack.elements || [])
+    |> Enum.map(&build_single_element(&1, context, options, band_name))
+    |> Enum.filter(&filter_successful_elements/1)
+  end
+
+  # Extract raw elements from a band without building them (for placeholder substitution)
+  defp extract_all_band_elements(band) do
+    flat_elements = band.elements || []
+
+    table_elements =
+      (band.tables || [])
+      |> Enum.flat_map(fn table -> table.elements || [] end)
+
+    grid_elements =
+      (band.grids || [])
+      |> Enum.flat_map(fn grid -> grid.elements || [] end)
+
+    stack_elements =
+      (band.stacks || [])
+      |> Enum.flat_map(fn stack -> stack.elements || [] end)
+
+    flat_elements ++ table_elements ++ grid_elements ++ stack_elements
+  end
+
+  defp build_grouped_elements(%RenderContext{} = context, options) do
+    bands = context.report.bands
+    groups = context.groups
+
+    # Separate bands by type
+    {title_bands, other_bands} = Enum.split_with(bands, &(&1.type == :title))
+    {header_bands, other_bands} = Enum.split_with(other_bands, &(&1.type in [:page_header, :column_header]))
+    {group_header_bands, other_bands} = Enum.split_with(other_bands, &(&1.type == :group_header))
+    {detail_bands, other_bands} = Enum.split_with(other_bands, &(&1.type == :detail))
+    {group_footer_bands, other_bands} = Enum.split_with(other_bands, &(&1.type == :group_footer))
+    {footer_bands, summary_bands} = Enum.split_with(other_bands, &(&1.type in [:page_footer, :column_footer]))
+
+    # Render title bands once
+    title_elements = render_bands_once(title_bands, context, options)
+
+    # Render header bands once
+    header_elements = render_bands_once(header_bands, context, options)
+
+    # Render grouped content
+    grouped_elements =
+      groups
+      |> Enum.flat_map(fn group ->
+        group_context = build_group_context(context, group)
+
+        # Render group header for this group
+        group_header_elements =
+          render_bands_for_group(group_header_bands, group_context, group, options)
+
+        # Render detail bands for each record in the group
+        detail_elements =
+          group.records
+          |> Enum.flat_map(fn record ->
+            record_context = %{group_context | current_record: record}
+            render_bands_for_record(detail_bands, record_context, options)
+          end)
+
+        # Render group footer for this group
+        group_footer_elements =
+          render_bands_for_group(group_footer_bands, group_context, group, options)
+
+        group_header_elements ++ detail_elements ++ group_footer_elements
+      end)
+
+    # Render footer bands once
+    footer_elements = render_bands_once(footer_bands, context, options)
+
+    # Render summary bands once
+    summary_elements = render_bands_once(summary_bands, context, options)
+
+    title_elements ++ header_elements ++ grouped_elements ++ footer_elements ++ summary_elements
+  end
+
+  defp render_bands_once(bands, context, options) do
+    bands
+    |> Enum.flat_map(fn band ->
+      build_band_elements(band, context, options)
+    end)
+  end
+
+  defp render_bands_for_group(bands, context, group, options) do
+    bands
+    |> Enum.flat_map(fn band ->
+      # Get all elements from band (including tables, grids, stacks)
+      all_elements = extract_all_band_elements(band)
+
+      all_elements
+      |> Enum.map(fn element ->
+        # Replace placeholders in text with group values
+        element_with_group = substitute_group_placeholders(element, group)
+        build_single_element(element_with_group, context, options, band.name)
+      end)
+      |> Enum.filter(&filter_successful_elements/1)
+    end)
+  end
+
+  defp render_bands_for_record(bands, context, options) do
+    bands
+    |> Enum.flat_map(fn band ->
+      build_band_elements(band, context, options)
+    end)
+  end
+
+  defp build_group_context(%RenderContext{} = context, group) do
+    # Add group-specific data to context
+    group_variables = Map.get(group, :aggregates, %{})
+    merged_variables = Map.merge(context.variables, group_variables)
+
+    %{context |
+      variables: merged_variables,
+      metadata: Map.put(context.metadata, :current_group, group)
+    }
+  end
+
+  defp substitute_group_placeholders(element, group) do
+    case Map.get(element, :text) do
+      nil ->
+        element
+
+      text when is_binary(text) ->
+        # Replace [group_value] with actual group value
+        group_value = group.group_value || ""
+        record_count = group.record_count || 0
+
+        new_text =
+          text
+          |> String.replace("[group_value]", to_string(group_value))
+          |> String.replace("[group_customer_count]", to_string(record_count))
+          |> String.replace("[group_record_count]", to_string(record_count))
+
+        # Replace group aggregate placeholders like [group_total_credit_limit]
+        new_text =
+          Enum.reduce(Map.get(group, :aggregates, %{}), new_text, fn {key, value}, acc ->
+            placeholder = "[group_#{key}]"
+            String.replace(acc, placeholder, format_aggregate_value(value))
+          end)
+
+        Map.put(element, :text, new_text)
+
+      _ ->
+        element
+    end
+  end
+
+  defp format_aggregate_value(value) when is_float(value), do: :erlang.float_to_binary(value, decimals: 2)
+  defp format_aggregate_value(%Decimal{} = value), do: Decimal.to_string(value)
+  defp format_aggregate_value(value), do: to_string(value)
 
   @doc """
   Builds HTML for a single element.
@@ -440,8 +654,9 @@ defmodule AshReports.HtmlRenderer.ElementBuilder do
   defp resolve_field_value(element, %RenderContext{} = context) do
     case Map.get(element, :expression) do
       nil ->
-        # Try to get value from data field
-        field_name = Map.get(element, :field)
+        # Try to get value from data field - check both :field and :source attributes
+        # The :source attribute is used by AshReports.Element.Field structs
+        field_name = Map.get(element, :field) || Map.get(element, :source)
 
         if field_name do
           value = RenderContext.get_current_record(context, field_name, "")

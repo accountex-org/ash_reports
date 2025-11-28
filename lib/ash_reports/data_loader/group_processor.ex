@@ -453,29 +453,47 @@ defmodule AshReports.GroupProcessor do
   @doc """
   Processes multiple records and returns group summary information.
 
-  Simplified version for Phase 8.1 integration.
+  Returns a list of group maps, where each group contains:
+  - `group_key`: A map of level => value for all group levels
+  - `group_value`: The primary group value (level 1)
+  - `records`: The list of records in this group
+  - `record_count`: Number of records in the group
+  - `first_record`: First record in the group
+  - `last_record`: Last record in the group
+
+  This structure is compatible with the BandRenderer's HEEX template generation.
   """
-  @spec process_records(group_state(), [map()]) :: %{term() => map()}
-  def process_records(_group_state, []), do: %{}
+  @spec process_records(group_state(), [map()]) :: [map()]
+  def process_records(_group_state, []), do: []
 
   def process_records(group_state, records) when is_list(records) do
     # Group records by their group values
-    records
-    |> Enum.group_by(fn record ->
-      # Extract group values for this record
-      Enum.reduce(group_state.groups, %{}, fn group, acc ->
-        group_value = evaluate_group_expression(group.expression, record)
-        Map.put(acc, group.level, group_value)
+    grouped_records =
+      records
+      |> Enum.group_by(fn record ->
+        # Extract group values for this record
+        Enum.reduce(group_state.groups, %{}, fn group, acc ->
+          group_value = evaluate_group_expression(group.expression, record)
+          Map.put(acc, group.level, group_value)
+        end)
       end)
+
+    # Convert to list of group maps with records included
+    grouped_records
+    |> Enum.map(fn {group_key, group_records} ->
+      # Get the primary group value (level 1)
+      primary_value = Map.get(group_key, 1)
+
+      %{
+        group_key: group_key,
+        group_value: primary_value,
+        records: group_records,
+        record_count: length(group_records),
+        first_record: List.first(group_records),
+        last_record: List.last(group_records),
+        group_level_values: group_key
+      }
     end)
-    |> Enum.into(%{}, fn {group_key, group_records} ->
-      {group_key,
-       %{
-         record_count: length(group_records),
-         first_record: List.first(group_records),
-         last_record: List.last(group_records),
-         group_level_values: group_key
-       }}
-    end)
+    |> Enum.sort_by(fn group -> Map.get(group.group_key, 1) end)
   end
 end

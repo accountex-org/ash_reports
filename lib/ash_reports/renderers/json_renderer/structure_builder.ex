@@ -402,7 +402,12 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   defp should_include_section?(:variables, variables, _opts) when map_size(variables) > 0,
     do: true
 
-  defp should_include_section?(:groups, groups, _opts) when map_size(groups) > 0, do: true
+  defp should_include_section?(:groups, groups, _opts) when is_list(groups) and length(groups) > 0,
+    do: true
+
+  defp should_include_section?(:groups, groups, _opts) when is_map(groups) and map_size(groups) > 0,
+    do: true
+
   defp should_include_section?(_, _, _), do: false
 
   defp build_band_navigation(%RenderContext{} = context) do
@@ -430,9 +435,23 @@ defmodule AshReports.JsonRenderer.StructureBuilder do
   end
 
   defp build_group_navigation(%RenderContext{} = context) do
+    groups = context.groups
+
+    {total, keys} =
+      cond do
+        is_list(groups) ->
+          {length(groups), Enum.map(groups, & &1.group_key)}
+
+        is_map(groups) ->
+          {map_size(groups), Map.keys(groups)}
+
+        true ->
+          {0, []}
+      end
+
     %{
-      total_groups: map_size(context.groups),
-      group_keys: Map.keys(context.groups)
+      total_groups: total,
+      group_keys: keys
     }
   end
 
