@@ -929,7 +929,7 @@ defmodule AshReports.Typst.DSLGenerator do
         ""
       end
 
-      # For level 0, we use a simple approach: track group value changes
+      # For level 0, we use fold to accumulate groups (Typst variables are immutable in loops)
       if level == 0 do
         # Try direct field name first (for simple fields/aggregates), then calculated field (for complex expressions)
         calc_field_name = "__group_#{group_level}_#{current_group.name}"
@@ -937,45 +937,45 @@ defmodule AshReports.Typst.DSLGenerator do
         """
         // Grouping by #{group_field}
         {
-          let prev_group_value = none
-          let group_records = ()
-
-          for record in data.records {
-            // Try direct field first, fall back to calculated field
-            let current_group_value = if "#{group_field}" in record {
+          // Use fold to accumulate groups (Typst variables are immutable in for loops)
+          let get_group_value(record) = {
+            if "#{group_field}" in record {
               record.at("#{group_field}", default: none)
             } else {
               record.at("#{calc_field_name}", default: none)
             }
-
-            // Check for group break
-            if prev_group_value != none and prev_group_value != current_group_value {
-              // Process accumulated group records
-              if group_records.len() > 0 {
-                let group = (key: prev_group_value, records: group_records)
-        #{indent_content(header_content, 4)}
-        #{indent_content("v(8pt)", 4)}
-        #{indent_content("// Detail records", 4)}
-        #{indent_content(generate_detail_records_loop(detail_bands, context), 4)}
-        #{indent_content(footer_content, 4)}
-        #{indent_content("v(12pt)", 4)}
-              }
-              group_records = ()
-            }
-
-            group_records = group_records + (record,)
-            prev_group_value = current_group_value
           }
 
-          // Process final group
-          if group_records.len() > 0 {
-            let group = (key: prev_group_value, records: group_records)
-        #{indent_content(header_content, 3)}
-        #{indent_content("v(8pt)", 3)}
-        #{indent_content("// Detail records", 3)}
-        #{indent_content(generate_detail_records_loop(detail_bands, context), 3)}
-        #{indent_content(footer_content, 3)}
-        #{indent_content("v(12pt)", 3)}
+          let result = data.records.fold(
+            (prev: none, groups: (), current_records: ()),
+            (acc, record) => {
+              let current_val = get_group_value(record)
+              if acc.prev != none and acc.prev != current_val {
+                // Group break - save previous group and start new one
+                let new_groups = acc.groups + ((key: acc.prev, records: acc.current_records),)
+                (prev: current_val, groups: new_groups, current_records: (record,))
+              } else {
+                // Same group or first record - accumulate
+                (prev: current_val, groups: acc.groups, current_records: acc.current_records + (record,))
+              }
+            }
+          )
+
+          // Add the final group
+          let all_groups = if result.current_records.len() > 0 {
+            result.groups + ((key: result.prev, records: result.current_records),)
+          } else {
+            result.groups
+          }
+
+          // Render all groups
+          for group in all_groups {
+        #{indent_content(header_content, 2)}
+        #{indent_content("v(8pt)", 2)}
+        #{indent_content("// Detail records", 2)}
+        #{indent_content(generate_detail_records_loop(detail_bands, context), 2)}
+        #{indent_content(footer_content, 2)}
+        #{indent_content("v(12pt)", 2)}
           }
         }
         """
