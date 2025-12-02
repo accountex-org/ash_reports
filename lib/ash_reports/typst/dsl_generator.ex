@@ -405,34 +405,30 @@ defmodule AshReports.Typst.DSLGenerator do
     stacks = band.stacks || []
     elements = band.elements || []
 
-    cond do
-      # Render grids
-      length(grids) > 0 ->
-        grids
-        |> Enum.map(&generate_grid_content(&1, context))
-        |> Enum.join("\n")
+    # Render all layout primitives, not just one type
+    rendered_grids =
+      grids
+      |> Enum.map(&generate_grid_content(&1, context))
 
-      # Render tables
-      length(tables) > 0 ->
-        tables
-        |> Enum.map(&generate_table_content(&1, context))
-        |> Enum.join("\n")
+    rendered_tables =
+      tables
+      |> Enum.map(&generate_table_content(&1, context))
 
-      # Render stacks
-      length(stacks) > 0 ->
-        stacks
-        |> Enum.map(&generate_stack_content(&1, context))
-        |> Enum.join("\n")
+    rendered_stacks =
+      stacks
+      |> Enum.map(&generate_stack_content(&1, context))
 
-      # Render elements (labels, fields, etc.)
-      length(elements) > 0 ->
-        elements
-        |> Enum.map(&generate_element(&1, context))
-        |> Enum.join("\n")
+    rendered_elements =
+      elements
+      |> Enum.map(&generate_element(&1, context))
 
-      # No layout primitives or elements - empty band
-      true ->
-        "// Empty band: #{band.name}"
+    all_content =
+      rendered_grids ++ rendered_tables ++ rendered_stacks ++ rendered_elements
+
+    if Enum.empty?(all_content) do
+      "// Empty band: #{band.name}"
+    else
+      Enum.join(all_content, "\n")
     end
   end
 
