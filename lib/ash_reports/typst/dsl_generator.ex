@@ -236,9 +236,13 @@ defmodule AshReports.Typst.DSLGenerator do
     page_header = find_band_by_type(report.bands, :page_header)
     page_footer = find_band_by_type(report.bands, :page_footer)
 
+    # Page headers/footers are placed inside content blocks [], so band content
+    # needs # prefix for function calls (content mode vs code mode)
+    content_mode_context = Map.put(context, :content_mode, true)
+
     header_content =
       if page_header do
-        header_band_content = generate_band_content(page_header, context)
+        header_band_content = generate_band_content(page_header, content_mode_context)
 
         # Check if header should repeat on all pages (default: true)
         if Map.get(page_header, :repeat_on_pages, true) do
@@ -253,7 +257,7 @@ defmodule AshReports.Typst.DSLGenerator do
 
     footer_content =
       if page_footer do
-        "footer: [#{generate_band_content(page_footer, context)}]"
+        "footer: [#{generate_band_content(page_footer, content_mode_context)}]"
       else
         "footer: context [Page #counter(page).display() of #counter(page).final().at(0)]"
       end
@@ -448,12 +452,13 @@ defmodule AshReports.Typst.DSLGenerator do
         rendered = maybe_replace_group_variables(rendered, context)
 
         # Check if grid has center alignment - if so, wrap in align(center)
-        # No # prefix since we're already in code mode.
+        # Use # prefix when in content mode (inside [] blocks like page headers)
+        prefix = if context[:content_mode], do: "#", else: ""
         align = get_in(ir.properties, [:align])
         if has_center_align?(align) do
-          "align(center)[#{rendered}]"
+          "#{prefix}align(center)[#{rendered}]"
         else
-          "block(width: 100%, above: 0pt, below: 0pt)[#{rendered}]"
+          "#{prefix}block(width: 100%, above: 0pt, below: 0pt)[#{rendered}]"
         end
 
       {:error, reason} ->
@@ -478,8 +483,9 @@ defmodule AshReports.Typst.DSLGenerator do
         rendered = maybe_replace_group_variables(rendered, context)
 
         # Wrap in block with full width and no spacing to prevent gaps between repeated tables
-        # in detail band loops. No # prefix since we're already in code mode.
-        "block(width: 100%, above: 0pt, below: 0pt)[#{rendered}]"
+        # in detail band loops. Use # prefix when in content mode (inside [] blocks like page headers)
+        prefix = if context[:content_mode], do: "#", else: ""
+        "#{prefix}block(width: 100%, above: 0pt, below: 0pt)[#{rendered}]"
 
       {:error, reason} ->
         Logger.warning("Failed to transform table #{table.name}: #{inspect(reason)}")
@@ -503,8 +509,9 @@ defmodule AshReports.Typst.DSLGenerator do
         rendered = maybe_replace_group_variables(rendered, context)
 
         # Wrap in block with full width and no spacing to prevent gaps between repeated stacks
-        # in detail band loops. No # prefix since we're already in code mode.
-        "block(width: 100%, above: 0pt, below: 0pt)[#{rendered}]"
+        # in detail band loops. Use # prefix when in content mode (inside [] blocks like page headers)
+        prefix = if context[:content_mode], do: "#", else: ""
+        "#{prefix}block(width: 100%, above: 0pt, below: 0pt)[#{rendered}]"
 
       {:error, reason} ->
         Logger.warning("Failed to transform stack #{stack.name}: #{inspect(reason)}")
