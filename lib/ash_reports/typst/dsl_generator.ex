@@ -963,7 +963,7 @@ defmodule AshReports.Typst.DSLGenerator do
               group_records = ()
             }
 
-            group_records.push(record)
+            group_records = group_records + (record,)
             prev_group_value = current_group_value
           }
 
