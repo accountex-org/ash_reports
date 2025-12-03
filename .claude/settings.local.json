@@ -5,7 +5,9 @@
       "Bash(mix test:*)",
       "Bash(set MIX_ENV=test)",
       "Bash(mix clean:*)",
-      "Bash(mix compile:*)"
+      "Bash(mix compile:*)",
+      "Bash(mix deps.compile:*)",
+      "Bash(mix run:*)"
     ],
     "deny": [],
     "ask": []

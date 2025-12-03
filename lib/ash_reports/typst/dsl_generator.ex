@@ -1068,7 +1068,6 @@ defmodule AshReports.Typst.DSLGenerator do
   defp serialize_records(records) when is_list(records) do
     serialized =
       records
-      |> Enum.take(100)  # Limit to first 100 records to prevent huge templates
       |> Enum.map(&serialize_record/1)
       |> Enum.join(",\n    ")
 
