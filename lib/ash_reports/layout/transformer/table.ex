@@ -178,6 +178,7 @@ defmodule AshReports.Layout.Transformer.Table do
         {:ok, IR.Content.field(element.source,
           format: Map.get(element, :format),
           decimal_places: Map.get(element, :decimal_places),
+          align: Map.get(element, :align),
           style: style
         )}
 

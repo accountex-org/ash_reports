@@ -56,7 +56,7 @@ defmodule AshReports.Renderer.Typst.Content do
     end
   end
 
-  def render(%Field{source: source, format: format, decimal_places: decimal_places, style: style}, opts) do
+  def render(%Field{source: source, format: format, decimal_places: decimal_places, align: align, style: style}, opts) do
     data = Keyword.get(opts, :data)
     generate_refs = Keyword.get(opts, :generate_refs, false)
 
@@ -65,7 +65,7 @@ defmodule AshReports.Renderer.Typst.Content do
     content =
       if generate_refs or is_nil(data) do
         # Code generation mode - output Typst variable reference for runtime interpolation
-        render_field_reference(source, format, decimal_places)
+        render_field_reference(source, format, decimal_places, align)
       else
         # Data rendering mode - interpolate the actual value
         value = get_field_value(data, source)
@@ -255,22 +255,33 @@ defmodule AshReports.Renderer.Typst.Content do
   Generates code like `#record.field_name` that will be evaluated when the
   band function is called with actual data.
   """
-  @spec render_field_reference(atom() | list(), atom() | nil, non_neg_integer() | nil) :: String.t()
-  def render_field_reference(source, format, decimal_places) when is_atom(source) do
+  @spec render_field_reference(atom() | list(), atom() | nil, non_neg_integer() | nil, atom() | nil) :: String.t()
+  def render_field_reference(source, format, decimal_places, align \\ nil)
+
+  def render_field_reference(source, format, decimal_places, align) when is_atom(source) do
     # Base reference without # prefix - the # is added by wrap_field_formatting
     # when switching from markup mode to code mode
     base_ref = "record.#{source}"
-    wrap_field_formatting(base_ref, format, decimal_places)
+    base_content = wrap_field_formatting(base_ref, format, decimal_places)
+    wrap_field_alignment(base_content, align)
   end
 
-  def render_field_reference(source, format, decimal_places) when is_list(source) do
+  def render_field_reference(source, format, decimal_places, align) when is_list(source) do
     # Nested path like [:product, :name]
     path = Enum.map_join(source, ".", &to_string/1)
     base_ref = "record.#{path}"
-    wrap_field_formatting(base_ref, format, decimal_places)
+    base_content = wrap_field_formatting(base_ref, format, decimal_places)
+    wrap_field_alignment(base_content, align)
   end
 
-  def render_field_reference(_source, _format, _decimal_places), do: ""
+  def render_field_reference(_source, _format, _decimal_places, _align), do: ""
+
+  # Wrap content with alignment using #h(1fr) spacers
+  defp wrap_field_alignment(content, nil), do: content
+  defp wrap_field_alignment(content, :right), do: "#h(1fr)" <> content
+  defp wrap_field_alignment(content, :center), do: "#h(1fr)" <> content <> "#h(1fr)"
+  defp wrap_field_alignment(content, :left), do: content <> "#h(1fr)"
+  defp wrap_field_alignment(content, _), do: content
 
   # Wrap field reference with formatting functions if needed
   # The ref comes WITHOUT the # prefix. We add # when needed to switch to code mode.
@@ -285,7 +296,8 @@ defmodule AshReports.Renderer.Typst.Content do
     places = decimal_places || 2
     # \$ outputs literal dollar sign, use code block to handle none values
     # If the field is none, display dash to indicate missing value
-    "\\$\#{ let v = #{ref}; if v == none { \"-\" } else { calc.round(v, digits: #{places}) } }"
+    # Use format-decimal helper to always show fixed decimal places (e.g., 25000.00)
+    "\\$\#{ let v = #{ref}; if v == none { \"-\" } else { format-decimal(v, #{places}) } }"
   end
 
   defp wrap_field_formatting(ref, :percent, decimal_places) do
@@ -294,12 +306,13 @@ defmodule AshReports.Renderer.Typst.Content do
     # Include % inside else branch so we don't get "-%" for none values
     # Note: We assume the value is already a percentage (0-100 range), not a decimal (0-1 range)
     # If the source data is in decimal form, multiply by 100 at the data layer, not here
-    "\#{ let v = #{ref}; if v == none { \"-\" } else { str(calc.round(v, digits: #{places})) + \"%\" } }"
+    "\#{ let v = #{ref}; if v == none { \"-\" } else { format-decimal(v, #{places}) + \"%\" } }"
   end
 
   defp wrap_field_formatting(ref, :number, decimal_places) when not is_nil(decimal_places) do
     # Use code block to handle none values - display dash for missing values
-    "\#{ let v = #{ref}; if v == none { \"-\" } else { calc.round(v, digits: #{decimal_places}) } }"
+    # Use format-decimal helper to always show fixed decimal places
+    "\#{ let v = #{ref}; if v == none { \"-\" } else { format-decimal(v, #{decimal_places}) } }"
   end
 
   defp wrap_field_formatting(ref, _format, _decimal_places), do: "##{ref}"

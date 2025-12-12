@@ -80,10 +80,11 @@ defmodule AshReports.Layout.IR.Content do
             source: atom() | list(atom()),
             format: atom() | nil,
             decimal_places: non_neg_integer() | nil,
+            align: atom() | nil,
             style: AshReports.Layout.IR.Style.t() | nil
           }
 
-    defstruct [:source, :format, :decimal_places, :style]
+    defstruct [:source, :format, :decimal_places, :align, :style]
 
     @doc """
     Creates a new FieldIR.
@@ -94,6 +95,7 @@ defmodule AshReports.Layout.IR.Content do
         source: source,
         format: Keyword.get(opts, :format),
         decimal_places: Keyword.get(opts, :decimal_places),
+        align: Keyword.get(opts, :align),
         style: Keyword.get(opts, :style)
       }
     end

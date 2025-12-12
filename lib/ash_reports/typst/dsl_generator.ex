@@ -85,6 +85,25 @@ defmodule AshReports.Typst.DSLGenerator do
       // Generated at: #{DateTime.utc_now() |> DateTime.to_iso8601()}
       #{if context.debug, do: generate_debug_info(report), else: ""}
 
+      // Helper function to format decimal numbers with fixed decimal places
+      // Always shows the specified number of digits after the decimal point (e.g., 25000.00)
+      #let format-decimal(value, places) = {
+        let rounded = calc.round(value, digits: places)
+        let str-val = str(rounded)
+        let parts = str-val.split(".")
+        if parts.len() == 1 {
+          str-val + "." + "0" * places
+        } else {
+          let decimal-part = parts.at(1)
+          let padding = places - decimal-part.len()
+          if padding > 0 {
+            str-val + "0" * padding
+          } else {
+            str-val
+          }
+        }
+      }
+
       #let #{report.name}(data, config: (:)) = {
         #{generate_page_setup(report, context)}
 
@@ -546,44 +565,73 @@ defmodule AshReports.Typst.DSLGenerator do
   # Private Functions - Element Generation (kept for data iteration context)
 
   defp generate_field_element(%{source: source} = field, _context) do
-    content =
+    # First extract the field name from the source
+    field_name =
       case source do
-        {:resource, field_name} ->
-          "[#record.#{field_name}]"
-
-        {:parameter, param_name} ->
-          "[#config.#{param_name}]"
-
-        {:variable, var_name} ->
-          "[#variables.#{var_name}]"
-
-        field_name when is_atom(field_name) ->
-          "[#record.#{field_name}]"
-
-        %Ash.Query.Ref{attribute: %Ash.Resource.Attribute{name: field_name}} ->
-          "[#record.#{field_name}]"
-
-        %Ash.Query.Ref{relationship_path: [], attribute: attr} when is_atom(attr) ->
-          "[#record.#{attr}]"
-
-        %{__struct__: Ash.Query.Ref} = ref ->
-          # Extract field name from Ash reference
-          field_name = extract_field_from_ref(ref)
-          "[#record.#{field_name}]"
-
-        # Handle Ash expression structs
+        {:resource, name} -> name
+        {:parameter, name} -> {:parameter, name}
+        {:variable, name} -> {:variable, name}
+        name when is_atom(name) -> name
+        %Ash.Query.Ref{attribute: %Ash.Resource.Attribute{name: name}} -> name
+        %Ash.Query.Ref{relationship_path: [], attribute: attr} when is_atom(attr) -> attr
+        %{__struct__: Ash.Query.Ref} = ref -> extract_field_from_ref(ref)
         %{__struct__: struct_module} = expr when is_atom(struct_module) ->
           case extract_field_from_expression(expr) do
-            {:ok, field_name} -> "[#record.#{field_name}]"
-            :error -> "[#record.unknown_field]"
+            {:ok, name} -> name
+            :error -> :unknown_field
           end
-
         _ ->
           Logger.warning("Unknown field source type: #{inspect(source)} for field: #{inspect(field.name)}")
-          "[#record.unknown_field]"
+          :unknown_field
       end
 
+    # Generate the content with appropriate formatting
+    content = format_field_content(field_name, field)
+
     apply_element_wrappers(content, field)
+  end
+
+  # Format field content based on format, decimal_places, and align options
+  defp format_field_content({:parameter, name}, _field), do: "[#config.#{name}]"
+  defp format_field_content({:variable, name}, _field), do: "[#variables.#{name}]"
+
+  defp format_field_content(field_name, field) when is_map(field) do
+    ref = "record.#{field_name}"
+    format = Map.get(field, :format)
+    decimal_places = Map.get(field, :decimal_places)
+    align = Map.get(field, :align)
+
+    # Generate the base content with formatting
+    base_content =
+      case {format, decimal_places} do
+        {:currency, places} ->
+          places = places || 2
+          # Use format-decimal helper for fixed decimal places with currency symbol
+          # Use string concatenation to avoid Elixir interpreting \#{ as interpolation
+          "\\$" <> "\#{ let v = #{ref}; if v == none { \"-\" } else { format-decimal(v, #{places}) } }"
+
+        {:percent, places} ->
+          places = places || 1
+          # Use format-decimal helper for fixed decimal places with percent symbol
+          "\#{ let v = #{ref}; if v == none { \"-\" } else { format-decimal(v, #{places}) + \"%\" } }"
+
+        {:number, places} when not is_nil(places) ->
+          # Use format-decimal helper for fixed decimal places
+          "\#{ let v = #{ref}; if v == none { \"-\" } else { format-decimal(v, #{places}) } }"
+
+        _ ->
+          # No formatting, just output the field value
+          "##{ref}"
+      end
+
+    # Apply alignment if specified
+    # Use #h(1fr) (horizontal fill) to push content: before for right, after for left, both for center
+    case align do
+      :right -> "[#h(1fr)#{base_content}]"
+      :center -> "[#h(1fr)#{base_content}#h(1fr)]"
+      :left -> "[#{base_content}#h(1fr)]"
+      _ -> "[#{base_content}]"
+    end
   end
 
   defp extract_field_from_ref(%Ash.Query.Ref{attribute: %{name: name}}), do: name
