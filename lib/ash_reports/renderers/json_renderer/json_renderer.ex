@@ -160,6 +160,7 @@ defmodule AshReports.JsonRenderer do
 
   alias AshReports.{
     JsonRenderer.DataSerializer,
+    JsonRenderer.FieldExtractor,
     JsonRenderer.SchemaManager,
     JsonRenderer.StreamingEngine,
     JsonRenderer.StructureBuilder,
@@ -349,26 +350,31 @@ defmodule AshReports.JsonRenderer do
     end
   end
 
-  defp serialize_grouped_data(%RenderContext{} = _context, %{grouped: false, records: records}) do
-    # No grouping - serialize records directly
-    case DataSerializer.serialize_records(records) do
+  defp serialize_grouped_data(%RenderContext{} = context, %{grouped: false, records: records}) do
+    # No grouping - filter and serialize records directly
+    field_sources = extract_report_fields(context)
+    filtered_records = FieldExtractor.filter_records(records, field_sources)
+
+    case DataSerializer.serialize_records(filtered_records) do
       {:ok, serialized_records} -> {:ok, %{"records" => serialized_records}}
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp serialize_grouped_data(%RenderContext{} = _context, %{grouped: true, groups: grouped_records}) do
-    # Grouped - serialize the grouped structure
-    case serialize_grouped_structure(grouped_records) do
+  defp serialize_grouped_data(%RenderContext{} = context, %{grouped: true, groups: grouped_records}) do
+    # Grouped - filter and serialize the grouped structure
+    field_sources = extract_report_fields(context)
+
+    case serialize_grouped_structure(grouped_records, field_sources) do
       {:ok, serialized_groups} -> {:ok, %{"records" => serialized_groups}}
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp serialize_grouped_structure(groups) when is_list(groups) do
+  defp serialize_grouped_structure(groups, field_sources) when is_list(groups) do
     groups
     |> Enum.reduce_while({:ok, []}, fn group, {:ok, acc} ->
-      case serialize_single_group(group) do
+      case serialize_single_group(group, field_sources) do
         {:ok, serialized_group} -> {:cont, {:ok, [serialized_group | acc]}}
         {:error, reason} -> {:halt, {:error, reason}}
       end
@@ -379,8 +385,8 @@ defmodule AshReports.JsonRenderer do
     end
   end
 
-  defp serialize_single_group(group) do
-    with {:ok, serialized_records} <- serialize_group_records(group.records) do
+  defp serialize_single_group(group, field_sources) do
+    with {:ok, serialized_records} <- serialize_group_records(group.records, field_sources) do
       serialized_group = %{
         "group_value" => group.group_value,
         "group_level" => group.group_level,
@@ -391,17 +397,28 @@ defmodule AshReports.JsonRenderer do
     end
   end
 
-  defp serialize_group_records(records) when is_list(records) do
+  defp serialize_group_records(records, field_sources) when is_list(records) do
     # Check if first record is a group (nested grouping) or a data record
     case List.first(records) do
       %{group_level: _, group_value: _, aggregates: _, records: _} ->
         # Nested groups - recursively serialize
-        serialize_grouped_structure(records)
+        serialize_grouped_structure(records, field_sources)
 
       _ ->
-        # Data records - serialize normally
-        DataSerializer.serialize_records(records)
+        # Data records - filter to only report fields then serialize
+        filtered_records = FieldExtractor.filter_records(records, field_sources)
+        DataSerializer.serialize_records(filtered_records)
     end
+  end
+
+  # Extract field sources from the report definition
+  defp extract_report_fields(%RenderContext{report: report}) when not is_nil(report) do
+    FieldExtractor.extract_detail_fields(report)
+  end
+
+  defp extract_report_fields(_context) do
+    # No report definition available - return empty list (serialize all fields)
+    []
   end
 
   defp apply_json_locale_formatting(%RenderContext{} = context) do

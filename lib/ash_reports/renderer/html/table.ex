@@ -47,11 +47,13 @@ defmodule AshReports.Renderer.Html.Table do
 
     style_attr = if styles == "", do: "", else: ~s( style="#{styles}")
 
+    # Generate colgroup for column widths
+    colgroup = render_colgroup(properties)
     headers = render_headers(ir.headers, properties, opts)
     body = render_body(ir.children, properties, opts)
     footers = render_footers(ir.footers, properties, opts)
 
-    content = headers <> body <> footers
+    content = colgroup <> headers <> body <> footers
 
     ~s(<table class="ash-table"#{style_attr}>#{content}</table>)
   end
@@ -153,6 +155,19 @@ defmodule AshReports.Renderer.Html.Table do
   #############################################################################
   # Private Functions
   #############################################################################
+
+  # Colgroup for column widths
+
+  defp render_colgroup(%{columns: columns}) when is_list(columns) and columns != [] do
+    cols =
+      columns
+      |> Enum.map(fn width -> ~s(<col style="width: #{width}">) end)
+      |> Enum.join("")
+
+    "<colgroup>#{cols}</colgroup>"
+  end
+
+  defp render_colgroup(_), do: ""
 
   # Style builders
 
