@@ -43,13 +43,15 @@ defmodule AshReports.Renderer.Html.Content do
   @spec render(Label.t() | Field.t() | NestedLayout.t() | map(), keyword()) :: String.t()
   def render(content, opts \\ [])
 
-  def render(%Label{text: text, style: style}, _opts) do
+  def render(%Label{text: text, style: style}, opts) do
+    data = Keyword.get(opts, :data, %{})
     styles = build_text_styles(style)
-    escaped_text = Styling.escape_html(text)
+    # Interpolate variables like [customer_count] then escape the result
+    interpolated_text = AshReports.Renderer.Html.Interpolation.interpolate(text, data)
 
     style_attr = if styles == "", do: "", else: ~s( style="#{styles}")
 
-    ~s(<span class="ash-label"#{style_attr}>#{escaped_text}</span>)
+    ~s(<span class="ash-label"#{style_attr}>#{interpolated_text}</span>)
   end
 
   def render(%Field{source: source, format: format, decimal_places: decimal_places, style: style}, opts) do
@@ -69,16 +71,20 @@ defmodule AshReports.Renderer.Html.Content do
   end
 
   # Handle simple map content (text or value)
-  def render(%{text: text}, _opts) do
-    ~s(<span class="ash-label">#{Styling.escape_html(text)}</span>)
+  def render(%{text: text}, opts) do
+    data = Keyword.get(opts, :data, %{})
+    interpolated_text = AshReports.Renderer.Html.Interpolation.interpolate(text, data)
+    ~s(<span class="ash-label">#{interpolated_text}</span>)
   end
 
   def render(%{value: value}, _opts) do
     ~s(<span class="ash-field">#{Styling.escape_html(to_string(value))}</span>)
   end
 
-  def render(text, _opts) when is_binary(text) do
-    ~s(<span class="ash-label">#{Styling.escape_html(text)}</span>)
+  def render(text, opts) when is_binary(text) do
+    data = Keyword.get(opts, :data, %{})
+    interpolated_text = AshReports.Renderer.Html.Interpolation.interpolate(text, data)
+    ~s(<span class="ash-label">#{interpolated_text}</span>)
   end
 
   def render(_, _opts), do: ""

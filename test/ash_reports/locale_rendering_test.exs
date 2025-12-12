@@ -1,7 +1,7 @@
 defmodule AshReports.LocaleRenderingTest do
   use ExUnit.Case, async: true
 
-  alias AshReports.{HtmlRenderer, RenderContext, RtlLayoutEngine, Translation}
+  alias AshReports.{IrHtmlRenderer, RenderContext, RtlLayoutEngine, Translation}
 
   describe "Phase 4.3 locale-aware rendering integration" do
     test "HTML renderer includes RTL configuration" do

@@ -207,6 +207,65 @@ defmodule AshReports.Renderer.Html.Cell do
 
   defp render_content(content, opts), do: render_content_item(content, opts)
 
+  # Handle Label structs from IR Content
+  defp render_content_item(%AshReports.Layout.IR.Content.Label{text: text, style: style}, opts) do
+    data = Keyword.get(opts, :data, %{})
+    # First escape the literal text, then interpolate variables (which also escapes their values)
+    content =
+      text
+      |> Styling.escape_html()
+      |> Interpolation.interpolate(data)
+
+    # Apply styles if present
+    styles = build_content_styles(style)
+    if styles == "" do
+      content
+    else
+      ~s(<span style="#{styles}">#{content}</span>)
+    end
+  end
+
+  # Handle Field structs from IR Content
+  defp render_content_item(%AshReports.Layout.IR.Content.Field{source: source, format: format, decimal_places: decimal_places, style: style}, opts) do
+    data = Keyword.get(opts, :data, %{})
+    value = get_field_value(data, source)
+    formatted = Interpolation.format_value(value, format, decimal_places)
+    content = Styling.escape_html(formatted)
+
+    # Apply styles if present
+    styles = build_content_styles(style)
+    if styles == "" do
+      content
+    else
+      ~s(<span style="#{styles}">#{content}</span>)
+    end
+  end
+
+  # Build CSS styles from IR.Style struct
+  defp build_content_styles(nil), do: ""
+  defp build_content_styles(%IR.Style{} = style) do
+    []
+    |> maybe_add_style("font-weight", style.font_weight)
+    |> maybe_add_style("font-size", style.font_size, &Styling.render_length/1)
+    |> maybe_add_style("font-style", style.font_style)
+    |> maybe_add_style("color", style.color)
+    |> maybe_add_style("background-color", style.background_color)
+    |> maybe_add_style("font-family", style.font_family)
+    |> maybe_add_style("text-align", style.text_align)
+    |> Enum.reverse()
+    |> Enum.join("; ")
+  end
+  defp build_content_styles(_), do: ""
+
+  defp maybe_add_style(styles, _prop, nil), do: styles
+  defp maybe_add_style(styles, prop, value) do
+    ["#{prop}: #{value}" | styles]
+  end
+  defp maybe_add_style(styles, _prop, nil, _formatter), do: styles
+  defp maybe_add_style(styles, prop, value, formatter) do
+    ["#{prop}: #{formatter.(value)}" | styles]
+  end
+
   defp render_content_item(%{text: text}, opts) do
     data = Keyword.get(opts, :data, %{})
     # First escape the literal text, then interpolate variables (which also escapes their values)
@@ -228,4 +287,23 @@ defmodule AshReports.Renderer.Html.Cell do
   end
 
   defp render_content_item(_, _opts), do: ""
+
+  # Field value retrieval helpers for IR Content.Field structs
+  defp get_field_value(data, source) when is_atom(source) do
+    Map.get(data, source) || Map.get(data, to_string(source))
+  end
+
+  defp get_field_value(data, source) when is_list(source) do
+    Enum.reduce_while(source, data, fn key, acc ->
+      case acc do
+        %{} ->
+          value = Map.get(acc, key) || Map.get(acc, to_string(key))
+          if value, do: {:cont, value}, else: {:halt, nil}
+        _ ->
+          {:halt, nil}
+      end
+    end)
+  end
+
+  defp get_field_value(_data, _source), do: nil
 end

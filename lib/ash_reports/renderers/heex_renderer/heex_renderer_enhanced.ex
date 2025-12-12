@@ -56,7 +56,7 @@ defmodule AshReports.HeexRendererEnhanced do
     RenderContext
   }
 
-  alias AshReports.HtmlRenderer.AssetManager
+  alias AshReports.Renderer.Html.AssetManager
   alias AshReports.LiveView.ChartHooks
 
   @doc """

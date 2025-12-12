@@ -107,7 +107,7 @@ defmodule AshReports.HeexRenderer do
 
   # Phase 6.2: Chart Integration
   alias AshReports.LiveView.ChartHooks
-  alias AshReports.HtmlRenderer.AssetManager
+  alias AshReports.Renderer.Html.AssetManager
 
   @doc """
   Enhanced render callback with full Phase 3.3 HEEX generation.
@@ -561,10 +561,27 @@ defmodule AshReports.HeexRenderer do
   end
 
   defp build_component_assigns(%RenderContext{} = context, chart_components) do
-    # Enhanced component assigns with chart support
+    # Build grouped data structure using the JSON renderer's StructureBuilder
+    alias AshReports.JsonRenderer.StructureBuilder
+
+    {groups, records} =
+      case StructureBuilder.build_grouped_raw_records(context, context.records) do
+        {:ok, %{grouped: true, groups: grouped_records}} ->
+          {grouped_records, context.records}
+
+        {:ok, %{grouped: false, records: raw_records}} ->
+          {[], raw_records}
+
+        {:error, _} ->
+          {[], context.records}
+      end
+
+    # Enhanced component assigns with chart support and grouped data
     base_assigns = %{
       report: context.report,
       reports: context.records,
+      records: records,
+      groups: groups,
       locale: context.locale,
       text_direction: context.text_direction,
       context: context,

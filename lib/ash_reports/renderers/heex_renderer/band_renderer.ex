@@ -49,6 +49,15 @@ defmodule AshReports.HeexRenderer.BandRenderer do
   alias AshReports.HeexRenderer.TemplateBuilder
 
   @doc """
+  Safely converts any value to a string for HTML rendering.
+  Handles Decimal, nil, and other types that don't implement Phoenix.HTML.Safe.
+  """
+  def safe_to_string(nil), do: ""
+  def safe_to_string(%Decimal{} = d), do: Decimal.to_string(d)
+  def safe_to_string(value) when is_binary(value), do: value
+  def safe_to_string(value), do: to_string(value)
+
+  @doc """
   Renders all report bands with their elements as HEEX template code.
 
   Accepts a RenderContext containing the report definition, records, variables,
@@ -144,7 +153,9 @@ defmodule AshReports.HeexRenderer.BandRenderer do
       |> Enum.map(fn band ->
         # Generate band structure that will be filled with record data
         band_class = band_type_to_class(band.type)
-        elements_template = generate_elements_template_for_record(band.elements)
+        # Get all elements including those in tables, grids, and stacks
+        all_elements = extract_all_band_elements(band)
+        elements_template = generate_elements_template_for_record(all_elements)
 
         """
         <div class="#{band_class}" data-band="#{band.name}">
@@ -213,7 +224,9 @@ defmodule AshReports.HeexRenderer.BandRenderer do
 
   defp generate_group_header_template(%Band{} = band, context) do
     # Group headers will iterate over groups
-    elements_template = generate_elements_template_for_group(band.elements)
+    # Get all elements including those in tables, grids, and stacks
+    all_elements = extract_all_band_elements(band)
+    elements_template = generate_elements_template_for_group(all_elements)
     nested_template = generate_nested_bands_template(band, context)
 
     group_level = band.group_level || 1
@@ -227,7 +240,9 @@ defmodule AshReports.HeexRenderer.BandRenderer do
   end
 
   defp generate_group_footer_template(%Band{} = band, context) do
-    elements_template = generate_elements_template_for_group(band.elements)
+    # Get all elements including those in tables, grids, and stacks
+    all_elements = extract_all_band_elements(band)
+    elements_template = generate_elements_template_for_group(all_elements)
     nested_template = generate_nested_bands_template(band, context)
 
     group_level = band.group_level || 1
@@ -279,7 +294,9 @@ defmodule AshReports.HeexRenderer.BandRenderer do
     detail_template =
       detail_bands
       |> Enum.map(fn band ->
-        elements_template = generate_elements_template_for_record(band.elements)
+        # Get all elements including those in tables, grids, and stacks
+        all_elements = extract_all_band_elements(band)
+        elements_template = generate_elements_template_for_record(all_elements)
         band_class = band_type_to_class(band.type)
 
         """
@@ -368,7 +385,8 @@ defmodule AshReports.HeexRenderer.BandRenderer do
 
   defp generate_element_template_for_record(%{type: :field} = element) do
     field_name = element.source || element.name
-    "<span class=\"field-element\" data-field=\"#{field_name}\"><%= record.#{field_name} %></span>"
+    # Use a helper to safely convert any value (including Decimal) to string for HTML rendering
+    "<span class=\"field-element\" data-field=\"#{field_name}\"><%= AshReports.HeexRenderer.BandRenderer.safe_to_string(record.#{field_name}) %></span>"
   end
 
   defp generate_element_template_for_record(%{type: :expression} = element) do
@@ -386,12 +404,14 @@ defmodule AshReports.HeexRenderer.BandRenderer do
 
   defp generate_element_template_for_group(%{type: :field} = element) do
     field_name = element.source || element.name
-    "<span class=\"field-element\" data-field=\"#{field_name}\"><%= group.#{field_name} %></span>"
+    # Use safe_to_string helper to handle Decimal and other non-Safe types
+    "<span class=\"field-element\" data-field=\"#{field_name}\"><%= AshReports.HeexRenderer.BandRenderer.safe_to_string(group.#{field_name}) %></span>"
   end
 
   defp generate_element_template_for_group(%{type: :aggregate} = element) do
     var_name = Map.get(element, :variable) || Map.get(element, :variable_name) || element.name
-    "<span class=\"aggregate-element\"><%= group.aggregates.#{var_name} %></span>"
+    # Use safe_to_string helper to handle Decimal and other non-Safe types
+    "<span class=\"aggregate-element\"><%= AshReports.HeexRenderer.BandRenderer.safe_to_string(group.aggregates.#{var_name}) %></span>"
   end
 
   defp generate_element_template_for_group(_element) do
@@ -450,5 +470,24 @@ defmodule AshReports.HeexRenderer.BandRenderer do
       Enum.reject(bands, &(&1.type in [:group_header, :group_footer, :detail_header, :detail, :detail_footer]))
 
     {group_headers, detail_bands, group_footers, other_bands}
+  end
+
+  # Extract all elements from a band, including those in layout containers
+  defp extract_all_band_elements(%Band{} = band) do
+    direct_elements = band.elements || []
+
+    table_elements =
+      (band.tables || [])
+      |> Enum.flat_map(fn table -> Map.get(table, :elements) || [] end)
+
+    grid_elements =
+      (band.grids || [])
+      |> Enum.flat_map(fn grid -> Map.get(grid, :elements) || [] end)
+
+    stack_elements =
+      (band.stacks || [])
+      |> Enum.flat_map(fn stack -> Map.get(stack, :elements) || [] end)
+
+    direct_elements ++ table_elements ++ grid_elements ++ stack_elements
   end
 end

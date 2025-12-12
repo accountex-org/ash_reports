@@ -117,8 +117,7 @@ defmodule AshReports.Runner do
         end_time = System.monotonic_time(:microsecond)
         execution_time_ms = div(end_time - start_time, 1000)
 
-        {:ok,
-         %{
+        base_result = %{
            content: rendered_result.content,
            metadata:
              build_pipeline_metadata(
@@ -131,7 +130,17 @@ defmodule AshReports.Runner do
            # Include data for debugging (can be disabled in production)
            data: if(Keyword.get(opts, :include_debug_data, true), do: data_result, else: nil),
            record_count: Map.get(data_result.metadata, :record_count, 0)
-         }}
+         }
+
+        # Preserve assigns for HEEX renderer (contains groups, records, etc. for template rendering)
+        final_result =
+          if Map.has_key?(rendered_result, :assigns) do
+            Map.put(base_result, :assigns, rendered_result.assigns)
+          else
+            base_result
+          end
+
+        {:ok, final_result}
       else
         {:error, {stage, reason}} ->
           handle_pipeline_error(stage, reason, opts)
@@ -382,7 +391,7 @@ defmodule AshReports.Runner do
     "Review error details and check system configuration. Ensure all dependencies are properly configured."
   end
 
-  defp get_renderer_for_format(:html), do: {:ok, AshReports.HtmlRenderer}
+  defp get_renderer_for_format(:html), do: {:ok, AshReports.IrHtmlRenderer}
   defp get_renderer_for_format(:pdf), do: {:ok, AshReports.PdfRenderer}
   defp get_renderer_for_format(:heex), do: {:ok, AshReports.HeexRenderer}
   defp get_renderer_for_format(:json), do: {:ok, AshReports.JsonRenderer}

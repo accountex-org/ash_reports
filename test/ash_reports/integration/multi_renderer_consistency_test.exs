@@ -8,13 +8,13 @@ defmodule AshReports.Integration.MultiRendererConsistencyTest do
 
   use ExUnit.Case, async: true
 
-  alias AshReports.{HeexRenderer, HtmlRenderer, JsonRenderer, PdfRenderer}
+  alias AshReports.{HeexRenderer, IrHtmlRenderer, JsonRenderer, PdfRenderer}
   alias AshReports.Integration.TestHelpers
 
   @moduletag :integration
   @moduletag :multi_renderer
 
-  @renderers [HtmlRenderer, HeexRenderer, PdfRenderer, JsonRenderer]
+  @renderers [IrHtmlRenderer, HeexRenderer, PdfRenderer, JsonRenderer]
 
   describe "RTL Support Consistency" do
     test "RTL text direction handled consistently across all renderers" do
@@ -43,7 +43,7 @@ defmodule AshReports.Integration.MultiRendererConsistencyTest do
 
     test "RTL layout calculations consistent across visual renderers" do
       # HTML and PDF should have similar RTL layout adaptations
-      visual_renderers = [HtmlRenderer, PdfRenderer]
+      visual_renderers = [IrHtmlRenderer, PdfRenderer]
       _report = TestHelpers.build_rtl_test_report()
       _data = TestHelpers.create_arabic_test_data()
 
@@ -312,7 +312,7 @@ defmodule AshReports.Integration.MultiRendererConsistencyTest do
 
   # Helper functions for extracting data from different renderer outputs
 
-  defp extract_layout_data(output, HtmlRenderer) do
+  defp extract_layout_data(output, IrHtmlRenderer) do
     # Extract CSS and HTML structure data
     %{
       text_direction: extract_css_direction(output),

@@ -6,13 +6,13 @@ defmodule AshReports.Integration.TestHelpers do
   multi-renderer consistency, and complex internationalization features.
   """
 
-  alias AshReports.{HeexRenderer, HtmlRenderer, JsonRenderer, PdfRenderer}
+  alias AshReports.{HeexRenderer, IrHtmlRenderer, JsonRenderer, PdfRenderer}
   alias AshReports.Test.Customer
   alias AshReports.TestHelpers
 
   @locales ["en", "ar", "he", "fa", "ur", "es", "fr", "de", "ja", "zh"]
   @rtl_locales ["ar", "he", "fa", "ur"]
-  @renderers [HtmlRenderer, HeexRenderer, PdfRenderer, JsonRenderer]
+  @renderers [IrHtmlRenderer, HeexRenderer, PdfRenderer, JsonRenderer]
 
   # Test Data Generation
 
@@ -225,7 +225,7 @@ defmodule AshReports.Integration.TestHelpers do
 
   def validates_rtl_output?(result, renderer) do
     case renderer do
-      HtmlRenderer ->
+      IrHtmlRenderer ->
         String.contains?(result, "dir=\"rtl\"")
 
       HeexRenderer ->
@@ -270,7 +270,7 @@ defmodule AshReports.Integration.TestHelpers do
 
   def valid_output?(result, renderer) do
     case renderer do
-      HtmlRenderer -> String.starts_with?(result, ["<", "<!DOCTYPE"])
+      IrHtmlRenderer -> String.starts_with?(result, ["<", "<!DOCTYPE"])
       HeexRenderer -> String.contains?(result, ["<", "phx-"])
       PdfRenderer -> String.starts_with?(result, "%PDF-")
       JsonRenderer -> String.starts_with?(result, ["{", "["])

@@ -61,7 +61,7 @@ defmodule AshReports.LiveView.ChartLiveComponent do
   use Phoenix.LiveComponent
 
   alias AshReports.ChartEngine.ChartConfig
-  alias AshReports.HtmlRenderer.ChartIntegrator
+  alias AshReports.Renderer.Html.ChartIntegrator
   alias AshReports.{InteractiveEngine, RenderContext}
 
   @impl true

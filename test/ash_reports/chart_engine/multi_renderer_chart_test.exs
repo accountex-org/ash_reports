@@ -12,7 +12,7 @@ defmodule AshReports.ChartEngine.MultiRendererChartTest do
 
   alias AshReports.{
     HeexRenderer,
-    HtmlRenderer,
+    IrHtmlRenderer,
     JsonRenderer,
     PdfRenderer,
     RenderContext,
@@ -232,7 +232,7 @@ defmodule AshReports.ChartEngine.MultiRendererChartTest do
 
       # Generate chart data for all renderers
       renderer_results = [
-        {:html, HtmlRenderer.render_with_context(context_with_charts)},
+        {:html, IrHtmlRenderer.render_with_context(context_with_charts)},
         {:heex, HeexRenderer.render_with_context(context_with_charts)},
         {:json, JsonRenderer.render_with_context(context_with_charts)}
       ]
@@ -326,7 +326,7 @@ defmodule AshReports.ChartEngine.MultiRendererChartTest do
       }
 
       # HTML renderer should still work
-      case HtmlRenderer.render_with_context(context_with_bad_charts) do
+      case IrHtmlRenderer.render_with_context(context_with_bad_charts) do
         {:ok, result} ->
           assert is_binary(result.content)
           # Should contain HTML even if charts fail
@@ -610,7 +610,7 @@ defmodule AshReports.ChartEngine.MultiRendererChartTest do
 
       context = %{@test_context | metadata: %{chart_configs: [chart_config]}}
 
-      {:ok, result} = HtmlRenderer.render_with_context(context)
+      {:ok, result} = IrHtmlRenderer.render_with_context(context)
       assert is_binary(result.content)
     end
 

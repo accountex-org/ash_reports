@@ -46,7 +46,7 @@ defmodule AshReports.ChartEngine.ChartImageGenerator do
   """
 
   alias AshReports.ChartEngine.{ChartConfig, ChartDataProcessor}
-  alias AshReports.HtmlRenderer.ChartIntegrator
+  alias AshReports.Renderer.Html.ChartIntegrator
   alias AshReports.RenderContext
 
   require Logger

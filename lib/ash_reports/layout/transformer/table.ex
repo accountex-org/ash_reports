@@ -60,8 +60,8 @@ defmodule AshReports.Layout.Transformer.Table do
         end
       end)
 
-    # Transform elements (labels, fields)
-    element_children =
+    # Transform elements (labels, fields) into cells
+    element_cells =
       Enum.map(table.elements, fn element ->
         case transform_element(element) do
           {:ok, content_ir} ->
@@ -70,7 +70,15 @@ defmodule AshReports.Layout.Transformer.Table do
         end
       end)
 
-    all_children = children ++ row_children ++ cell_children ++ element_children
+    # Group all loose elements into a single row (they represent columns in the same row)
+    element_row =
+      if length(element_cells) > 0 do
+        [IR.Row.new(index: 0, cells: element_cells)]
+      else
+        []
+      end
+
+    all_children = children ++ row_children ++ cell_children ++ element_row
     {:ok, all_children}
   catch
     {:error, _} = err -> err

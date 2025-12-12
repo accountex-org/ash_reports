@@ -101,7 +101,7 @@ defmodule AshReports.Integration.Phase4IntegrationTest do
 
     test "translated format specifications apply correctly" do
       locale = "ar"
-      context = TestHelpers.create_translation_context(locale, AshReports.HtmlRenderer)
+      context = TestHelpers.create_translation_context(locale, AshReports.IrHtmlRenderer)
 
       format_spec = %{
         type: :currency,

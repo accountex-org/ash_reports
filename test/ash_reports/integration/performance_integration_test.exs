@@ -9,7 +9,7 @@ defmodule AshReports.Integration.PerformanceIntegrationTest do
   use ExUnit.Case
 
   alias AshReports.Integration.{BenchmarkHelpers, TestHelpers}
-  alias AshReports.{HeexRenderer, HtmlRenderer, JsonRenderer, PdfRenderer}
+  alias AshReports.{HeexRenderer, IrHtmlRenderer, JsonRenderer, PdfRenderer}
 
   @moduletag :benchmark
   @moduletag :performance
@@ -280,7 +280,7 @@ defmodule AshReports.Integration.PerformanceIntegrationTest do
               report = TestHelpers.build_phase4_enhanced_report()
               data = TestHelpers.create_multilingual_test_data()
 
-              AshReports.HtmlRenderer.render_with_context(%{context | report: report, data: data})
+              AshReports.IrHtmlRenderer.render_with_context(%{context | report: report, data: data})
             end)
 
           {scenario.name, memory_used, result}
@@ -324,7 +324,7 @@ defmodule AshReports.Integration.PerformanceIntegrationTest do
         :timer.tc(fn ->
           Enum.each(contexts, fn context ->
             data = TestHelpers.create_multilingual_test_data()
-            AshReports.HtmlRenderer.render_with_context(%{context | report: report, data: data})
+            AshReports.IrHtmlRenderer.render_with_context(%{context | report: report, data: data})
           end)
         end)
         |> elem(0)
@@ -335,7 +335,7 @@ defmodule AshReports.Integration.PerformanceIntegrationTest do
           |> Task.async_stream(
             fn context ->
               data = TestHelpers.create_multilingual_test_data()
-              AshReports.HtmlRenderer.render_with_context(%{context | report: report, data: data})
+              AshReports.IrHtmlRenderer.render_with_context(%{context | report: report, data: data})
             end,
             max_concurrency: 4
           )
