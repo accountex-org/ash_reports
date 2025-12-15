@@ -250,6 +250,13 @@ defmodule AshReports.Renderer.Html.Interpolation do
   @spec format_value(any(), atom() | nil, non_neg_integer() | nil) :: String.t()
   def format_value(nil, _format, _decimal_places), do: ""
 
+  def format_value(%Decimal{} = value, nil, decimal_places) do
+    # For Decimals without a specific format, round to decimal_places (default 2)
+    places = decimal_places || 2
+    formatted = :erlang.float_to_binary(Decimal.to_float(value), decimals: places)
+    format_number_with_commas(formatted)
+  end
+
   def format_value(value, nil, _decimal_places) do
     to_string(value)
   end
@@ -260,16 +267,30 @@ defmodule AshReports.Renderer.Html.Interpolation do
     format_number_with_commas(formatted)
   end
 
+  def format_value(%Decimal{} = value, :number, decimal_places) do
+    format_value(Decimal.to_float(value), :number, decimal_places)
+  end
+
   def format_value(value, :currency, decimal_places) when is_number(value) do
     places = decimal_places || 2
     formatted = :erlang.float_to_binary(value * 1.0, decimals: places)
     "$#{format_number_with_commas(formatted)}"
   end
 
+  def format_value(%Decimal{} = value, :currency, decimal_places) do
+    format_value(Decimal.to_float(value), :currency, decimal_places)
+  end
+
   def format_value(value, :percent, decimal_places) when is_number(value) do
     places = decimal_places || 0
-    formatted = :erlang.float_to_binary(value * 100.0, decimals: places)
+    # Values are expected to already be percentages (e.g., 26.47 meaning 26.47%)
+    # not decimals (e.g., 0.2647)
+    formatted = :erlang.float_to_binary(value * 1.0, decimals: places)
     "#{formatted}%"
+  end
+
+  def format_value(%Decimal{} = value, :percent, decimal_places) do
+    format_value(Decimal.to_float(value), :percent, decimal_places)
   end
 
   def format_value(%Date{} = value, :date, _decimal_places) do
@@ -303,6 +324,13 @@ defmodule AshReports.Renderer.Html.Interpolation do
       false -> "No"
       _ -> to_string(value)
     end
+  end
+
+  def format_value(%Decimal{} = value, _format, decimal_places) do
+    # For Decimals without a specific format, round to decimal_places (default 2)
+    places = decimal_places || 2
+    formatted = :erlang.float_to_binary(Decimal.to_float(value), decimals: places)
+    format_number_with_commas(formatted)
   end
 
   def format_value(value, _format, _decimal_places) do
