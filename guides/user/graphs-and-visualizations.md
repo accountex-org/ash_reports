@@ -41,7 +41,18 @@ defmodule MyApp.Reports do
   reports do
     # Level 1: Chart Definitions (reusable)
     bar_chart :sales_by_region do
-      data_source expr(aggregate_sales_by_region())
+      driving_resource MyApp.Sales.Order
+
+      transform do
+        group_by :region
+        as_category :group_key
+        as_value :total
+
+        aggregates do
+          aggregate type: :sum, field: :amount, as: :total
+        end
+      end
+
       config do
         width 800
         height 400
@@ -68,13 +79,30 @@ end
 
 ## Defining Charts
 
-Charts are defined at the `reports` level using type-specific entities. Each chart type has its own DSL function and configuration options.
+Charts are defined at the `reports` level using type-specific entities. Each chart type has its own DSL function and uses a declarative transform block to specify how data should be aggregated and mapped.
 
 ### Chart Definition Syntax
 
 ```elixir
 <chart_type> :chart_name do
-  data_source expr(...)  # Expression that evaluates to chart data
+  driving_resource MyApp.Resource  # The Ash resource to query
+
+  # Optional: Filter the data
+  base_filter(fn params ->
+    import Ash.Query
+    MyApp.Resource |> filter(status == :active)
+  end)
+
+  # Transform block defines data aggregation and field mapping
+  transform do
+    group_by :field_name              # Group data by this field
+    as_category :group_key            # Map to category (bar/pie charts)
+    as_value :total                   # Map to value (bar/pie charts)
+
+    aggregates do
+      aggregate type: :sum, field: :amount, as: :total
+    end
+  end
 
   config do
     # Type-specific configuration options
@@ -133,7 +161,17 @@ Best for comparing values across categories with support for simple, grouped, an
 
 ```elixir
 bar_chart :revenue_by_region do
-  data_source expr(aggregate_revenue_by_region())
+  driving_resource MyApp.Sales.Order
+
+  transform do
+    group_by :region
+    as_category :group_key
+    as_value :revenue
+
+    aggregates do
+      aggregate type: :sum, field: :amount, as: :revenue
+    end
+  end
 
   config do
     width 800
@@ -201,7 +239,17 @@ Best for showing trends and changes over time with support for single and multi-
 
 ```elixir
 line_chart :sales_trend do
-  data_source expr(monthly_sales_data())
+  driving_resource MyApp.Sales.Order
+
+  transform do
+    group_by {:created_at, :month}
+    as_x :group_key
+    as_y :total
+
+    aggregates do
+      aggregate type: :sum, field: :amount, as: :total
+    end
+  end
 
   config do
     width 900
@@ -266,7 +314,17 @@ Best for showing proportions and percentages of a whole.
 
 ```elixir
 pie_chart :market_share do
-  data_source expr(product_market_share())
+  driving_resource MyApp.Sales.Order
+
+  transform do
+    group_by :product_category
+    as_category :group_key
+    as_value :total
+
+    aggregates do
+      aggregate type: :sum, field: :amount, as: :total
+    end
+  end
 
   config do
     width 600
@@ -328,7 +386,17 @@ Best for visualizing cumulative values and trends over time with filled areas.
 
 ```elixir
 area_chart :cumulative_revenue do
-  data_source expr(revenue_over_time())
+  driving_resource MyApp.Sales.Order
+
+  transform do
+    group_by {:created_at, :month}
+    as_x :group_key
+    as_y :total
+
+    aggregates do
+      aggregate type: :sum, field: :amount, as: :total
+    end
+  end
 
   config do
     width 800
@@ -393,7 +461,12 @@ Best for showing correlation and distribution between two variables.
 
 ```elixir
 scatter_chart :price_vs_sales do
-  data_source expr(price_sales_correlation())
+  driving_resource MyApp.Products.Product
+
+  transform do
+    as_x :price
+    as_y :units_sold
+  end
 
   config do
     width 700
@@ -446,7 +519,13 @@ Compact inline charts (default 100×20px) perfect for dashboards and table cells
 
 ```elixir
 sparkline :daily_trend do
-  data_source expr(last_30_days_data())
+  driving_resource MyApp.Metrics.DailyMetric
+
+  transform do
+    sort_by {:date, :asc}
+    limit 30
+    as_values :value
+  end
 
   config do
     width 100
@@ -523,7 +602,15 @@ Project timeline visualization with task scheduling and dependencies.
 
 ```elixir
 gantt_chart :project_timeline do
-  data_source expr(sprint_tasks())
+  driving_resource MyApp.Projects.Task
+
+  transform do
+    as_category :phase
+    as_task :name
+    as_start_date :start_date
+    as_end_date :end_date
+    sort_by {:start_date, :asc}
+  end
 
   config do
     width 1000
@@ -606,7 +693,17 @@ All chart configurations use a `config do ... end` block with type-specific opti
 
 ```elixir
 bar_chart :my_chart do
-  data_source expr(...)
+  driving_resource MyApp.Resource
+
+  transform do
+    group_by :category
+    as_category :group_key
+    as_value :total
+
+    aggregates do
+      aggregate type: :sum, field: :amount, as: :total
+    end
+  end
 
   config do
     # Common options (available on all chart types)
@@ -657,16 +754,33 @@ If `colours` is not specified, the default palette is used:
 
 ## Data Sources
 
-The `data_source` field specifies how to obtain chart data at render time.
+Charts in AshReports use a declarative approach where you specify the `driving_resource` and define a `transform` block that describes how the data should be aggregated and mapped to chart fields.
 
-### Expression-Based Data Sources
+### Driving Resource and Transform
 
-Use `expr()` to define expressions that evaluate to chart data:
+Each chart requires a `driving_resource` - the Ash resource to query. The `transform` block defines how to process that data:
 
 ```elixir
 bar_chart :sales_by_region do
-  # Expression referencing an aggregation
-  data_source expr(aggregate_sales_by_region())
+  # The Ash resource to query
+  driving_resource MyApp.Sales.Order
+
+  # Optional: Filter the data
+  base_filter(fn params ->
+    import Ash.Query
+    MyApp.Sales.Order |> filter(status == :completed)
+  end)
+
+  # Transform: Define how to aggregate and map data
+  transform do
+    group_by :region
+    as_category :group_key
+    as_value :total
+
+    aggregates do
+      aggregate type: :sum, field: :amount, as: :total
+    end
+  end
 
   config do
     title "Regional Sales"
@@ -674,85 +788,85 @@ bar_chart :sales_by_region do
 end
 ```
 
-### Data Source Types
+### Transform Options
 
-1. **Aggregation References** - Reference computed aggregations
-   ```elixir
-   data_source expr(my_aggregation())
-   ```
+The `transform` block supports the following options:
 
-2. **Field References** - Reference report data fields
-   ```elixir
-   data_source expr(chart_data_field)
-   ```
+| Option | Description | Example |
+|--------|-------------|---------|
+| `group_by` | Field or tuple to group by | `:region`, `{:created_at, :month}` |
+| `aggregates` | List of aggregate operations | See aggregates section |
+| `filters` | Map of filter conditions | `%{status: :active}` |
+| `sort_by` | Field to sort by | `:name`, `{:value, :desc}` |
+| `limit` | Maximum results to return | `10` |
+| `as_category` | Map to category field (bar/pie) | `:group_key` |
+| `as_value` | Map to value field (bar/pie) | `:total` |
+| `as_x` | Map to X-axis (line/scatter) | `:group_key` |
+| `as_y` | Map to Y-axis (line/scatter) | `:total` |
+| `as_task` | Map to task name (Gantt) | `:name` |
+| `as_start_date` | Map to start date (Gantt) | `:start_date` |
+| `as_end_date` | Map to end date (Gantt) | `:end_date` |
+| `as_values` | Map to values (sparkline) | `:value` |
 
-3. **Variable References** - Reference report variables
-   ```elixir
-   data_source expr(monthly_totals_var)
-   ```
+### Aggregates Block
 
-4. **Records Reference** - Access all report records
-   ```elixir
-   data_source expr(records)
-   ```
+Define aggregations within the transform:
+
+```elixir
+transform do
+  group_by :category
+
+  aggregates do
+    aggregate type: :sum, field: :amount, as: :total
+    aggregate type: :count, as: :count
+    aggregate type: :avg, field: :price, as: :avg_price
+  end
+end
+```
 
 ### Data Preparation
 
-Chart data must be in the format expected by the chart type (see each chart type's "Data Format" section above).
+Chart data is automatically prepared by the transform block. The data flows through:
+1. Driving resource query
+2. Optional base_filter
+3. Transform aggregations
+4. Field mapping (as_category, as_value, etc.)
 
-Data can be prepared:
-- In the driving resource query
-- Via Ash aggregations
-- Through report variables
-- Using custom expressions
+### Performance Considerations
 
-### Performance Considerations for Data Sources
+When working with large datasets:
 
-⚠️ **IMPORTANT**: When working with large datasets, avoid eager loading relationships in your data_source functions!
+1. **Use `load_relationships` option** to preload relationships efficiently:
+   ```elixir
+   bar_chart :sales_by_category do
+     driving_resource MyApp.InvoiceLineItem
+     load_relationships [:product, product: :category]
 
-**Common N+1 Problem:**
+     transform do
+       group_by :product_category_name
+       # ...
+     end
+   end
+   ```
 
-```elixir
-# ❌ BAD - This causes N+1 queries with large datasets!
-data_source(fn ->
-  InvoiceLineItem
-  |> Ash.Query.load(product: :category)  # Loads for EVERY line item!
-  |> Ash.read!(domain: MyApp.Domain)
-  |> process_into_chart_data()
-end)
-```
+2. **Apply filters early** using `base_filter` to reduce data volume:
+   ```elixir
+   base_filter(fn params ->
+     import Ash.Query
+     MyApp.Orders |> filter(date >= ^params[:start_date])
+   end)
+   ```
 
-With 325,000 line items, this performs **325,000+ individual queries** and can take **8+ minutes**!
-
-**Optimized Pattern:**
-
-```elixir
-# ✅ GOOD - Load relationships separately
-data_source(fn ->
-  alias AshReports.Charts.DataSourceHelpers
-
-  # Use helper to load with optimization
-  {:ok, {line_items, products_map}} =
-    DataSourceHelpers.load_with_relationship(
-      InvoiceLineItem,
-      Product,
-      :product_id,
-      domain: MyApp.Domain,
-      preload: :category
-    )
-
-  # Join in memory using the lookup map
-  chart_data = process_with_lookup(line_items, products_map)
-
-  {:ok, chart_data, %{source_records: length(line_items)}}
-end)
-```
-
-This reduces execution from **8 minutes to <1 second** on large datasets!
+3. **Limit results** when only top N items are needed:
+   ```elixir
+   transform do
+     sort_by {:value, :desc}
+     limit 10
+   end
+   ```
 
 **See the [Performance Optimization Guide](performance-optimization.md) for:**
 - Detailed explanation of N+1 problems
-- Complete examples with DataSourceHelpers
 - Best practices for large datasets
 - Monitoring and profiling techniques
 
@@ -768,7 +882,17 @@ defmodule MyApp.Reports.SalesAnalytics do
   reports do
     # Define reusable charts
     bar_chart :sales_by_region do
-      data_source expr(regional_sales_data())
+      driving_resource MyApp.Sales.Order
+
+      transform do
+        group_by :region
+        as_category :group_key
+        as_value :total
+
+        aggregates do
+          aggregate type: :sum, field: :amount, as: :total
+        end
+      end
 
       config do
         width 800
@@ -781,7 +905,17 @@ defmodule MyApp.Reports.SalesAnalytics do
     end
 
     line_chart :monthly_trend do
-      data_source expr(monthly_sales_trend())
+      driving_resource MyApp.Sales.Order
+
+      transform do
+        group_by {:created_at, :month}
+        as_x :group_key
+        as_y :total
+
+        aggregates do
+          aggregate type: :sum, field: :amount, as: :total
+        end
+      end
 
       config do
         width 900
@@ -794,7 +928,17 @@ defmodule MyApp.Reports.SalesAnalytics do
     end
 
     pie_chart :product_distribution do
-      data_source expr(product_sales_distribution())
+      driving_resource MyApp.Sales.Order
+
+      transform do
+        group_by :product_category
+        as_category :group_key
+        as_value :total
+
+        aggregates do
+          aggregate type: :sum, field: :amount, as: :total
+        end
+      end
 
       config do
         width 600
@@ -880,7 +1024,13 @@ defmodule MyApp.Reports.Dashboard do
   reports do
     # Define compact sparklines for each metric
     sparkline :revenue_trend do
-      data_source expr(last_7_days_revenue())
+      driving_resource MyApp.Sales.DailyMetric
+
+      transform do
+        sort_by {:date, :asc}
+        limit 7
+        as_values :revenue
+      end
 
       config do
         width 120
@@ -891,7 +1041,13 @@ defmodule MyApp.Reports.Dashboard do
     end
 
     sparkline :orders_trend do
-      data_source expr(last_7_days_orders())
+      driving_resource MyApp.Sales.DailyMetric
+
+      transform do
+        sort_by {:date, :asc}
+        limit 7
+        as_values :order_count
+      end
 
       config do
         width 120
@@ -902,7 +1058,13 @@ defmodule MyApp.Reports.Dashboard do
     end
 
     sparkline :customers_trend do
-      data_source expr(last_7_days_customers())
+      driving_resource MyApp.Sales.DailyMetric
+
+      transform do
+        sort_by {:date, :asc}
+        limit 7
+        as_values :new_customers
+      end
 
       config do
         width 120
@@ -979,7 +1141,15 @@ defmodule MyApp.Reports.ProjectTracking do
 
   reports do
     gantt_chart :sprint_timeline do
-      data_source expr(sprint_tasks())
+      driving_resource MyApp.Projects.Task
+
+      transform do
+        as_category :phase
+        as_task :name
+        as_start_date :start_date
+        as_end_date :end_date
+        sort_by {:start_date, :asc}
+      end
 
       config do
         width 1200
@@ -992,7 +1162,17 @@ defmodule MyApp.Reports.ProjectTracking do
     end
 
     bar_chart :task_completion do
-      data_source expr(task_status_breakdown())
+      driving_resource MyApp.Projects.Task
+
+      transform do
+        group_by :status
+        as_category :group_key
+        as_value :count
+
+        aggregates do
+          aggregate type: :count, as: :count
+        end
+      end
 
       config do
         width 600
