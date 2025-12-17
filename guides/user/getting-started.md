@@ -352,6 +352,8 @@ band :analytics do
 end
 ```
 
+> **Warning**: Embedding charts inside report bands is a work-in-progress feature and may be broken. Use with caution.
+
 > **Supported Chart Types**: Bar, Line, Pie, Area, Scatter, Gantt, and Sparkline charts via Contex. See [Graphs and Visualizations](graphs-and-visualizations.md) for complete documentation.
 
 ## Output Formats
@@ -381,6 +383,9 @@ Print-ready documents:
 ```
 
 ### HEEX
+
+> **Warning**: HEEX rendering is a work-in-progress feature and may be broken. Use with caution.
+
 LiveView templates for interactive reports:
 ```elixir
 {:ok, result} = AshReports.Runner.run_report(

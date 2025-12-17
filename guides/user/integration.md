@@ -146,6 +146,7 @@ defmodule MyAppWeb.ReportsController do
         json(conn, result.content)
 
       :heex ->
+        # Warning: HEEX rendering is a work-in-progress feature and may be broken
         # HEEX is typically used with LiveView, not direct download
         conn
         |> put_resp_content_type("text/plain")

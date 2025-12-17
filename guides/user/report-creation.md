@@ -27,6 +27,7 @@ report :report_name do
   driving_resource(MyApp.SomeResource)
 
   # Optional: Supported output formats
+  # Note: :heex is a work-in-progress feature and may be broken
   formats([:html, :pdf, :json, :heex])
 
   # Optional: Required permissions

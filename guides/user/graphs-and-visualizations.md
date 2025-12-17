@@ -128,6 +128,8 @@ end
 
 ## Using Charts in Bands
 
+> **Warning**: Embedding charts inside report bands is a work-in-progress feature and may be broken. Use with caution.
+
 Once defined, charts are referenced in report bands using the same type-specific function:
 
 ```elixir
