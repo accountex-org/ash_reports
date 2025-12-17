@@ -122,9 +122,26 @@ defmodule AshReports.MixProject do
       canonical: "http://hexdocs.pm/ash_reports",
       extras: [
         "README.md",
-        "planning/system_design.md": [title: "System Design"],
-        "planning/report_design.md": [title: "Report Design"],
-        "planning/detailed_implementation_plan.md": [title: "Implementation Plan"]
+        # User Guides
+        "guides/user/getting-started.md": [title: "Getting Started"],
+        "guides/user/report-creation.md": [title: "Report Creation"],
+        "guides/user/graphs-and-visualizations.md": [title: "Graphs and Visualizations"],
+        "guides/user/advanced-features.md": [title: "Advanced Features"],
+        "guides/user/integration.md": [title: "Integration"],
+        "guides/user/performance-optimization.md": [title: "Performance Optimization"],
+        # Developer Guides
+        "guides/developer/architecture-overview.md": [title: "Architecture Overview"],
+        "guides/developer/dsl-system.md": [title: "DSL System"],
+        "guides/developer/data-loading.md": [title: "Data Loading Pipeline"],
+        "guides/developer/rendering-system.md": [title: "Rendering System"],
+        "guides/developer/layout-system.md": [title: "Layout System"],
+        "guides/developer/chart-system.md": [title: "Chart System"],
+        "guides/developer/typst-pdf-generation.md": [title: "PDF Generation"],
+        "guides/developer/extending-ash-reports.md": [title: "Extending AshReports"]
+      ],
+      groups_for_extras: [
+        "User Guides": ~r/guides\/user\/.*/,
+        "Developer Guides": ~r/guides\/developer\/.*/
       ],
       groups_for_modules: [
         DSL: [
