@@ -138,7 +138,6 @@ defmodule AshReports.JsonRenderer do
   - Internal metadata fields (like `_index`)
   - Formatted values (only raw data)
   - Report structure information (bands, elements, etc.)
-  ```
 
   ## API Integration Features
 

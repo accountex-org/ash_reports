@@ -2,7 +2,7 @@
 
 This guide covers the currently available advanced features in AshReports, including basic internationalization support and formatting capabilities.
 
-> **Important**: Many advanced features like comprehensive i18n, security DSL, caching, monitoring, and custom extensions are planned but not yet implemented. See [ROADMAP.md](../../ROADMAP.md) for the complete roadmap of planned features.
+> **Important**: Many advanced features like comprehensive i18n, security DSL, caching, monitoring, and custom extensions are planned but not yet implemented. See [ROADMAP.md](ROADMAP.md) for the complete roadmap of planned features.
 
 ## Table of Contents
 
@@ -77,7 +77,7 @@ end
 
 ### Planned i18n Features
 
-> **Note**: Comprehensive i18n features are planned for Phase 3. See [ROADMAP.md Phase 3](../../ROADMAP.md#phase-3-advanced-internationalization).
+> **Note**: Comprehensive i18n features are planned for Phase 3. See [ROADMAP.md Phase 3](ROADMAP.md#phase-3-advanced-internationalization).
 
 Planned features include:
 - ❌ Per-element locale specification
@@ -216,7 +216,7 @@ end
 
 ### Conditional Formatting (Basic)
 
-> **Note**: Advanced conditional formatting with expressions is planned. See [ROADMAP.md Phase 7](../../ROADMAP.md#phase-7-advanced-formatting). Current implementation supports basic keyword list conditions.
+> **Note**: Advanced conditional formatting with expressions is planned. See [ROADMAP.md Phase 7](ROADMAP.md#phase-7-advanced-formatting). Current implementation supports basic keyword list conditions.
 
 ```elixir
 format_spec :status_formatting do
@@ -595,7 +595,7 @@ end
 
 ## Planned Advanced Features
 
-The following advanced features are planned but not yet implemented. See [ROADMAP.md](../../ROADMAP.md) for complete details and timelines.
+The following advanced features are planned but not yet implemented. See [ROADMAP.md](ROADMAP.md) for complete details and timelines.
 
 ### Phase 3: Advanced Internationalization
 - Dynamic locale switching per element
@@ -797,14 +797,14 @@ end
 
 ## See Also
 
-- [ROADMAP.md](../../ROADMAP.md) - Complete feature roadmap
+- [ROADMAP.md](ROADMAP.md) - Complete feature roadmap
 - [Report Creation Guide](report-creation.md) - Building reports
 - [Integration Guide](integration.md) - Phoenix and LiveView integration
-- [IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md) - Current status
+- [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) - Current status
 
 ## Next Steps
 
-1. Review [ROADMAP.md](../../ROADMAP.md) to see planned advanced features
-2. Check [IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md) for current implementation status
+1. Review [ROADMAP.md](ROADMAP.md) to see planned advanced features
+2. Check [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for current implementation status
 3. Build reports using currently available features
 4. Watch for updates as advanced features are implemented

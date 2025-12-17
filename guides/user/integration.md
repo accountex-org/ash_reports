@@ -2,7 +2,7 @@
 
 This guide covers integrating AshReports with Phoenix, LiveView, and basic deployment scenarios.
 
-> **Note**: This guide reflects current basic integration capabilities. For planned features like scheduled reports, webhook notifications, and advanced LiveView features, see [ROADMAP.md Phase 9](../../ROADMAP.md#phase-9-integration-enhancements).
+> **Note**: This guide reflects current basic integration capabilities. For planned features like scheduled reports, webhook notifications, and advanced LiveView features, see [ROADMAP.md Phase 9](ROADMAP.md#phase-9-integration-enhancements).
 
 ## Table of Contents
 
@@ -249,7 +249,7 @@ Create a form for users to input report parameters:
 
 ### Basic LiveView Report Viewer
 
-> **Note**: Full LiveView integration with real-time updates and interactive features is planned. See [ROADMAP.md Phase 9](../../ROADMAP.md#phase-9-integration-enhancements). Current implementation provides basic rendering.
+> **Note**: Full LiveView integration with real-time updates and interactive features is planned. See [ROADMAP.md Phase 9](ROADMAP.md#phase-9-integration-enhancements). Current implementation provides basic rendering.
 
 ```elixir
 defmodule MyAppWeb.ReportLive.Show do
@@ -685,7 +685,7 @@ defmodule MyApp.Reports.Telemetry do
 end
 ```
 
-> **Note**: Telemetry integration is basic. Advanced monitoring and performance tracking are planned - see [ROADMAP.md Phase 6](../../ROADMAP.md#phase-6-monitoring-and-telemetry).
+> **Note**: Telemetry integration is basic. Advanced monitoring and performance tracking are planned - see [ROADMAP.md Phase 6](ROADMAP.md#phase-6-monitoring-and-telemetry).
 
 ## Troubleshooting
 
@@ -736,18 +736,18 @@ The following features are planned for future releases:
 - S3/cloud storage
 - GraphQL API
 
-See [ROADMAP.md Phase 9](../../ROADMAP.md#phase-9-integration-enhancements) for complete details.
+See [ROADMAP.md Phase 9](ROADMAP.md#phase-9-integration-enhancements) for complete details.
 
 ## Next Steps
 
 1. Review [Report Creation Guide](report-creation.md) to build reports
 2. Check out [Advanced Features](advanced-features.md) for formatting options
-3. Read [ROADMAP.md](../../ROADMAP.md) for upcoming integration features
-4. See [IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md) for current status
+3. Read [ROADMAP.md](ROADMAP.md) for upcoming integration features
+4. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for current status
 
 ## See Also
 
 - [Phoenix Framework](https://www.phoenixframework.org/)
 - [Phoenix LiveView](https://hexdocs.pm/phoenix_live_view/)
 - [Ash Authentication](https://hexdocs.pm/ash_authentication/)
-- [ROADMAP.md](../../ROADMAP.md) - Planned integration features
+- [ROADMAP.md](ROADMAP.md) - Planned integration features
