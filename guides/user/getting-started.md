@@ -2,7 +2,7 @@
 
 AshReports is a comprehensive reporting extension for the Ash Framework that provides declarative report definitions with hierarchical band structures, multiple output formats, and internationalization support.
 
-> **Note**: This guide reflects the current implementation. For planned features, see [ROADMAP.md](../../ROADMAP.md).
+> **Note**: This guide reflects the current implementation. For planned features, see [ROADMAP.md](ROADMAP.md).
 
 ## Table of Contents
 
@@ -295,7 +295,7 @@ expression :full_name do
 end
 ```
 
-> **Note**: Full Ash expression support in expressions is a work in progress. See [ROADMAP.md Phase 4](../../ROADMAP.md#phase-4-performance-and-optimization).
+> **Note**: Full Ash expression support in expressions is a work in progress. See [ROADMAP.md Phase 4](ROADMAP.md#phase-4-performance-and-optimization).
 
 ### Aggregate Elements
 Statistical calculations within bands:
@@ -407,7 +407,7 @@ Structured data for API consumption:
 )
 ```
 
-> **Note**: Renderer implementations are currently in testing phase. See [IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md) for current status.
+> **Note**: Renderer implementations are currently in testing phase. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for current status.
 
 ## Next Steps
 
@@ -468,4 +468,4 @@ AshReports is under active development. Core DSL and band system are production-
 - ⚠️ Full data loading pipeline (in progress)
 - 🔵 Advanced chart engine (planned)
 
-See [IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md) for complete details and [ROADMAP.md](../../ROADMAP.md) for planned features.
+See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for complete details and [ROADMAP.md](ROADMAP.md) for planned features.

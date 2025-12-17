@@ -122,6 +122,10 @@ defmodule AshReports.MixProject do
       canonical: "http://hexdocs.pm/ash_reports",
       extras: [
         "README.md",
+        "ROADMAP.md": [title: "Roadmap"],
+        "SECURITY.md": [title: "Security"],
+        "IMPLEMENTATION_STATUS.md": [title: "Implementation Status"],
+        "LICENSE": [title: "License"],
         # User Guides
         "guides/user/getting-started.md": [title: "Getting Started"],
         "guides/user/report-creation.md": [title: "Report Creation"],

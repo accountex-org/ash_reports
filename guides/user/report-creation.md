@@ -2,7 +2,7 @@
 
 This guide covers report creation techniques in AshReports, including parameters, grouping, variables, and formatting.
 
-> **Note**: This guide reflects the current implementation. For planned features like advanced conditional formatting and streaming configuration, see [ROADMAP.md](../../ROADMAP.md).
+> **Note**: This guide reflects the current implementation. For planned features like advanced conditional formatting and streaming configuration, see [ROADMAP.md](ROADMAP.md).
 
 ## Table of Contents
 
@@ -498,7 +498,7 @@ end
 
 ### Conditional Format Specifications (Basic)
 
-> **Note**: Advanced conditional formatting with expressions is planned. See [ROADMAP.md Phase 7](../../ROADMAP.md#phase-7-advanced-formatting). Current implementation supports basic keyword list conditions.
+> **Note**: Advanced conditional formatting with expressions is planned. See [ROADMAP.md Phase 7](ROADMAP.md#phase-7-advanced-formatting). Current implementation supports basic keyword list conditions.
 
 ```elixir
 format_spec :amount_formatting do
@@ -905,7 +905,7 @@ end
 2. **Use aggregates wisely**: Database aggregates are more efficient than variables for simple sums
 3. **Consider data volume**: For large datasets, ensure proper indexing on group and sort fields
 
-> **Note**: Advanced streaming configuration and performance monitoring features are planned. See [ROADMAP.md Phase 4](../../ROADMAP.md#phase-4-performance-and-optimization).
+> **Note**: Advanced streaming configuration and performance monitoring features are planned. See [ROADMAP.md Phase 4](ROADMAP.md#phase-4-performance-and-optimization).
 
 ### Maintainability
 
@@ -924,8 +924,8 @@ end
 
 ### See Also
 
-- [ROADMAP.md](../../ROADMAP.md) - Planned features and timeline
-- [IMPLEMENTATION_STATUS.md](../../IMPLEMENTATION_STATUS.md) - Current implementation status
+- [ROADMAP.md](ROADMAP.md) - Planned features and timeline
+- [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) - Current implementation status
 - [Advanced Features Guide](advanced-features.md) - What's currently available in advanced features
 - [Graphs and Visualizations](graphs-and-visualizations.md) - Chart integration
 
